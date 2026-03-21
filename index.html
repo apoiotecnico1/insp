@@ -59,22 +59,19 @@
   }
   #wrap{
     position: relative; height: 100%; border-radius: var(--radius); overflow: hidden;
-    /* cria contexto de empilhamento para overlays */
-    isolation:isolate;
+    isolation:isolate; /* overlay seguro */
   }
   #vid{
     width: 100%; height: 100%; display:block; background:#000; border-radius: var(--radius);
     object-fit: contain; z-index:0;
   }
-  /* Afastador sob a câmera */
   #camSpacer{ height: calc(var(--camH) + 26px + env(safe-area-inset-top, 0px)); max-width:980px; margin: 0 auto 8px; }
 
-  /* ===== TopBar (sobre o vídeo) ===== */
+  /* ===== TopBar ===== */
   #topBar{
     position:absolute; inset:auto 0 auto 0; top:8px; z-index:5;
-    display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 8px;
-    width:100%;
-    pointer-events:none; /* cada botão recoloca pointer-events */
+    display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 8px; width:100%;
+    pointer-events:none;
   }
   .toolbar{
     display:flex; align-items:center; gap:8px; padding:6px 8px;
@@ -92,15 +89,16 @@
   .btn:active{ transform:translateY(1px); }
   .btn.critical{ background: linear-gradient(180deg, #cc3e36, #a72b25); border-color:#b52d27; color:#fff; }
   .btn.success{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#0b2c21; border-color:#1aa455; }
+  .btn.selected{ outline:2px solid #35eb85; }
 
-  /* ===== BottomBar (sobre o vídeo) ===== */
+  /* ===== BottomBar ===== */
   #bottomBar{
     position:absolute; inset:auto 0 8px 0; z-index:5; width:100%;
     display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 8px;
     pointer-events:none;
   }
 
-  /* Zoom pad (discreto) */
+  /* Zoom */
   #zoomPad{
     pointer-events:auto;
     display:none; align-items:center; gap:8px; padding:6px 10px;
@@ -109,7 +107,7 @@
   }
   #zoomLbl{ min-width:52px; text-align:center; font-weight:900 }
 
-  /* Counters */
+  /* Contadores */
   .pill{
     pointer-events:auto; display:inline-flex; align-items:center; gap:8px;
     background: linear-gradient(180deg, rgba(10,16,40,.75), rgba(8,12,28,.72));
@@ -127,7 +125,7 @@
   }
   #presetMenu .btn{ width:100%; justify-content:flex-start }
 
-  /* Chip status (top center) */
+  /* Chip status */
   .chip{
     position:absolute; left:50%; top:8px; transform:translateX(-50%); z-index:6;
     background: linear-gradient(180deg, rgba(127,29,29,.9), rgba(90,14,14,.82));
@@ -136,11 +134,11 @@
   }
   .chip.on{ display:inline-flex; align-items:center; gap:8px }
 
-  /* ===== Ações (fora do vídeo) ===== */
+  /* ===== Ações ===== */
   .row{display:flex;gap:8px;flex-wrap:wrap}
   button.action{
     flex:1 1 180px; padding:12px 14px; font-size:.98rem; border:0; border-radius:12px; cursor:pointer;
-    background: linear-gradient(180deg, var(--btnGradA), var(--btnGradB)); color:var(--fg); font-weight:800;
+    background: linear-gradient(180deg, var(--btnGradA), var(--btnGradB)); color:#e6ebff; font-weight:800;
     border:1px solid var(--btnBorder); box-shadow: 0 6px 18px rgba(0,0,0,.25);
   }
   button.action:active{ transform: translateY(1px) }
@@ -202,12 +200,14 @@
   }
   #pdfModal .inner{
     background:linear-gradient(180deg, rgba(10,16,40,.96), rgba(10,16,35,.94));
-    border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:16px; max-width:340px; width:92%;
+    border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:16px; max-width:360px; width:92%;
     box-shadow:0 18px 40px rgba(0,0,0,.45);
   }
   #pdfModal h3{ margin:0 0 10px; font-size:1.02rem }
-  #pdfOpts{ display:flex; flex-wrap:wrap; gap:8px; }
+  #pdfOpts{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
   #pdfOpts .btn{ flex:1 1 68px }
+  #legendRow{ display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top:8px; }
+  #legendRow .group{ display:flex; gap:8px; flex-wrap:wrap }
 </style>
 </head>
 <body>
@@ -309,14 +309,24 @@
 <!-- Modal PDF -->
 <div id="pdfModal">
   <div class="inner">
-    <h3>Fotos por página</h3>
+    <h3>Relatório PDF – Fotos por página</h3>
     <div id="pdfOpts">
       <button class="btn" data-pp="1">1</button>
       <button class="btn" data-pp="2">2</button>
       <button class="btn" data-pp="4">4</button>
       <button class="btn" data-pp="8">8</button>
       <button class="btn" data-pp="16">16</button>
-      <button class="btn" data-pp="cancel" style="background:linear-gradient(180deg,#3a3a3a,#222)">Cancelar</button>
+    </div>
+    <div id="legendRow">
+      <div style="font-weight:900">Legendas:</div>
+      <div class="group">
+        <button class="btn selected" data-leg="auto" id="legAuto">Auto</button>
+        <button class="btn" data-leg="on" id="legOn">Sempre</button>
+        <button class="btn" data-leg="off" id="legOff">Nunca</button>
+      </div>
+    </div>
+    <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end">
+      <button class="btn" id="pdfCancel">Cancelar</button>
     </div>
   </div>
 </div>
@@ -329,7 +339,7 @@
 
 <!-- ===== SCRIPTS ===== -->
 <script>
-/* ---------- Splash (com proteção anti-trava) ---------- */
+/* ---------- Splash seguro ---------- */
 (() => {
   const splash = document.getElementById('splash');
   const btnStart = document.getElementById('btnStart');
@@ -354,18 +364,18 @@
   window.addEventListener('resize', resize, {passive:true});
   resize(); draw();
   btnStart.addEventListener('click', startNow, {once:true});
-  // fallback auto-start
   setTimeout(()=>{ if(!started) startNow(); }, 2400);
 })();
 </script>
 
 <script>
-/* ===== Utilitários e Estado global ===== */
+/* ===== Utilitários e Estado ===== */
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
 function fmtKm(v){ let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
 function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function bytesToMB(b){ return (b/1048576).toFixed(1); }
+function escPdf(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
 
 let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null;
@@ -373,7 +383,7 @@ let kmUpdateInterval=null; let isRecordingVideo=false;
 
 /* Sessão */
 let sessionPhotos = 0;
-const sessionPhotoFiles = []; // {handle,w,h,name}
+const sessionPhotoFiles = []; // {handle,w,h,name,kmStr,ts,lat,lon,stampedKM}
 
 /* Referências */
 const vid=document.getElementById('vid'), foto=document.getElementById('foto'), wrap=document.getElementById('wrap'), chip=document.getElementById('chip');
@@ -391,7 +401,12 @@ const zoomPad=document.getElementById('zoomPad'), btnZoomDec=document.getElement
 const hudPhotos=document.getElementById('hudPhotos'), hudRight=document.getElementById('hudRight'), hudVideoSize=document.getElementById('hudVideoSize');
 
 const pdfModal=document.getElementById('pdfModal'), pdfOpts=document.getElementById('pdfOpts');
+const legAuto=document.getElementById('legAuto'), legOn=document.getElementById('legOn'), legOff=document.getElementById('legOff'), pdfCancel=document.getElementById('pdfCancel');
 
+/* Legenda PDF: 'auto' | 'on' | 'off' */
+let pdfLegendMode='auto';
+
+/* Carimbo */
 const overlayOpts = { showKM:true, showTs:true, showIds:true, showGps:false };
 const can=document.createElement('canvas'), ctx=can.getContext('2d',{alpha:false});
 const CAP_MAX_DIM = 1600;
@@ -403,7 +418,7 @@ function statusChip(el, text, state){ el.textContent = text; el.className = 'st 
 function updateStatusBar(){
   statusChip(stCsv,  'CSV: '  + (csvReady?'OK':'Carregando…'), csvReady?'ok':'warn');
   statusChip(stCam,  'Câmera: ' + (camReady?'OK':(cameraPaused?'Parada':'Aguardando…')), (camReady?'ok':'warn'));
-  const gpsTxt = gpsReady ? (lastPos? `OK (±${Math.round(lastPos.acc||0)} m)`:'OK') : 'Aguardando…';
+  const gpsTxt = gpsReady ? (lastPos? `OK (±${Math.round((lastPos.acc||0))} m)`:'OK') : 'Aguardando…';
   statusChip(stGps,  'GPS: ' + gpsTxt, gpsReady?'ok':'warn');
   statusChip(stFotos,'Fotos: ' + sessionPhotos, sessionPhotos>0?'ok':'');
 }
@@ -463,12 +478,7 @@ function pickTrio(c){
 async function loadKM(){
   const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
   const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
-  kmPoints=[]; let lastKeep=null; const MIN_STEP=5;
-  for(let i=0;i<lines.length;i++){
-    const c=lines[i].split(';'); if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue;
-    const t=pickTrio(c); if(!t) continue;
-    kmPoints.push(t); // pontos densos; a grade otimiza
-  }
+  kmPoints=[]; for(let i=0;i<lines.length;i++){ const c=lines[i].split(';'); const t=pickTrio(c); if(t) kmPoints.push(t); }
   kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p);
 }
 async function loadCSVs(){ try{ await Promise.all([loadIDs(),loadKM()]); csvReady=dataset.length>0 && kmPoints.length>0; }catch{ csvReady=false; } updateStatusBar(); }
@@ -532,7 +542,6 @@ async function startCamera(deviceIdx=deviceIndex){
     if (vid.videoWidth && vid.videoHeight) videoAR = vid.videoWidth / vid.videoHeight;
     applyCamHeight();
 
-    // Zoom discreto
     if(currentCap && currentCap.zoom){
       zoomMin=currentCap.zoom.min??1; zoomMax=currentCap.zoom.max??1; zoomStep=currentCap.zoom.step??0.1;
       let z=loadCamPrefsFor(deviceList[deviceIndex]?.deviceId) ?? (currentCap.zoom.min ?? 1);
@@ -615,7 +624,7 @@ function startGPS(){
 function stampOverlay(ctx, w, h, kmStr, ids, ts, gpsLine){
   const bandH=Math.max(144,Math.round(h*0.16));
   ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
-  if(overlayOpts.showKM && kmStr){
+  if(kmStr){
     ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.055)}px system-ui`;
     ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
     ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52)); ctx.shadowBlur=0;
@@ -635,6 +644,7 @@ function stampOverlay(ctx, w, h, kmStr, ids, ts, gpsLine){
 }
 
 /* ===== Captura fotos ===== */
+let previewBuffer = [];
 function addPreview(url, meta){
   previewBuffer.push({url, meta});
   if(previewBuffer.length > 10){
@@ -660,11 +670,11 @@ function buildFilename(kmStr, ts){
   const stamp = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}_${String(t.getHours()).padStart(2,'0')}-${String(t.getMinutes()).padStart(2,'0')}-${String(t.getSeconds()).padStart(2,'0')}`;
   return `FOTO_${safeKm}_${stamp}.jpg`;
 }
-async function savePhotoDirect(blob, filename, w, h){
+async function savePhotoDirect(blob, filename, w, h, meta){
   if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta não selecionada'); }
   const fileHandle = await rootDirHandle.getFileHandle(filename, { create:true });
   const writable = await fileHandle.createWritable(); await writable.write(blob); await writable.close();
-  sessionPhotoFiles.push({ handle:fileHandle, w, h, name:filename });
+  sessionPhotoFiles.push({ handle:fileHandle, w, h, name:filename, ...meta });
   sessionPhotos++; hudPhotos.textContent=sessionPhotos; stFotos.textContent='Fotos: '+sessionPhotos;
   btnFinalizePdf.disabled = sessionPhotos===0;
   setPdfStatus('—', false);
@@ -677,23 +687,25 @@ async function captureOnce(){
   can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
 
   const kmObj=nearestKM(lastPos.lat,lastPos.lon);
-  const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+  const kmStrRaw=kmObj? fmtKm(kmObj.km): 'KM —';
   const ids=nearestN(lastPos.lat,lastPos.lon,5);
-  const ts=new Date().toLocaleString();
+  const tsStr=new Date().toLocaleString();
   const gpsLine = overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
-  stampOverlay(ctx, w, h, overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
+
+  const stampedKM = !!overlayOpts.showKM;
+  const kmText = overlayOpts.showKM ? kmStrRaw : ''; // carimba ou não
+  stampOverlay(ctx, w, h, kmText, overlayOpts.showIds?ids:[], overlayOpts.showTs?tsStr:'', gpsLine);
 
   const blob = await new Promise(res => can.toBlob(res,'image/jpeg',0.85));
-  const fname = buildFilename(kmStr, new Date());
-  await savePhotoDirect(blob, fname, w, h);
+  const fname = buildFilename(kmStrRaw, new Date());
+  await savePhotoDirect(blob, fname, w, h, { kmStr: kmStrRaw, ts: tsStr, lat:lastPos.lat, lon:lastPos.lon, stampedKM });
 
   const url = URL.createObjectURL(blob);
   foto.src=url;
-  addPreview(url, `${kmStr} • ${ts}`);
+  addPreview(url, `${kmStrRaw} • ${tsStr}`);
 }
 
 /* Auto captura */
-let previewBuffer = [];
 function startAutoCapture(){
   if(!rootDirHandle){ alert('Selecione a pasta primeiro.'); return; }
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
@@ -750,7 +762,7 @@ btnPTT.addEventListener('pointerdown', ()=>{ if(narrationMode==='ptt'){ narratio
 btnPTT.addEventListener('pointerup',   ()=>{ if(narrationMode==='ptt'){ narrationActive=false; if(micTrack) micTrack.enabled=false; updateChip(); }});
 btnPTT.addEventListener('pointerleave',()=>{ if(narrationMode==='ptt'){ narrationActive=false; if(micTrack) micTrack.enabled=false; updateChip(); }});
 
-/* ===== Vídeo – MP4/WebM (com narração) ===== */
+/* ===== Vídeo – MP4/WebM ===== */
 let videoWritable=null, videoBytesWritten=0, mediaRecorder=null, wc={encoder:null,muxer:null,vTrack:null}, rafId=null;
 const VID_FPS=30, VID_BITRATE=1_200_000, REC_W=1280, REC_H=720;
 
@@ -805,16 +817,7 @@ async function startVideoRecordingMP4(){
   };
 
   isRecordingVideo=true; updateChip(); showVideoHUD(true); draw();
-  return {
-    async stop(){
-      if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
-      try{ await wc.encoder.flush(); wc.encoder.close(); }catch{}
-      try{ wc.muxer.finalize(); }catch{}
-      await closeVideoWriter();
-      wc={encoder:null,muxer:null,vTrack:null};
-      isRecordingVideo=false; updateChip();
-    }
-  };
+  return { async stop(){ if(rafId){ cancelAnimationFrame(rafId); rafId=null; } try{ await wc.encoder.flush(); wc.encoder.close(); }catch{} try{ wc.muxer.finalize(); }catch{} await closeVideoWriter(); wc={encoder:null,muxer:null,vTrack:null}; isRecordingVideo=false; updateChip(); } };
 }
 async function startVideoRecordingSafariMP4(){
   const videoStream=vid.srcObject; if(!videoStream) throw new Error('Câmera indisponível');
@@ -842,7 +845,6 @@ async function startVideoRecordingSafariMP4(){
   };
   draw();
 
-  // PTT durante gravação
   btnPTT.onpointerdown=()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=true; narrationActive=true; updateChip(); }};
   btnPTT.onpointerup=()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=false; narrationActive=false; updateChip(); }};
   btnPTT.onpointerleave=btnPTT.onpointerup;
@@ -875,7 +877,6 @@ async function startVideoRecordingWebM(){
   };
   draw();
 
-  // PTT
   btnPTT.onpointerdown=()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=true; narrationActive=true; updateChip(); }};
   btnPTT.onpointerup=()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=false; narrationActive=false; updateChip(); }};
   btnPTT.onpointerleave=btnPTT.onpointerup;
@@ -888,18 +889,15 @@ async function startVideoRecording(){
   if(isRecordingVideo) return;
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
 
-  // Safari MP4 com áudio
   if('MediaRecorder' in window && MediaRecorder.isTypeSupported?.('video/mp4;codecs=h264')){
     try{ activeStopper = await startVideoRecordingSafariMP4(); return; }catch(e){ console.warn('Safari MP4 falhou:', e); }
   }
-  // Chrome/Edge: MP4 sem áudio (narration off)
   try{
     activeStopper = await startVideoRecordingMP4(); return;
   }catch(e){
-    if(String(e).includes('NarrationOnUseWebM')) console.warn('Narration ativa → usar WebM');
+    if(String(e).includes('NarrationOnUseWebM')) console.warn('Narration ativa → usando WebM por áudio.');
     else console.warn('WebCodecs MP4 falhou:', e);
   }
-  // Fallback WebM
   try{ activeStopper = await startVideoRecordingWebM(); }catch(e){ console.error('WebM falhou:', e); alert('Não foi possível iniciar a gravação.'); }
 }
 async function stopVideoRecording(){
@@ -912,19 +910,29 @@ btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ await
 btnRecStop.addEventListener('click', async ()=>{ if(isRecordingVideo) await stopVideoRecording(); });
 
 /* ===== Interações ===== */
-wrap.addEventListener('click', ()=>{ /* nada aqui, para não distrair na direção */ });
+wrap.addEventListener('click', ()=>{ /* sem toque para não distrair na direção */ });
 btnSelectFolder.addEventListener('click', async ()=>{ await selectOutputFolder(); });
 
 /* ===== MODAL PDF + Gerador consolidado ===== */
 function openPdfOptions(){ if(sessionPhotoFiles.length===0){ alert('Nenhuma foto na sessão.'); return; } pdfModal.style.display='flex'; }
 function closePdfOptions(){ pdfModal.style.display='none'; }
 btnFinalizePdf.addEventListener('click', openPdfOptions);
+pdfCancel.addEventListener('click', closePdfOptions);
+
+[legAuto,legOn,legOff].forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    pdfLegendMode = btn.dataset.leg;
+    [legAuto,legOn,legOff].forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+});
+
 pdfOpts.addEventListener('click', async (e)=>{
   const pp = e.target.closest('.btn')?.dataset?.pp; if(!pp) return;
   if(pp==='cancel'){ closePdfOptions(); return; }
   closePdfOptions();
   try{
-    await generateConsolidatedPdf(Number(pp));
+    await generateConsolidatedPdf(Number(pp), pdfLegendMode);
     setPdfStatus('GERADO', true);
     const clear = confirm('PDF gerado com sucesso. Limpar sessão (mantém os arquivos na pasta)?');
     if(clear){
@@ -933,39 +941,79 @@ pdfOpts.addEventListener('click', async (e)=>{
   }catch(err){ alert('Falha ao gerar PDF: '+err.message); }
 });
 
-async function generateConsolidatedPdf(perPage){
+/* Gerador de PDF consolidado (grid + legendas) */
+async function generateConsolidatedPdf(perPage, legendMode){
   if(!rootDirHandle) throw new Error('Pasta não selecionada');
   const fileName = `RELATORIO_INSPECAO_${perPage}ppg_${new Date().toISOString().slice(0,10)}_${Date.now()}.pdf`;
   const handle = await rootDirHandle.getFileHandle(fileName, { create:true });
   const stream = await handle.createWritable();
+
   const enc=new TextEncoder(); let pos=0, objNo=0; const xref=[0];
   const write=async s=>{ const b=(s instanceof Uint8Array)?s:enc.encode(s); await stream.write(b); pos+=b.length; };
   const addObj=async body=>{ objNo++; xref.push(pos); await write(`${objNo} 0 obj\n${body}\nendobj\n`); return objNo; };
   const addStream=async (dict,bin)=>{ objNo++; xref.push(pos); await write(`${objNo} 0 obj\n${dict.replace('>>','')} /Length ${bin.length} >>\nstream\n`); await write(bin); await write(`\nendstream\nendobj\n`); return objNo; };
 
   await write('%PDF-1.4\n');
-  const PW=595, PH=842, M=24;
+  const PW=595, PH=842, M=28;
   const L={1:[1,1],2:[2,1],4:[2,2],8:[4,2],16:[4,4]}; const [COLS, ROWS] = L[perPage] || [1,1];
+  const CAP_H=30; /* reserva p/ legenda no rodapé da célula */
   const CELL_W=Math.floor((PW-2*M)/COLS), CELL_H=Math.floor((PH-2*M)/ROWS);
-  const pages=[]; let i=0;
+  const fontNum = await addObj(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`);
 
+  const pages=[]; let i=0;
   while(i<sessionPhotoFiles.length){
-    const xobjs=[], ops=[];
+    const xobjs=[]; const ops=[];
     for(let r=0;r<ROWS && i<sessionPhotoFiles.length;r++){
       for(let c=0;c<COLS && i<sessionPhotoFiles.length;c++,i++){
-        const rec=sessionPhotoFiles[i]; const file=await rec.handle.getFile(); const bin=new Uint8Array(await file.arrayBuffer());
+        const rec=sessionPhotoFiles[i];
+        const file=await rec.handle.getFile();
+        const imgBin=new Uint8Array(await file.arrayBuffer());
         const imgW=rec.w||800, imgH=rec.h||450;
+
+        /* espaço disponível para imagem (deixando CAP_H para legenda) */
+        const availH = CELL_H - CAP_H;
         let dw=CELL_W, dh=Math.round(imgH*(CELL_W/imgW));
-        if(dh>CELL_H){ dh=CELL_H; dw=Math.round(imgW*(CELL_H/imgH)); }
-        const tx=M + c*CELL_W + Math.round((CELL_W-dw)/2);
-        const ty=PH - (M+(r+1)*CELL_H) + Math.round((CELL_H-dh)/2);
-        const n=await addStream(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, bin);
-        const alias=`/Im_${r}_${c}`; xobjs.push(`${alias} ${n} 0 R`); ops.push(`q\n${dw} 0 0 ${dh} ${tx} ${ty} cm\n${alias} Do\nQ\n`);
+        if(dh>availH){ dh=availH; dw=Math.round(imgW*(availH/imgH)); }
+
+        const cellX = M + c*CELL_W, cellY = PH - (M + (r+1)*CELL_H);
+        const tx = cellX + Math.round((CELL_W - dw)/2);
+        const ty = cellY + Math.round((availH - dh)/2) + CAP_H; // imagem acima da área de legenda
+
+        const imNum = await addStream(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, imgBin);
+        const alias=`/Im_${r}_${c}`; xobjs.push(`${alias} ${imNum} 0 R`);
+        ops.push(`q\n${dw} 0 0 ${dh} ${tx} ${ty} cm\n${alias} Do\nQ\n`);
+
+        /* legenda (se aplicável) */
+        let needLegend=false;
+        if(legendMode==='on') needLegend=true;
+        else if(legendMode==='off') needLegend=false;
+        else /* auto */ needLegend = !rec.stampedKM; // só se não foi carimbado na foto
+
+        if(needLegend){
+          const km = rec.kmStr || 'KM —';
+          const ts = rec.ts || '';
+          const gps = (typeof rec.lat==='number' && typeof rec.lon==='number') ? `${rec.lat.toFixed(6)}, ${rec.lon.toFixed(6)}` : '';
+          const line1 = `${km}${ts?` • ${ts}`:''}`;
+          const line2 = gps ? `GPS: ${gps}` : '';
+
+          const textX = cellX + 6;
+          let textY = cellY + 6; // base da célula
+          const tsize = 9;
+
+          const textOps = [];
+          textOps.push(`BT /F1 ${tsize} Tf 1 0 0 1 ${textX} ${textY+(line2?12:18)} Tm (${escPdf(line1)}) Tj ET`);
+          if(line2){ textOps.push(`BT /F1 ${tsize} Tf 1 0 0 1 ${textX} ${textY+2} Tm (${escPdf(line2)}) Tj ET`); }
+          ops.push(textOps.join('\n'));
+        }
       }
     }
-    const cont=await addStream(`<< >>`, enc.encode(ops.join('')));
-    const pg=await addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << ${xobjs.join(' ')} >> >> /Contents ${cont} 0 R >>`);
-    pages.push(pg);
+    const cont=await addStream(`<< >>`, enc.encode(ops.join('\n')));
+    const page=await addObj(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}]
+          /Resources << /XObject << ${xobjs.join(' ')} >> /Font << /F1 ${fontNum} 0 R >> >>
+          /Contents ${cont} 0 R >>`
+    );
+    pages.push(page);
   }
   const pagesNum=await addObj(`<< /Type /Pages /Kids [ ${pages.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pages.length} >>`);
   const catalog=await addObj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
@@ -973,7 +1021,7 @@ async function generateConsolidatedPdf(perPage){
   await write(xr); await write(`trailer\n<< /Size ${xref.length} /Root ${catalog} 0 R >>\nstartxref\n${startXref}\n%%EOF`); await stream.close();
 }
 
-/* ===== Boot (proteção anti-trava) ===== */
+/* ===== Boot ===== */
 let bootStarted=false;
 window.__BOOT = async function(){
   if(bootStarted) return; bootStarted=true;
