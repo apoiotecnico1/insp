@@ -8,8 +8,7 @@
 <style>
   :root{
     --panelA:rgba(8,14,30,.82); --panelB:rgba(6,10,24,.78);
-    --blue:#0a77d5; --blueDark:#095fb0; --border:#e9f2ff;
-    --btnH:68px;
+    --btnH:68px; --badgeBg:rgba(10,16,40,.78); --badgeBr:rgba(255,255,255,.18);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
   html,body{height:100%}
@@ -19,39 +18,44 @@
     overflow:hidden; -webkit-user-select:none; user-select:none;
   }
 
-  /* Tela cheia */
+  /* Tela */
   #app{ position:fixed; inset:0; display:grid; grid-template-rows:1fr; }
   #camWrap{
     position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate;
-    touch-action:none; /* habilita pinch-zoom custom sem o zoom da página */
+    touch-action:none; /* habilita pinch-zoom custom */
   }
   #vid{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000 }
 
-  /* HUD topo: placa azul + compartilhar */
+  /* HUD topo: botões */
   #hudTop{
-    position:absolute; top:10px; left:0; right:0; display:flex; justify-content:space-between; align-items:flex-start; z-index:3;
+    position:absolute; top:10px; left:0; right:0; display:flex; justify-content:flex-end; z-index:4;
     padding:0 10px; pointer-events:none;
   }
-  .road-sign{
-    display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
-    min-width:128px; padding:12px 16px 14px;
-    background:linear-gradient(180deg, var(--blue), var(--blueDark));
-    color:#ffffff; border-radius:14px;
-    border:6px solid var(--border);
-    box-shadow: 0 8px 24px rgba(0,0,0,.45), inset 0 0 0 2px rgba(255,255,255,.75);
-    text-shadow: 0 1px 0 rgba(0,0,0,.35);
-  }
-  .km-label{ font:900 1.05rem system-ui; letter-spacing:.02em; line-height:1 }
-  .km-big  { font:900 1.9rem system-ui; letter-spacing:.02em; line-height:1.05; margin-top:6px }
-  .km-mini { font:900 1.02rem system-ui; transform:translateY(-2px) }
-
   .chipBtn{
-    pointer-events:auto;
-    display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px;
+    pointer-events:auto; display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px;
     background:linear-gradient(180deg,var(--panelA),var(--panelB));
     border:1px solid rgba(255,255,255,.16); box-shadow:0 14px 36px rgba(0,0,0,.45);
-    cursor:pointer; user-select:none; color:#eaf2ff; font-weight:900;
+    cursor:pointer; user-select:none; color:#eaf2ff; font-weight:900; margin-left:8px;
   }
+
+  /* KM badge (pequeno e destacado) */
+  #kmHud{ position:absolute; z-index:5; pointer-events:none; }
+  .kmBadge{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--badgeBg);
+    border:1px solid var(--badgeBr);
+    border-radius:12px; padding:6px 10px; font-weight:900; font-size:1rem;
+    box-shadow:0 12px 30px rgba(0,0,0,.45);
+  }
+  .kmBadge .label{ opacity:.9; letter-spacing:.02em }
+  .kmBadge .val{ font-variant-numeric:tabular-nums; letter-spacing:.01em }
+
+  /* Posições do KM (selecionável) */
+  .pos-top-center{ top:10px; left:50%; transform:translateX(-50%); }
+  .pos-top-left{ top:10px; left:10px; }
+  .pos-top-right{ top:10px; right:10px; }
+  .pos-mid-left{ top:50%; left:10px; transform:translateY(-50%); }
+  .pos-mid-right{ top:50%; right:10px; transform:translateY(-50%); }
 
   /* HUD base: único botão */
   #hudBottom{
@@ -89,6 +93,21 @@
     background:linear-gradient(180deg, rgba(0,0,0,.78), rgba(0,0,0,.64));
     border:1px solid rgba(255,255,255,.16); color:#eaf2ff; padding:10px 14px; border-radius:12px;
   }
+
+  /* Painel opções (KM) */
+  #opts{
+    position:absolute; right:10px; top:58px; z-index:6; display:none;
+    background:linear-gradient(180deg,var(--panelA),var(--panelB));
+    border:1px solid rgba(255,255,255,.16); border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.45);
+    padding:12px; min-width:260px; pointer-events:auto;
+  }
+  #opts h4{ margin:0 0 8px; font-size:1rem }
+  .row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin:10px 0 }
+  .row select, .row button{
+    border-radius:10px; border:1px solid rgba(255,255,255,.16); background:#0c1436; color:#eaf2ff; font-weight:800;
+  }
+  .row select{ padding:8px 10px }
+  .row button{ padding:8px 10px; cursor:pointer }
 </style>
 </head>
 <body>
@@ -96,16 +115,15 @@
   <div id="camWrap">
     <video id="vid" autoplay playsinline muted></video>
 
-    <!-- HUD topo: placa KM estilo primeiro HTML + compartilhar -->
+    <!-- KM em tempo real (pequeno e destacado) -->
+    <div id="kmHud" class="pos-top-center">
+      <div class="kmBadge"><span class="label" id="kmLabel">KM</span> <span class="val" id="kmText">—</span></div>
+    </div>
+
+    <!-- HUD topo: compartilhar + opções -->
     <div id="hudTop">
-      <div class="road-sign">
-        <div class="km-label">KM</div>
-        <div style="display:flex;align-items:flex-end;gap:8px">
-          <div class="km-big" id="kmK">—</div>
-          <div class="km-mini" id="kmM">+000</div>
-        </div>
-      </div>
       <div id="btnShare" class="chipBtn" title="Enviar por WhatsApp">📤 Compartilhar</div>
+      <div id="btnGear"  class="chipBtn" title="Opções do KM">⚙️ Opções</div>
     </div>
 
     <!-- HUD base: único botão -->
@@ -113,6 +131,30 @@
       <button id="btnAuto" class="btn primary">🎬 INICIAR AUTO</button>
     </div>
   </div>
+</div>
+
+<!-- Opções (somente para o KM na tela) -->
+<div id="opts">
+  <h4>Opções de KM (tela)</h4>
+  <div class="row">
+    <span>Formato</span>
+    <select id="selKmFmt">
+      <option value="label">KM (apenas)</option>
+      <option value="comma" selected>KM K,mmm</option>
+      <option value="plus">KM K+mmm</option>
+    </select>
+  </div>
+  <div class="row">
+    <span>Posição</span>
+    <select id="selKmPos">
+      <option value="pos-top-center" selected>Topo (centro)</option>
+      <option value="pos-top-left">Topo (esquerda)</option>
+      <option value="pos-top-right">Topo (direita)</option>
+      <option value="pos-mid-left">Meio (esquerda)</option>
+      <option value="pos-mid-right">Meio (direita)</option>
+    </select>
+  </div>
+  <div class="row"><span></span><button id="btnCloseOpts">Fechar</button></div>
 </div>
 
 <!-- Gate: selecionar pasta -->
@@ -129,7 +171,7 @@
 
 <script>
 /* =================== ESTADO/REFS =================== */
-let rootDirHandle=null;           // pasta destino
+let rootDirHandle=null;  // pasta destino
 let csvKMReady=false, camReady=false, gpsReady=false;
 let lastPos=null;
 let isAuto=false, autoTimer=null, writing=false, queue=Promise.resolve();
@@ -137,45 +179,41 @@ let isAuto=false, autoTimer=null, writing=false, queue=Promise.resolve();
 /* Wake Lock (mantém tela ligada) */
 let wakeLock=null, keepAliveTimer=null;
 
-/* Zoom */
-let camCap=null, camTrack=null;
-let zoomSupported=false, zoomMin=1, zoomMax=1, zoomStep=0.1, zoomVal=1;
-let virtualZoom=1; // para fallback (crop na captura)
+/* Zoom (lente/virtual) */
+let camTrack=null, camCap=null; let zoomSupported=false, zoomMin=1, zoomMax=1, zoomVal=1, virtualZoom=1;
 
 /* DOM */
-const camWrap=document.getElementById('camWrap');
-const vid=document.getElementById('vid');
-const kmK=document.getElementById('kmK'), kmM=document.getElementById('kmM');
-const btnAuto=document.getElementById('btnAuto');
+const camWrap=document.getElementById('camWrap'), vid=document.getElementById('vid');
+const kmHud=document.getElementById('kmHud'), kmLabel=document.getElementById('kmLabel'), kmText=document.getElementById('kmText');
+const btnAuto=document.getElementById('btnAuto'), btnShare=document.getElementById('btnShare');
 const folderGate=document.getElementById('folderGate'), btnPickFolder=document.getElementById('btnPickFolder');
-const btnShare=document.getElementById('btnShare');
 const toast=document.getElementById('toast');
+const btnGear=document.getElementById('btnGear'), opts=document.getElementById('opts'), btnCloseOpts=document.getElementById('btnCloseOpts');
+const selKmFmt=document.getElementById('selKmFmt'), selKmPos=document.getElementById('selKmPos');
 
-/* CONFIG FIXA */
-const AUTO_MS = 800;        // intervalo fixo
-const MAX_DIM = 1920;       // resolução máxima (maior lado)
-const JPG_Q   = 0.92;       // qualidade JPG
-const SHOW_TS = false;      // sem data/hora no carimbo por padrão
-const SHOW_GPS= false;      // sem coordenadas por padrão
+/* CONFIG BÁSICA (salvo no aparelho) */
+const state={
+  autoMs: Number(localStorage.getItem('auto_ms')||'800'),
+  jpgQ  : Number(localStorage.getItem('jpg_q')||'92'),
+  maxDim: Number(localStorage.getItem('max_dim')||'1920'),
+  kmFmt : localStorage.getItem('km_fmt')||'comma', // 'label' | 'comma' | 'plus'
+  kmPos : localStorage.getItem('km_pos')||'pos-top-center'
+};
 
 /* =================== WAKE LOCK =================== */
 async function requestWakeLock(){
   try{
     if('wakeLock' in navigator){
       wakeLock = await navigator.wakeLock.request('screen');
-      wakeLock.addEventListener?.('release', ()=>{ if(isAuto) requestWakeLock(); });
+      wakeLock.addEventListener?.('release',()=>{ if(isAuto) requestWakeLock(); });
     }else{
-      keepAliveTimer = setInterval(()=>{}, 30000);
+      keepAliveTimer=setInterval(()=>{},30000);
     }
-  }catch(e){ console.warn('WakeLock:', e); }
+  }catch(e){ console.warn('WakeLock:',e); }
 }
-async function releaseWakeLock(){
-  try{ await wakeLock?.release?.(); }catch{} finally{ wakeLock=null; }
-  if(keepAliveTimer){ clearInterval(keepAliveTimer); keepAliveTimer=null; }
-}
-document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && isAuto){ requestWakeLock(); }});
-window.addEventListener('pagehide', releaseWakeLock);
-window.addEventListener('beforeunload', releaseWakeLock);
+async function releaseWakeLock(){ try{ await wakeLock?.release?.(); }catch{} finally{ wakeLock=null; } if(keepAliveTimer){ clearInterval(keepAliveTimer); keepAliveTimer=null; } }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&isAuto){ requestWakeLock(); }});
+window.addEventListener('pagehide',releaseWakeLock); window.addEventListener('beforeunload',releaseWakeLock);
 
 /* =================== UI/UTILS =================== */
 function showToast(msg,ms=1500){ toast.textContent=msg; toast.style.display='block'; clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.style.display='none',ms); }
@@ -185,39 +223,25 @@ function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; 
 function stampStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours())}-${String(d.getMinutes())}-${String(d.getSeconds())}`; }
 function fmtKMMM(val){ const K=Math.floor(val); let m=Math.round((val-K)*1000); if(m>=1000){m-=1000;} return {K, mmm:String(m).padStart(3,'0')}; }
 
-/* =================== PASTA/PERMISSÃO =================== */
-async function verifyPermission(handle, rw){
-  const opt={mode:rw?'readwrite':'read'};
-  const q=await handle.queryPermission?.(opt);
-  if(q==='granted') return true;
-  const r=await handle.requestPermission?.(opt);
-  return r==='granted';
-}
-async function pickFolder(){
-  try{
-    rootDirHandle = await window.showDirectoryPicker({mode:'readwrite'});
-    const ok=await verifyPermission(rootDirHandle,true);
-    if(!ok){ showToast('Permissão negada na pasta'); return; }
-    folderGate.style.display='none'; showToast('Pasta OK');
-  }catch(e){ showToast('Seleção cancelada'); }
-}
+/* =================== Pasta/Permissão =================== */
+async function verifyPermission(handle,rw){ const opt={mode:rw?'readwrite':'read'}; const q=await handle.queryPermission?.(opt); if(q==='granted') return true; const r=await handle.requestPermission?.(opt); return r==='granted'; }
+async function pickFolder(){ try{
+  rootDirHandle = await window.showDirectoryPicker({mode:'readwrite'});
+  const ok=await verifyPermission(rootDirHandle,true); if(!ok){ showToast('Permissão negada'); return; }
+  folderGate.style.display='none'; showToast('Pasta OK');
+}catch(e){ showToast('Seleção cancelada'); } }
 btnPickFolder.addEventListener('click', pickFolder);
 
 /* =================== KM (CSV) =================== */
-let kmPoints=[], kmGrid=new Map();
-const CELL=0.005;
+let kmPoints=[], kmGrid=new Map(); const CELL=0.005;
 function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
 function gridInsert(grid,p){ const k=cellKey(p.lat,p.lon); const a=grid.get(k); a?a.push(p):grid.set(k,[p]); }
 function gridCands(grid,lat,lon,minCount=120,maxR=5){
   const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[];
-  for(let r=0;r<=maxR && out.length<minCount;r++){
-    for(let dy=-r;dy<=r;dy++){
-      for(let dx=-r;dx<=r;dx++){
-        if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue;
-        const a=grid.get(`${ky+dy},${kx+dx}`); if(a) out.push(...a);
-      }
-    }
-  } return out;
+  for(let r=0;r<=maxR && out.length<minCount;r++){ for(let dy=-r;dy<=r;dy++){ for(let dx=-r;dx<=r;dx++){
+    if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue;
+    const a=grid.get(`${ky+dy},${kx+dx}`); if(a) out.push(...a);
+  }}} return out;
 }
 async function loadKM(){
   try{
@@ -241,122 +265,94 @@ function nearestKM(lat,lon){
   const c=gridCands(kmGrid,lat,lon,140); if(!c.length) return null;
   let best=null,bd=Infinity; for(const p of c){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
 }
-function refreshSign(){
-  if(!lastPos || !csvKMReady) return;
-  const n=nearestKM(lastPos.lat,lastPos.lon);
-  if(!n){ kmK.textContent='—'; kmM.textContent='+000'; return; }
-  const {K, mmm}=fmtKMMM(n.km);
-  kmK.textContent=String(K);
-  kmM.textContent='+'+mmm;
-}
-setInterval(refreshSign, 600);
 
-/* =================== CÂMERA + PINCH-ZOOM =================== */
+/* =================== KM HUD (tela) =================== */
+function applyKmHud(){
+  // posição
+  kmHud.className = ''; kmHud.classList.add(state.kmPos);
+}
+function updateKmHud(){
+  if(!csvKMReady || !lastPos){ kmText.textContent='—'; return; }
+  const n=nearestKM(lastPos.lat,lastPos.lon); if(!n){ kmText.textContent='—'; return; }
+  const {K, mmm}=fmtKMMM(n.km);
+  kmLabel.textContent = 'KM';
+  if(state.kmFmt==='label') kmText.textContent = '';               // só “KM”
+  else if(state.kmFmt==='plus') kmText.textContent = `${K}+${mmm}`; // KM K+mmm
+  else kmText.textContent = `${K},${mmm}`;                          // KM K,mmm
+}
+setInterval(updateKmHud, 600);
+
+/* =================== Câmera + Pinch-Zoom =================== */
 async function startCamera(){
   try{
-    const st=await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} },
-      audio:false
-    });
-    vid.srcObject=st;
-    await vid.play().catch(()=>{});
-    await new Promise(res=>{ if(vid.readyState>=2 && vid.videoWidth) res(); else vid.onloadeddata=()=>res(); });
-    camReady=true;
-
-    camTrack = st.getVideoTracks()[0];
-    camCap = camTrack.getCapabilities?.()||null;
-    if(camCap && camCap.zoom){
-      zoomSupported=true;
-      zoomMin=camCap.zoom.min??1; zoomMax=camCap.zoom.max??1; zoomStep=camCap.zoom.step??0.1;
-      zoomVal=Math.max(zoomMin, Math.min(zoomMax, camTrack.getSettings?.().zoom ?? zoomMin));
-    }else{
-      zoomSupported=false; virtualZoom=1; // fallback por crop no canvas
-    }
+    const st=await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false });
+    vid.srcObject=st; await vid.play().catch(()=>{}); await new Promise(res=>{ if(vid.readyState>=2&&vid.videoWidth) res(); else vid.onloadeddata=()=>res(); });
+    camReady=true; camTrack=st.getVideoTracks()[0]; camCap=camTrack.getCapabilities?.()||null;
+    if(camCap && camCap.zoom){ zoomSupported=true; zoomMin=camCap.zoom.min??1; zoomMax=camCap.zoom.max??1; zoomVal=camTrack.getSettings?.().zoom ?? zoomMin; } else { zoomSupported=false; virtualZoom=1; }
   }catch(e){ camReady=false; showToast('Falha na câmera'); }
 }
 
-/* Pinch-to-zoom */
-const pointers=new Map();
-let startDist=0, startZoom=1;
-function distance(p1,p2){ const dx=p2.x-p1.x, dy=p2.y-p1.y; return Math.hypot(dx,dy); }
-
-camWrap.addEventListener('pointerdown', (e)=>{ camWrap.setPointerCapture?.(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); });
-camWrap.addEventListener('pointermove', async (e)=>{
-  if(!pointers.has(e.pointerId)) return;
-  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+/* Pinch-to-zoom (nativo se suportado; senão virtual) */
+const pointers=new Map(); let startDist=0, startZoom=1;
+function distance(a,b){ const dx=b.x-a.x, dy=b.y-a.y; return Math.hypot(dx,dy); }
+camWrap.addEventListener('pointerdown',(e)=>{ camWrap.setPointerCapture?.(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); });
+camWrap.addEventListener('pointermove',async(e)=>{
+  if(!pointers.has(e.pointerId)) return; pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pointers.size===2){
-    const [a,b]=[...pointers.values()];
-    const dist=distance(a,b);
+    const [p1,p2]=[...pointers.values()]; const dist=distance(p1,p2);
     if(!startDist){ startDist=dist; startZoom = zoomSupported? zoomVal : virtualZoom; return; }
-    const scale = dist / startDist;
-    const target = Math.max(zoomMin||1, Math.min((zoomMax||6), startZoom * scale));
-    if(zoomSupported){
-      try{ await camTrack.applyConstraints({advanced:[{zoom:target}]}); zoomVal=target; }catch{}
-    }else{
-      virtualZoom = target; // usado no crop da captura
-    }
+    const target = Math.max(zoomMin, Math.min(zoomMax||6, startZoom * (dist/startDist)));
+    if(zoomSupported){ try{ await camTrack.applyConstraints({advanced:[{zoom:target}]}); zoomVal=target; }catch{} }
+    else { virtualZoom=target; }
   }
 });
-function endPointer(e){ pointers.delete(e.pointerId); if(pointers.size<2){ startDist=0; } }
-camWrap.addEventListener('pointerup', endPointer);
-camWrap.addEventListener('pointercancel', endPointer);
-camWrap.addEventListener('pointerleave', endPointer);
+['pointerup','pointercancel','pointerleave'].forEach(ev=>camWrap.addEventListener(ev,(e)=>{ pointers.delete(e.pointerId); if(pointers.size<2) startDist=0; }));
 
-/* =================== CARIMBO NA FOTO =================== */
-/* — pequeno, alinhado, uma linha: “KM K,mmm” — */
-function drawStamp(ctx,w,h,kmText,tsStr,gpsStr){
-  const bandH=Math.max(72,Math.round(h*0.10));  // faixa menor
+/* =================== Carimbo na FOTO (simples e alinhado) =================== */
+function drawStamp(ctx,w,h,kmStr){
+  const bandH=Math.max(72,Math.round(h*0.10));
   ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(0,h-bandH,w,bandH);
-  const fMain=Math.round(h*0.038);   // tamanho contido
-  const fSub =Math.round(h*0.026);
-
-  // KM (sempre)
+  const fMain=Math.round(h*0.038);
   ctx.fillStyle='#d8ffe6'; ctx.textAlign='left'; ctx.font=`900 ${fMain}px system-ui`;
-  ctx.fillText(kmText,16,h-bandH+Math.round(bandH*0.60));
-
-  // Data/Hora e GPS (desligados por padrão)
-  if(false){/* SHOW_TS false fixo (sem opções visuais) */}
-  if(false){/* SHOW_GPS false fixo (sem opções visuais) */}
+  ctx.fillText(kmStr,16,h-bandH+Math.round(bandH*0.60));
 }
 
 /* =================== CAPTURA → toBlob → write(blob) =================== */
 async function frameToJpegBlob(){
   const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
-
-  // resolução final (máximo lado)
-  const sc=(Math.max(vw,vh)>MAX_DIM)? (MAX_DIM/Math.max(vw,vh)) : 1;
+  const sc=(Math.max(vw,vh)>state.maxDim)? (state.maxDim/Math.max(vw,vh)) : 1;
   const w=Math.round(vw*sc), h=Math.round(vh*sc);
-
   const can=document.createElement('canvas'); const ctx=can.getContext('2d',{alpha:false});
   can.width=w; can.height=h;
 
-  // Fonte: recorte se for zoom virtual; se zoom nativo, pega frame inteiro
+  // aplica zoom virtual se necessário
   if(zoomSupported || virtualZoom<=1.001){
     ctx.drawImage(vid,0,0,w,h);
   }else{
-    // Crop central proporcional ao virtualZoom
-    const z = Math.max(1, Math.min(virtualZoom, 6));
-    const srcW = Math.round(vw / z), srcH = Math.round(vh / z);
-    const sx = Math.floor((vw - srcW)/2), sy = Math.floor((vh - srcH)/2);
-    ctx.drawImage(vid, sx, sy, srcW, srcH, 0, 0, w, h);
+    const z=Math.max(1, Math.min(virtualZoom,6));
+    const srcW=Math.round(vw/z), srcH=Math.round(vh/z);
+    const sx=Math.floor((vw-srcW)/2), sy=Math.floor((vh-srcH)/2);
+    ctx.drawImage(vid,sx,sy,srcW,srcH,0,0,w,h);
   }
 
-  // KM para carimbo: “KM K,mmm”
-  let kmText='KM —';
-  if (csvKMReady && lastPos){
+  // string do KM para FOTO (sempre KM + valor)
+  let kmStr='KM —';
+  if(csvKMReady && lastPos){
     const n=nearestKM(lastPos.lat,lastPos.lon);
-    if(n){ const {K, mmm}=fmtKMMM(n.km); kmText = `KM ${K},${mmm}`; }
+    if(n){
+      const {K, mmm}=fmtKMMM(n.km);
+      if(state.kmFmt==='plus') kmStr=`KM ${K}+${mmm}`;
+      else kmStr=`KM ${K},${mmm}`; // default
+    }
   }
+  drawStamp(ctx,w,h,kmStr);
 
-  drawStamp(ctx,w,h,kmText);
-
-  // ESQUEMA DO RELATÓRIO
-  const blob = await new Promise(res=>can.toBlob(res,'image/jpeg',JPG_Q));
+  const q=Math.max(0.7, Math.min(1, state.jpgQ/100));
+  const blob=await new Promise(res=>can.toBlob(res,'image/jpeg',q));
   if(blob && blob.size>0) return blob;
-
-  // Fallback simples: dataURL → Blob
-  const dataURL = can.toDataURL('image/jpeg', JPG_Q);
-  const bin = atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
+  // Fallback: dataURL → Blob
+  const dataURL=can.toDataURL('image/jpeg',q);
+  const bin=atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
   return new Blob([u8], {type:'image/jpeg'});
 }
@@ -364,78 +360,85 @@ async function frameToJpegBlob(){
 async function savePhotoOnce(){
   if(writing) return;
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady && vid.videoWidth)) return;
-
   writing=true;
   try{
     const ok=await verifyPermission(rootDirHandle,true);
     if(!ok){ showToast('Permissão na pasta'); writing=false; return; }
 
-    const blob = await frameToJpegBlob();
+    const blob=await frameToJpegBlob();
 
-    // Nome: FOTO_km_K_mmm_YYYY-MM-DD_HH-MM-SS.jpg
+    // Nome do arquivo: FOTO_km_K_mmm_YYYY-MM-DD_HH-MM-SS.jpg
     let kPart='K', mPart='000';
-    if (csvKMReady && lastPos){
+    if(csvKMReady && lastPos){
       const n=nearestKM(lastPos.lat,lastPos.lon);
       if(n){ const {K, mmm}=fmtKMMM(n.km); kPart=String(K); mPart=mmm; }
     }
-    const name = `FOTO_km_${kPart}_${mPart}_${stampStr()}.jpg`;
+    const name=`FOTO_km_${kPart}_${mPart}_${stampStr()}.jpg`;
 
-    const fh = await rootDirHandle.getFileHandle(name,{create:true});
-    const w = await fh.createWritable();
-    await w.write(blob);          // ← igual ao relatório
+    const fh=await rootDirHandle.getFileHandle(name,{create:true});
+    const w=await fh.createWritable();
+    await w.write(blob);  // ← mesmo esquema do relatório
     await w.close();
 
-    // sanidade
+    // checagem
     const f=await fh.getFile();
     if(f.size===0){
       const blob2=await frameToJpegBlob();
       const w2=await fh.createWritable(); await w2.write(blob2); await w2.close();
     }
-  }catch(err){
-    console.error('Salvar foto erro:', err); showToast('Falha ao salvar foto');
-  }finally{
-    writing=false;
-  }
+  }catch(err){ console.error('Salvar foto erro:',err); showToast('Falha ao salvar foto'); }
+  finally{ writing=false; }
 }
 
-/* =================== AUTO c/ Wake Lock =================== */
+/* =================== AUTO + Wake Lock =================== */
 function startAuto(){
   if(isAuto) return;
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady)){ showToast('Aguarde Pasta/Câmera/GPS/CSV'); return; }
-  isAuto=true;
-  btnAuto.textContent='⏹ PARAR AUTO'; btnAuto.classList.add('auto-on'); btnAuto.classList.remove('primary');
+  isAuto=true; btnAuto.textContent='⏹ PARAR AUTO'; btnAuto.classList.add('auto-on'); btnAuto.classList.remove('primary');
   requestWakeLock();
-  queue = queue.then(()=>savePhotoOnce()).catch(()=>{});
-  autoTimer=setInterval(()=>{ queue = queue.then(()=>savePhotoOnce()).catch(()=>{}); }, AUTO_MS);
+  queue=queue.then(()=>savePhotoOnce()).catch(()=>{});
+  autoTimer=setInterval(()=>{ queue=queue.then(()=>savePhotoOnce()).catch(()=>{}); }, state.autoMs);
   showToast('Auto ON');
 }
 function stopAuto(){
   if(!isAuto) return;
-  isAuto=false;
-  btnAuto.textContent='🎬 INICIAR AUTO'; btnAuto.classList.remove('auto-on'); btnAuto.classList.add('primary');
-  clearInterval(autoTimer); autoTimer=null;
-  releaseWakeLock();
-  showToast('Auto OFF');
+  isAuto=false; btnAuto.textContent='🎬 INICIAR AUTO'; btnAuto.classList.remove('auto-on'); btnAuto.classList.add('primary');
+  clearInterval(autoTimer); autoTimer=null; releaseWakeLock(); showToast('Auto OFF');
 }
 btnAuto.addEventListener('click', ()=>{ if(isAuto) stopAuto(); else startAuto(); });
 
 /* =================== Compartilhar (WhatsApp via Web Share) =================== */
 async function shareInstant(){
   try{
-    const blob = await frameToJpegBlob();
-    const file = new File([blob], `captura_${stampStr()}.jpg`, {type:'image/jpeg', lastModified:Date.now()});
-
+    const blob=await frameToJpegBlob();
+    const file=new File([blob],`captura_${stampStr()}.jpg`,{type:'image/jpeg',lastModified:Date.now()});
     if(navigator.canShare && navigator.canShare({files:[file]})){
       await navigator.share({ files:[file], text:'Evidência de inspeção – captura instantânea.' });
     }else{
-      const msg = encodeURIComponent('Evidência de inspeção – captura instantânea.');
-      window.open(`https://wa.me/?text=${msg}`, '_blank');
+      const msg=encodeURIComponent('Evidência de inspeção – captura instantânea.');
+      window.open(`https://wa.me/?text=${msg}`,'_blank');
       const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+      setTimeout(()=>URL.revokeObjectURL(a.href),3000);
     }
-  }catch(err){ console.error('Share erro:', err); showToast('Não foi possível compartilhar'); }
+  }catch(err){ console.error('Share erro:',err); showToast('Não foi possível compartilhar'); }
 }
-btnShare.addEventListener('click', ()=>{ shareInstant().catch(()=>{}); });
+btnShare.addEventListener('click', ()=>{ shareInstant().catch(()=>{}) });
+
+/* =================== Opções do KM (somente visual de tela) =================== */
+function applyKmOptions(){
+  // formato
+  localStorage.setItem('km_fmt', state.kmFmt);
+  // posição
+  kmHud.className=''; kmHud.classList.add(state.kmPos);
+  localStorage.setItem('km_pos', state.kmPos);
+  // valores atuais
+  selKmFmt.value=state.kmFmt; selKmPos.value=state.kmPos;
+  updateKmHud();
+}
+btnGear.addEventListener('click', ()=>{ opts.style.display = (opts.style.display==='block'?'none':'block'); });
+btnCloseOpts.addEventListener('click', ()=>{ opts.style.display='none'; });
+selKmFmt.addEventListener('change', ()=>{ state.kmFmt=selKmFmt.value; applyKmOptions(); });
+selKmPos.addEventListener('change', ()=>{ state.kmPos=selKmPos.value; applyKmOptions(); });
 
 /* =================== GPS =================== */
 function startGPS(){
@@ -451,10 +454,11 @@ function startGPS(){
 
 /* =================== BOOT =================== */
 async function boot(){
+  applyKmOptions(); // carrega posição/formato salvos
   await startCamera();
   startGPS();
   await loadKM();
-  refreshSign();
+  updateKmHud();
 }
 boot();
 </script>
