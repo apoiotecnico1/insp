@@ -18,7 +18,7 @@
     overflow:hidden; -webkit-user-select:none; user-select:none;
   }
 
-  /* Área da câmera */
+  /* Canvas da app */
   #app{ position:fixed; inset:0; display:grid; grid-template-rows:1fr; }
   #camWrap{
     position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate;
@@ -26,9 +26,9 @@
   }
   #vid{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000 }
 
-  /* Topo: NX (esq), Opções (dir) */
+  /* Topo: apenas Opções (⚙️) à direita */
   #hudTop{
-    position:absolute; top:10px; left:0; right:0; display:flex; justify-content:space-between; z-index:6;
+    position:absolute; top:10px; left:0; right:0; display:flex; justify-content:flex-end; z-index:7;
     padding:0 10px; pointer-events:none;
   }
   .chipBtn{
@@ -39,7 +39,7 @@
     cursor:pointer; user-select:none; color:#eaf2ff; font-weight:900;
   }
 
-  /* HUD do KM (centro topo) */
+  /* KM central no topo */
   #kmHud{ position:absolute; z-index:5; pointer-events:none; }
   .kmBadge{
     display:inline-flex; align-items:center; gap:8px;
@@ -51,13 +51,12 @@
   .kmBadge .val{ font-variant-numeric:tabular-nums; letter-spacing:.01em }
   .pos-top-center{ top:10px; left:50%; transform:translateX(-50%); }
 
-  /* Chips à direita (GPS, contador) */
+  /* Chips (GPS/contador) deslocados para não sobrepor o ⚙️ */
   #chipsRight{
-    position:absolute; top:10px; right:60px; display:flex; gap:8px; z-index:5; pointer-events:none;
+    position:absolute; top:60px; right:10px; display:flex; gap:8px; z-index:6; pointer-events:none;
   }
   .chipSmall{
-    pointer-events:none;
-    display:inline-flex; align-items:center; gap:6px;
+    display:inline-flex; align-items:center; gap:6px; pointer-events:none;
     background:linear-gradient(180deg,var(--panelA),var(--panelB));
     border:1px solid rgba(255,255,255,.16);
     border-radius:12px; padding:6px 10px; font-weight:900; font-size:.92rem;
@@ -66,7 +65,7 @@
 
   /* FAB AUTO (ícone) */
   #fabWrap{
-    position:absolute; bottom:14px; left:0; right:0; display:flex; justify-content:center; z-index:6;
+    position:absolute; bottom:14px; left:0; right:0; display:flex; justify-content:center; z-index:7;
   }
   #btnAuto{
     width:72px; height:72px; border-radius:50%;
@@ -76,7 +75,7 @@
   }
   #btnAuto.on{ background:linear-gradient(180deg,#ff8f49,#e06a2d); color:#1b0b02; border-color:#c45722 }
 
-  /* Gate de pasta (minimalista) */
+  /* Gate de pasta */
   #folderGate{
     position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:#060a12;
   }
@@ -99,9 +98,9 @@
     border:1px solid rgba(255,255,255,.16); color:#eaf2ff; padding:10px 14px; border-radius:12px;
   }
 
-  /* Opções (ícones) */
+  /* Opções (abre sob o ⚙️) */
   #opts{
-    position:absolute; right:10px; top:58px; z-index:7; display:none;
+    position:absolute; right:10px; top:58px; z-index:8; display:none;
     background:linear-gradient(180deg,var(--panelA),var(--panelB)); border:1px solid rgba(255,255,255,.16);
     border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.45); padding:12px; min-width:320px; pointer-events:auto;
   }
@@ -120,20 +119,19 @@
   <div id="camWrap">
     <video id="vid" autoplay playsinline muted></video>
 
-    <!-- KM ao centro topo -->
+    <!-- KM central -->
     <div id="kmHud" class="pos-top-center">
       <div class="kmBadge"><span class="label">KM</span> <span class="val" id="kmText">—</span></div>
     </div>
 
-    <!-- Chips à direita: GPS e Contador -->
+    <!-- Chips deslocados -->
     <div id="chipsRight">
-      <div class="chipSmall" id="gpsChip">📡 <b id="gpsTxt">—</b></div>
+      <div class="chipSmall">📡 <b id="gpsTxt">—</b></div>
       <div class="chipSmall">📷 <b id="countTxt">0</b></div>
     </div>
 
-    <!-- Topo: NX e Opções -->
+    <!-- Topo: somente Opções -->
     <div id="hudTop">
-      <div class="chipBtn" id="btnNX" title="NX" aria-label="NX">🧭</div>
       <div class="chipBtn" id="btnGear" title="Opções" aria-label="Opções">⚙️</div>
     </div>
 
@@ -186,16 +184,15 @@
 let rootDirHandle=null; let csvReady=false, camReady=false, gpsReady=false; let lastPos=null;
 let isAuto=false, autoTimer=null, writing=false;
 let wakeLock=null, keepAliveTimer=null;
-
 let sessionCount=0;
 
+/* DOM */
 const vid=document.getElementById('vid');
 const kmText=document.getElementById('kmText');
 const gpsTxt=document.getElementById('gpsTxt');
 const countTxt=document.getElementById('countTxt');
 const btnAuto=document.getElementById('btnAuto');
 const btnGear=document.getElementById('btnGear');
-const btnNX=document.getElementById('btnNX');
 const opts=document.getElementById('opts');
 const folderGate=document.getElementById('folderGate');
 const btnPickFolder=document.getElementById('btnPickFolder');
@@ -216,25 +213,23 @@ function showToast(msg,ms=1400){ toast.textContent=msg; toast.style.display='blo
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
-function fileStampBR(){ const d=new Date(); const DD=String(d.getDate()).padStart(2,'0'); const MM=String(d.getMonth()+1).padStart(2,'0'); const YY=d.getFullYear(); const HH=String(d.getHours()).padStart(2,'0'); const m=String(d.getMinutes()).padStart(2,'0'); const s=String(d.getSeconds()).padStart(2,'0'); return `${YY}-${MM}-${DD}_${HH}-${m}-${s}`; } // igual ao seu "fileStamp" (YYYY-MM-DD_HH-mm-ss)
+function stampFile(){ const d=new Date(); const YY=d.getFullYear(); const MM=String(d.getMonth()+1).padStart(2,'0'); const DD=String(d.getDate()).padStart(2,'0'); const HH=String(d.getHours()).padStart(2,'0'); const m=String(d.getMinutes()).padStart(2,'0'); const s=String(d.getSeconds()).padStart(2,'0'); return `${YY}-${MM}-${DD}_${HH}-${m}-${s}`; }
+function fmtKmKmmm(val){ const K=Math.floor(val); let m=Math.round((val-K)*1000); if(m>=1000){m-=1000;} return `${K}+${String(m).padStart(3,'0')}`; }
 
 /* ========================= WAKE LOCK ========================= */
 async function requestWakeLock(){ try{ if('wakeLock' in navigator){ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener?.('release',()=>{ if(isAuto) requestWakeLock(); }); } else { keepAliveTimer=setInterval(()=>{},30000); } }catch{} }
 async function releaseWakeLock(){ try{ await wakeLock?.release?.(); }catch{} finally{ wakeLock=null; } if(keepAliveTimer){ clearInterval(keepAliveTimer); keepAliveTimer=null; } }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&isAuto){ requestWakeLock(); }});
 
-/* ========================= NX link ========================= */
-btnNX.addEventListener('click', ()=>{ window.open('https://apoiotecnico1.github.io/nx', '_blank'); });
-
 /* ========================= Pasta / permissão ========================= */
 async function verifyPermission(handle,rw){ const opt={mode:rw?'readwrite':'read'}; const q=await handle.queryPermission?.(opt); if(q==='granted') return true; const r=await handle.requestPermission?.(opt); return r==='granted'; }
 btnPickFolder.addEventListener('click', async ()=>{ try{
   rootDirHandle = await window.showDirectoryPicker({mode:'readwrite'});
-  const ok=await verifyPermission(rootDirHandle,true); if(!ok){ showToast('Permissão negada'); return; }
+  if(!await verifyPermission(rootDirHandle,true)){ showToast('Permissão negada'); return; }
   folderGate.style.display='none'; showToast('Pasta OK');
 }catch{ showToast('Seleção cancelada'); }});
 
-/* ========================= KM (CSV) ========================= */
+/* ========================= CSV (KM) ========================= */
 let kmPoints=[], kmGrid=new Map(); const CELL=0.005;
 function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
 function gridInsert(grid,p){ const k=cellKey(p.lat,p.lon); const a=grid.get(k); a?a.push(p):grid.set(k,[p]); }
@@ -272,11 +267,13 @@ function nearestKM(lat,lon){
   let best=null,bd=Infinity; for(const p of c){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
 }
 
-/* ========================= HUD (KM + GPS) ========================= */
+/* ========================= HUD KM + GPS ========================= */
 setInterval(()=>{
-  if(lastPos){ const best=nearestKM(lastPos.lat,lastPos.lon); kmText.textContent = best? formatKm(best.km) : '—'; }
+  if(lastPos){
+    const n=nearestKM(lastPos.lat,lastPos.lon);
+    kmText.textContent = n ? fmtKmKmmm(n.km) : '—';
+  }
 }, 600);
-function formatKm(v){ const K=Math.floor(v); let m=Math.round((v-K)*1000); if(m>=1000){m-=1000;} return `${K}+${String(m).padStart(3,'0')}`; }
 
 /* ========================= Câmera ========================= */
 async function startCamera(){
@@ -309,27 +306,42 @@ function stampOverlay(ctx,w,h,kmStr,tsStr,gpsStr){
   const bandH=Math.max(100,Math.round(h*0.14));
   ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
 
-  // KM (linha central da faixa)
-  if(kmStr){
-    ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.05)}px system-ui`;
-    ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
-    ctx.fillText(`KM ${kmStr}`, 20, h - bandH + Math.round(bandH*0.50));
-    ctx.shadowBlur=0;
-  }
-  // GPS (linha superior da faixa)
+  // GPS (linha superior)
   if(gpsStr){
     ctx.fillStyle='#cfe7ff'; ctx.textAlign='left'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
     ctx.fillText(gpsStr, 20, h - bandH + 28);
   }
-  // Data/Hora (rodapé da faixa)
+  // KM (linha central)
+  if(kmStr){
+    ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.05)}px system-ui`;
+    ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
+    ctx.fillText(kmStr, 20, h - bandH + Math.round(bandH*0.50));
+    ctx.shadowBlur=0;
+  }
+  // Data/Hora (rodapé)
   if(tsStr){
     ctx.fillStyle='#ffffff'; ctx.textAlign='left'; ctx.font=`700 ${Math.round(h*0.03)}px system-ui`;
     ctx.fillText(tsStr, 20, h - 18);
   }
 }
 
-/* ========================= Captura (JPG) ========================= */
+/* ========================= Pinch‑zoom (virtual, sai na foto) ========================= */
+const pointers=new Map(); let startDist=0, startZoom=1, virtualZoom=1;
+function distance(a,b){ const dx=b.x-a.x, dy=b.y-a.y; return Math.hypot(dx,dy); }
+camWrap.addEventListener('pointerdown',(e)=>{ camWrap.setPointerCapture?.(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); });
+camWrap.addEventListener('pointermove',(e)=>{
+  if(!pointers.has(e.pointerId)) return; pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===2){
+    const [p1,p2]=[...pointers.values()]; const dist=distance(p1,p2);
+    if(!startDist){ startDist=dist; startZoom=virtualZoom; return; }
+    virtualZoom=Math.max(1, Math.min(6, startZoom*(dist/startDist)));
+  }
+});
+['pointerup','pointercancel','pointerleave'].forEach(ev=>camWrap.addEventListener(ev,(e)=>{ pointers.delete(e.pointerId); if(pointers.size<2) startDist=0; }));
+
+/* ========================= Canvas e captura ========================= */
 const capCanvas=document.createElement('canvas'), capCtx=capCanvas.getContext('2d',{alpha:false});
+
 async function frameToBlobAndMeta(){
   const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
   const sc=(Math.max(vw,vh)>state.maxDim)? (state.maxDim/Math.max(vw,vh)) : 1;
@@ -338,18 +350,24 @@ async function frameToBlobAndMeta(){
   if(capCanvas.width!==w) capCanvas.width=w;
   if(capCanvas.height!==h) capCanvas.height=h;
 
-  // frame
-  capCtx.filter='none';
-  capCtx.drawImage(vid,0,0,w,h);
+  // frame com zoom virtual (sai na foto)
+  if(virtualZoom<=1.001){
+    capCtx.drawImage(vid,0,0,w,h);
+  }else{
+    const z=Math.max(1, Math.min(virtualZoom,6));
+    const srcW=Math.round(vw/z), srcH=Math.round(vh/z);
+    const sx=Math.floor((vw - srcW)/2), sy=Math.floor((vh - srcH)/2);
+    capCtx.drawImage(vid, sx, sy, srcW, srcH, 0, 0, w, h);
+  }
 
   // textos
-  const km = kmText.textContent && kmText.textContent!=='—' ? kmText.textContent : null;
-  const ts = new Date().toLocaleString();
-  const gps = lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : null;
+  const kmStr = (kmText.textContent && kmText.textContent!=='—') ? `KM ${kmText.textContent}` : 'KM —';
+  const tsStr = new Date().toLocaleString();
+  const gpsStr = lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
 
-  stampOverlay(capCtx,w,h,km,ts,gps);
+  stampOverlay(capCtx, w, h, kmStr, tsStr, gpsStr);
 
-  // blob (original) + fallback se necessário
+  // Blob JPEG (original) + fallback se necessário
   const q=Math.max(0.7, Math.min(1, state.jpgQ/100));
   let blob=await new Promise(res=>capCanvas.toBlob(res,'image/jpeg',q));
   if(!blob){
@@ -358,42 +376,75 @@ async function frameToBlobAndMeta(){
     for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
     blob=new Blob([u8], {type:'image/jpeg'});
   }
-  return {blob, kmStr: km?`KM ${km}`:'KM —', tsStr: ts};
+  return {blob, kmStr, tsStr};
 }
 
-async function writeFile(handle, blob){ const w=await handle.createWritable(); await w.write(blob); await w.close(); }
-async function ensureWriteOK(handle, primaryBlob){
-  try{
-    await new Promise(r=>setTimeout(r,12)); // curto tempo p/ flush em alguns Androids
-    const f=await handle.getFile(); if(f.size>0) return;
-    // rewrite 1x com fallback (dataURL->Blob) no mesmo nome
+/* ========= Escrita atômica anti‑0B: .part -> verifica -> final ========= */
+async function writeAtomicJpeg(dirHandle, finalName, primaryBlob){
+  // 1) Nome temporário .part
+  const tempName = finalName.replace(/\.jpg$/i, `.${Date.now()}.part.jpg`);
+
+  // 2) Grava .part
+  const tempFH = await dirHandle.getFileHandle(tempName, {create:true});
+  let w = await tempFH.createWritable({keepExistingData:false});
+  await w.write(primaryBlob); await w.close();
+
+  // 3) Verifica .part; se 0B, reescreve com fallback (dataURL->blob)
+  let tempFile = await tempFH.getFile();
+  if(tempFile.size===0){
     const q=Math.max(0.7, Math.min(1, state.jpgQ/100));
-    let fb=primaryBlob;
-    if(fb.size===0){
-      const dataURL=capCanvas.toDataURL('image/jpeg',q);
-      const bin=atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
-      for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
-      fb=new Blob([u8], {type:'image/jpeg'});
-    }
-    const w=await handle.createWritable(); await w.write(fb); await w.close();
-  }catch{}
+    const dataURL=capCanvas.toDataURL('image/jpeg',q);
+    const bin=atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+    const fbBlob=new Blob([u8], {type:'image/jpeg'});
+    const w2=await tempFH.createWritable({keepExistingData:false});
+    await w2.write(fbBlob); await w2.close();
+    tempFile = await tempFH.getFile();
+    if(tempFile.size===0){ showToast('Falha ao salvar (0B)'); return null; }
+  }
+
+  // 4) Copia .part -> final
+  const finalFH = await dirHandle.getFileHandle(finalName, {create:true});
+  const wFinal = await finalFH.createWritable({keepExistingData:false});
+  const buf = await tempFile.arrayBuffer();
+  await wFinal.write(new Blob([buf], {type:'image/jpeg'}));
+  await wFinal.close();
+
+  // 5) Remove .part (best effort)
+  try{ await dirHandle.removeEntry(tempName); }catch{}
+
+  // 6) Verifica final (robustez)
+  const f = await finalFH.getFile();
+  if(f.size===0){ showToast('Falha ao salvar (final 0B)'); return null; }
+
+  return finalFH;
 }
 
+/* ========================= CAPTURAR & SALVAR ========================= */
 async function capturePhoto(){
+  if(writing) return;
   if(!(rootDirHandle && camReady && gpsReady && csvReady)) return;
-  const ok=await verifyPermission(rootDirHandle,true); if(!ok){ showToast('Permissão na pasta'); return; }
 
-  const {blob, kmStr, tsStr}=await frameToBlobAndMeta();
+  writing=true;
+  try{
+    if(!await verifyPermission(rootDirHandle,true)){ showToast('Permissão na pasta'); writing=false; return; }
 
-  // Nome: FOTO_{KM_K_mmm}_YYYY-MM-DD_HH-mm-ss.jpg
-  const kPart=(kmStr||'KM —').replace('KM ','').replace('+','_').replace(',','_');
-  const name=`FOTO_${kPart}_${fileStampBR()}.jpg`;
+    const {blob, kmStr, tsStr}=await frameToBlobAndMeta();
 
-  const fh=await rootDirHandle.getFileHandle(name,{create:true});
-  await writeFile(fh, blob);
-  await ensureWriteOK(fh, blob);
+    // FOTO_{KM_K_mmm}_YYYY-MM-DD_HH-mm-ss.jpg
+    const kPart = (kmStr||'KM —').replace('KM ','').replace('+','_').replace(',','_');
+    const name  = `FOTO_${kPart}_${stampFile()}.jpg`;
 
-  sessionCount++; countTxt.textContent=String(sessionCount);
+    const fh = await writeAtomicJpeg(rootDirHandle, name, blob);
+    if(!fh) return; // já mostrou toast
+
+    sessionCount++; countTxt.textContent=String(sessionCount);
+  }catch(e){
+    console.error('Salvar foto erro:', e);
+    showToast('Falha ao salvar foto');
+  }finally{
+    writing=false;
+  }
 }
 
 /* ========================= AUTO ========================= */
@@ -404,7 +455,6 @@ function startAuto(){
   requestWakeLock();
   btnAuto.classList.add('on'); btnAuto.textContent='⏹'; btnAuto.setAttribute('aria-label','Parar captura automática');
 
-  // uma captura imediata
   capturePhoto().catch(()=>{});
   autoTimer=setInterval(()=>{ if(!writing) capturePhoto().catch(()=>{}); }, state.autoMs);
   showToast('Auto ON');
@@ -420,10 +470,7 @@ function stopAuto(){
 btnAuto.addEventListener('click', ()=>{ if(isAuto) stopAuto(); else startAuto(); });
 
 /* ========================= Opções ========================= */
-btnGear.addEventListener('click', ()=>{
-  const open=(opts.style.display!=='block');
-  opts.style.display = open?'block':'none';
-});
+btnGear.addEventListener('click', ()=>{ opts.style.display = (opts.style.display==='block'?'none':'block'); });
 rngInterval.value=String(state.autoMs); lblInterval.textContent=String(state.autoMs);
 rngJpgQ.value=String(state.jpgQ); lblQ.textContent=String(state.jpgQ);
 selMaxDim.value=String(state.maxDim); lblDim.textContent=String(state.maxDim);
@@ -431,25 +478,9 @@ rngInterval.addEventListener('input', ()=>{ state.autoMs=Number(rngInterval.valu
 rngJpgQ.addEventListener('input',   ()=>{ state.jpgQ  =Number(rngJpgQ.value); lblQ.textContent=rngJpgQ.value; localStorage.setItem('jpg_q',  String(state.jpgQ)); });
 selMaxDim.addEventListener('change',()=>{ state.maxDim=Number(selMaxDim.value); lblDim.textContent=selMaxDim.value; localStorage.setItem('max_dim',String(state.maxDim)); });
 
-/* ========================= Pinch‑to‑zoom (virtual) ========================= */
-const pointers=new Map(); let startDist=0, startZoom=1, virtualZoom=1;
-function distance(a,b){ const dx=b.x-a.x, dy=b.y-a.y; return Math.hypot(dx,dy); }
-camWrap.addEventListener('pointerdown',(e)=>{ camWrap.setPointerCapture?.(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); });
-camWrap.addEventListener('pointermove',(e)=>{
-  if(!pointers.has(e.pointerId)) return; pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(pointers.size===2){
-    const [p1,p2]=[...pointers.values()]; const dist=distance(p1,p2);
-    if(!startDist){ startDist=dist; startZoom=virtualZoom; return; }
-    virtualZoom=Math.max(1, Math.min(6, startZoom*(dist/startDist)));
-  }
-});
-['pointerup','pointercancel','pointerleave'].forEach(ev=>camWrap.addEventListener(ev,(e)=>{ pointers.delete(e.pointerId); if(pointers.size<2) startDist=0; }));
-
 /* ========================= Boot ========================= */
-btnNX.addEventListener('click', ()=>{ window.open('https://apoiotecnico1.github.io/nx','_blank'); });
-
 async function boot(){
-  // valores salvos
+  // aplica defaults salvos
   rngInterval.value=String(state.autoMs); lblInterval.textContent=String(state.autoMs);
   rngJpgQ.value=String(state.jpgQ); lblQ.textContent=String(state.jpgQ);
   selMaxDim.value=String(state.maxDim); lblDim.textContent=String(state.maxDim);
@@ -458,10 +489,10 @@ async function boot(){
   await startCamera();
   startGPS();
 
-  // HUD KM
+  // HUD (segurança extra)
   setInterval(()=>{
     if(!lastPos){ kmText.textContent='—'; return; }
-    const best=nearestKM(lastPos.lat,lastPos.lon); kmText.textContent=best?formatKm(best.km):'—';
+    const n=nearestKM(lastPos.lat,lastPos.lon); kmText.textContent = n ? fmtKmKmmm(n.km) : '—';
   }, 600);
 }
 boot();
