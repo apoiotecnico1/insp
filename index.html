@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0b1020" />
-<title>Relatório Fotográfico – Iluminação (Campo / Noturno)</title>
+<title>Relatório Fotográfico – Inspeção Noturna (Consolidado)</title>
 <style>
   :root{
     --bg:#0e1533; --surface:#0f1731cc; --fg:#e8eeff; --muted:#a9b7df; --border:#1e284d;
@@ -19,7 +19,7 @@
   html,body{height:100%}
   body{
     margin:0; color:var(--fg);
-    background: radial-gradient(1200px 600px at 10% -10%, #0d2a7633, transparent 70%), radial-gradient(1000px 600px at 120% 10%, #0b553355, transparent 70%), var(--bg);
+    background: radial-gradient(1200px 600px at 50% -10%, #0d2a7633, transparent 70%), radial-gradient(1000px 600px at 120% 10%, #0b553355, transparent 70%), var(--bg);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
     padding:12px; line-height:1.35; overflow-x:hidden;
   }
@@ -67,8 +67,8 @@
     box-shadow: 0 6px 16px rgba(0,0,0,.28);
   }
   #btnMiniCycle{ position:absolute; left:10px; top:10px; }    /* trocar câmera */
-  #btnMiniPreset{ position:absolute; left:64px; top:10px; }  /* presets de câmera */
-  #btnMiniPower{ position:absolute; right:10px; top:10px; }  /* ligar/parar câmera */
+  #btnMiniPreset{ position:absolute; left:64px; top:10px; }  /* presets */
+  #btnMiniPower{ position:absolute; right:10px; top:10px; }  /* ligar/parar */
   #btnRecStop { position:absolute; right:10px; bottom:10px; display:none } /* STOP gravação */
   #btnPTT     { position:absolute; right:100px; bottom:10px; display:none } /* PTT */
 
@@ -83,9 +83,7 @@
   #zoomLbl{ min-width:48px; text-align:center; font-weight:900 }
 
   /* HUD contadores */
-  #hud{
-    position:absolute; left:10px; bottom:10px; right:10px; display:flex; gap:8px; align-items:center; justify-content:space-between; pointer-events:none;
-  }
+  #hud{ position:absolute; left:10px; bottom:10px; right:10px; display:flex; gap:8px; align-items:center; justify-content:space-between; pointer-events:none; }
   .pill{
     pointer-events:auto; display:inline-flex; align-items:center; gap:8px;
     background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.45));
@@ -172,6 +170,19 @@
   @keyframes splashout{ to{ opacity:0; transform: scale(1.01) } }
   @keyframes typing { from { width: 0 } to { width: 24ch } }
   @keyframes caret { 0%, 100% { border-right-color: transparent } 50% { border-right-color: #43ff9b } }
+
+  /* ===== Modal PDF ===== */
+  #pdfModal{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:3000;
+  }
+  #pdfModal .inner{
+    background:linear-gradient(180deg, rgba(10,16,40,.95), rgba(10,16,35,.92));
+    border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:16px; max-width:320px; width:92%;
+    box-shadow:0 18px 40px rgba(0,0,0,.45);
+  }
+  #pdfModal h3{ margin:0 0 10px; font-size:1.02rem }
+  #pdfOpts{ display:flex; flex-wrap:wrap; gap:8px; }
+  #pdfOpts button{ flex:1 1 64px }
 </style>
 </head>
 <body>
@@ -264,6 +275,21 @@
   <div id="gal" class="gallery"></div>
 </div>
 
+<!-- Modal de opções de PDF -->
+<div id="pdfModal">
+  <div class="inner">
+    <h3>Fotos por página</h3>
+    <div id="pdfOpts">
+      <button class="mini" data-pp="1">1</button>
+      <button class="mini" data-pp="2">2</button>
+      <button class="mini" data-pp="4">4</button>
+      <button class="mini" data-pp="8">8</button>
+      <button class="mini" data-pp="16">16</button>
+      <button class="mini" data-pp="cancel" style="background:linear-gradient(180deg,#3a3a3a,#222)">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ====== MP4 MUXER para Chrome/Edge ====== -->
 <script type="module">
   import MP4Muxer from "https://cdn.jsdelivr.net/npm/mp4-muxer@6.0.2/+esm";
@@ -282,6 +308,7 @@ function bytesToMB(b){ return (b/1048576).toFixed(1); }
 let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null;
 let kmUpdateInterval=null;
+let isRecordingVideo=false;
 
 /* Sessão */
 let sessionPhotos = 0;
@@ -301,6 +328,8 @@ const zoomPad=document.getElementById('zoomPad'); const btnZoomDec=document.getE
 
 const hudPhotos=document.getElementById('hudPhotos'); const hudRight=document.getElementById('hudRight'); const hudVideoSize=document.getElementById('hudVideoSize');
 
+const pdfModal=document.getElementById('pdfModal'); const pdfOpts=document.getElementById('pdfOpts');
+
 /* Carimbo */
 const overlayOpts = { showKM:true, showTs:true, showIds:true, showGps:false };
 
@@ -308,77 +337,21 @@ const overlayOpts = { showKM:true, showTs:true, showIds:true, showGps:false };
 const can=document.createElement('canvas'); const ctx=can.getContext('2d',{alpha:false});
 const CAP_MAX_DIM = 1600;
 
-/* ===== Pasta + PDF incremental ===== */
+/* ===== Pasta + Sessão ===== */
 let rootDirHandle = null;
 let previewBuffer = []; // últimas 10
-let pdfWriter = null;
+// Lista das fotos da SESSÃO (ordem de captura): { handle:FileSystemFileHandle, w, h, name }
+const sessionPhotoFiles = [];
 
-function makeByteWriter(stream){
-  const enc = new TextEncoder(); let pos = 0;
-  return {
-    async writeStr(s){ const bin = enc.encode(s); await stream.write(bin); pos += bin.length; },
-    async writeBin(bin){ await stream.write(bin); pos += bin.length; },
-    get pos(){ return pos; }
-  };
+function statusChip(el, text, state){ el.textContent = text; el.className = 'st ' + (state||''); }
+function updateStatusBar(){
+  statusChip(stCsv,  'CSV: '  + (csvReady?'OK':'Carregando…'), csvReady?'ok':'warn');
+  statusChip(stCam,  'Câmera: ' + (camReady?'OK':(cameraPaused?'Parada':'Aguardando…')), (camReady?'ok':'warn'));
+  const gpsTxt = gpsReady ? (lastPos? `OK (±${Math.round(lastPos.acc||0)} m)`:'OK') : 'Aguardando…';
+  statusChip(stGps,  'GPS: ' + gpsTxt, gpsReady?'ok':'warn');
+  statusChip(stFotos,'Fotos: ' + sessionPhotos, sessionPhotos>0?'ok':'');
 }
-function createPdfStreamWriter(stream){
-  const writer = makeByteWriter(stream);
-  const offsets = []; const pagesKids = [];
-  const PW = 595, PH = 842, M = 24;
-  let nextNum = 3; let closed = false;
-  const pad10 = n => String(n).padStart(10,'0');
-
-  async function writeObjWithNum(num, body){ offsets[num] = writer.pos; await writer.writeStr(`${num} 0 obj\n${body}\nendobj\n`); }
-  async function addObj(body){ const num = nextNum++; await writeObjWithNum(num, body); return num; }
-  async function addStream(dict, data){
-    const num = nextNum++; offsets[num] = writer.pos;
-    const header = `${num} 0 obj\n${dict.replace('>>','')} /Length ${data.length} >>\nstream\n`;
-    await writer.writeStr(header); await writer.writeBin(data); await writer.writeStr(`\nendstream\nendobj\n`); return num;
-  }
-  function fitToCell(imgW, imgH){
-    let cellW = PW - 2*M, cellH = PH - 2*M;
-    let dw = cellW, dh = Math.round(imgH*(cellW/imgW));
-    if(dh > cellH){ dh=cellH; dw=Math.round(imgW*(cellH/imgH)); }
-    const tx = M + Math.round((cellW - dw)/2);
-    const ty = M + Math.round((cellH - dh)/2);
-    return {dw, dh, tx, ty};
-  }
-  return {
-    async init(){ await writer.writeStr('%PDF-1.4\n'); },
-    async addImagePage(blob, knownW, knownH){
-      if(closed) return;
-      let w = knownW, h = knownH;
-      if(!(w && h)){
-        const url = URL.createObjectURL(blob);
-        const im = await new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=url; });
-        URL.revokeObjectURL(url);
-        w = im.naturalWidth; h = im.naturalHeight;
-      }
-      const imgBuf = new Uint8Array(await blob.arrayBuffer());
-      const imNum = await addStream(`<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, imgBuf);
-      const {dw, dh, tx, ty} = fitToCell(w, h);
-      const content = `q
-${dw} 0 0 ${dh} ${tx} ${PH - (ty + dh)} cm
-/Im0 Do
-Q
-`;
-      const contNum = await addStream(`<< >>`, new TextEncoder().encode(content));
-      const pageNum = await addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im0 ${imNum} 0 R >> >> /Contents ${contNum} 0 R >>`);
-      pagesKids.push(pageNum);
-    },
-    async finalize(){
-      if(closed) return; closed = true;
-      await writeObjWithNum(2, `<< /Type /Pages /Kids [ ${pagesKids.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pagesKids.length} >>`);
-      await writeObjWithNum(1, `<< /Type /Catalog /Pages 2 0 R >>`);
-      const start = writer.pos; const count = Math.max(1, offsets.length-1) + 1;
-      let xr = `xref\n0 ${count}\n0000000000 65535 f \n`;
-      for(let i=1;i<count;i++){ const off = offsets[i] ?? 0; const flag = (offsets[i] != null); xr += `${pad10(off)} 00000 ${flag?'n':'f'} \n`; }
-      await writer.writeStr(xr);
-      await writer.writeStr(`trailer\n<< /Size ${count} /Root 1 0 R >>\nstartxref\n${start}\n%%EOF`);
-      await stream.close();
-    }
-  };
-}
+function setPdfStatus(text, ok){ stPdf.textContent = 'PDF: ' + text; stPdf.className = 'st ' + (ok?'ok':'warn'); }
 
 async function selectOutputFolder(){
   if(!('showDirectoryPicker' in window)){
@@ -393,24 +366,11 @@ async function selectOutputFolder(){
   }catch{
     stFolder.textContent = 'Pasta: OK'; stFolder.className='st ok';
   }
-
-  // novo PDF
-  const pdfHandle = await rootDirHandle.getFileHandle(`RELATORIO_${new Date().toISOString().slice(0,10)}_${Date.now()}.pdf`, { create:true });
-  const stream = await pdfHandle.createWritable();
-  pdfWriter = createPdfStreamWriter(stream);
-  await pdfWriter.init();
-  btnFinalizePdf.disabled = false; stPdf.textContent='PDF: ABERTO'; stPdf.className='st ok';
-
-  // reinicia contagem de sessão
+  // zera sessão
   sessionPhotos = 0; hudPhotos.textContent = sessionPhotos; stFotos.textContent='Fotos: '+sessionPhotos;
-}
-
-async function savePhotoDirect(blob, filename, w, h){
-  if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta não selecionada'); }
-  const fileHandle = await rootDirHandle.getFileHandle(filename, { create:true });
-  const writable = await fileHandle.createWritable(); await writable.write(blob); await writable.close();
-  if(pdfWriter){ await pdfWriter.addImagePage(blob, w, h); }
-  sessionPhotos++; hudPhotos.textContent=sessionPhotos; stFotos.textContent='Fotos: '+sessionPhotos;
+  sessionPhotoFiles.length = 0;
+  setPdfStatus('—', false);
+  btnFinalizePdf.disabled = true; // habilita quando tiver ao menos 1 foto
 }
 
 /* ===== CSV (IDs + KM) ===== */
@@ -516,7 +476,7 @@ async function startCamera(deviceIdx=deviceIndex){
     if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
     currentStream=currentTrack=currentCap=null;
     const dev=deviceList[deviceIdx];
-    // Força 720p e 30fps para fluidez
+    // Força 720p 30fps para fluidez total
     const constraints=dev? {video:{deviceId:{exact:dev.deviceId}, width:{ideal:1280}, height:{ideal:720}, frameRate:{ideal:30, max:30}}, audio:false}
                          : {video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}, frameRate:{ideal:30, max:30}}, audio:false};
     const st=await navigator.mediaDevices.getUserMedia(constraints);
@@ -530,7 +490,14 @@ async function startCamera(deviceIdx=deviceIndex){
     applyCamHeight();
 
     // Zoom discreto
-    setupZoomUI();
+    if(currentCap && currentCap.zoom){
+      zoomMin=currentCap.zoom.min??1; zoomMax=currentCap.zoom.max??1; zoomStep=currentCap.zoom.step??0.1;
+      let z = loadCamPrefsFor(deviceList[deviceIndex]?.deviceId) ?? (currentCap.zoom.min ?? 1);
+      z = Math.max(zoomMin, Math.min(zoomMax, z)); await applyZoom(z);
+      zoomPad.style.display='flex';
+    } else {
+      zoomPad.style.display='none';
+    }
 
     camReady=!!vid.videoWidth;
     deviceIndex=deviceIdx; saveCamPrefs();
@@ -542,22 +509,11 @@ async function startCamera(deviceIdx=deviceIndex){
   updateStatusBar();
 }
 
-/* Zoom +/- */
 async function applyZoom(z){
   if(!(currentTrack && currentCap && currentCap.zoom)) return;
   const val = Math.max(zoomMin, Math.min(zoomMax, Number(z)));
   try{ await currentTrack.applyConstraints({advanced:[{zoom:val}]}); }catch{ try{ await currentTrack.applyConstraints({zoom:val}); }catch{} }
   currentZoom=val; zoomLbl.textContent = currentZoom.toFixed(1)+'×'; saveCamPrefs();
-}
-function setupZoomUI(){
-  if(currentCap && currentCap.zoom){
-    zoomMin=currentCap.zoom.min??1; zoomMax=currentCap.zoom.max??1; zoomStep=currentCap.zoom.step??0.1;
-    let z = loadCamPrefsFor(deviceList[deviceIndex]?.deviceId) ?? (currentCap.zoom.min ?? 1);
-    z = Math.max(zoomMin, Math.min(zoomMax, z)); applyZoom(z);
-    zoomPad.style.display='flex';
-  } else {
-    zoomPad.style.display='none';
-  }
 }
 document.getElementById('btnZoomDec').addEventListener('click', ()=>applyZoom(currentZoom - zoomStep));
 document.getElementById('btnZoomInc').addEventListener('click', ()=>applyZoom(currentZoom + zoomStep));
@@ -570,41 +526,27 @@ btnMiniCycle.addEventListener('click', async ()=>{
   await startCamera(deviceIndex);
 });
 
-/* Presets (mini popup) */
-btnMiniPreset.addEventListener('click', ()=>{
-  presetMenu.style.display = (presetMenu.style.display==='block'?'none':'block');
-});
+/* Presets */
+btnMiniPreset.addEventListener('click', ()=>{ presetMenu.style.display = (presetMenu.style.display==='block'?'none':'block'); });
 presetMenu.addEventListener('click', async (e)=>{
   const p = e.target.closest('button')?.dataset?.preset;
   if(!p || !currentTrack) return;
   try{
-    // Tenta ajustes típicos (nem todo aparelho expõe todos)
     if(p==='noite'){
-      await currentTrack.applyConstraints({ advanced:[
-        { exposureCompensation:-1 }, { whiteBalanceMode:'continuous' }, { colorTemperature:4200 },
-        { frameRate:30 }, { brightness:0 }, { contrast:0.2 }
-      ]});
+      await currentTrack.applyConstraints({ advanced:[ {exposureCompensation:-1},{whiteBalanceMode:'continuous'},{colorTemperature:4200},{frameRate:30} ]});
     } else if(p==='postes'){
-      await currentTrack.applyConstraints({ advanced:[
-        { exposureCompensation:-0.5 }, { whiteBalanceMode:'continuous' }, { colorTemperature:3600 },
-        { frameRate:30 }, { contrast:0.15 }, { saturation:0.05 }
-      ]});
+      await currentTrack.applyConstraints({ advanced:[ {exposureCompensation:-0.5},{whiteBalanceMode:'continuous'},{colorTemperature:3600},{frameRate:30} ]});
     } else if(p==='misto'){
-      await currentTrack.applyConstraints({ advanced:[
-        { exposureCompensation:0 }, { whiteBalanceMode:'continuous' }, { colorTemperature:4800 },
-        { frameRate:30 }
-      ]});
+      await currentTrack.applyConstraints({ advanced:[ {exposureCompensation:0},{whiteBalanceMode:'continuous'},{colorTemperature:4800},{frameRate:30} ]});
     } else {
-      await currentTrack.applyConstraints({ advanced:[ { exposureCompensation:0 }, { whiteBalanceMode:'continuous' } ]});
+      await currentTrack.applyConstraints({ advanced:[ {exposureCompensation:0},{whiteBalanceMode:'continuous'} ]});
     }
-  }catch(err){
-    // Alguns devices não suportam; tudo bem.
-    console.warn('Preset não aplicado (capabilities do dispositivo):', err);
-  }
+  }catch(err){ console.warn('Preset não aplicado:', err); }
   presetMenu.style.display='none';
 });
 
 /* Parar/Ligar câmera */
+let cameraPaused=false;
 btnMiniPower.addEventListener('click', async ()=>{
   if(isAutoCapturing || isRecordingVideo){ alert('Pare a captura/gravação antes de desligar a câmera.'); return; }
   if(!cameraPaused){
@@ -617,7 +559,7 @@ btnMiniPower.addEventListener('click', async ()=>{
   }
 });
 
-/* ===== GPS / Status ===== */
+/* ===== GPS ===== */
 function startGPS(){
   if(!('geolocation' in navigator)){ gpsReady=false; updateStatusBar(); return; }
   navigator.geolocation.getCurrentPosition(p=>{
@@ -629,14 +571,6 @@ function startGPS(){
   }, ()=>{
     gpsReady=false; updateStatusBar();
   }, {enableHighAccuracy:true, timeout:12000});
-}
-function statusChip(el, text, state){ el.textContent = text; el.className = 'st ' + (state||''); }
-function updateStatusBar(){
-  statusChip(stCsv,  'CSV: '  + (csvReady?'OK':'Carregando…'), csvReady?'ok':'warn');
-  statusChip(stCam,  'Câmera: ' + (camReady?'OK':(cameraPaused?'Parada':'Aguardando…')), (camReady?'ok':'warn'));
-  const gpsTxt = gpsReady ? (lastPos? `OK (±${Math.round(lastPos.acc||0)} m)`:'OK') : 'Aguardando…';
-  statusChip(stGps,  'GPS: ' + gpsTxt, gpsReady?'ok':'warn');
-  statusChip(stFotos,'Fotos: ' + sessionPhotos, sessionPhotos>0?'ok':'');
 }
 
 /* ===== Carimbo ===== */
@@ -688,9 +622,23 @@ function buildFilename(kmStr, ts){
   const stamp = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}_${String(t.getHours()).padStart(2,'0')}-${String(t.getMinutes()).padStart(2,'0')}-${String(t.getSeconds()).padStart(2,'0')}`;
   return `FOTO_${safeKm}_${stamp}.jpg`;
 }
+
+async function savePhotoDirect(blob, filename, w, h){
+  if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta não selecionada'); }
+  const fileHandle = await rootDirHandle.getFileHandle(filename, { create:true });
+  const writable = await fileHandle.createWritable(); await writable.write(blob); await writable.close();
+
+  // Indexa para relatório consolidado
+  sessionPhotoFiles.push({ handle:fileHandle, w, h, name:filename });
+
+  // Contagem sessão
+  sessionPhotos++; hudPhotos.textContent=sessionPhotos; stFotos.textContent='Fotos: '+sessionPhotos;
+  btnFinalizePdf.disabled = sessionPhotos===0;
+  setPdfStatus('—', false);
+}
+
 async function captureOnce(){
   if(!(csvReady && camReady && gpsReady && lastPos)) return;
-  // 720p equivalente (ou menor, para leveza)
   const vw = vid.videoWidth||1280, vh=vid.videoHeight||720;
   const scale = (Math.max(vw,vh)>CAP_MAX_DIM) ? (CAP_MAX_DIM/Math.max(vw,vh)) : 1;
   const w = Math.round(vw*scale), h = Math.round(vh*scale);
@@ -711,6 +659,7 @@ async function captureOnce(){
   foto.src=url;
   addPreview(url, `${kmStr} • ${ts}`);
 }
+
 /* Auto captura */
 function startAutoCapture(){
   if(!rootDirHandle){ alert('Selecione a pasta primeiro.'); return; }
@@ -729,7 +678,6 @@ btnAutoCapture.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCaptu
 btnClear.addEventListener('click', ()=>{ previewBuffer.forEach(p=>{ try{ URL.revokeObjectURL(p.url);}catch{} }); previewBuffer.length=0; foto.removeAttribute('src'); renderGallery(); });
 
 /* ===== Chip / HUD ===== */
-let isRecordingVideo=false;
 let narrationMode='off'; // 'off' | 'direct' | 'ptt'
 let narrationActive=false;
 function updateChip(){
@@ -746,7 +694,7 @@ function updateKmDisplay(){ if(!lastPos) return; const kmObj=nearestKM(lastPos.l
 function startKmUpdate(){ updateKmDisplay(); kmUpdateInterval=setInterval(()=>{ updateKmDisplay(); updateStatusBar(); }, 500); }
 function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); kmUpdateInterval=null; } }
 
-/* ===== Narração (áudio do microfone) ===== */
+/* ===== Narração ===== */
 let micStream=null, micTrack=null;
 async function ensureMic(){
   if(micStream && micTrack) return;
@@ -767,16 +715,16 @@ btnNarrationMode.addEventListener('click', async ()=>{
   if(next!=='off'){ try{ await ensureMic(); }catch{ alert('Permita o microfone para narrar.'); return; } }
   setNarrationMode(next);
 });
-btnPTT.addEventListener('pointerdown', ()=>{ if(narrationMode==='ptt'){ narrationActive=true; updateChip(); }});
-btnPTT.addEventListener('pointerup',   ()=>{ if(narrationMode==='ptt'){ narrationActive=false; updateChip(); }});
-btnPTT.addEventListener('pointerleave',()=>{ if(narrationMode==='ptt'){ narrationActive=false; updateChip(); }});
+btnPTT.addEventListener('pointerdown', ()=>{ if(narrationMode==='ptt'){ narrationActive=true; if(micTrack) micTrack.enabled=true; updateChip(); }});
+btnPTT.addEventListener('pointerup',   ()=>{ if(narrationMode==='ptt'){ narrationActive=false; if(micTrack) micTrack.enabled=false; updateChip(); }});
+btnPTT.addEventListener('pointerleave',()=>{ if(narrationMode==='ptt'){ narrationActive=false; if(micTrack) micTrack.enabled=false; updateChip(); }});
 
-/* ===== Vídeo – MP4 preferencial (WebCodecs/MP4Muxer), com fallback e áudio narração ===== */
+/* ===== Vídeo – MP4 preferencial (WebCodecs/MP4Muxer), com fallback e áudio ===== */
 let videoWritable = null; let videoBytesWritten = 0; let mediaRecorder = null; let wc={encoder:null, muxer:null, vTrack:null}; let rafId=null;
 
 const VID_FPS = 30;
-const VID_BITRATE = 1_200_000; // mais leve (~1.2 Mbps)
-const REC_W = 1280, REC_H = 720; // força 720p para fluidez total
+const VID_BITRATE = 1_200_000; // leve (~1.2 Mbps)
+const REC_W = 1280, REC_H = 720; // 720p
 
 async function openVideoWriter(nameExt){
   if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta não selecionada'); }
@@ -791,14 +739,10 @@ async function closeVideoWriter(){
   hudRight.style.display='none';
 }
 
-/* MP4 com WebCodecs (vídeo). Áudio: para confiabilidade total, quando narração estiver ativa, usaremos fallback WebM (garante áudio em todos os Chrome). */
+/* MP4 sem áudio (quando narração off) via WebCodecs */
 async function startVideoRecordingMP4(){
   if(!(window.VideoEncoder && window.VideoFrame && window.MP4Muxer)) throw new Error('WebCodecs/MP4Muxer indisponíveis');
-
-  // Se for narrar, usamos WebM (compatível com áudio garantido no Chrome). MP4 com áudio via AudioEncoder AAC varia por aparelho.
-  if(narrationMode!=='off'){
-    throw new Error('NarrationOnUseWebM'); // força fallback para WebM com áudio
-  }
+  if(narrationMode!=='off') throw new Error('NarrationOnUseWebM'); // áudio garantido no WebM
 
   await openVideoWriter('mp4');
 
@@ -807,28 +751,17 @@ async function startVideoRecordingMP4(){
     fastStart: "in-memory",
     firstTimestampBehavior: "offset",
     onData: async (data) => {
-      if(videoWritable){
-        await videoWritable.write(data);
-        videoBytesWritten += data.byteLength; hudVideoSize.textContent = bytesToMB(videoBytesWritten);
-      }
+      if(videoWritable){ await videoWritable.write(data); videoBytesWritten += data.byteLength; hudVideoSize.textContent = bytesToMB(videoBytesWritten); }
     }
   });
 
   wc.vTrack = wc.muxer.addTrack({ codec: "avc1.42E01E", width: REC_W, height: REC_H, timescale: 1e6 });
 
-  const support = await VideoEncoder.isConfigSupported({
-    codec: "avc1.42E01E", width: REC_W, height: REC_H, bitrate: VID_BITRATE, framerate: VID_FPS, avc: {format: "annexb"}
-  });
+  const support = await VideoEncoder.isConfigSupported({ codec: "avc1.42E01E", width: REC_W, height: REC_H, bitrate: VID_BITRATE, framerate: VID_FPS, avc: {format: "annexb"} });
   if(!support.supported) throw new Error('H.264 não suportado');
 
   wc.encoder = new VideoEncoder({
-    output: (chunk) => {
-      wc.muxer.addSample(wc.vTrack, chunk, {
-        duration: Math.round(1e6 / VID_FPS),
-        dts: chunk.timestamp, pts: chunk.timestamp,
-        keyframe: chunk.type === "key"
-      });
-    },
+    output: (chunk) => wc.muxer.addSample(wc.vTrack, chunk, { duration: Math.round(1e6 / VID_FPS), dts: chunk.timestamp, pts: chunk.timestamp, keyframe: chunk.type === "key" }),
     error: (e) => console.error('VideoEncoder error:', e)
   });
   wc.encoder.configure({ codec: "avc1.42E01E", width: REC_W, height: REC_H, bitrate: VID_BITRATE, framerate: VID_FPS, avc: {format: "annexb"} });
@@ -839,7 +772,6 @@ async function startVideoRecordingMP4(){
 
   const draw = () => {
     if(!isRecordingVideo) return;
-    // desenha em 720p fixo
     overlayCtx.drawImage(vid, 0, 0, REC_W, REC_H);
     const kmObj=nearestKM(lastPos?.lat||0,lastPos?.lon||0); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
     const ids=nearestN(lastPos?.lat||0,lastPos?.lon||0,5); const ts=new Date().toLocaleString();
@@ -854,8 +786,7 @@ async function startVideoRecordingMP4(){
     rafId = requestAnimationFrame(draw);
   };
 
-  isRecordingVideo=true; updateChip();
-  btnRecStop.style.display='inline-block';
+  isRecordingVideo=true; updateChip(); btnRecStop.style.display='inline-block';
   draw();
 
   return {
@@ -865,23 +796,20 @@ async function startVideoRecordingMP4(){
       try{ wc.muxer.finalize(); }catch{}
       await closeVideoWriter();
       wc={encoder:null,muxer:null,vTrack:null};
-      isRecordingVideo=false; updateChip();
-      btnRecStop.style.display='none';
+      isRecordingVideo=false; updateChip(); btnRecStop.style.display='none';
     }
   };
 }
 
-/* Safari MP4 nativo (com áudio se narração ativa) */
+/* Safari MP4 (com áudio) */
 async function startVideoRecordingSafariMP4(){
   const videoStream=vid.srcObject; if(!videoStream) throw new Error('Câmera não disponível');
 
-  if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta não selecionada'); }
   await openVideoWriter('mp4');
 
   const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=REC_W; overlayCanvas.height=REC_H; const overlayCtx=overlayCanvas.getContext('2d');
   const canvasStream=overlayCanvas.captureStream(VID_FPS);
 
-  // Áudio narração
   if(narrationMode!=='off'){ await ensureMic(); micTrack.enabled = (narrationMode==='direct'); canvasStream.addTrack(micTrack); }
 
   const mime = 'video/mp4;codecs=h264,mp4a.40.2';
@@ -904,7 +832,6 @@ async function startVideoRecordingSafariMP4(){
   };
   drawLoop();
 
-  // PTT habilita/desabilita trilha
   btnPTT.onpointerdown = ()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=true; narrationActive=true; updateChip(); }};
   btnPTT.onpointerup   = ()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=false; narrationActive=false; updateChip(); }};
   btnPTT.onpointerleave= ()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=false; narrationActive=false; updateChip(); }};
@@ -912,15 +839,13 @@ async function startVideoRecordingSafariMP4(){
   return { async stop(){ try{ mediaRecorder.stop(); }catch{} } };
 }
 
-/* Fallback WebM (vídeo + áudio narração) */
+/* Fallback WebM (vídeo + áudio) */
 async function startVideoRecordingWebM(){
-  const videoStream=vid.srcObject; if(!videoStream) throw new Error('Câmera não disponível');
   await openVideoWriter('webm');
 
   const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=REC_W; overlayCanvas.height=REC_H; const overlayCtx=overlayCanvas.getContext('2d');
   const canvasStream=overlayCanvas.captureStream(VID_FPS);
 
-  // Áudio narração
   if(narrationMode!=='off'){ await ensureMic(); micTrack.enabled = (narrationMode==='direct'); canvasStream.addTrack(micTrack); }
 
   const options={ mimeType:'video/webm;codecs=vp9,opus', videoBitsPerSecond: VID_BITRATE };
@@ -943,36 +868,27 @@ async function startVideoRecordingWebM(){
   };
   drawLoop();
 
-  // PTT
-  btnPTT.onpointerdown = ()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=true; narrationActive=true; updateChip(); }};
-  btnPTT.onpointerup   = ()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=false; narrationActive=false; updateChip(); }};
-  btnPTT.onpointerleave= ()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=false; narrationActive=false; updateChip(); }};
-
   return { async stop(){ try{ mediaRecorder.stop(); }catch{} } };
 }
 
-/* Orquestrador start/stop */
+/* Orquestrador start/stop vídeo */
 let activeStopper = null;
 async function startVideoRecording(){
   if(isRecordingVideo) return;
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
 
-  // Safari MP4 direto (com áudio)
   if('MediaRecorder' in window && MediaRecorder.isTypeSupported?.('video/mp4;codecs=h264')){
     try{ activeStopper = await startVideoRecordingSafariMP4(); return; }catch(e){ console.warn('Safari MP4 falhou:', e); }
   }
-  // Chrome/Edge: MP4 (sem narração) ou fallback WebM (com narração)
   try{
-    activeStopper = await startVideoRecordingMP4();
-    return;
+    activeStopper = await startVideoRecordingMP4(); return;
   }catch(e){
     if(e && String(e).includes('NarrationOnUseWebM')){
-      console.warn('Narration ativa → usando WebM para incluir áudio.');
+      console.warn('Narration ativa → usando WebM para áudio garantido.');
     }else{
       console.warn('WebCodecs+MP4 falhou:', e);
     }
   }
-  // Fallback: WebM
   try{ activeStopper = await startVideoRecordingWebM(); }catch(e){ console.error('WebM falhou:', e); alert('Não foi possível iniciar gravação neste dispositivo.'); }
 }
 async function stopVideoRecording(){
@@ -985,23 +901,128 @@ async function stopVideoRecording(){
 btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ await stopVideoRecording(); } else { await startVideoRecording(); }});
 btnRecStop.addEventListener('click', async ()=>{ if(isRecordingVideo) await stopVideoRecording(); });
 
-/* ===== Interações / Boot ===== */
+/* ===== Interações ===== */
 wrap.addEventListener('click', ()=>{ /* sem toque para não distrair na direção */ });
-
 btnSelectFolder.addEventListener('click', async ()=>{ await selectOutputFolder(); });
-btnFinalizePdf.addEventListener('click', async ()=>{
-  if(!pdfWriter){ alert('Nenhum PDF aberto. Selecione a pasta para iniciar um novo.'); return; }
-  btnFinalizePdf.disabled = true;
+
+/* ===== MODAL PDF + Gerador Consolidado ===== */
+function openPdfOptions(){
+  if(sessionPhotoFiles.length===0){ alert('Nenhuma foto na sessão.'); return; }
+  pdfModal.style.display='flex';
+}
+function closePdfOptions(){ pdfModal.style.display='none'; }
+
+pdfOpts.addEventListener('click', async (e)=>{
+  const pp = e.target.closest('button')?.dataset?.pp;
+  if(!pp) return;
+  if(pp==='cancel'){ closePdfOptions(); return; }
+  closePdfOptions();
+  const perPage = Number(pp);
   try{
-    await pdfWriter.finalize();
-    stPdf.textContent = 'PDF: FECHADO'; stPdf.className = 'st warn'; pdfWriter = null;
-    alert('PDF finalizado. Para iniciar outro, selecione a pasta novamente.');
-  }catch(e){
-    alert('Falha ao finalizar PDF: ' + e.message); btnFinalizePdf.disabled = false;
+    await generateConsolidatedPdf(perPage);
+    setPdfStatus('GERADO', true);
+    // Perguntar se limpa sessão após gerar
+    const clear = confirm('PDF gerado com sucesso. Limpar fotos da sessão (somente o índice da sessão, os arquivos permanecem na pasta)?');
+    if(clear){
+      sessionPhotoFiles.length = 0;
+      sessionPhotos = 0; hudPhotos.textContent = sessionPhotos; stFotos.textContent = 'Fotos: 0';
+      btnFinalizePdf.disabled = true;
+    }
+  }catch(err){
+    console.error(err);
+    alert('Falha ao gerar PDF: ' + err.message);
   }
 });
 
-function updateStatusBar(){ /* já definida acima */ }
+btnFinalizePdf.addEventListener('click', ()=>{
+  if(sessionPhotoFiles.length===0){ alert('Nenhuma foto na sessão.'); return; }
+  openPdfOptions();
+});
+
+/* Gerador de PDF consolidado (grid) */
+async function generateConsolidatedPdf(perPage){
+  if(!rootDirHandle) throw new Error('Pasta não selecionada');
+  const fileName = `RELATORIO_INSPECAO_${perPage}ppg_${new Date().toISOString().slice(0,10)}_${Date.now()}.pdf`;
+  const handle = await rootDirHandle.getFileHandle(fileName, { create:true });
+  const stream = await handle.createWritable();
+
+  // Writer básico
+  const enc = new TextEncoder();
+  const xref = [0]; let objNo=0; const parts=[]; let bytePos=0;
+  const write = async (sOrU8) => {
+    let bin = (sOrU8 instanceof Uint8Array) ? sOrU8 : enc.encode(sOrU8);
+    await stream.write(bin); bytePos += bin.length;
+  };
+  const addObj = async (body) => { objNo++; xref.push(bytePos); await write(`${objNo} 0 obj\n${body}\nendobj\n`); return objNo; };
+  const addStream = async (dict, bin) => {
+    objNo++; xref.push(bytePos);
+    const head = `${objNo} 0 obj\n${dict.replace('>>','')} /Length ${bin.length} >>\nstream\n`;
+    await write(head); await write(bin); await write(`\nendstream\nendobj\n`); return objNo;
+  };
+
+  await write('%PDF-1.4\n');
+
+  // Página A4
+  const PW=595, PH=842, M=24;
+  const layouts = {
+    1:[1,1], 2:[2,1], 4:[2,2], 8:[4,2], 16:[4,4]
+  };
+  const [COLS, ROWS] = layouts[perPage] || [1,1];
+  const CELL_W = Math.floor( (PW - 2*M) / COLS );
+  const CELL_H = Math.floor( (PH - 2*M) / ROWS );
+
+  const pagesNums = [];
+  let idx=0;
+
+  while(idx < sessionPhotoFiles.length){
+    const xobjects = []; const contentOps = [];
+    // Para cada célula, adiciona uma imagem
+    for(let r=0; r<ROWS && idx<sessionPhotoFiles.length; r++){
+      for(let c=0; c<COLS && idx<sessionPhotoFiles.length; c++, idx++){
+        const rec = sessionPhotoFiles[idx];
+        const file = await rec.handle.getFile();
+        const bin = new Uint8Array(await file.arrayBuffer());
+
+        // Dimensões originais (da sessão), para o XObject
+        const imgW = rec.w || 800, imgH = rec.h || 450;
+
+        // Ajuste para caber na célula preservando AR
+        let dw=CELL_W, dh=Math.round(imgH*(CELL_W/imgW));
+        if(dh>CELL_H){ dh=CELL_H; dw=Math.round(imgW*(CELL_H/imgH)); }
+
+        const tx = M + c*CELL_W + Math.round((CELL_W - dw)/2);
+        const ty = PH - (M + (r+1)*CELL_H) + Math.round((CELL_H - dh)/2);
+
+        const imNum = await addStream(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, bin);
+        const name = `/Im_${r}_${c}`;
+        xobjects.push(`${name} ${imNum} 0 R`);
+        contentOps.push(`q\n${dw} 0 0 ${dh} ${tx} ${ty} cm\n${name} Do\nQ\n`);
+      }
+    }
+    const contNum = await addStream(`<< >>`, enc.encode(contentOps.join('')));
+    const pageNum = await addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << ${xobjects.join(' ')} >> >> /Contents ${contNum} 0 R >>`);
+    pagesNums.push(pageNum);
+  }
+
+  const pagesNum = await addObj(`<< /Type /Pages /Kids [ ${pagesNums.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pagesNums.length} >>`);
+  const catalogNum = await addObj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
+
+  const startXref = bytePos;
+  let xr = `xref\n0 ${xref.length}\n0000000000 65535 f \n`;
+  for(let i=1;i<xref.length;i++){
+    xr += String(xref[i]).padStart(10,'0') + ' 00000 n \n';
+  }
+  await write(xr);
+  await write(`trailer\n<< /Size ${xref.length} /Root ${catalogNum} 0 R >>\nstartxref\n${startXref}\n%%EOF`);
+  await stream.close();
+}
+
+/* ===== Vídeo: controle de UI e narração ===== */
+let activeStopper=null;
+btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ await stopVideoRecording(); } else { await startVideoRecording(); }});
+btnRecStop.addEventListener('click', async ()=>{ if(isRecordingVideo) await stopVideoRecording(); });
+
+/* ===== Boot ===== */
 function ready(){ return csvReady && camReady && gpsReady; }
 
 async function boot(){
