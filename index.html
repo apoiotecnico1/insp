@@ -22,11 +22,11 @@
   #app{ position:fixed; inset:0; display:grid; grid-template-rows:1fr; }
   #camWrap{
     position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate;
-    touch-action:none; /* habilita pinch-zoom custom sem zoom da página */
+    touch-action:none; /* pinch-zoom custom sem zoom da página */
   }
   #vid{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000 }
 
-  /* Topo: ícones NX (esq) e Opções (dir) */
+  /* Topo: NX e Opções (ícones) */
   #hudTop{
     position:absolute; top:10px; left:0; right:0; display:flex; justify-content:space-between; z-index:4;
     padding:0 10px; pointer-events:none;
@@ -39,7 +39,7 @@
     cursor:pointer; user-select:none; color:#eaf2ff; font-weight:900;
   }
 
-  /* HUD do KM (pequeno, destacado) */
+  /* HUD do KM */
   #kmHud{ position:absolute; z-index:5; pointer-events:none; }
   .kmBadge{
     display:inline-flex; align-items:center; gap:8px; background:var(--badgeBg);
@@ -49,14 +49,14 @@
   .kmBadge .label{ opacity:.9; letter-spacing:.02em }
   .kmBadge .val{ font-variant-numeric:tabular-nums; letter-spacing:.01em }
 
-  /* Posições do KM (selecionável) */
+  /* Posições do KM (selecionáveis) */
   .pos-top-center{ top:10px; left:50%; transform:translateX(-50%); }
   .pos-top-left{ top:10px; left:10px; }
   .pos-top-right{ top:10px; right:10px; }
   .pos-mid-left{ top:50%; left:10px; transform:translateY(-50%); }
   .pos-mid-right{ top:50%; right:10px; transform:translateY(-50%); }
 
-  /* Botão AUTO (apenas ícone) */
+  /* Botão AUTO (só ícone) */
   #fabWrap{
     position:absolute; bottom:14px; left:0; right:0; display:flex; justify-content:center; z-index:3;
   }
@@ -91,7 +91,7 @@
     border:1px solid rgba(255,255,255,.16); color:#eaf2ff; padding:10px 14px; border-radius:12px;
   }
 
-  /* Opções (ícones nos botões) */
+  /* Opções (p painéis/ícones) */
   #opts{
     position:absolute; right:10px; top:58px; z-index:6; display:none;
     background:linear-gradient(180deg,var(--panelA),var(--panelB)); border:1px solid rgba(255,255,255,.16);
@@ -126,7 +126,7 @@
       <div class="chipBtn" id="btnGear" title="Opções" aria-label="Opções">⚙️</div>
     </div>
 
-    <!-- Botão AUTO (apenas ícone) -->
+    <!-- Botão AUTO (só ícone) -->
     <div id="fabWrap">
       <button id="btnAuto" class="" title="Iniciar/Pausar" aria-label="Iniciar captura automática">⏺</button>
     </div>
@@ -202,7 +202,7 @@
     </select>
   </div>
 
-  <!-- Capa/Rodapé do PDF (sem nomes de empresa por padrão) -->
+  <!-- Capa/Rodapé do PDF (sem nome de empresa por padrão) -->
   <div class="row" style="border-top:1px dashed rgba(255,255,255,.16);padding-top:8px;margin-top:8px">
     <span>Capa do PDF</span>
     <div class="col">
@@ -392,7 +392,7 @@ async function startCameraByDeviceId(id){
     await startCameraWithConstraints({ video:{ deviceId:{ exact:id }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false });
     await enumerateCameras(); showToast('Câmera trocada');
   }catch(e){
-    const facing=(vid.srcObject?.getVideoTracks?.()[0]?.getSettings?.().facingMode)||'environment';
+    const facing=(vid.srcObject?.getVideoTracks?.[0]?.getSettings?.().facingMode)||'environment';
     const nextFacing=facing==='environment'?'user':'environment';
     try{
       await startCameraWithConstraints({ video:{ facingMode:{ exact: nextFacing }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false });
@@ -465,7 +465,7 @@ function drawStamp(ctx, w, h, kmStr, tsStr){
 const capCanvas=document.createElement('canvas');
 const capCtx=capCanvas.getContext('2d', {alpha:false});
 
-/* ========================= SALVAMENTO (rollback estável) ========================= */
+/* ========================= SALVAMENTO (ajuste 0B) ========================= */
 async function frameToJpegBlobAndMeta_Simple(){
   const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
   const sc=(Math.max(vw,vh)>state.maxDim)? (state.maxDim/Math.max(vw,vh)) : 1;
@@ -505,7 +505,7 @@ async function frameToJpegBlobAndMeta_Simple(){
 }
 
 async function savePhotoOnce(){
-  if(writing) return;                                      // trava (sem concorrência)
+  if(writing) return;
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady && vid.videoWidth)) return;
 
   writing=true;
@@ -515,22 +515,47 @@ async function savePhotoOnce(){
 
     const {blob, kmStr, tsStr}=await frameToJpegBlobAndMeta_Simple();
 
-    // Nome: FOTO_km_K_mmm_DD-MM-AAAA_HH-mm-ss.jpg
+    // Nome base: FOTO_km_K_mmm_DD-MM-AAAA_HH-mm-ss.jpg
     let kPart='K', mPart='000';
     if(kmStr.startsWith('KM ')){
       const m=kmStr.replace('KM ','').replace(',','_').replace('+','_');
       const parts=m.split('_'); kPart=parts[0]||kPart; mPart=parts[1]||mPart;
     }
-    const name=`FOTO_km_${kPart}_${mPart}_${stampStrBR()}.jpg`;
+    const base=`FOTO_km_${kPart}_${mPart}_${stampStrBR()}`;
+    const name=`${base}.jpg`;
 
+    // Gravação padrão (rollback do primeiro HTML que funcionava)
     const fh=await rootDirHandle.getFileHandle(name,{create:true});
-    const w=await fh.createWritable();
-    await w.write(blob);                                   // ← fluxo “bom” original
+    const w=await fh.createWritable({keepExistingData:false});
+    await w.write(blob);
     await w.close();
 
+    // ---- Ajuste 0B: verificação leve pós-close + re-write fallback ----
+    // Pequeno atraso para garantir flush em dispositivos mais lentos
+    await new Promise(r=>setTimeout(r, 12));
+    const saved=await fh.getFile();
+    if(saved.size===0){
+      // Regrava como fallback usando DataURL→Blob, em um novo nome _R1
+      const retryName=`${base}_R1.jpg`;
+      const fh2=await rootDirHandle.getFileHandle(retryName,{create:true});
+      const w2=await fh2.createWritable({keepExistingData:false});
+      let fbBlob=blob;
+      if(fbBlob.size===0){
+        const dataURL=capCanvas.toDataURL('image/jpeg', Math.max(0.7, Math.min(1, state.jpgQ/100)));
+        const bin=atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
+        for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+        fbBlob=new Blob([u8], {type:'image/jpeg'});
+      }
+      await w2.write(fbBlob);
+      await w2.close();
+      sessionPhotos.push({handle: fh2, name: retryName, kmStr, tsStr});
+    }else{
+      sessionPhotos.push({handle: fh, name, kmStr, tsStr});
+    }
+
     sessionPhotoCount++;
-    sessionPhotos.push({handle: fh, name, kmStr, tsStr});
     latestPdfHandle=null; latestPdfName=''; btnSharePdf.disabled=true;
+
   }catch(err){
     console.error('Salvar foto erro:',err);
     showToast('Falha ao salvar foto');
@@ -548,9 +573,9 @@ function startAuto(){
   requestWakeLock();
   btnAuto.classList.add('on'); btnAuto.textContent='⏹'; btnAuto.setAttribute('aria-label','Parar captura automática');
 
-  // 1ª captura imediata
+  // Primeira captura
   savePhotoOnce().catch(()=>{});
-  // Loop simples: se está salvando, esse tick é ignorado
+  // Loop: se está salvando, pula o tick
   autoTimer=setInterval(()=>{ if(!writing) savePhotoOnce().catch(()=>{}); }, state.autoMs);
 
   showToast('Auto ON');
@@ -586,7 +611,7 @@ async function generatePdfFromSession(){
   const pdfName=`RELATORIO_FOTOS_${stampStrBR()}.pdf`;
   const fh=await rootDirHandle.getFileHandle(pdfName,{create:true}); const ws=await fh.createWritable();
 
-  let pos=0,obj=0,xref=[0];
+  let pos=0, obj=0, xref=[0];
   async function w(s){ const u=(s instanceof Uint8Array)?s:new TextEncoder().encode(s); await ws.write(u); pos+=u.length; }
   async function objWrite(body){ obj+=1; xref.push(pos); await w(`${obj} 0 obj\n${body}\nendobj\n`); return obj; }
   async function streamWrite(dict,u8){ obj+=1; xref.push(pos); await w(`${obj} 0 obj\n${dict.replace('>>','')} /Length ${u8.length} >>\nstream\n`); await w(u8); await w(`\nendstream\nendobj\n`); return obj; }
@@ -675,7 +700,7 @@ function startGPS(){
   },()=>{ gpsReady=false; }, {enableHighAccuracy:true, timeout:12000});
 }
 
-/* ========================= Timeout helper ========================= */
+/* ========================= Boot FLUIDO ========================= */
 async function withTimeout(promise, ms, onTimeoutMsg='Tempo esgotado'){
   const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(onTimeoutMsg), ms);
   try{
@@ -686,19 +711,14 @@ async function withTimeout(promise, ms, onTimeoutMsg='Tempo esgotado'){
     return res;
   }finally{ clearTimeout(t); }
 }
-
-/* ========================= Boot FLUIDO ========================= */
 btnGear.addEventListener('click', async ()=>{
   const open = (opts.style.display!=='block');
   if(open && !deviceList.length){ await enumerateCameras().catch(()=>{}); }
   opts.style.display = open ? 'block' : 'none';
 });
-
 function hydrateReportFields(){
-  txtRptTitle.value=state.rptTitle;
-  txtRptTrecho.value=state.rptTrecho;
-  txtRptOper.value=state.rptOper;
-  txtRptFooter.value=state.rptFooter;
+  txtRptTitle.value=state.rptTitle; txtRptTrecho.value=state.rptTrecho;
+  txtRptOper.value=state.rptOper;   txtRptFooter.value=state.rptFooter;
 }
 txtRptTitle.addEventListener('input', ()=>{ state.rptTitle=txtRptTitle.value; localStorage.setItem('rpt_title', state.rptTitle); });
 txtRptTrecho.addEventListener('input', ()=>{ state.rptTrecho=txtRptTrecho.value; localStorage.setItem('rpt_trecho', state.rptTrecho); });
@@ -727,7 +747,7 @@ async function boot(){
   // CSV de KM (lazy), com timeout; HUD atualiza ao concluir
   setTimeout(async()=>{ try{ await withTimeout(loadKM(), 6000, 'CSV lento'); }catch{} updateKmHud(); }, 120);
 
-  // Atualização de HUD (KM)
+  // Atualização da HUD (KM)
   setInterval(updateKmHud, 700);
 
   // Persistência opcional
