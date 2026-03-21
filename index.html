@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0b1020" />
-<title>Relatório Fotográfico – Inspeção Noturna (UI Pro)</title>
+<title>Relatório Fotográfico – Inspeção Noturna (PDF Incremental)</title>
 <style>
   :root{
     --bg:#0d132b; --surface:#0f1731cc; --fg:#e8eeff; --muted:#a9b7df; --border:#1e284d;
@@ -13,7 +13,6 @@
     --radius: 14px; --camH: 44vh;
     --btnGradA:#0e1432; --btnGradB:#0a0f26; --btnBorder:#223363;
     --camGradA:#0b1230; --camGradB:#07102a; --camBorder:#213066;
-    --pdfA:#eab308; --pdfB:#b98a06; --pdfText:#231c00;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -88,7 +87,6 @@
   }
   .btn:active{ transform:translateY(1px); }
   .btn.critical{ background: linear-gradient(180deg, #cc3e36, #a72b25); border-color:#b52d27; color:#fff; }
-  .btn.success{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#0b2c21; border-color:#1aa455; }
   .btn.selected{ outline:2px solid #35eb85; }
 
   /* ===== BottomBar ===== */
@@ -98,7 +96,7 @@
     pointer-events:none;
   }
 
-  /* Zoom */
+  /* Zoom pad */
   #zoomPad{
     pointer-events:auto;
     display:none; align-items:center; gap:8px; padding:6px 10px;
@@ -106,8 +104,6 @@
     border:1px solid rgba(255,255,255,.16); border-radius:12px; box-shadow: var(--shadow);
   }
   #zoomLbl{ min-width:52px; text-align:center; font-weight:900 }
-
-  /* Contadores */
   .pill{
     pointer-events:auto; display:inline-flex; align-items:center; gap:8px;
     background: linear-gradient(180deg, rgba(10,16,40,.75), rgba(8,12,28,.72));
@@ -116,7 +112,7 @@
     box-shadow: var(--shadow);
   }
 
-  /* Popup presets */
+  /* Presets menu */
   #presetMenu{
     position:absolute; left:70px; top:56px; z-index:6;
     display:none; flex-direction:column; gap:6px; padding:8px;
@@ -145,10 +141,18 @@
   #btnSelectFolder{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#072414 }
   #btnAutoCapture{ background: linear-gradient(180deg, #ff7b45, #e5612e); color:#1b0b02 }
   #btnVideoRecord{ background: linear-gradient(180deg, #f2544b, #cc3e36); color:#fff }
-  #btnFinalizePdf{ background: linear-gradient(180deg, var(--pdfA), var(--pdfB)); color:var(--pdfText) }
+  #btnFinalizePdf{ background: linear-gradient(180deg, #eab308, #b98a06); color:#231c00 }
   #btnClear{ background: linear-gradient(180deg, #ff6161, #ef4444); color:#fff }
   button.action:disabled{opacity:.55;cursor:not-allowed; filter:grayscale(.2)}
-  @media (max-width:420px){ button.action{flex:1 1 140px;font-size:.95rem} }
+
+  /* Controles de PDF antes de iniciar (per-page e legenda) */
+  .inline-controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:8px }
+  .inline-controls label{ font-weight:800; color:#dfe7ff }
+  .inline-controls select{
+    border-radius:10px; border:1px solid var(--border); background:#0c1431; color:#e6ebff; padding:8px 10px; font-weight:800;
+  }
+  .legend-group{ display:flex; gap:8px; }
+  .legend-group .btn{ height:36px; padding:0 10px; }
 
   /* Lista de fotos */
   #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:8px; box-shadow: var(--shadow)}
@@ -193,21 +197,6 @@
   @keyframes splashout{ to{ opacity:0; transform: scale(1.01) } }
   @keyframes typing { from { width: 0 } to { width: 24ch } }
   @keyframes caret { 0%, 100% { border-right-color: transparent } 50% { border-right-color: #43ff9b } }
-
-  /* ===== Modal PDF ===== */
-  #pdfModal{
-    position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:3000;
-  }
-  #pdfModal .inner{
-    background:linear-gradient(180deg, rgba(10,16,40,.96), rgba(10,16,35,.94));
-    border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:16px; max-width:360px; width:92%;
-    box-shadow:0 18px 40px rgba(0,0,0,.45);
-  }
-  #pdfModal h3{ margin:0 0 10px; font-size:1.02rem }
-  #pdfOpts{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
-  #pdfOpts .btn{ flex:1 1 68px }
-  #legendRow{ display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top:8px; }
-  #legendRow .group{ display:flex; gap:8px; flex-wrap:wrap }
 </style>
 </head>
 <body>
@@ -255,7 +244,7 @@
       </div>
     </div>
 
-    <!-- Popup presets -->
+    <!-- Presets -->
     <div id="presetMenu" role="menu" aria-label="Presets">
       <button class="btn" data-preset="noite">🌙 Noite (farol)</button>
       <button class="btn" data-preset="postes">💡 Postes fortes</button>
@@ -278,7 +267,7 @@
       </div>
     </div>
 
-    <!-- Chip status -->
+    <!-- Chip -->
     <div id="chip" class="chip" aria-live="polite" aria-atomic="true"></div>
   </div>
 </div>
@@ -290,8 +279,27 @@
     <button class="action" id="btnAutoCapture">🎬 Captura Auto</button>
     <button class="action" id="btnVideoRecord">⏺️ Gravar Vídeo</button>
     <button class="action" id="btnNarrationMode">🎤 Narração: OFF</button>
-    <button class="action" id="btnFinalizePdf" disabled>📄 Finalizar PDF</button>
+    <button class="action" id="btnFinalizePdf" disabled>📄 Finalizar Relatório</button>
     <button class="action" id="btnClear" disabled>🧹 Limpar Prévias</button>
+  </div>
+
+  <!-- Configurações antes de iniciar -->
+  <div class="inline-controls">
+    <label>Fotos/página:
+      <select id="pppSel">
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+        <option value="4">4</option>
+        <option value="8">8</option>
+        <option value="16">16</option>
+      </select>
+    </label>
+    <div class="legend-group" aria-label="Modo de legenda no PDF">
+      <span style="font-weight:900">Legendas:</span>
+      <button class="btn selected" id="legAuto" data-leg="auto" title="Só quando faltar carimbo de KM">Auto</button>
+      <button class="btn" id="legOn" data-leg="on" title="Sempre mostrar KM + Data/Hora (+GPS se houver)">Sempre</button>
+      <button class="btn" id="legOff" data-leg="off" title="Nunca mostrar legenda">Nunca</button>
+    </div>
   </div>
 </div>
 
@@ -304,31 +312,6 @@
 <div class="card">
   <h2 style="margin:0 0 6px;font-size:1rem">Últimas 10 fotos</h2>
   <div id="gal" class="gallery"></div>
-</div>
-
-<!-- Modal PDF -->
-<div id="pdfModal">
-  <div class="inner">
-    <h3>Relatório PDF – Fotos por página</h3>
-    <div id="pdfOpts">
-      <button class="btn" data-pp="1">1</button>
-      <button class="btn" data-pp="2">2</button>
-      <button class="btn" data-pp="4">4</button>
-      <button class="btn" data-pp="8">8</button>
-      <button class="btn" data-pp="16">16</button>
-    </div>
-    <div id="legendRow">
-      <div style="font-weight:900">Legendas:</div>
-      <div class="group">
-        <button class="btn selected" data-leg="auto" id="legAuto">Auto</button>
-        <button class="btn" data-leg="on" id="legOn">Sempre</button>
-        <button class="btn" data-leg="off" id="legOff">Nunca</button>
-      </div>
-    </div>
-    <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end">
-      <button class="btn" id="pdfCancel">Cancelar</button>
-    </div>
-  </div>
 </div>
 
 <!-- MP4 MUXER (Chrome/Edge) -->
@@ -383,7 +366,6 @@ let kmUpdateInterval=null; let isRecordingVideo=false;
 
 /* Sessão */
 let sessionPhotos = 0;
-const sessionPhotoFiles = []; // {handle,w,h,name,kmStr,ts,lat,lon,stampedKM}
 
 /* Referências */
 const vid=document.getElementById('vid'), foto=document.getElementById('foto'), wrap=document.getElementById('wrap'), chip=document.getElementById('chip');
@@ -400,13 +382,19 @@ const zoomPad=document.getElementById('zoomPad'), btnZoomDec=document.getElement
 
 const hudPhotos=document.getElementById('hudPhotos'), hudRight=document.getElementById('hudRight'), hudVideoSize=document.getElementById('hudVideoSize');
 
-const pdfModal=document.getElementById('pdfModal'), pdfOpts=document.getElementById('pdfOpts');
-const legAuto=document.getElementById('legAuto'), legOn=document.getElementById('legOn'), legOff=document.getElementById('legOff'), pdfCancel=document.getElementById('pdfCancel');
-
-/* Legenda PDF: 'auto' | 'on' | 'off' */
+/* Config PDF (antes de iniciar) */
+const pppSel=document.getElementById('pppSel');
+const legAuto=document.getElementById('legAuto'), legOn=document.getElementById('legOn'), legOff=document.getElementById('legOff');
 let pdfLegendMode='auto';
+[legAuto,legOn,legOff].forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    pdfLegendMode = btn.dataset.leg;
+    [legAuto,legOn,legOff].forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+});
 
-/* Carimbo */
+/* Carimbo overlay */
 const overlayOpts = { showKM:true, showTs:true, showIds:true, showGps:false };
 const can=document.createElement('canvas'), ctx=can.getContext('2d',{alpha:false});
 const CAP_MAX_DIM = 1600;
@@ -433,9 +421,7 @@ async function selectOutputFolder(){
 
   // reset sessão
   sessionPhotos=0; hudPhotos.textContent=sessionPhotos; stFotos.textContent='Fotos: 0';
-  sessionPhotoFiles.length=0;
   setPdfStatus('—', false);
-  btnFinalizePdf.disabled = true;
 }
 
 /* ===== CSV (IDs + KM) ===== */
@@ -643,6 +629,150 @@ function stampOverlay(ctx, w, h, kmStr, ids, ts, gpsLine){
   }
 }
 
+/* ===== PDF INCREMENTAL (streaming durante a captura) ===== */
+class IncrementalPdfWriter {
+  constructor(){ this.reset(); }
+  reset(){
+    this.stream=null; this.pos=0; this.objNo=0; this.xref=[0];
+    this.pageList=[]; this.fontObj=null;
+    this.PW=595; this.PH=842; this.M=28;
+    this.perPage=1; this.legendMode='auto';
+    this.layout={COLS:1, ROWS:1}; this.CELL_W=0; this.CELL_H=0; this.CAP_H=30;
+    this.pending=[]; // células ainda não gravadas (para compor 1 página)
+    this.active=false;
+    this.reportName='';
+  }
+  async openNew(rootHandle, perPage=1, legendMode='auto'){
+    this.reset();
+    this.perPage = Number(perPage)||1;
+    this.legendMode = legendMode||'auto';
+    const layouts={1:[1,1],2:[2,1],4:[2,2],8:[4,2],16:[4,4]};
+    const [C,R] = layouts[this.perPage] || [1,1];
+    this.layout={COLS:C, ROWS:R};
+    this.CELL_W = Math.floor((this.PW-2*this.M)/C);
+    this.CELL_H = Math.floor((this.PH-2*this.M)/R);
+
+    // cria arquivo
+    const name = `RELATORIO_INSPECAO_${this.perPage}ppg_${new Date().toISOString().slice(0,10)}_${Date.now()}.pdf`;
+    this.reportName = name;
+    const handle = await rootHandle.getFileHandle(name, {create:true});
+    this.stream = await handle.createWritable();
+    this.active = true;
+
+    await this._write('%PDF-1.4\n');
+    // Fonte (Helvetica)
+    this.fontObj = await this._addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+    setPdfStatus('ABERTO', true);
+    return name;
+  }
+  async addPhoto({blob, meta}){
+    if(!this.active || !this.stream) return;
+    // cria XObject da imagem
+    const fileU8 = new Uint8Array(await blob.arrayBuffer());
+    const imgW = meta.w || 800, imgH = meta.h || 450;
+    const imNum = await this._addStream(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, fileU8);
+
+    // prepara célula
+    const availH = this.CELL_H - this.CAP_H;
+    let dw=this.CELL_W, dh=Math.round(imgH*(this.CELL_W/imgW));
+    if(dh>availH){ dh=availH; dw=Math.round(imgW*(availH/imgH)); }
+
+    // posição será definida ao fechar a página (com base no índice)
+    this.pending.push({ imNum, imgW, imgH, dw, dh, meta });
+    // se completou a página, grava
+    if(this.pending.length >= this.layout.COLS*this.layout.ROWS){
+      await this._flushPage();
+    }
+  }
+  async finalize(){
+    if(!this.active) return;
+    // se restou conteúdo parcial, grava a página final
+    if(this.pending.length>0){
+      await this._flushPage();
+    }
+    // escreve /Pages e /Catalog
+    const pagesKidsStr = this.pageList.map(n=>`${n} 0 R`).join(' ');
+    const pagesNum = await this._addObj(`<< /Type /Pages /Kids [ ${pagesKidsStr} ] /Count ${this.pageList.length} >>`);
+    const catalog = await this._addObj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
+    // xref/trailer
+    const startXref = this.pos;
+    let xr = `xref\n0 ${this.xref.length}\n0000000000 65535 f \n`;
+    for(let i=1;i<this.xref.length;i++){
+      xr += String(this.xref[i]).padStart(10,'0')+' 00000 n \n';
+    }
+    await this._write(xr);
+    await this._write(`trailer\n<< /Size ${this.xref.length} /Root ${catalog} 0 R >>\nstartxref\n${startXref}\n%%EOF`);
+    await this.stream.close();
+    this.active=false;
+    setPdfStatus('FECHADO', true);
+  }
+  async _flushPage(){
+    const ops=[]; const xobjs=[];
+    // monta cada célula nas linhas/colunas
+    for(let idx=0; idx<this.pending.length; idx++){
+      const c = idx % this.layout.COLS;
+      const r = Math.floor(idx / this.layout.COLS);
+      const cellX = this.M + c*this.CELL_W;
+      const cellY = this.PH - (this.M + (r+1)*this.CELL_H); // origem PDF é embaixo
+      const tx = cellX + Math.round((this.CELL_W - this.pending[idx].dw)/2);
+      const ty = cellY + Math.round(((this.CELL_H - this.CAP_H) - this.pending[idx].dh)/2) + this.CAP_H;
+
+      const alias = `/Im_${r}_${c}`;
+      xobjs.push(`${alias} ${this.pending[idx].imNum} 0 R`);
+      ops.push(`q\n${this.pending[idx].dw} 0 0 ${this.pending[idx].dh} ${tx} ${ty} cm\n${alias} Do\nQ\n`);
+
+      // legenda?
+      const m = this.pending[idx].meta;
+      let needLegend=false;
+      if(this.legendMode==='on') needLegend=true;
+      else if(this.legendMode==='off') needLegend=false;
+      else needLegend = !m.stampedKM; // auto: só se faltou KM no carimbo
+
+      if(needLegend){
+        const km = m.kmStr || 'KM —';
+        const ts = m.ts || '';
+        const gps = (typeof m.lat==='number' && typeof m.lon==='number') ? `GPS: ${m.lat.toFixed(6)}, ${m.lon.toFixed(6)}` : '';
+        const tsize = 9;
+        const textX = cellX + 6;
+        const baseY = cellY + 6;
+        const line1 = `${km}${ts?` • ${ts}`:''}`;
+        const line2 = gps;
+
+        ops.push(`BT /F1 ${tsize} Tf 1 0 0 1 ${textX} ${baseY+(line2?12:18)} Tm (${escPdf(line1)}) Tj ET`);
+        if(line2){
+          ops.push(`BT /F1 ${tsize} Tf 1 0 0 1 ${textX} ${baseY+2} Tm (${escPdf(line2)}) Tj ET`);
+        }
+      }
+    }
+    const cont = await this._addStream(`<< >>`, new TextEncoder().encode(ops.join('\n')));
+    const pageNum = await this._addObj(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${this.PW} ${this.PH}]
+         /Resources << /XObject << ${xobjs.join(' ')} >> /Font << /F1 ${this.fontObj} 0 R >> >>
+         /Contents ${cont} 0 R >>`
+    );
+    this.pageList.push(pageNum);
+    this.pending.length=0;
+  }
+  async _write(sOrU8){
+    const bin = (sOrU8 instanceof Uint8Array) ? sOrU8 : new TextEncoder().encode(sOrU8);
+    await this.stream.write(bin); this.pos += bin.length;
+  }
+  async _addObj(body){
+    this.objNo++; this.xref.push(this.pos);
+    await this._write(`${this.objNo} 0 obj\n${body}\nendobj\n`);
+    return this.objNo;
+  }
+  async _addStream(dict, binU8){
+    this.objNo++; this.xref.push(this.pos);
+    const head = `${this.objNo} 0 obj\n${dict.replace('>>','')} /Length ${binU8.length} >>\nstream\n`;
+    await this._write(head); await this._write(binU8); await this._write(`\nendstream\nendobj\n`);
+    return this.objNo;
+  }
+}
+
+/* Instância global do PDF incremental */
+const pdfWriter = new IncrementalPdfWriter();
+
 /* ===== Captura fotos ===== */
 let previewBuffer = [];
 function addPreview(url, meta){
@@ -670,14 +800,21 @@ function buildFilename(kmStr, ts){
   const stamp = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}_${String(t.getHours()).padStart(2,'0')}-${String(t.getMinutes()).padStart(2,'0')}-${String(t.getSeconds()).padStart(2,'0')}`;
   return `FOTO_${safeKm}_${stamp}.jpg`;
 }
-async function savePhotoDirect(blob, filename, w, h, meta){
+async function savePhotoAndAppendToPdf(blob, filename, w, h, meta){
   if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta não selecionada'); }
+
+  // salva JPG
   const fileHandle = await rootDirHandle.getFileHandle(filename, { create:true });
   const writable = await fileHandle.createWritable(); await writable.write(blob); await writable.close();
-  sessionPhotoFiles.push({ handle:fileHandle, w, h, name:filename, ...meta });
+
+  // incrementa contador sessão
   sessionPhotos++; hudPhotos.textContent=sessionPhotos; stFotos.textContent='Fotos: '+sessionPhotos;
-  btnFinalizePdf.disabled = sessionPhotos===0;
-  setPdfStatus('—', false);
+  btnFinalizePdf.disabled = !pdfWriter.active; // PDF aberto permite finalizar
+
+  // adiciona ao PDF (incremental) se ativo
+  if(pdfWriter.active){
+    await pdfWriter.addPhoto({blob, meta:{...meta, w, h}});
+  }
 }
 async function captureOnce(){
   if(!(csvReady && camReady && gpsReady && lastPos)) return;
@@ -698,7 +835,7 @@ async function captureOnce(){
 
   const blob = await new Promise(res => can.toBlob(res,'image/jpeg',0.85));
   const fname = buildFilename(kmStrRaw, new Date());
-  await savePhotoDirect(blob, fname, w, h, { kmStr: kmStrRaw, ts: tsStr, lat:lastPos.lat, lon:lastPos.lon, stampedKM });
+  await savePhotoAndAppendToPdf(blob, fname, w, h, { kmStr: kmStrRaw, ts: tsStr, lat:lastPos.lat, lon:lastPos.lon, stampedKM });
 
   const url = URL.createObjectURL(blob);
   foto.src=url;
@@ -709,15 +846,41 @@ async function captureOnce(){
 function startAutoCapture(){
   if(!rootDirHandle){ alert('Selecione a pasta primeiro.'); return; }
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
+
+  // bloqueia ajustes de PDF durante a sessão
+  pppSel.disabled = true; [legAuto,legOn,legOff].forEach(b=>b.disabled=true);
+
+  // abre/ inicia o PDF do relatório (incremental)
+  if(!pdfWriter.active){
+    const perPage = Number(pppSel.value)||1;
+    const legendMode = pdfLegendMode;
+    pdfWriter.openNew(rootDirHandle, perPage, legendMode)
+      .catch(e=>{ console.error('Erro ao abrir PDF:', e); alert('Falha ao iniciar o relatório PDF.'); });
+  }
+
   isAutoCapturing=true; btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.style.background='linear-gradient(180deg,#ff7b7b,#ef4444)';
+  setPdfStatus('GRAVANDO…', true);
   updateChip();
   autoCaptureInterval=setInterval(()=>{ captureOnce().catch(()=>{}); }, 600);
 }
-function stopAutoCapture(){
-  if(!isAutoCapturing) return; isAutoCapturing=false;
+async function stopAutoCapture(){
+  if(!isAutoCapturing) return;
+  isAutoCapturing=false;
   if(autoCaptureInterval){ clearInterval(autoCaptureInterval); autoCaptureInterval=null; }
   btnAutoCapture.textContent='🎬 Captura Auto'; btnAutoCapture.style.background='linear-gradient(180deg,#ff7b45,#e5612e)';
   updateChip();
+
+  // fecha o PDF automaticamente (relatório pronto)
+  try{
+    await pdfWriter.finalize();
+    alert('Relatório finalizado e salvo na pasta.');
+  }catch(e){
+    console.error('Finalização PDF:', e);
+    alert('Atenção: houve um problema ao finalizar o PDF. Verifique os arquivos na pasta.');
+  }
+
+  // libera ajustes de PDF
+  pppSel.disabled = false; [legAuto,legOn,legOff].forEach(b=>b.disabled=false);
 }
 btnAutoCapture.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
 btnClear.addEventListener('click', ()=>{ previewBuffer.forEach(p=>{ try{ URL.revokeObjectURL(p.url);}catch{} }); previewBuffer.length=0; foto.removeAttribute('src'); renderGallery(); });
@@ -762,7 +925,7 @@ btnPTT.addEventListener('pointerdown', ()=>{ if(narrationMode==='ptt'){ narratio
 btnPTT.addEventListener('pointerup',   ()=>{ if(narrationMode==='ptt'){ narrationActive=false; if(micTrack) micTrack.enabled=false; updateChip(); }});
 btnPTT.addEventListener('pointerleave',()=>{ if(narrationMode==='ptt'){ narrationActive=false; if(micTrack) micTrack.enabled=false; updateChip(); }});
 
-/* ===== Vídeo – MP4/WebM ===== */
+/* ===== Vídeo – MP4/WebM (com narração) ===== */
 let videoWritable=null, videoBytesWritten=0, mediaRecorder=null, wc={encoder:null,muxer:null,vTrack:null}, rafId=null;
 const VID_FPS=30, VID_BITRATE=1_200_000, REC_W=1280, REC_H=720;
 
@@ -913,113 +1076,14 @@ btnRecStop.addEventListener('click', async ()=>{ if(isRecordingVideo) await stop
 wrap.addEventListener('click', ()=>{ /* sem toque para não distrair na direção */ });
 btnSelectFolder.addEventListener('click', async ()=>{ await selectOutputFolder(); });
 
-/* ===== MODAL PDF + Gerador consolidado ===== */
-function openPdfOptions(){ if(sessionPhotoFiles.length===0){ alert('Nenhuma foto na sessão.'); return; } pdfModal.style.display='flex'; }
-function closePdfOptions(){ pdfModal.style.display='none'; }
-btnFinalizePdf.addEventListener('click', openPdfOptions);
-pdfCancel.addEventListener('click', closePdfOptions);
-
-[legAuto,legOn,legOff].forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    pdfLegendMode = btn.dataset.leg;
-    [legAuto,legOn,legOff].forEach(b=>b.classList.remove('selected'));
-    btn.classList.add('selected');
-  });
-});
-
-pdfOpts.addEventListener('click', async (e)=>{
-  const pp = e.target.closest('.btn')?.dataset?.pp; if(!pp) return;
-  if(pp==='cancel'){ closePdfOptions(); return; }
-  closePdfOptions();
+// Finalizar manualmente o relatório (fecha o PDF se estiver ativo)
+btnFinalizePdf.addEventListener('click', async ()=>{
+  if(!pdfWriter.active){ alert('Não há relatório aberto. Inicie a Captura Auto para abrir um novo.'); return; }
   try{
-    await generateConsolidatedPdf(Number(pp), pdfLegendMode);
-    setPdfStatus('GERADO', true);
-    const clear = confirm('PDF gerado com sucesso. Limpar sessão (mantém os arquivos na pasta)?');
-    if(clear){
-      sessionPhotoFiles.length=0; sessionPhotos=0; hudPhotos.textContent=sessionPhotos; stFotos.textContent='Fotos: 0'; btnFinalizePdf.disabled=true;
-    }
-  }catch(err){ alert('Falha ao gerar PDF: '+err.message); }
+    await pdfWriter.finalize();
+    alert('Relatório finalizado e salvo na pasta.');
+  }catch(e){ alert('Falha ao finalizar PDF: '+e.message); }
 });
-
-/* Gerador de PDF consolidado (grid + legendas) */
-async function generateConsolidatedPdf(perPage, legendMode){
-  if(!rootDirHandle) throw new Error('Pasta não selecionada');
-  const fileName = `RELATORIO_INSPECAO_${perPage}ppg_${new Date().toISOString().slice(0,10)}_${Date.now()}.pdf`;
-  const handle = await rootDirHandle.getFileHandle(fileName, { create:true });
-  const stream = await handle.createWritable();
-
-  const enc=new TextEncoder(); let pos=0, objNo=0; const xref=[0];
-  const write=async s=>{ const b=(s instanceof Uint8Array)?s:enc.encode(s); await stream.write(b); pos+=b.length; };
-  const addObj=async body=>{ objNo++; xref.push(pos); await write(`${objNo} 0 obj\n${body}\nendobj\n`); return objNo; };
-  const addStream=async (dict,bin)=>{ objNo++; xref.push(pos); await write(`${objNo} 0 obj\n${dict.replace('>>','')} /Length ${bin.length} >>\nstream\n`); await write(bin); await write(`\nendstream\nendobj\n`); return objNo; };
-
-  await write('%PDF-1.4\n');
-  const PW=595, PH=842, M=28;
-  const L={1:[1,1],2:[2,1],4:[2,2],8:[4,2],16:[4,4]}; const [COLS, ROWS] = L[perPage] || [1,1];
-  const CAP_H=30; /* reserva p/ legenda no rodapé da célula */
-  const CELL_W=Math.floor((PW-2*M)/COLS), CELL_H=Math.floor((PH-2*M)/ROWS);
-  const fontNum = await addObj(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`);
-
-  const pages=[]; let i=0;
-  while(i<sessionPhotoFiles.length){
-    const xobjs=[]; const ops=[];
-    for(let r=0;r<ROWS && i<sessionPhotoFiles.length;r++){
-      for(let c=0;c<COLS && i<sessionPhotoFiles.length;c++,i++){
-        const rec=sessionPhotoFiles[i];
-        const file=await rec.handle.getFile();
-        const imgBin=new Uint8Array(await file.arrayBuffer());
-        const imgW=rec.w||800, imgH=rec.h||450;
-
-        /* espaço disponível para imagem (deixando CAP_H para legenda) */
-        const availH = CELL_H - CAP_H;
-        let dw=CELL_W, dh=Math.round(imgH*(CELL_W/imgW));
-        if(dh>availH){ dh=availH; dw=Math.round(imgW*(availH/imgH)); }
-
-        const cellX = M + c*CELL_W, cellY = PH - (M + (r+1)*CELL_H);
-        const tx = cellX + Math.round((CELL_W - dw)/2);
-        const ty = cellY + Math.round((availH - dh)/2) + CAP_H; // imagem acima da área de legenda
-
-        const imNum = await addStream(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, imgBin);
-        const alias=`/Im_${r}_${c}`; xobjs.push(`${alias} ${imNum} 0 R`);
-        ops.push(`q\n${dw} 0 0 ${dh} ${tx} ${ty} cm\n${alias} Do\nQ\n`);
-
-        /* legenda (se aplicável) */
-        let needLegend=false;
-        if(legendMode==='on') needLegend=true;
-        else if(legendMode==='off') needLegend=false;
-        else /* auto */ needLegend = !rec.stampedKM; // só se não foi carimbado na foto
-
-        if(needLegend){
-          const km = rec.kmStr || 'KM —';
-          const ts = rec.ts || '';
-          const gps = (typeof rec.lat==='number' && typeof rec.lon==='number') ? `${rec.lat.toFixed(6)}, ${rec.lon.toFixed(6)}` : '';
-          const line1 = `${km}${ts?` • ${ts}`:''}`;
-          const line2 = gps ? `GPS: ${gps}` : '';
-
-          const textX = cellX + 6;
-          let textY = cellY + 6; // base da célula
-          const tsize = 9;
-
-          const textOps = [];
-          textOps.push(`BT /F1 ${tsize} Tf 1 0 0 1 ${textX} ${textY+(line2?12:18)} Tm (${escPdf(line1)}) Tj ET`);
-          if(line2){ textOps.push(`BT /F1 ${tsize} Tf 1 0 0 1 ${textX} ${textY+2} Tm (${escPdf(line2)}) Tj ET`); }
-          ops.push(textOps.join('\n'));
-        }
-      }
-    }
-    const cont=await addStream(`<< >>`, enc.encode(ops.join('\n')));
-    const page=await addObj(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}]
-          /Resources << /XObject << ${xobjs.join(' ')} >> /Font << /F1 ${fontNum} 0 R >> >>
-          /Contents ${cont} 0 R >>`
-    );
-    pages.push(page);
-  }
-  const pagesNum=await addObj(`<< /Type /Pages /Kids [ ${pages.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pages.length} >>`);
-  const catalog=await addObj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
-  const startXref=pos; let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`; for(let k=1;k<xref.length;k++){ xr+=String(xref[k]).padStart(10,'0')+' 00000 n \n'; }
-  await write(xr); await write(`trailer\n<< /Size ${xref.length} /Root ${catalog} 0 R >>\nstartxref\n${startXref}\n%%EOF`); await stream.close();
-}
 
 /* ===== Boot ===== */
 let bootStarted=false;
