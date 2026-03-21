@@ -25,7 +25,7 @@
   #camWrap{ position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate; }
   #vid{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000 }
 
-  /* HUD topo: PLACA AZUL “km” (K grande + mmm menor) + engrenagem */
+  /* HUD topo: PLACA AZUL + engrenagem + compartilhar */
   #hudTop{
     position:absolute; top:10px; left:0; right:0; display:flex; justify-content:space-between; align-items:flex-start; z-index:3;
     padding:0 10px; pointer-events:none;
@@ -39,18 +39,18 @@
     box-shadow: 0 8px 24px rgba(0,0,0,.45), inset 0 0 0 2px rgba(255,255,255,.75);
     text-shadow: 0 1px 0 rgba(0,0,0,.35);
   }
-  .road-sign .km-label{
-    font-weight:900; font-size:1.10rem; letter-spacing:.02em; line-height:1;
-  }
-  .road-sign .km-row{ display:flex; align-items:flex-end; gap:6px; margin-top:6px; line-height:1 }
-  .road-sign .km-k{ font-weight:900; font-size:2.0rem; letter-spacing:.02em }
-  .road-sign .km-mm{ font-weight:900; font-size:1.05rem; transform:translateY(-2px) } /* “+mmm” menor */
+  .km-row{ display:flex; align-items:flex-end; gap:8px; }
+  .km-label{ font:900 1.05rem system-ui; letter-spacing:.02em; line-height:1 }
+  .km-eq{ font:900 1.65rem system-ui; letter-spacing:.02em; line-height:1.05 }   /* “km = XX” */
+  .km-k { font:900 1.9rem system-ui; letter-spacing:.02em; line-height:1.05 }
+  .km-mm{ font:900 1.02rem system-ui; transform:translateY(-2px) } /* “+mmm” menor */
 
-  /* Engrenagem (opções) */
-  #gear{ pointer-events:auto;
+  .hudBtns{ display:flex; gap:8px; pointer-events:auto; }
+  .chipBtn{
     display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px;
     background:linear-gradient(180deg,var(--panelA),var(--panelB));
     border:1px solid rgba(255,255,255,.16); box-shadow:var(--shadow); cursor:pointer; user-select:none;
+    color:#eaf2ff; font-weight:900;
   }
 
   /* HUD base: ÚNICO botão */
@@ -77,7 +77,7 @@
   }
   .gateCard{
     background:linear-gradient(180deg, rgba(16,26,64,.9), rgba(14,22,52,.9));
-    border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:20px; width:min(92vw, 460px);
+    border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:20px; width:min(92vw, 480px);
     color:#cfe1ff; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.5);
   }
   .gateCard h2{ margin:0 0 10px } .gateCard p{ margin:0 0 14px; opacity:.9 }
@@ -95,12 +95,17 @@
     position:absolute; right:10px; top:58px; z-index:4; display:none;
     background:linear-gradient(180deg,var(--panelA),var(--panelB));
     border:1px solid rgba(255,255,255,.16); border-radius:12px; box-shadow:var(--shadow);
-    padding:12px; min-width:240px; pointer-events:auto;
+    padding:12px; min-width:260px; pointer-events:auto;
   }
   #opts h4{ margin:0 0 8px; font-size:1rem }
-  .row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin:8px 0 }
-  .row button{ padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.16); background:#0c1436; color:#eaf2ff; font-weight:800; cursor:pointer }
-  .row input[type="range"]{ width:140px }
+  .row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin:10px 0 }
+  .row button, .row select, .row input[type="range"], .row input[type="checkbox"]{
+    border-radius:10px; border:1px solid rgba(255,255,255,.16); background:#0c1436; color:#eaf2ff; font-weight:800;
+  }
+  .row button{ padding:8px 10px; cursor:pointer }
+  .row select{ padding:8px 10px }
+  .row input[type="range"]{ width:150px }
+  .row label{ display:flex; align-items:center; gap:8px; font-weight:800 }
   .dim{ font-size:.86rem; opacity:.85 }
 </style>
 </head>
@@ -113,9 +118,14 @@
     <div id="hudTop">
       <div class="road-sign" id="sign">
         <div class="km-label">km</div>
-        <div class="km-row"><span class="km-k" id="kmK">—</span><span class="km-mm" id="kmM">+000</span></div>
+        <!-- modo “eq”: km = XX  |  modo “plus”: km K + mmm -->
+        <div class="km-row" id="kmEqRow" style="display:none"><span class="km-eq" id="kmEq">km = —</span></div>
+        <div class="km-row" id="kmPlusRow"><span class="km-k" id="kmK">—</span><span class="km-mm" id="kmM">+000</span></div>
       </div>
-      <div id="gear">⚙️ Opções</div>
+      <div class="hudBtns">
+        <div id="btnShare" class="chipBtn" title="Enviar por WhatsApp">📤 Compartilhar</div>
+        <div id="btnGear" class="chipBtn" title="Opções">⚙️ Opções</div>
+      </div>
     </div>
 
     <!-- HUD base -->
@@ -137,7 +147,33 @@
     <input id="rngInterval" type="range" min="300" max="2000" step="50">
   </div>
   <div class="row">
-    <span class="dim">Atual: <b id="lblInterval">—</b> ms</span>
+    <span>Qualidade JPG</span>
+    <input id="rngJpgQ" type="range" min="70" max="100" step="1">
+  </div>
+  <div class="row">
+    <span>Resolução máx. (px)</span>
+    <select id="selMaxDim">
+      <option value="1280">1280</option>
+      <option value="1600">1600</option>
+      <option value="1920" selected>1920</option>
+      <option value="2560">2560</option>
+    </select>
+  </div>
+  <div class="row">
+    <label><input id="chkShowTS" type="checkbox" checked> Mostrar data/hora</label>
+  </div>
+  <div class="row">
+    <label><input id="chkShowGPS" type="checkbox"> Mostrar GPS</label>
+  </div>
+  <div class="row">
+    <span>Formato do KM</span>
+    <select id="selKmFmt">
+      <option value="eq">km = XX</option>
+      <option value="plus" selected>km K + mmm</option>
+    </select>
+  </div>
+  <div class="row">
+    <span class="dim">Atual: <b id="lblInterval">—</b> ms • JPG <b id="lblQ">—</b>% • Máx <b id="lblDim">—</b>px</span>
     <button id="btnCloseOpts">Fechar</button>
   </div>
 </div>
@@ -147,7 +183,7 @@
   <div class="gateCard">
     <h2>Selecionar Pasta de Saída</h2>
     <p>As <b>fotos (JPG)</b> serão gravadas automaticamente na pasta escolhida.</p>
-    <button id="btnPickFolder" class="btn primary">📁 Escolher pasta</button>
+    <button id="btnPickFolder" class="btn">📁 Escolher pasta</button>
     <p style="margin-top:10px;opacity:.85">Requisitos: Chrome/Edge em <b>HTTPS</b>. Mantenha <code>SNVBR116SPRJ.csv</code> (KM) na mesma pasta do HTML.</p>
   </div>
 </div>
@@ -155,35 +191,47 @@
 <div id="toast"></div>
 
 <script>
-/* ===== Estado/Refs ===== */
+/* ================= Estado/Refs ================= */
 let rootDirHandle=null;
 let csvKMReady=false, camReady=false, gpsReady=false;
 let lastPos=null;
-let isAuto=false, autoTimer=null;
-let photoBusy=false;               // semáforo
-let photoQueue=Promise.resolve();  // fila serial
-
+let isAuto=false, autoTimer=null, writing=false, queue=Promise.resolve();
 let deviceList=[], deviceIndex=0, currentStream=null;
 
+/* Opções persistentes */
+const optsState = {
+  interval: Number(localStorage.getItem('auto_ms')||'800'),
+  jpgQ: Number(localStorage.getItem('jpg_q')||'92'),
+  maxDim: Number(localStorage.getItem('max_dim')||'1920'),
+  showTS: (localStorage.getItem('show_ts')??'1')==='1',
+  showGPS: (localStorage.getItem('show_gps')??'0')==='1',
+  kmFmt: localStorage.getItem('km_fmt')||'plus' // 'eq' | 'plus'
+};
+
+/* DOM */
 const vid=document.getElementById('vid');
-const kmK=document.getElementById('kmK'), kmM=document.getElementById('kmM');
+const kmK=document.getElementById('kmK'), kmM=document.getElementById('kmM'), kmEq=document.getElementById('kmEq');
+const kmPlusRow=document.getElementById('kmPlusRow'), kmEqRow=document.getElementById('kmEqRow');
 const btnAuto=document.getElementById('btnAuto');
 const folderGate=document.getElementById('folderGate'), btnPickFolder=document.getElementById('btnPickFolder');
-const gear=document.getElementById('gear'), opts=document.getElementById('opts');
-const btnSwap=document.getElementById('btnSwap'), rngInterval=document.getElementById('rngInterval'), lblInterval=document.getElementById('lblInterval');
+const btnGear=document.getElementById('btnGear'), opts=document.getElementById('opts'), btnCloseOpts=document.getElementById('btnCloseOpts');
+const btnSwap=document.getElementById('btnSwap'), btnShare=document.getElementById('btnShare');
+const rngInterval=document.getElementById('rngInterval'), lblInterval=document.getElementById('lblInterval');
+const rngJpgQ=document.getElementById('rngJpgQ'), lblQ=document.getElementById('lblQ');
+const selMaxDim=document.getElementById('selMaxDim'), lblDim=document.getElementById('lblDim');
+const chkShowTS=document.getElementById('chkShowTS'), chkShowGPS=document.getElementById('chkShowGPS');
+const selKmFmt=document.getElementById('selKmFmt');
+const toast=document.getElementById('toast');
 
-const DEF_INTERVAL = Number(localStorage.getItem('auto_ms')||'800');
-rngInterval.value=String(DEF_INTERVAL); lblInterval.textContent=rngInterval.value;
-
-/* ===== Utils ===== */
-function showToast(msg,ms=1500){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(showToast.t); showToast.t=setTimeout(()=>t.style.display='none',ms); }
+/* ================= Utils ================= */
+function showToast(msg,ms=1500){ toast.textContent=msg; toast.style.display='block'; clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.style.display='none',ms); }
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
 function stampStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours())}-${String(d.getMinutes())}-${String(d.getSeconds())}`; }
 function fmtKMMM(val){ const K=Math.floor(val); let m=Math.round((val-K)*1000); if(m>=1000){m-=1000;} return {K, mmm:String(m).padStart(3,'0')}; }
 
-/* ===== Pasta/Permissões ===== */
+/* ================= Pasta/Permissão ================= */
 async function verifyPermission(handle, rw){
   const opt={mode:rw?'readwrite':'read'};
   const q=await handle.queryPermission?.(opt);
@@ -201,7 +249,7 @@ async function pickFolder(){
 }
 btnPickFolder.addEventListener('click', pickFolder);
 
-/* ===== CSV KM ===== */
+/* ================= KM (CSV) ================= */
 let kmPoints=[], kmGrid=new Map();
 const CELL=0.005;
 function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
@@ -240,15 +288,21 @@ function nearestKM(lat,lon){
   let best=null,bd=Infinity; for(const p of c){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
 }
 function refreshSign(){
-  if(lastPos && csvKMReady){
-    const n=nearestKM(lastPos.lat,lastPos.lon);
-    if(n){ const {K, mmm}=fmtKMMM(n.km); kmK.textContent=String(K); kmM.textContent='+'+mmm; }
-    else { kmK.textContent='—'; kmM.textContent='+000'; }
+  if(!lastPos || !csvKMReady) return;
+  const n=nearestKM(lastPos.lat,lastPos.lon);
+  if(!n){ kmK.textContent='—'; kmM.textContent='+000'; kmEq.textContent='km = —'; return; }
+  const {K, mmm}=fmtKMMM(n.km);
+  if(optsState.kmFmt==='eq'){
+    kmEqRow.style.display='flex'; kmPlusRow.style.display='none';
+    kmEq.textContent = `km = ${K}`;
+  }else{
+    kmEqRow.style.display='none'; kmPlusRow.style.display='flex';
+    kmK.textContent=String(K); kmM.textContent='+'+mmm;
   }
 }
 setInterval(refreshSign, 600);
 
-/* ===== Câmera / Troca ===== */
+/* ================= Câmera / Troca ================= */
 async function enumerateCameras(){
   try{ const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); tmp.getTracks().forEach(t=>t.stop()); }catch{}
   const devs=await navigator.mediaDevices.enumerateDevices();
@@ -276,7 +330,7 @@ btnSwap.addEventListener('click', async ()=>{
   deviceIndex=(deviceIndex+1)%deviceList.length; await startCamera(deviceIndex);
 });
 
-/* ===== GPS ===== */
+/* ================= GPS ================= */
 function startGPS(){
   if(!('geolocation' in navigator)){ gpsReady=false; return; }
   navigator.geolocation.getCurrentPosition(p=>{
@@ -288,112 +342,110 @@ function startGPS(){
   },()=>{ gpsReady=false; }, {enableHighAccuracy:true, timeout:12000});
 }
 
-/* ===== Carimbo na foto ===== */
-function stampOverlay(ctx,w,h,kmKVal,kmMVal,tsStr,gpsStr){
-  const bandH=Math.max(100,Math.round(h*0.14));
-  ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
-
-  if(kmKVal){
-    ctx.fillStyle='#b7ffcf'; ctx.textAlign='left';
-    const fBig=Math.round(h*0.05), fSmall=Math.round(h*0.03);
-    const baseY = h - bandH + Math.round(bandH*0.50);
-
+/* ================= Carimbo na foto ================= */
+function drawStamp(ctx,w,h,kmKVal,kmMVal,tsStr,gpsStr){
+  const bandH=Math.max(84,Math.round(h*0.12));
+  ctx.fillStyle='rgba(0,0,0,.60)'; ctx.fillRect(0,h-bandH,w,bandH);
+  const fBig=Math.round(h*0.045), fSmall=Math.round(h*0.028);
+  ctx.fillStyle='#b7ffcf'; ctx.textAlign='left';
+  if(optsState.kmFmt==='eq'){
     ctx.font=`900 ${fBig}px system-ui`;
-    const kmTxt=`km ${kmKVal}`;
-    ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
-    ctx.fillText(kmTxt,20,baseY);
-    ctx.shadowBlur=0;
-
-    if(kmMVal){
-      ctx.font=`900 ${fSmall}px system-ui`;
-      const wTxt = ctx.measureText(kmTxt).width;
-      ctx.fillText('+'+kmMVal, 20 + wTxt + 10, baseY - Math.round(fBig*0.25));
-    }
+    ctx.fillText(`km = ${kmKVal??'—'}`, 18, h-bandH+Math.round(bandH*0.55));
+  }else{
+    ctx.font=`900 ${fBig}px system-ui`;
+    const baseY=h-bandH+Math.round(bandH*0.55);
+    const left=18;
+    const kmTxt=`km ${kmKVal??'—'}`;
+    ctx.fillText(kmTxt,left,baseY);
+    ctx.font=`900 ${fSmall}px system-ui`;
+    const wTxt=ctx.measureText(kmTxt).width;
+    if(kmMVal) ctx.fillText('+'+kmMVal, left+wTxt+10, baseY-Math.round(fBig*0.25));
   }
-  if(tsStr){
-    ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.font=`700 ${Math.round(h*0.03)}px system-ui`;
-    ctx.fillText(tsStr,20,h-18);
+  if(optsState.showTS){
+    ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.font=`700 ${Math.round(h*0.028)}px system-ui`;
+    ctx.fillText(tsStr,18,h-16);
   }
-  if(gpsStr){
-    ctx.fillStyle='#cfe7ff'; ctx.textAlign='left'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
-    ctx.fillText(gpsStr,20,h-bandH+28);
+  if(optsState.showGPS && gpsStr){
+    ctx.fillStyle='#cfe7ff'; ctx.textAlign='left'; ctx.font=`600 ${Math.round(h*0.026)}px system-ui`;
+    ctx.fillText(gpsStr,18,h-bandH+26);
   }
 }
 
-/* ===== Captura → toBlob → write(blob) (igual ao do relatório) ===== */
-const MAX_DIM=1920;
-async function createJpegBlobFromVideo(){
+/* ================= Captura JPEG → write(blob) (esquema do relatório) ================= */
+async function frameToJpegBlob(){
   const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
-  const sc=(Math.max(vw,vh)>MAX_DIM)? (MAX_DIM/Math.max(vw,vh)) : 1;
+  const sc=(Math.max(vw,vh)>optsState.maxDim)? (optsState.maxDim/Math.max(vw,vh)) : 1;
   const w=Math.round(vw*sc), h=Math.round(vh*sc);
 
   const can=document.createElement('canvas'); const ctx=can.getContext('2d',{alpha:false});
   can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
 
-  const kVal = kmK.textContent!=='—' ? kmK.textContent : null;
-  const mVal = kmM.textContent.replace('+','');
+  // Prepara KM atual
+  let kmKVal=null, kmMVal=null;
+  if(optsState.kmFmt==='eq'){
+    kmKVal = kmEq.textContent.replace('km =','').trim();
+  }else{
+    kmKVal = kmK.textContent!=='—' ? kmK.textContent : null;
+    kmMVal = kmM.textContent.replace('+','');
+  }
   const ts=new Date().toLocaleString();
   let gps=''; if(lastPos) gps=`${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
-  stampOverlay(ctx,w,h,kVal,mVal,ts,gps);
+  drawStamp(ctx,w,h,kmKVal,kmMVal,ts,gps);
 
-  // === ESQUEMA QUE FUNCIONAVA NO RELATÓRIO ===
-  const blob = await new Promise(res=>can.toBlob(res,'image/jpeg',0.92));
+  // Blob JPEG
+  const q = Math.max(0.7, Math.min(1, optsState.jpgQ/100));
+  const blob = await new Promise(res=>can.toBlob(res,'image/jpeg',q));
   if(blob && blob.size>0) return blob;
 
-  // Fallback simples (raro): dataURL → Blob
-  const dataURL = can.toDataURL('image/jpeg',0.9);
-  const byteString = atob(dataURL.split(',')[1]);
-  const u8 = new Uint8Array(byteString.length);
-  for(let i=0;i<byteString.length;i++) u8[i]=byteString.charCodeAt(i);
+  // Fallback simples via dataURL → Blob
+  const dataURL = can.toDataURL('image/jpeg', q);
+  const bin = atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
   return new Blob([u8], {type:'image/jpeg'});
 }
 
 async function savePhotoOnce(){
-  if(photoBusy) return;
-  if(!(rootDirHandle && camReady && gpsReady && csvKMReady && lastPos && vid.videoWidth)) return;
+  if(writing) return;
+  if(!(rootDirHandle && camReady && gpsReady && csvKMReady && vid.videoWidth)) return;
 
-  photoBusy=true;
+  writing=true;
   try{
-    // Revalida permissão (alguns Android “esquecem” após inatividade)
-    const ok = await verifyPermission(rootDirHandle, true);
-    if(!ok){ showToast('Permissão na pasta perdida'); photoBusy=false; return; }
+    const ok=await verifyPermission(rootDirHandle,true);
+    if(!ok){ showToast('Permissão na pasta'); writing=false; return; }
 
-    const blob = await createJpegBlobFromVideo();
-    const kText = kmK.textContent!=='—' ? kmK.textContent : '—';
-    const mText = kmM.textContent.replace('+','');
+    const blob = await frameToJpegBlob();
+
+    const kText = (optsState.kmFmt==='eq')
+      ? (kmEq.textContent.replace('km =','').trim()||'—')
+      : (kmK.textContent!=='—'? kmK.textContent : '—');
+    const mText = (optsState.kmFmt==='eq')? '000' : kmM.textContent.replace('+','');
     const name = `FOTO_km_${kText}_${mText}_${stampStr()}.jpg`;
 
     const fh = await rootDirHandle.getFileHandle(name,{create:true});
     const w = await fh.createWritable();
-    await w.write(blob);         // <-- exatamente como no relatório
+    await w.write(blob);          // <— ESQUEMA QUE FUNCIONAVA NO RELATÓRIO
     await w.close();
 
-    // Sanidade: confirma tamanho; se 0 B, reescreve via fallback dataURL
+    // checagem rápida
     const f=await fh.getFile();
     if(f.size===0){
-      const blob2 = await createJpegBlobFromVideo(); // recaptura rápida
-      const w2 = await fh.createWritable();
-      await w2.write(blob2);
-      await w2.close();
+      const blob2=await frameToJpegBlob();
+      const w2=await fh.createWritable(); await w2.write(blob2); await w2.close();
     }
   }catch(err){
-    console.error('Salvar foto erro:', err);
-    showToast('Falha ao salvar foto');
+    console.error('Salvar foto erro:', err); showToast('Falha ao salvar foto');
   }finally{
-    photoBusy=false;
+    writing=false;
   }
 }
 
-/* ===== AUTO ===== */
+/* ================= AUTO ================= */
 function startAuto(){
   if(isAuto) return;
-  const interval = Math.max(300, Math.min(2000, Number(rngInterval.value)||800));
-  rngInterval.value=String(interval); lblInterval.textContent=rngInterval.value; localStorage.setItem('auto_ms', String(interval));
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady)){ showToast('Aguarde Pasta/Câmera/GPS/CSV'); return; }
   isAuto=true; btnAuto.textContent='⏹ PARAR AUTO'; btnAuto.classList.add('auto-on'); btnAuto.classList.remove('primary');
-
-  // Fila serial garante que a próxima só começa após a anterior terminar
-  autoTimer=setInterval(()=>{ photoQueue = photoQueue.then(()=>savePhotoOnce()).catch(()=>{}); }, interval);
+  queue = queue.then(()=>savePhotoOnce()).catch(()=>{});
+  autoTimer=setInterval(()=>{ queue = queue.then(()=>savePhotoOnce()).catch(()=>{}); }, optsState.interval);
   showToast('Auto ON');
 }
 function stopAuto(){
@@ -403,31 +455,59 @@ function stopAuto(){
 }
 btnAuto.addEventListener('click', ()=>{ if(isAuto) stopAuto(); else startAuto(); });
 
-/* ===== Opções ===== */
-gear.addEventListener('click', ()=>{ opts.style.display = (opts.style.display==='block'?'none':'block'); });
-document.getElementById('btnCloseOpts').addEventListener('click', ()=>{ opts.style.display='none'; });
-rngInterval.addEventListener('input', ()=>{ lblInterval.textContent=rngInterval.value; });
-btnSwap.addEventListener('click', async ()=>{
-  if(!deviceList.length) await enumerateCameras();
-  if(!deviceList.length) return;
-  deviceIndex=(deviceIndex+1)%deviceList.length; await startCamera(deviceIndex);
-});
+/* ================= Compartilhar (WhatsApp via Web Share) ================= */
+async function shareInstant(){
+  try{
+    // Captura instantânea (a mesma que vai para o arquivo), mas sem gravar
+    const blob = await frameToJpegBlob();
+    const file = new File([blob], `captura_${stampStr()}.jpg`, {type:'image/jpeg', lastModified:Date.now()});
 
-/* ===== Atualização de KM na placa ===== */
-setInterval(()=>{
-  if(lastPos && csvKMReady){
-    const n=nearestKM(lastPos.lat,lastPos.lon);
-    if(n){ const o=n.km; const K=Math.floor(o); let m=Math.round((o-K)*1000); if(m>=1000){m-=1000;} kmK.textContent=String(K); kmM.textContent='+'+String(m).padStart(3,'0'); }
-    else { kmK.textContent='—'; kmM.textContent='+000'; }
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], text:'Evidência de inspeção – captura instantânea.' });
+    }else{
+      // Fallback: tenta abrir WhatsApp com texto; o usuário anexa a última foto
+      const msg = encodeURIComponent('Evidência de inspeção – captura instantânea.');
+      window.open(`https://wa.me/?text=${msg}`, '_blank');
+      // opcional: baixa a imagem para facilitar anexo
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+    }
+  }catch(err){
+    console.error('Share erro:', err); showToast('Não foi possível compartilhar');
   }
-}, 600);
+}
+btnShare.addEventListener('click', ()=>{ shareInstant().catch(()=>{}); });
 
-/* ===== Boot ===== */
+/* ================= Opções UI ================= */
+function applyOptionsToUI(){
+  rngInterval.value=String(optsState.interval); lblInterval.textContent=rngInterval.value;
+  rngJpgQ.value=String(optsState.jpgQ); lblQ.textContent=String(optsState.jpgQ);
+  selMaxDim.value=String(optsState.maxDim); lblDim.textContent=String(optsState.maxDim);
+  chkShowTS.checked=optsState.showTS; chkShowGPS.checked=optsState.showGPS;
+  selKmFmt.value=optsState.kmFmt;
+  // troca de visual da placa
+  if(optsState.kmFmt==='eq'){ kmEqRow.style.display='flex'; kmPlusRow.style.display='none'; }
+  else { kmEqRow.style.display='none'; kmPlusRow.style.display='flex'; }
+}
+applyOptionsToUI();
+
+btnGear.addEventListener('click', ()=>{ opts.style.display = (opts.style.display==='block'?'none':'block'); });
+btnCloseOpts.addEventListener('click', ()=>{ opts.style.display='none'; });
+
+rngInterval.addEventListener('input', ()=>{ optsState.interval=Number(rngInterval.value); lblInterval.textContent=rngInterval.value; localStorage.setItem('auto_ms', String(optsState.interval)); });
+rngJpgQ.addEventListener('input', ()=>{ optsState.jpgQ=Number(rngJpgQ.value); lblQ.textContent=String(optsState.jpgQ); localStorage.setItem('jpg_q', String(optsState.jpgQ)); });
+selMaxDim.addEventListener('change', ()=>{ optsState.maxDim=Number(selMaxDim.value); lblDim.textContent=String(optsState.maxDim); localStorage.setItem('max_dim', String(optsState.maxDim)); });
+chkShowTS.addEventListener('change', ()=>{ optsState.showTS=chkShowTS.checked; localStorage.setItem('show_ts', optsState.showTS?'1':'0'); });
+chkShowGPS.addEventListener('change', ()=>{ optsState.showGPS=chkShowGPS.checked; localStorage.setItem('show_gps', optsState.showGPS?'1':'0'); });
+selKmFmt.addEventListener('change', ()=>{ optsState.kmFmt=selKmFmt.value; localStorage.setItem('km_fmt', optsState.kmFmt); applyOptionsToUI(); refreshSign(); });
+
+/* ================= Boot ================= */
 async function boot(){
   await enumerateCameras();
   await startCamera(deviceIndex);
   startGPS();
   await loadKM();
+  refreshSign();
 }
 boot();
 </script>
