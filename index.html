@@ -4,26 +4,29 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0b1020" />
-<title>Relatório Fotográfico – Inspeção Noturna (Consolidado)</title>
+<title>Relatório Fotográfico – Inspeção Noturna (UI Pro)</title>
 <style>
   :root{
-    --bg:#0e1533; --surface:#0f1731cc; --fg:#e8eeff; --muted:#a9b7df; --border:#1e284d;
-    --ok:#22c55e; --warn:#eab308; --danger:#ef4444;
-    --shadow: 0 10px 28px rgba(0,0,0,.38);
-    --radius: 14px; --camH: 42vh;
-    --btnGradA:#0d1430; --btnGradB:#0a0f26; --btnBorder:#20305e;
+    --bg:#0d132b; --surface:#0f1731cc; --fg:#e8eeff; --muted:#a9b7df; --border:#1e284d;
+    --ok:#22c55e; --warn:#eab308; --danger:#ef4444; --accent:#35eb85; --accent2:#22c55e;
+    --shadow: 0 12px 30px rgba(0,0,0,.40);
+    --radius: 14px; --camH: 44vh;
+    --btnGradA:#0e1432; --btnGradB:#0a0f26; --btnBorder:#223363;
     --camGradA:#0b1230; --camGradB:#07102a; --camBorder:#213066;
-    --pdfA:#857b5d; --pdfB:#eab308; --pdfText:#231c00;
+    --pdfA:#eab308; --pdfB:#b98a06; --pdfText:#231c00;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
     margin:0; color:var(--fg);
-    background: radial-gradient(1200px 600px at 50% -10%, #0d2a7633, transparent 70%), radial-gradient(1000px 600px at 120% 10%, #0b553355, transparent 70%), var(--bg);
+    background:
+      radial-gradient(1100px 520px at 10% -10%, #15305f33, transparent 70%),
+      radial-gradient(900px 520px at 120% 10%, #0a4b3355, transparent 70%),
+      var(--bg);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
     padding:12px; line-height:1.35; overflow-x:hidden;
   }
-  h1{margin:0 0 10px;text-align:center;font-size:1.28rem; letter-spacing:.02em}
+  h1{margin:0 0 10px;text-align:center;font-size:1.24rem; letter-spacing:.02em}
 
   .card{
     background: linear-gradient(180deg, var(--surface), rgba(15,23,49,.7));
@@ -54,80 +57,102 @@
     background: linear-gradient(180deg, var(--camGradA), var(--camGradB));
     border:1px solid var(--camBorder); box-shadow: 0 14px 36px rgba(0,0,0,.45), inset 0 0 0 1px #0d1b4e;
   }
-  #wrap{ position: relative; height: 100%; border-radius: var(--radius); overflow: hidden }
-  #vid{ width: 100%; height: 100%; display:block; background:#000; border-radius: var(--radius); object-fit:contain; }
-
-  #camSpacer{ height: calc(var(--camH) + 24px + env(safe-area-inset-top, 0px)); max-width:980px; margin: 0 auto 8px; }
-
-  /* ===== HUD sobre o vídeo ===== */
-  .mini{
-    pointer-events:auto; border:1px solid rgba(255,255,255,.18);
-    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.45));
-    color:#e6ebff; border-radius:10px; padding:6px 8px; font-weight:900; font-size:.9rem; cursor:pointer;
-    box-shadow: 0 6px 16px rgba(0,0,0,.28);
+  #wrap{
+    position: relative; height: 100%; border-radius: var(--radius); overflow: hidden;
+    /* cria contexto de empilhamento para overlays */
+    isolation:isolate;
   }
-  #btnMiniCycle{ position:absolute; left:10px; top:10px; }    /* trocar câmera */
-  #btnMiniPreset{ position:absolute; left:64px; top:10px; }  /* presets */
-  #btnMiniPower{ position:absolute; right:10px; top:10px; }  /* ligar/parar */
-  #btnRecStop { position:absolute; right:10px; bottom:10px; display:none } /* STOP gravação */
-  #btnPTT     { position:absolute; right:100px; bottom:10px; display:none } /* PTT */
+  #vid{
+    width: 100%; height: 100%; display:block; background:#000; border-radius: var(--radius);
+    object-fit: contain; z-index:0;
+  }
+  /* Afastador sob a câmera */
+  #camSpacer{ height: calc(var(--camH) + 26px + env(safe-area-inset-top, 0px)); max-width:980px; margin: 0 auto 8px; }
 
-  /* Zoom discreto */
+  /* ===== TopBar (sobre o vídeo) ===== */
+  #topBar{
+    position:absolute; inset:auto 0 auto 0; top:8px; z-index:5;
+    display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 8px;
+    width:100%;
+    pointer-events:none; /* cada botão recoloca pointer-events */
+  }
+  .toolbar{
+    display:flex; align-items:center; gap:8px; padding:6px 8px;
+    background: linear-gradient(180deg, rgba(10,16,40,.75), rgba(8,12,28,.72));
+    border:1px solid rgba(255,255,255,.16); border-radius:12px; box-shadow: var(--shadow);
+  }
+  .btn{
+    pointer-events:auto; min-width:44px; height:40px; padding:0 10px;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    border:1px solid rgba(255,255,255,.18);
+    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.45));
+    color:#e6ebff; border-radius:10px; font-weight:900; font-size:.92rem; cursor:pointer;
+    box-shadow: 0 8px 18px rgba(0,0,0,.30);
+  }
+  .btn:active{ transform:translateY(1px); }
+  .btn.critical{ background: linear-gradient(180deg, #cc3e36, #a72b25); border-color:#b52d27; color:#fff; }
+  .btn.success{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#0b2c21; border-color:#1aa455; }
+
+  /* ===== BottomBar (sobre o vídeo) ===== */
+  #bottomBar{
+    position:absolute; inset:auto 0 8px 0; z-index:5; width:100%;
+    display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 8px;
+    pointer-events:none;
+  }
+
+  /* Zoom pad (discreto) */
   #zoomPad{
-    position:absolute; left:50%; bottom:10px; transform:translateX(-50%);
-    display:none; align-items:center; gap:8px;
-    padding:6px 10px; border-radius:12px; border:1px solid rgba(255,255,255,.18);
-    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.45));
-    box-shadow: 0 6px 16px rgba(0,0,0,.28);
+    pointer-events:auto;
+    display:none; align-items:center; gap:8px; padding:6px 10px;
+    background: linear-gradient(180deg, rgba(10,16,40,.75), rgba(8,12,28,.72));
+    border:1px solid rgba(255,255,255,.16); border-radius:12px; box-shadow: var(--shadow);
   }
-  #zoomLbl{ min-width:48px; text-align:center; font-weight:900 }
+  #zoomLbl{ min-width:52px; text-align:center; font-weight:900 }
 
-  /* HUD contadores */
-  #hud{ position:absolute; left:10px; bottom:10px; right:10px; display:flex; gap:8px; align-items:center; justify-content:space-between; pointer-events:none; }
+  /* Counters */
   .pill{
     pointer-events:auto; display:inline-flex; align-items:center; gap:8px;
-    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.45));
-    border:1px solid rgba(255,255,255,.18); color:#e6ebff;
-    padding:6px 10px; border-radius:12px; font-size:.84rem; font-weight:900;
-    box-shadow: 0 6px 16px rgba(0,0,0,.28);
+    background: linear-gradient(180deg, rgba(10,16,40,.75), rgba(8,12,28,.72));
+    border:1px solid rgba(255,255,255,.16); color:#e6ebff;
+    padding:6px 10px; border-radius:12px; font-size:.86rem; font-weight:900;
+    box-shadow: var(--shadow);
   }
-
-  /* Chip estado (centro topo) */
-  .chip{
-    position: absolute; left:50%; top:10px; transform:translateX(-50%);
-    background: linear-gradient(180deg, rgba(127,29,29,.8), rgba(90,14,14,.72));
-    border: 1px solid #dc2626; color: #ffe2e2; padding: 6px 10px; border-radius: 999px;
-    font-size: .8rem; font-weight: 900; display: none; user-select: none; box-shadow: var(--shadow);
-  }
-  .chip.on{ display:inline-flex; align-items:center; gap:8px }
 
   /* Popup presets */
   #presetMenu{
-    position:absolute; left:64px; top:48px; display:none; z-index:120;
-    background: linear-gradient(180deg, rgba(0,0,0,.8), rgba(0,0,0,.72));
-    border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:6px;
-    box-shadow: 0 10px 28px rgba(0,0,0,.45);
+    position:absolute; left:70px; top:56px; z-index:6;
+    display:none; flex-direction:column; gap:6px; padding:8px;
+    background: linear-gradient(180deg, rgba(10,16,40,.95), rgba(10,16,35,.92));
+    border:1px solid rgba(255,255,255,.18); border-radius:12px; box-shadow: var(--shadow);
   }
-  #presetMenu button{ display:block; width:100%; text-align:left; margin:4px 0; }
+  #presetMenu .btn{ width:100%; justify-content:flex-start }
 
-  /* ===== Ações ===== */
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  button{
-    flex:1 1 180px; padding:12px 14px; font-size:.98rem; border:0; border-radius:12px; cursor:pointer;
-    background: linear-gradient(180deg, var(--btnGradA), var(--btnGradB)); color:var(--fg); font-weight:900;
-    border:1px solid var(--btnBorder); box-shadow: 0 6px 18px rgba(0,0,0,.25);
-    transition: transform .06s ease, box-shadow .12s ease, filter .12s ease;
+  /* Chip status (top center) */
+  .chip{
+    position:absolute; left:50%; top:8px; transform:translateX(-50%); z-index:6;
+    background: linear-gradient(180deg, rgba(127,29,29,.9), rgba(90,14,14,.82));
+    border:1px solid #dc2626; color:#ffe2e2; padding:6px 10px; border-radius:999px; font-weight:900; font-size:.84rem;
+    box-shadow: var(--shadow); display:none;
   }
-  button:hover{ filter:brightness(1.05) }
-  button:active{ transform: translateY(1px); box-shadow: 0 3px 12px rgba(0,0,0,.25) }
+  .chip.on{ display:inline-flex; align-items:center; gap:8px }
+
+  /* ===== Ações (fora do vídeo) ===== */
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button.action{
+    flex:1 1 180px; padding:12px 14px; font-size:.98rem; border:0; border-radius:12px; cursor:pointer;
+    background: linear-gradient(180deg, var(--btnGradA), var(--btnGradB)); color:var(--fg); font-weight:800;
+    border:1px solid var(--btnBorder); box-shadow: 0 6px 18px rgba(0,0,0,.25);
+  }
+  button.action:active{ transform: translateY(1px) }
+  #btnSelectFolder{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#072414 }
   #btnAutoCapture{ background: linear-gradient(180deg, #ff7b45, #e5612e); color:#1b0b02 }
   #btnVideoRecord{ background: linear-gradient(180deg, #f2544b, #cc3e36); color:#fff }
   #btnFinalizePdf{ background: linear-gradient(180deg, var(--pdfA), var(--pdfB)); color:var(--pdfText) }
-  #btnSelectFolder{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#072414 }
   #btnClear{ background: linear-gradient(180deg, #ff6161, #ef4444); color:#fff }
-  button:disabled{opacity:.5;cursor:not-allowed; filter:grayscale(.2)}
-  @media (max-width:420px){ button{flex:1 1 140px;font-size:.95rem} }
+  button.action:disabled{opacity:.55;cursor:not-allowed; filter:grayscale(.2)}
+  @media (max-width:420px){ button.action{flex:1 1 140px;font-size:.95rem} }
 
+  /* Lista de fotos */
   #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:8px; box-shadow: var(--shadow)}
   .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
   .thumb{border:1px solid #243053;border-radius:10px;overflow:hidden;background:#0a122a}
@@ -152,11 +177,12 @@
   .splash-inner{ position: relative; z-index: 2; text-align: center; padding: 24px 18px; }
   .title{
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-weight: 900; font-size: clamp(1.2rem, 4vw, 2.4rem);
+    font-weight: 900; font-size: clamp(1.1rem, 4vw, 2.2rem);
     letter-spacing: .06em; color: #b7ffcf;
     text-shadow: 0 0 10px #22c55e55, 0 0 22px #22c55e77, 0 0 40px #22c55e55, 0 1px 0 #0b1d14;
     white-space: nowrap; overflow: hidden; border-right: 2px solid #43ff9b;
     margin: 0 auto 10px; width: 0;
+    animation: typing 1200ms steps(24, end) forwards, caret 650ms step-end 6;
   }
   .subtitle{ font-weight:700; color:#9fe9ff; letter-spacing:.04em; opacity:.9 }
   .splash-actions{ margin-top:16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap }
@@ -165,8 +191,7 @@
     background: linear-gradient(180deg, #1b4c3b, #123c2e); color:#c8ffdf; font-weight:900; cursor:pointer;
     box-shadow: 0 8px 20px rgba(0,0,0,.35);
   }
-  .splash-btn:hover{ filter: brightness(1.08) }
-  .splash-fade{ animation: splashout .6s ease forwards }
+  .splash-fade{ animation: splashout .5s ease forwards }
   @keyframes splashout{ to{ opacity:0; transform: scale(1.01) } }
   @keyframes typing { from { width: 0 } to { width: 24ch } }
   @keyframes caret { 0%, 100% { border-right-color: transparent } 50% { border-right-color: #43ff9b } }
@@ -176,32 +201,32 @@
     position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:3000;
   }
   #pdfModal .inner{
-    background:linear-gradient(180deg, rgba(10,16,40,.95), rgba(10,16,35,.92));
-    border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:16px; max-width:320px; width:92%;
+    background:linear-gradient(180deg, rgba(10,16,40,.96), rgba(10,16,35,.94));
+    border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:16px; max-width:340px; width:92%;
     box-shadow:0 18px 40px rgba(0,0,0,.45);
   }
   #pdfModal h3{ margin:0 0 10px; font-size:1.02rem }
   #pdfOpts{ display:flex; flex-wrap:wrap; gap:8px; }
-  #pdfOpts button{ flex:1 1 64px }
+  #pdfOpts .btn{ flex:1 1 68px }
 </style>
 </head>
 <body>
 
 <!-- ===== SPLASH ===== -->
-<div id="splash" aria-label="Tela de abertura do relatório fotográfico">
+<div id="splash" aria-label="Tela de abertura">
   <canvas id="rainCanvas"></canvas>
   <div class="splash-inner">
     <h2 class="title" id="splashTitle">RELATÓRIO DE INSPEÇÃO</h2>
     <div class="subtitle">FOTOS COM DATA • KM • IDs • GPS</div>
     <div class="splash-actions">
-      <button class="splash-btn" id="btnStart">SEJA BEM-VINDO</button>
+      <button class="splash-btn" id="btnStart">INICIAR</button>
     </div>
   </div>
 </div>
 
 <h1>📸 Relatório Fotográfico</h1>
 
-<!-- ===== Barra de Status ===== -->
+<!-- ===== Status ===== -->
 <div id="statusBar" aria-live="polite">
   <span id="stCsv"  class="st">CSV: —</span>
   <span id="stCam"  class="st">Câmera: —</span>
@@ -214,53 +239,59 @@
 <div id="camSpacer"></div>
 <div id="kmPlaque"><span id="kmTop">KM —</span></div>
 
-<!-- VÍDEO -->
+<!-- ===== VÍDEO ===== -->
 <div class="card" id="camCard">
   <div id="wrap">
     <video id="vid" autoplay playsinline muted></video>
 
-    <!-- botões discretos -->
-    <button id="btnMiniCycle"  class="mini" title="Trocar câmera">🔁</button>
-    <button id="btnMiniPreset" class="mini" title="Ajustes rápidos">🎛️</button>
-    <button id="btnMiniPower"  class="mini" title="Ligar/Parar câmera">⏻</button>
-    <button id="btnRecStop"    class="mini" title="Parar gravação">⏹️ STOP</button>
-    <button id="btnPTT"        class="mini" title="Segure para narrar (PTT)">🎙️ PTT</button>
+    <!-- Top Bar -->
+    <div id="topBar">
+      <div class="toolbar" style="margin-left:8px">
+        <button class="btn" id="btnMiniCycle" title="Alternar câmera (frontal/traseira)">🔄</button>
+        <button class="btn" id="btnMiniPreset" title="Presets de captura (noite, postes, misto)">🎛️</button>
+      </div>
+      <div class="toolbar" style="margin-right:8px">
+        <button class="btn" id="btnMiniPower" title="Ligar/Parar câmera">⏻</button>
+      </div>
+    </div>
 
     <!-- Popup presets -->
-    <div id="presetMenu">
-      <button class="mini" data-preset="noite">🌙 Noite (farol)</button>
-      <button class="mini" data-preset="postes">💡 Postes fortes</button>
-      <button class="mini" data-preset="misto">⚖️ Misto</button>
-      <button class="mini" data-preset="auto">♻️ Auto padrão</button>
+    <div id="presetMenu" role="menu" aria-label="Presets">
+      <button class="btn" data-preset="noite">🌙 Noite (farol)</button>
+      <button class="btn" data-preset="postes">💡 Postes fortes</button>
+      <button class="btn" data-preset="misto">⚖️ Misto</button>
+      <button class="btn" data-preset="auto">♻️ Auto padrão</button>
     </div>
 
-    <!-- Zoom discreto -->
-    <div id="zoomPad">
-      <button id="btnZoomDec" class="mini" title="Diminuir zoom">−</button>
-      <span id="zoomLbl">1.0×</span>
-      <button id="btnZoomInc" class="mini" title="Aumentar zoom">+</button>
+    <!-- Bottom Bar -->
+    <div id="bottomBar">
+      <div class="toolbar" style="margin-left:8px" id="zoomPad">
+        <button class="btn" id="btnZoomDec" title="Diminuir zoom">−</button>
+        <span id="zoomLbl">1.0×</span>
+        <button class="btn" id="btnZoomInc" title="Aumentar zoom">+</button>
+      </div>
+      <div class="toolbar" style="margin-right:8px">
+        <div class="pill">📷 <span id="hudPhotos">0</span></div>
+        <div class="pill" id="hudRight" style="display:none">⏺ <span id="hudVideoSize">0.0</span> MB</div>
+        <button class="btn critical" id="btnRecStop" title="Parar gravação" style="display:none">⏹️ STOP</button>
+        <button class="btn" id="btnPTT" title="Segure para narrar (PTT)" style="display:none">🎙️ PTT</button>
+      </div>
     </div>
 
-    <!-- HUD -->
-    <div id="hud">
-      <div class="pill">📷 <span id="hudPhotos">0</span></div>
-      <div id="hudRight" class="pill" style="display:none">⏺ <span id="hudVideoSize">0.0</span> MB</div>
-    </div>
-
-    <!-- Chip estado -->
+    <!-- Chip status -->
     <div id="chip" class="chip" aria-live="polite" aria-atomic="true"></div>
   </div>
 </div>
 
-<!-- AÇÕES -->
+<!-- ===== AÇÕES ===== -->
 <div class="card">
   <div class="row">
-    <button id="btnSelectFolder">📁 Selecionar pasta</button>
-    <button id="btnAutoCapture">🎬 Captura Auto</button>
-    <button id="btnVideoRecord">⏺️ Gravar Vídeo</button>
-    <button id="btnNarrationMode">🎙️ Narração: OFF</button>
-    <button id="btnFinalizePdf" disabled>📄 Finalizar PDF</button>
-    <button id="btnClear" disabled>🧹 Limpar Prévias</button>
+    <button class="action" id="btnSelectFolder">📁 Selecionar pasta</button>
+    <button class="action" id="btnAutoCapture">🎬 Captura Auto</button>
+    <button class="action" id="btnVideoRecord">⏺️ Gravar Vídeo</button>
+    <button class="action" id="btnNarrationMode">🎤 Narração: OFF</button>
+    <button class="action" id="btnFinalizePdf" disabled>📄 Finalizar PDF</button>
+    <button class="action" id="btnClear" disabled>🧹 Limpar Prévias</button>
   </div>
 </div>
 
@@ -275,30 +306,61 @@
   <div id="gal" class="gallery"></div>
 </div>
 
-<!-- Modal de opções de PDF -->
+<!-- Modal PDF -->
 <div id="pdfModal">
   <div class="inner">
     <h3>Fotos por página</h3>
     <div id="pdfOpts">
-      <button class="mini" data-pp="1">1</button>
-      <button class="mini" data-pp="2">2</button>
-      <button class="mini" data-pp="4">4</button>
-      <button class="mini" data-pp="8">8</button>
-      <button class="mini" data-pp="16">16</button>
-      <button class="mini" data-pp="cancel" style="background:linear-gradient(180deg,#3a3a3a,#222)">Cancelar</button>
+      <button class="btn" data-pp="1">1</button>
+      <button class="btn" data-pp="2">2</button>
+      <button class="btn" data-pp="4">4</button>
+      <button class="btn" data-pp="8">8</button>
+      <button class="btn" data-pp="16">16</button>
+      <button class="btn" data-pp="cancel" style="background:linear-gradient(180deg,#3a3a3a,#222)">Cancelar</button>
     </div>
   </div>
 </div>
 
-<!-- ====== MP4 MUXER para Chrome/Edge ====== -->
+<!-- MP4 MUXER (Chrome/Edge) -->
 <script type="module">
   import MP4Muxer from "https://cdn.jsdelivr.net/npm/mp4-muxer@6.0.2/+esm";
   window.MP4Muxer = MP4Muxer;
 </script>
 
-<!-- ====== SCRIPTS ====== -->
+<!-- ===== SCRIPTS ===== -->
 <script>
-/* ===== Utilitários e Estado ===== */
+/* ---------- Splash (com proteção anti-trava) ---------- */
+(() => {
+  const splash = document.getElementById('splash');
+  const btnStart = document.getElementById('btnStart');
+  const canvas = document.getElementById('rainCanvas');
+  const ctx = canvas.getContext('2d');
+  let started = false, raf=null;
+
+  function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  function draw(){
+    const W=canvas.width,H=canvas.height, font=Math.max(14,Math.min(24,Math.floor(W/64)));
+    ctx.fillStyle='rgba(6,10,18,.08)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#39ff88'; ctx.font=`${font}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+    for(let x=0;x<W;x+=font){ const y=(Math.random()*H)|0; const ch=String.fromCharCode(0x30A0 + Math.floor(Math.random()*96)); ctx.fillText(ch,x,y); }
+    raf=requestAnimationFrame(draw);
+  }
+  function startNow(){
+    if(started) return; started=true;
+    splash.classList.add('splash-fade');
+    setTimeout(()=>{ splash.remove(); window.__BOOT && window.__BOOT(); }, 520);
+    if(raf){ cancelAnimationFrame(raf); raf=null; }
+  }
+  window.addEventListener('resize', resize, {passive:true});
+  resize(); draw();
+  btnStart.addEventListener('click', startNow, {once:true});
+  // fallback auto-start
+  setTimeout(()=>{ if(!started) startNow(); }, 2400);
+})();
+</script>
+
+<script>
+/* ===== Utilitários e Estado global ===== */
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
 function fmtKm(v){ let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
@@ -307,41 +369,35 @@ function bytesToMB(b){ return (b/1048576).toFixed(1); }
 
 let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null;
-let kmUpdateInterval=null;
-let isRecordingVideo=false;
+let kmUpdateInterval=null; let isRecordingVideo=false;
 
 /* Sessão */
 let sessionPhotos = 0;
+const sessionPhotoFiles = []; // {handle,w,h,name}
 
 /* Referências */
-const vid=document.getElementById('vid'); const foto=document.getElementById('foto'); const wrap=document.getElementById('wrap'); const chip=document.getElementById('chip');
-const stCsv=document.getElementById('stCsv'); const stCam=document.getElementById('stCam'); const stGps=document.getElementById('stGps'); const stFotos=document.getElementById('stFotos'); const stFolder=document.getElementById('stFolder'); const stPdf=document.getElementById('stPdf');
-const kmTop=document.getElementById('kmTop'); const gal=document.getElementById('gal');
+const vid=document.getElementById('vid'), foto=document.getElementById('foto'), wrap=document.getElementById('wrap'), chip=document.getElementById('chip');
+const stCsv=document.getElementById('stCsv'), stCam=document.getElementById('stCam'), stGps=document.getElementById('stGps'), stFotos=document.getElementById('stFotos'), stFolder=document.getElementById('stFolder'), stPdf=document.getElementById('stPdf');
+const kmTop=document.getElementById('kmTop'), gal=document.getElementById('gal');
 
-const btnSelectFolder = document.getElementById('btnSelectFolder'); const btnFinalizePdf = document.getElementById('btnFinalizePdf'); const btnClear = document.getElementById('btnClear');
-const btnAutoCapture=document.getElementById('btnAutoCapture'); const btnVideoRecord=document.getElementById('btnVideoRecord'); const btnNarrationMode=document.getElementById('btnNarrationMode');
+const btnSelectFolder=document.getElementById('btnSelectFolder'), btnFinalizePdf=document.getElementById('btnFinalizePdf'), btnClear=document.getElementById('btnClear');
+const btnAutoCapture=document.getElementById('btnAutoCapture'), btnVideoRecord=document.getElementById('btnVideoRecord'), btnNarrationMode=document.getElementById('btnNarrationMode');
 
-const btnMiniCycle=document.getElementById('btnMiniCycle'); const btnMiniPreset=document.getElementById('btnMiniPreset'); const btnMiniPower=document.getElementById('btnMiniPower'); const btnRecStop=document.getElementById('btnRecStop'); const btnPTT=document.getElementById('btnPTT');
+const btnMiniCycle=document.getElementById('btnMiniCycle'), btnMiniPreset=document.getElementById('btnMiniPreset'), btnMiniPower=document.getElementById('btnMiniPower'), btnRecStop=document.getElementById('btnRecStop'), btnPTT=document.getElementById('btnPTT');
 const presetMenu=document.getElementById('presetMenu');
 
-const zoomPad=document.getElementById('zoomPad'); const btnZoomDec=document.getElementById('btnZoomDec'); const btnZoomInc=document.getElementById('btnZoomInc'); const zoomLbl=document.getElementById('zoomLbl');
+const zoomPad=document.getElementById('zoomPad'), btnZoomDec=document.getElementById('btnZoomDec'), btnZoomInc=document.getElementById('btnZoomInc'), zoomLbl=document.getElementById('zoomLbl');
 
-const hudPhotos=document.getElementById('hudPhotos'); const hudRight=document.getElementById('hudRight'); const hudVideoSize=document.getElementById('hudVideoSize');
+const hudPhotos=document.getElementById('hudPhotos'), hudRight=document.getElementById('hudRight'), hudVideoSize=document.getElementById('hudVideoSize');
 
-const pdfModal=document.getElementById('pdfModal'); const pdfOpts=document.getElementById('pdfOpts');
+const pdfModal=document.getElementById('pdfModal'), pdfOpts=document.getElementById('pdfOpts');
 
-/* Carimbo */
 const overlayOpts = { showKM:true, showTs:true, showIds:true, showGps:false };
-
-/* Canvas para fotos */
-const can=document.createElement('canvas'); const ctx=can.getContext('2d',{alpha:false});
+const can=document.createElement('canvas'), ctx=can.getContext('2d',{alpha:false});
 const CAP_MAX_DIM = 1600;
 
-/* ===== Pasta + Sessão ===== */
+/* ===== Pasta ===== */
 let rootDirHandle = null;
-let previewBuffer = []; // últimas 10
-// Lista das fotos da SESSÃO (ordem de captura): { handle:FileSystemFileHandle, w, h, name }
-const sessionPhotoFiles = [];
 
 function statusChip(el, text, state){ el.textContent = text; el.className = 'st ' + (state||''); }
 function updateStatusBar(){
@@ -351,26 +407,20 @@ function updateStatusBar(){
   statusChip(stGps,  'GPS: ' + gpsTxt, gpsReady?'ok':'warn');
   statusChip(stFotos,'Fotos: ' + sessionPhotos, sessionPhotos>0?'ok':'');
 }
-function setPdfStatus(text, ok){ stPdf.textContent = 'PDF: ' + text; stPdf.className = 'st ' + (ok?'ok':'warn'); }
+function setPdfStatus(text, ok){ stPdf.textContent='PDF: '+text; stPdf.className='st '+(ok?'ok':'warn'); }
 
 async function selectOutputFolder(){
-  if(!('showDirectoryPicker' in window)){
-    alert('Navegador sem File System Access API. Use Chrome/Edge no Android ou Desktop (HTTPS).');
-    return;
-  }
+  if(!('showDirectoryPicker' in window)){ alert('Use Chrome/Edge (HTTPS) para escolher pasta.'); return; }
   rootDirHandle = await window.showDirectoryPicker({ mode:'readwrite' });
-  try{
-    const name = rootDirHandle.name || 'OK';
-    stFolder.textContent = 'Pasta: ' + name; stFolder.className='st ok';
-    btnSelectFolder.textContent = '📁 Pasta: ' + name;
-  }catch{
-    stFolder.textContent = 'Pasta: OK'; stFolder.className='st ok';
-  }
-  // zera sessão
-  sessionPhotos = 0; hudPhotos.textContent = sessionPhotos; stFotos.textContent='Fotos: '+sessionPhotos;
-  sessionPhotoFiles.length = 0;
+  const name = rootDirHandle.name || 'OK';
+  stFolder.textContent = 'Pasta: ' + name; stFolder.className='st ok';
+  btnSelectFolder.textContent = '📁 Pasta: ' + name;
+
+  // reset sessão
+  sessionPhotos=0; hudPhotos.textContent=sessionPhotos; stFotos.textContent='Fotos: 0';
+  sessionPhotoFiles.length=0;
   setPdfStatus('—', false);
-  btnFinalizePdf.disabled = true; // habilita quando tiver ao menos 1 foto
+  btnFinalizePdf.disabled = true;
 }
 
 /* ===== CSV (IDs + KM) ===== */
@@ -391,13 +441,12 @@ function gridCands(grid,lat,lon,minCount=60,maxR=5){
 async function loadIDs(){
   const txt=await fetch('./Dados_Completos_Grupo_2_all.csv',{cache:'no-store'}).then(r=>r.text());
   const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
-  const head=lines[0].split(';').map(h=>h.toLowerCase());
+  const head=lines[0].toLowerCase().split(';');
   const iId=head.findIndex(h=>h.includes('id') && !h.includes('lat') && !h.includes('long'));
   const iLat=head.findIndex(h=>h.includes('lat')); const iLon=head.findIndex(h=>h.includes('lon'));
   dataset=[];
   for(let i=1;i<lines.length;i++){
-    const c=lines[i].split(';');
-    const id=String(c[iId]||'').trim(), lat=parsePt(c[iLat]), lon=parsePt(c[iLon]);
+    const c=lines[i].split(';'); const id=String(c[iId]||'').trim(), lat=parsePt(c[iLat]), lon=parsePt(c[iLon]);
     if(!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
     if(lat===0 && lon===0) continue; if(Math.abs(lat)>90 || Math.abs(lon)>180) continue;
     dataset.push({id,lat,lon});
@@ -418,17 +467,13 @@ async function loadKM(){
   for(let i=0;i<lines.length;i++){
     const c=lines[i].split(';'); if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue;
     const t=pickTrio(c); if(!t) continue;
-    if(!Number.isFinite(t.km)||!Number.isFinite(t.lat)||!Number.isFinite(t.lon)) continue;
-    if(!lastKeep){ kmPoints.push(t); lastKeep=t; } else {
-      const d=hav(lastKeep.lat,lastKeep.lon,t.lat,t.lon);
-      if(d>=MIN_STEP){ kmPoints.push(t); lastKeep=t; }
-    }
+    kmPoints.push(t); // pontos densos; a grade otimiza
   }
   kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p);
 }
 async function loadCSVs(){ try{ await Promise.all([loadIDs(),loadKM()]); csvReady=dataset.length>0 && kmPoints.length>0; }catch{ csvReady=false; } updateStatusBar(); }
 
-/* ===== Vizinho / KM ===== */
+/* ===== KM/IDs ===== */
 function nearestN(lat,lon,n=5){
   if(!dataset.length) return [];
   const cand=gridCands(idGrid,lat,lon,Math.max(60,n*20));
@@ -436,7 +481,7 @@ function nearestN(lat,lon,n=5){
 }
 function nearestKM(lat,lon){
   if(!kmPoints.length) return null;
-  const cand=gridCands(kmGrid,lat,lon,120); if(!cand.length) return null;
+  const cand=gridCands(kmGrid,lat,lon,100); if(!cand.length) return null;
   let best=null,bd=Infinity; for(const p of cand){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
 }
 
@@ -447,8 +492,7 @@ let currentZoom=1, zoomMin=1, zoomMax=1, zoomStep=0.1;
 
 function computeAvailableW(){ const pad = 24; return Math.min(window.innerWidth - pad, 980); }
 function applyCamHeight(){
-  const w = computeAvailableW();
-  const h = Math.round(w / (videoAR || (16/9)));
+  const w = computeAvailableW(); const h = Math.round(w / (videoAR || (16/9)));
   document.documentElement.style.setProperty('--camH', Math.max(220, Math.min(h, (window.visualViewport?.height||window.innerHeight)-160)) + 'px');
 }
 window.addEventListener('resize', applyCamHeight);
@@ -476,31 +520,27 @@ async function startCamera(deviceIdx=deviceIndex){
     if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
     currentStream=currentTrack=currentCap=null;
     const dev=deviceList[deviceIdx];
-    // Força 720p 30fps para fluidez total
-    const constraints=dev? {video:{deviceId:{exact:dev.deviceId}, width:{ideal:1280}, height:{ideal:720}, frameRate:{ideal:30, max:30}}, audio:false}
-                         : {video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}, frameRate:{ideal:30, max:30}}, audio:false};
+    const constraints=dev? {video:{deviceId:{exact:dev.deviceId}, width:{ideal:1280}, height:{ideal:720}, frameRate:{ideal:30,max:30}}, audio:false}
+                         : {video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}, frameRate:{ideal:30,max:30}}, audio:false};
     const st=await navigator.mediaDevices.getUserMedia(constraints);
     currentStream=st; vid.srcObject=st;
 
-    await new Promise(res=>{ if(vid.readyState>=1 && vid.videoWidth) return res(); vid.onloadedmetadata=()=>res(); setTimeout(res,1200); });
+    await new Promise(res=>{ if(vid.readyState>=1 && vid.videoWidth) return res(); vid.onloadedmetadata=()=>res(); setTimeout(res,1000); });
     currentTrack=st.getVideoTracks()[0];
     currentCap=currentTrack.getCapabilities? currentTrack.getCapabilities(): null;
 
-    if (vid.videoWidth && vid.videoHeight) { videoAR = vid.videoWidth / vid.videoHeight; }
+    if (vid.videoWidth && vid.videoHeight) videoAR = vid.videoWidth / vid.videoHeight;
     applyCamHeight();
 
     // Zoom discreto
     if(currentCap && currentCap.zoom){
       zoomMin=currentCap.zoom.min??1; zoomMax=currentCap.zoom.max??1; zoomStep=currentCap.zoom.step??0.1;
-      let z = loadCamPrefsFor(deviceList[deviceIndex]?.deviceId) ?? (currentCap.zoom.min ?? 1);
-      z = Math.max(zoomMin, Math.min(zoomMax, z)); await applyZoom(z);
+      let z=loadCamPrefsFor(deviceList[deviceIndex]?.deviceId) ?? (currentCap.zoom.min ?? 1);
+      z=Math.max(zoomMin, Math.min(zoomMax, z)); await applyZoom(z);
       zoomPad.style.display='flex';
-    } else {
-      zoomPad.style.display='none';
-    }
+    } else { zoomPad.style.display='none'; }
 
-    camReady=!!vid.videoWidth;
-    deviceIndex=deviceIdx; saveCamPrefs();
+    camReady=!!vid.videoWidth; deviceIndex=deviceIdx; saveCamPrefs();
     stCam.textContent='Câmera: OK'; stCam.className='st ok';
     cameraPaused=false; btnMiniPower.textContent='⏻';
   }catch(e){
@@ -515,10 +555,9 @@ async function applyZoom(z){
   try{ await currentTrack.applyConstraints({advanced:[{zoom:val}]}); }catch{ try{ await currentTrack.applyConstraints({zoom:val}); }catch{} }
   currentZoom=val; zoomLbl.textContent = currentZoom.toFixed(1)+'×'; saveCamPrefs();
 }
-document.getElementById('btnZoomDec').addEventListener('click', ()=>applyZoom(currentZoom - zoomStep));
-document.getElementById('btnZoomInc').addEventListener('click', ()=>applyZoom(currentZoom + zoomStep));
+btnZoomDec.addEventListener('click', ()=>applyZoom(currentZoom - zoomStep));
+btnZoomInc.addEventListener('click', ()=>applyZoom(currentZoom + zoomStep));
 
-/* Trocar câmera */
 btnMiniCycle.addEventListener('click', async ()=>{
   if(!deviceList.length){ await enumerateCameras(); }
   if(!deviceList.length) return;
@@ -527,9 +566,9 @@ btnMiniCycle.addEventListener('click', async ()=>{
 });
 
 /* Presets */
-btnMiniPreset.addEventListener('click', ()=>{ presetMenu.style.display = (presetMenu.style.display==='block'?'none':'block'); });
+btnMiniPreset.addEventListener('click', ()=>{ presetMenu.style.display = (presetMenu.style.display==='flex'?'none':'flex'); });
 presetMenu.addEventListener('click', async (e)=>{
-  const p = e.target.closest('button')?.dataset?.preset;
+  const p = e.target.closest('.btn')?.dataset?.preset;
   if(!p || !currentTrack) return;
   try{
     if(p==='noite'){
@@ -546,7 +585,6 @@ presetMenu.addEventListener('click', async (e)=>{
 });
 
 /* Parar/Ligar câmera */
-let cameraPaused=false;
 btnMiniPower.addEventListener('click', async ()=>{
   if(isAutoCapturing || isRecordingVideo){ alert('Pare a captura/gravação antes de desligar a câmera.'); return; }
   if(!cameraPaused){
@@ -596,7 +634,7 @@ function stampOverlay(ctx, w, h, kmStr, ids, ts, gpsLine){
   }
 }
 
-/* ===== Captura (fotos) ===== */
+/* ===== Captura fotos ===== */
 function addPreview(url, meta){
   previewBuffer.push({url, meta});
   if(previewBuffer.length > 10){
@@ -622,21 +660,15 @@ function buildFilename(kmStr, ts){
   const stamp = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}_${String(t.getHours()).padStart(2,'0')}-${String(t.getMinutes()).padStart(2,'0')}-${String(t.getSeconds()).padStart(2,'0')}`;
   return `FOTO_${safeKm}_${stamp}.jpg`;
 }
-
 async function savePhotoDirect(blob, filename, w, h){
   if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta não selecionada'); }
   const fileHandle = await rootDirHandle.getFileHandle(filename, { create:true });
   const writable = await fileHandle.createWritable(); await writable.write(blob); await writable.close();
-
-  // Indexa para relatório consolidado
   sessionPhotoFiles.push({ handle:fileHandle, w, h, name:filename });
-
-  // Contagem sessão
   sessionPhotos++; hudPhotos.textContent=sessionPhotos; stFotos.textContent='Fotos: '+sessionPhotos;
   btnFinalizePdf.disabled = sessionPhotos===0;
   setPdfStatus('—', false);
 }
-
 async function captureOnce(){
   if(!(csvReady && camReady && gpsReady && lastPos)) return;
   const vw = vid.videoWidth||1280, vh=vid.videoHeight||720;
@@ -661,23 +693,24 @@ async function captureOnce(){
 }
 
 /* Auto captura */
+let previewBuffer = [];
 function startAutoCapture(){
   if(!rootDirHandle){ alert('Selecione a pasta primeiro.'); return; }
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
-  isAutoCapturing=true; btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.style.background='linear-gradient(180deg, #ff7b7b, #ef4444)';
+  isAutoCapturing=true; btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.style.background='linear-gradient(180deg,#ff7b7b,#ef4444)';
   updateChip();
   autoCaptureInterval=setInterval(()=>{ captureOnce().catch(()=>{}); }, 600);
 }
 function stopAutoCapture(){
   if(!isAutoCapturing) return; isAutoCapturing=false;
   if(autoCaptureInterval){ clearInterval(autoCaptureInterval); autoCaptureInterval=null; }
-  btnAutoCapture.textContent='🎬 Captura Auto'; btnAutoCapture.style.background='linear-gradient(180deg, #ff7b45, #e5612e)';
+  btnAutoCapture.textContent='🎬 Captura Auto'; btnAutoCapture.style.background='linear-gradient(180deg,#ff7b45,#e5612e)';
   updateChip();
 }
 btnAutoCapture.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
 btnClear.addEventListener('click', ()=>{ previewBuffer.forEach(p=>{ try{ URL.revokeObjectURL(p.url);}catch{} }); previewBuffer.length=0; foto.removeAttribute('src'); renderGallery(); });
 
-/* ===== Chip / HUD ===== */
+/* Chip / HUD */
 let narrationMode='off'; // 'off' | 'direct' | 'ptt'
 let narrationActive=false;
 function updateChip(){
@@ -689,12 +722,12 @@ function updateChip(){
   chip.className = on ? 'chip on' : 'chip';
 }
 
-/* ===== KM ao vivo ===== */
+/* KM ao vivo */
 function updateKmDisplay(){ if(!lastPos) return; const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; kmTop.textContent=kmStr; }
 function startKmUpdate(){ updateKmDisplay(); kmUpdateInterval=setInterval(()=>{ updateKmDisplay(); updateStatusBar(); }, 500); }
 function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); kmUpdateInterval=null; } }
 
-/* ===== Narração ===== */
+/* Narração */
 let micStream=null, micTrack=null;
 async function ensureMic(){
   if(micStream && micTrack) return;
@@ -703,15 +736,13 @@ async function ensureMic(){
 }
 function setNarrationMode(next){
   narrationMode = next;
-  if(narrationMode==='off'){ narrationActive=false; btnNarrationMode.textContent='🎙️ Narração: OFF'; btnPTT.style.display='none'; }
-  else if(narrationMode==='direct'){ narrationActive=true; btnNarrationMode.textContent='🎙️ Narração: DIRETA'; btnPTT.style.display='none'; }
-  else { narrationActive=false; btnNarrationMode.textContent='🎙️ Narração: PTT'; btnPTT.style.display='inline-block'; }
+  if(narrationMode==='off'){ narrationActive=false; btnNarrationMode.textContent='🎤 Narração: OFF'; btnPTT.style.display='none'; }
+  else if(narrationMode==='direct'){ narrationActive=true; btnNarrationMode.textContent='🎤 Narração: DIRETA'; btnPTT.style.display='none'; }
+  else { narrationActive=false; btnNarrationMode.textContent='🎤 Narração: PTT'; btnPTT.style.display='inline-flex'; }
   updateChip();
 }
 btnNarrationMode.addEventListener('click', async ()=>{
-  const order = ['off','direct','ptt'];
-  const idx = order.indexOf(narrationMode);
-  const next = order[(idx+1)%order.length];
+  const order=['off','direct','ptt']; const idx=order.indexOf(narrationMode); const next=order[(idx+1)%order.length];
   if(next!=='off'){ try{ await ensureMic(); }catch{ alert('Permita o microfone para narrar.'); return; } }
   setNarrationMode(next);
 });
@@ -719,76 +750,61 @@ btnPTT.addEventListener('pointerdown', ()=>{ if(narrationMode==='ptt'){ narratio
 btnPTT.addEventListener('pointerup',   ()=>{ if(narrationMode==='ptt'){ narrationActive=false; if(micTrack) micTrack.enabled=false; updateChip(); }});
 btnPTT.addEventListener('pointerleave',()=>{ if(narrationMode==='ptt'){ narrationActive=false; if(micTrack) micTrack.enabled=false; updateChip(); }});
 
-/* ===== Vídeo – MP4 preferencial (WebCodecs/MP4Muxer), com fallback e áudio ===== */
-let videoWritable = null; let videoBytesWritten = 0; let mediaRecorder = null; let wc={encoder:null, muxer:null, vTrack:null}; let rafId=null;
+/* ===== Vídeo – MP4/WebM (com narração) ===== */
+let videoWritable=null, videoBytesWritten=0, mediaRecorder=null, wc={encoder:null,muxer:null,vTrack:null}, rafId=null;
+const VID_FPS=30, VID_BITRATE=1_200_000, REC_W=1280, REC_H=720;
 
-const VID_FPS = 30;
-const VID_BITRATE = 1_200_000; // leve (~1.2 Mbps)
-const REC_W = 1280, REC_H = 720; // 720p
-
+function showVideoHUD(on){
+  hudRight.style.display = on ? 'inline-flex' : 'none';
+  btnRecStop.style.display = on ? 'inline-flex' : 'none';
+  btnPTT.style.display = (on && narrationMode==='ptt') ? 'inline-flex' : 'none';
+}
 async function openVideoWriter(nameExt){
   if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta não selecionada'); }
   const name = `VIDEO_${new Date().toISOString().replace(/[:.]/g,'-')}.${nameExt}`;
   const h = await rootDirHandle.getFileHandle(name, {create:true});
   videoWritable = await h.createWritable();
-  videoBytesWritten = 0;
-  hudRight.style.display='inline-flex'; hudVideoSize.textContent = bytesToMB(0);
+  videoBytesWritten=0; hudVideoSize.textContent='0.0'; showVideoHUD(true);
 }
-async function closeVideoWriter(){
-  if(videoWritable){ await videoWritable.close(); videoWritable = null; }
-  hudRight.style.display='none';
-}
+async function closeVideoWriter(){ if(videoWritable){ await videoWritable.close(); videoWritable=null; } showVideoHUD(false); }
 
-/* MP4 sem áudio (quando narração off) via WebCodecs */
 async function startVideoRecordingMP4(){
-  if(!(window.VideoEncoder && window.VideoFrame && window.MP4Muxer)) throw new Error('WebCodecs/MP4Muxer indisponíveis');
+  if(!(window.VideoEncoder && window.VideoFrame && window.MP4Muxer)) throw new Error('WebCodecs indisponíveis');
   if(narrationMode!=='off') throw new Error('NarrationOnUseWebM'); // áudio garantido no WebM
-
   await openVideoWriter('mp4');
 
   wc.muxer = new MP4Muxer.MP4Muxer({
-    target: "file",
-    fastStart: "in-memory",
-    firstTimestampBehavior: "offset",
-    onData: async (data) => {
-      if(videoWritable){ await videoWritable.write(data); videoBytesWritten += data.byteLength; hudVideoSize.textContent = bytesToMB(videoBytesWritten); }
-    }
+    target:"file", fastStart:"in-memory", firstTimestampBehavior:"offset",
+    onData: async (data)=>{ if(videoWritable){ await videoWritable.write(data); videoBytesWritten+=data.byteLength; hudVideoSize.textContent=bytesToMB(videoBytesWritten);} }
   });
+  wc.vTrack = wc.muxer.addTrack({ codec:"avc1.42E01E", width:REC_W, height:REC_H, timescale:1e6 });
 
-  wc.vTrack = wc.muxer.addTrack({ codec: "avc1.42E01E", width: REC_W, height: REC_H, timescale: 1e6 });
-
-  const support = await VideoEncoder.isConfigSupported({ codec: "avc1.42E01E", width: REC_W, height: REC_H, bitrate: VID_BITRATE, framerate: VID_FPS, avc: {format: "annexb"} });
+  const support=await VideoEncoder.isConfigSupported({ codec:"avc1.42E01E", width:REC_W, height:REC_H, bitrate:VID_BITRATE, framerate:VID_FPS, avc:{format:"annexb"} });
   if(!support.supported) throw new Error('H.264 não suportado');
 
-  wc.encoder = new VideoEncoder({
-    output: (chunk) => wc.muxer.addSample(wc.vTrack, chunk, { duration: Math.round(1e6 / VID_FPS), dts: chunk.timestamp, pts: chunk.timestamp, keyframe: chunk.type === "key" }),
-    error: (e) => console.error('VideoEncoder error:', e)
+  wc.encoder=new VideoEncoder({
+    output:(chunk)=>wc.muxer.addSample(wc.vTrack, chunk, { duration:Math.round(1e6/VID_FPS), dts:chunk.timestamp, pts:chunk.timestamp, keyframe:chunk.type==="key" }),
+    error:(e)=>console.error('VideoEncoder error:',e)
   });
-  wc.encoder.configure({ codec: "avc1.42E01E", width: REC_W, height: REC_H, bitrate: VID_BITRATE, framerate: VID_FPS, avc: {format: "annexb"} });
+  wc.encoder.configure({ codec:"avc1.42E01E", width:REC_W, height:REC_H, bitrate:VID_BITRATE, framerate:VID_FPS, avc:{format:"annexb"} });
 
   const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=REC_W; overlayCanvas.height=REC_H; const overlayCtx=overlayCanvas.getContext('2d');
+  let startTs=performance.now(), lastKeySec=-1;
 
-  let startTs = performance.now(); let lastKeySec=-1;
-
-  const draw = () => {
+  const draw=()=>{
     if(!isRecordingVideo) return;
-    overlayCtx.drawImage(vid, 0, 0, REC_W, REC_H);
-    const kmObj=nearestKM(lastPos?.lat||0,lastPos?.lon||0); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
-    const ids=nearestN(lastPos?.lat||0,lastPos?.lon||0,5); const ts=new Date().toLocaleString();
-    const gpsLine = overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
-    stampOverlay(overlayCtx, REC_W, REC_H, overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
-
-    const elapsed = performance.now() - startTs;
-    const timestampUS = Math.round(elapsed * 1000);
-    const vf = new VideoFrame(overlayCanvas, { timestamp: timestampUS });
-    const sec=Math.floor(elapsed/1000); const forceKey = (sec!==lastKeySec); if(forceKey) lastKeySec=sec;
-    wc.encoder.encode(vf, { keyFrame: forceKey }); vf.close();
-    rafId = requestAnimationFrame(draw);
+    overlayCtx.drawImage(vid,0,0,REC_W,REC_H);
+    const kmObj=nearestKM(lastPos?.lat||0,lastPos?.lon||0), kmStr=kmObj?fmtKm(kmObj.km):'KM —';
+    const ids=nearestN(lastPos?.lat||0,lastPos?.lon||0,5), ts=new Date().toLocaleString();
+    const gpsLine=overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
+    stampOverlay(overlayCtx,REC_W,REC_H, overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
+    const elapsed=performance.now()-startTs, tUS=Math.round(elapsed*1000);
+    const vf=new VideoFrame(overlayCanvas,{timestamp:tUS}); const sec=Math.floor(elapsed/1000); const key=(sec!==lastKeySec); if(key) lastKeySec=sec;
+    wc.encoder.encode(vf,{keyFrame:key}); vf.close();
+    rafId=requestAnimationFrame(draw);
   };
 
-  isRecordingVideo=true; updateChip(); btnRecStop.style.display='inline-block';
-  draw();
-
+  isRecordingVideo=true; updateChip(); showVideoHUD(true); draw();
   return {
     async stop(){
       if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
@@ -796,252 +812,179 @@ async function startVideoRecordingMP4(){
       try{ wc.muxer.finalize(); }catch{}
       await closeVideoWriter();
       wc={encoder:null,muxer:null,vTrack:null};
-      isRecordingVideo=false; updateChip(); btnRecStop.style.display='none';
+      isRecordingVideo=false; updateChip();
     }
   };
 }
-
-/* Safari MP4 (com áudio) */
 async function startVideoRecordingSafariMP4(){
-  const videoStream=vid.srcObject; if(!videoStream) throw new Error('Câmera não disponível');
-
+  const videoStream=vid.srcObject; if(!videoStream) throw new Error('Câmera indisponível');
   await openVideoWriter('mp4');
 
   const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=REC_W; overlayCanvas.height=REC_H; const overlayCtx=overlayCanvas.getContext('2d');
   const canvasStream=overlayCanvas.captureStream(VID_FPS);
+  if(narrationMode!=='off'){ await ensureMic(); micTrack.enabled=(narrationMode==='direct'); canvasStream.addTrack(micTrack); }
 
-  if(narrationMode!=='off'){ await ensureMic(); micTrack.enabled = (narrationMode==='direct'); canvasStream.addTrack(micTrack); }
-
-  const mime = 'video/mp4;codecs=h264,mp4a.40.2';
-  if(!MediaRecorder.isTypeSupported(mime)){ throw new Error('MediaRecorder MP4 não suportado'); }
-  mediaRecorder=new MediaRecorder(canvasStream, { mimeType:mime, videoBitsPerSecond: VID_BITRATE });
-
-  mediaRecorder.ondataavailable = async (e) => { if(e.data && e.data.size && videoWritable){ await videoWritable.write(e.data); videoBytesWritten += e.data.size; hudVideoSize.textContent = bytesToMB(videoBytesWritten);} };
-  mediaRecorder.onstop = async ()=>{ await closeVideoWriter(); isRecordingVideo=false; updateChip(); btnRecStop.style.display='none'; btnPTT.style.display = (narrationMode==='ptt'?'inline-block':'none'); };
+  const mime='video/mp4;codecs=h264,mp4a.40.2'; if(!MediaRecorder.isTypeSupported(mime)) throw new Error('MP4 não suportado');
+  mediaRecorder=new MediaRecorder(canvasStream,{mimeType:mime, videoBitsPerSecond:VID_BITRATE});
+  mediaRecorder.ondataavailable=async e=>{ if(e.data?.size && videoWritable){ await videoWritable.write(e.data); videoBytesWritten+=e.data.size; hudVideoSize.textContent=bytesToMB(videoBytesWritten);} };
+  mediaRecorder.onstop=async()=>{ await closeVideoWriter(); isRecordingVideo=false; updateChip(); };
 
   mediaRecorder.start(1000);
-  isRecordingVideo=true; updateChip(); btnRecStop.style.display='inline-block'; btnPTT.style.display = (narrationMode==='ptt'?'inline-block':'none');
+  isRecordingVideo=true; updateChip(); showVideoHUD(true);
 
-  const drawLoop=()=>{ if(!isRecordingVideo) return;
-    overlayCtx.drawImage(vid, 0, 0, REC_W, REC_H);
-    const kmObj=nearestKM(lastPos?.lat||0,lastPos?.lon||0); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
-    const ids=nearestN(lastPos?.lat||0,lastPos?.lon||0,5); const ts=new Date().toLocaleString();
-    const gpsLine = overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
-    stampOverlay(overlayCtx, REC_W, REC_H, overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
-    requestAnimationFrame(drawLoop);
+  const draw=()=>{ if(!isRecordingVideo) return;
+    overlayCtx.drawImage(vid,0,0,REC_W,REC_H);
+    const kmObj=nearestKM(lastPos?.lat||0,lastPos?.lon||0), kmStr=kmObj?fmtKm(kmObj.km):'KM —';
+    const ids=nearestN(lastPos?.lat||0,lastPos?.lon||0,5), ts=new Date().toLocaleString();
+    const gpsLine=overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
+    stampOverlay(overlayCtx,REC_W,REC_H, overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
+    requestAnimationFrame(draw);
   };
-  drawLoop();
+  draw();
 
-  btnPTT.onpointerdown = ()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=true; narrationActive=true; updateChip(); }};
-  btnPTT.onpointerup   = ()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=false; narrationActive=false; updateChip(); }};
-  btnPTT.onpointerleave= ()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=false; narrationActive=false; updateChip(); }};
+  // PTT durante gravação
+  btnPTT.onpointerdown=()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=true; narrationActive=true; updateChip(); }};
+  btnPTT.onpointerup=()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=false; narrationActive=false; updateChip(); }};
+  btnPTT.onpointerleave=btnPTT.onpointerup;
 
   return { async stop(){ try{ mediaRecorder.stop(); }catch{} } };
 }
-
-/* Fallback WebM (vídeo + áudio) */
 async function startVideoRecordingWebM(){
   await openVideoWriter('webm');
 
   const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=REC_W; overlayCanvas.height=REC_H; const overlayCtx=overlayCanvas.getContext('2d');
   const canvasStream=overlayCanvas.captureStream(VID_FPS);
+  if(narrationMode!=='off'){ await ensureMic(); micTrack.enabled=(narrationMode==='direct'); canvasStream.addTrack(micTrack); }
 
-  if(narrationMode!=='off'){ await ensureMic(); micTrack.enabled = (narrationMode==='direct'); canvasStream.addTrack(micTrack); }
-
-  const options={ mimeType:'video/webm;codecs=vp9,opus', videoBitsPerSecond: VID_BITRATE };
-  const mimeOk = MediaRecorder.isTypeSupported(options.mimeType) ? options.mimeType : 'video/webm';
-  mediaRecorder=new MediaRecorder(canvasStream, { ...options, mimeType:mimeOk });
-
-  mediaRecorder.ondataavailable = async (e) => { if(e.data && e.data.size && videoWritable){ await videoWritable.write(e.data); videoBytesWritten += e.data.size; hudVideoSize.textContent = bytesToMB(videoBytesWritten);} };
-  mediaRecorder.onstop = async ()=>{ await closeVideoWriter(); isRecordingVideo=false; updateChip(); btnRecStop.style.display='none'; btnPTT.style.display = (narrationMode==='ptt'?'inline-block':'none'); };
+  const options={ mimeType:'video/webm;codecs=vp9,opus', videoBitsPerSecond:VID_BITRATE };
+  const mimeOk=MediaRecorder.isTypeSupported(options.mimeType)? options.mimeType : 'video/webm';
+  mediaRecorder=new MediaRecorder(canvasStream,{...options,mimeType:mimeOk});
+  mediaRecorder.ondataavailable=async e=>{ if(e.data?.size && videoWritable){ await videoWritable.write(e.data); videoBytesWritten+=e.data.size; hudVideoSize.textContent=bytesToMB(videoBytesWritten);} };
+  mediaRecorder.onstop=async()=>{ await closeVideoWriter(); isRecordingVideo=false; updateChip(); };
 
   mediaRecorder.start(1000);
-  isRecordingVideo=true; updateChip(); btnRecStop.style.display='inline-block'; btnPTT.style.display = (narrationMode==='ptt'?'inline-block':'none');
+  isRecordingVideo=true; updateChip(); showVideoHUD(true);
 
-  const drawLoop=()=>{ if(!isRecordingVideo) return;
-    overlayCtx.drawImage(vid, 0, 0, REC_W, REC_H);
-    const kmObj=nearestKM(lastPos?.lat||0,lastPos?.lon||0); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
-    const ids=nearestN(lastPos?.lat||0,lastPos?.lon||0,5); const ts=new Date().toLocaleString();
-    const gpsLine = overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
-    stampOverlay(overlayCtx, REC_W, REC_H, overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
-    requestAnimationFrame(drawLoop);
+  const draw=()=>{ if(!isRecordingVideo) return;
+    overlayCtx.drawImage(vid,0,0,REC_W,REC_H);
+    const kmObj=nearestKM(lastPos?.lat||0,lastPos?.lon||0), kmStr=kmObj?fmtKm(kmObj.km):'KM —';
+    const ids=nearestN(lastPos?.lat||0,lastPos?.lon||0,5), ts=new Date().toLocaleString();
+    const gpsLine=overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
+    stampOverlay(overlayCtx,REC_W,REC_H, overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
+    requestAnimationFrame(draw);
   };
-  drawLoop();
+  draw();
+
+  // PTT
+  btnPTT.onpointerdown=()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=true; narrationActive=true; updateChip(); }};
+  btnPTT.onpointerup=()=>{ if(narrationMode==='ptt' && micTrack){ micTrack.enabled=false; narrationActive=false; updateChip(); }};
+  btnPTT.onpointerleave=btnPTT.onpointerup;
 
   return { async stop(){ try{ mediaRecorder.stop(); }catch{} } };
 }
 
-/* Orquestrador start/stop vídeo */
-let activeStopper = null;
+let activeStopper=null;
 async function startVideoRecording(){
   if(isRecordingVideo) return;
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
 
+  // Safari MP4 com áudio
   if('MediaRecorder' in window && MediaRecorder.isTypeSupported?.('video/mp4;codecs=h264')){
     try{ activeStopper = await startVideoRecordingSafariMP4(); return; }catch(e){ console.warn('Safari MP4 falhou:', e); }
   }
+  // Chrome/Edge: MP4 sem áudio (narration off)
   try{
     activeStopper = await startVideoRecordingMP4(); return;
   }catch(e){
-    if(e && String(e).includes('NarrationOnUseWebM')){
-      console.warn('Narration ativa → usando WebM para áudio garantido.');
-    }else{
-      console.warn('WebCodecs+MP4 falhou:', e);
-    }
+    if(String(e).includes('NarrationOnUseWebM')) console.warn('Narration ativa → usar WebM');
+    else console.warn('WebCodecs MP4 falhou:', e);
   }
-  try{ activeStopper = await startVideoRecordingWebM(); }catch(e){ console.error('WebM falhou:', e); alert('Não foi possível iniciar gravação neste dispositivo.'); }
+  // Fallback WebM
+  try{ activeStopper = await startVideoRecordingWebM(); }catch(e){ console.error('WebM falhou:', e); alert('Não foi possível iniciar a gravação.'); }
 }
 async function stopVideoRecording(){
   if(!isRecordingVideo || !activeStopper) return;
-  isRecordingVideo = false;
+  isRecordingVideo=false;
   try{ await activeStopper.stop(); }catch(e){ console.warn('stop error:', e); }
-  activeStopper = null;
-  updateChip();
+  activeStopper=null; updateChip();
 }
 btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ await stopVideoRecording(); } else { await startVideoRecording(); }});
 btnRecStop.addEventListener('click', async ()=>{ if(isRecordingVideo) await stopVideoRecording(); });
 
 /* ===== Interações ===== */
-wrap.addEventListener('click', ()=>{ /* sem toque para não distrair na direção */ });
+wrap.addEventListener('click', ()=>{ /* nada aqui, para não distrair na direção */ });
 btnSelectFolder.addEventListener('click', async ()=>{ await selectOutputFolder(); });
 
-/* ===== MODAL PDF + Gerador Consolidado ===== */
-function openPdfOptions(){
-  if(sessionPhotoFiles.length===0){ alert('Nenhuma foto na sessão.'); return; }
-  pdfModal.style.display='flex';
-}
+/* ===== MODAL PDF + Gerador consolidado ===== */
+function openPdfOptions(){ if(sessionPhotoFiles.length===0){ alert('Nenhuma foto na sessão.'); return; } pdfModal.style.display='flex'; }
 function closePdfOptions(){ pdfModal.style.display='none'; }
-
+btnFinalizePdf.addEventListener('click', openPdfOptions);
 pdfOpts.addEventListener('click', async (e)=>{
-  const pp = e.target.closest('button')?.dataset?.pp;
-  if(!pp) return;
+  const pp = e.target.closest('.btn')?.dataset?.pp; if(!pp) return;
   if(pp==='cancel'){ closePdfOptions(); return; }
   closePdfOptions();
-  const perPage = Number(pp);
   try{
-    await generateConsolidatedPdf(perPage);
+    await generateConsolidatedPdf(Number(pp));
     setPdfStatus('GERADO', true);
-    // Perguntar se limpa sessão após gerar
-    const clear = confirm('PDF gerado com sucesso. Limpar fotos da sessão (somente o índice da sessão, os arquivos permanecem na pasta)?');
+    const clear = confirm('PDF gerado com sucesso. Limpar sessão (mantém os arquivos na pasta)?');
     if(clear){
-      sessionPhotoFiles.length = 0;
-      sessionPhotos = 0; hudPhotos.textContent = sessionPhotos; stFotos.textContent = 'Fotos: 0';
-      btnFinalizePdf.disabled = true;
+      sessionPhotoFiles.length=0; sessionPhotos=0; hudPhotos.textContent=sessionPhotos; stFotos.textContent='Fotos: 0'; btnFinalizePdf.disabled=true;
     }
-  }catch(err){
-    console.error(err);
-    alert('Falha ao gerar PDF: ' + err.message);
-  }
+  }catch(err){ alert('Falha ao gerar PDF: '+err.message); }
 });
 
-btnFinalizePdf.addEventListener('click', ()=>{
-  if(sessionPhotoFiles.length===0){ alert('Nenhuma foto na sessão.'); return; }
-  openPdfOptions();
-});
-
-/* Gerador de PDF consolidado (grid) */
 async function generateConsolidatedPdf(perPage){
   if(!rootDirHandle) throw new Error('Pasta não selecionada');
   const fileName = `RELATORIO_INSPECAO_${perPage}ppg_${new Date().toISOString().slice(0,10)}_${Date.now()}.pdf`;
   const handle = await rootDirHandle.getFileHandle(fileName, { create:true });
   const stream = await handle.createWritable();
-
-  // Writer básico
-  const enc = new TextEncoder();
-  const xref = [0]; let objNo=0; const parts=[]; let bytePos=0;
-  const write = async (sOrU8) => {
-    let bin = (sOrU8 instanceof Uint8Array) ? sOrU8 : enc.encode(sOrU8);
-    await stream.write(bin); bytePos += bin.length;
-  };
-  const addObj = async (body) => { objNo++; xref.push(bytePos); await write(`${objNo} 0 obj\n${body}\nendobj\n`); return objNo; };
-  const addStream = async (dict, bin) => {
-    objNo++; xref.push(bytePos);
-    const head = `${objNo} 0 obj\n${dict.replace('>>','')} /Length ${bin.length} >>\nstream\n`;
-    await write(head); await write(bin); await write(`\nendstream\nendobj\n`); return objNo;
-  };
+  const enc=new TextEncoder(); let pos=0, objNo=0; const xref=[0];
+  const write=async s=>{ const b=(s instanceof Uint8Array)?s:enc.encode(s); await stream.write(b); pos+=b.length; };
+  const addObj=async body=>{ objNo++; xref.push(pos); await write(`${objNo} 0 obj\n${body}\nendobj\n`); return objNo; };
+  const addStream=async (dict,bin)=>{ objNo++; xref.push(pos); await write(`${objNo} 0 obj\n${dict.replace('>>','')} /Length ${bin.length} >>\nstream\n`); await write(bin); await write(`\nendstream\nendobj\n`); return objNo; };
 
   await write('%PDF-1.4\n');
-
-  // Página A4
   const PW=595, PH=842, M=24;
-  const layouts = {
-    1:[1,1], 2:[2,1], 4:[2,2], 8:[4,2], 16:[4,4]
-  };
-  const [COLS, ROWS] = layouts[perPage] || [1,1];
-  const CELL_W = Math.floor( (PW - 2*M) / COLS );
-  const CELL_H = Math.floor( (PH - 2*M) / ROWS );
+  const L={1:[1,1],2:[2,1],4:[2,2],8:[4,2],16:[4,4]}; const [COLS, ROWS] = L[perPage] || [1,1];
+  const CELL_W=Math.floor((PW-2*M)/COLS), CELL_H=Math.floor((PH-2*M)/ROWS);
+  const pages=[]; let i=0;
 
-  const pagesNums = [];
-  let idx=0;
-
-  while(idx < sessionPhotoFiles.length){
-    const xobjects = []; const contentOps = [];
-    // Para cada célula, adiciona uma imagem
-    for(let r=0; r<ROWS && idx<sessionPhotoFiles.length; r++){
-      for(let c=0; c<COLS && idx<sessionPhotoFiles.length; c++, idx++){
-        const rec = sessionPhotoFiles[idx];
-        const file = await rec.handle.getFile();
-        const bin = new Uint8Array(await file.arrayBuffer());
-
-        // Dimensões originais (da sessão), para o XObject
-        const imgW = rec.w || 800, imgH = rec.h || 450;
-
-        // Ajuste para caber na célula preservando AR
+  while(i<sessionPhotoFiles.length){
+    const xobjs=[], ops=[];
+    for(let r=0;r<ROWS && i<sessionPhotoFiles.length;r++){
+      for(let c=0;c<COLS && i<sessionPhotoFiles.length;c++,i++){
+        const rec=sessionPhotoFiles[i]; const file=await rec.handle.getFile(); const bin=new Uint8Array(await file.arrayBuffer());
+        const imgW=rec.w||800, imgH=rec.h||450;
         let dw=CELL_W, dh=Math.round(imgH*(CELL_W/imgW));
         if(dh>CELL_H){ dh=CELL_H; dw=Math.round(imgW*(CELL_H/imgH)); }
-
-        const tx = M + c*CELL_W + Math.round((CELL_W - dw)/2);
-        const ty = PH - (M + (r+1)*CELL_H) + Math.round((CELL_H - dh)/2);
-
-        const imNum = await addStream(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, bin);
-        const name = `/Im_${r}_${c}`;
-        xobjects.push(`${name} ${imNum} 0 R`);
-        contentOps.push(`q\n${dw} 0 0 ${dh} ${tx} ${ty} cm\n${name} Do\nQ\n`);
+        const tx=M + c*CELL_W + Math.round((CELL_W-dw)/2);
+        const ty=PH - (M+(r+1)*CELL_H) + Math.round((CELL_H-dh)/2);
+        const n=await addStream(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, bin);
+        const alias=`/Im_${r}_${c}`; xobjs.push(`${alias} ${n} 0 R`); ops.push(`q\n${dw} 0 0 ${dh} ${tx} ${ty} cm\n${alias} Do\nQ\n`);
       }
     }
-    const contNum = await addStream(`<< >>`, enc.encode(contentOps.join('')));
-    const pageNum = await addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << ${xobjects.join(' ')} >> >> /Contents ${contNum} 0 R >>`);
-    pagesNums.push(pageNum);
+    const cont=await addStream(`<< >>`, enc.encode(ops.join('')));
+    const pg=await addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << ${xobjs.join(' ')} >> >> /Contents ${cont} 0 R >>`);
+    pages.push(pg);
   }
-
-  const pagesNum = await addObj(`<< /Type /Pages /Kids [ ${pagesNums.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pagesNums.length} >>`);
-  const catalogNum = await addObj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
-
-  const startXref = bytePos;
-  let xr = `xref\n0 ${xref.length}\n0000000000 65535 f \n`;
-  for(let i=1;i<xref.length;i++){
-    xr += String(xref[i]).padStart(10,'0') + ' 00000 n \n';
-  }
-  await write(xr);
-  await write(`trailer\n<< /Size ${xref.length} /Root ${catalogNum} 0 R >>\nstartxref\n${startXref}\n%%EOF`);
-  await stream.close();
+  const pagesNum=await addObj(`<< /Type /Pages /Kids [ ${pages.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pages.length} >>`);
+  const catalog=await addObj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
+  const startXref=pos; let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`; for(let k=1;k<xref.length;k++){ xr+=String(xref[k]).padStart(10,'0')+' 00000 n \n'; }
+  await write(xr); await write(`trailer\n<< /Size ${xref.length} /Root ${catalog} 0 R >>\nstartxref\n${startXref}\n%%EOF`); await stream.close();
 }
 
-/* ===== Vídeo: controle de UI e narração ===== */
-let activeStopper=null;
-btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ await stopVideoRecording(); } else { await startVideoRecording(); }});
-btnRecStop.addEventListener('click', async ()=>{ if(isRecordingVideo) await stopVideoRecording(); });
-
-/* ===== Boot ===== */
-function ready(){ return csvReady && camReady && gpsReady; }
-
-async function boot(){
-  await Promise.all([loadCSVs(), enumerateCameras()]);
-  await startCamera(deviceIndex);
-  camReady = !!vid.videoWidth;
-  startGPS();
-  startKmUpdate();
-  setInterval(updateStatusBar, 600);
-}
-
-/* Splash */
-document.getElementById('btnStart').addEventListener('click', ()=>{/* evita FOUC */});
-(function(){
-  const splash = document.getElementById('splash'); const btnStart = document.getElementById('btnStart');
-  const startNow = ()=>{ splash.classList.add('splash-fade'); setTimeout(()=>{ splash.remove(); boot(); }, 580); };
-  btnStart.addEventListener('click', startNow, {once:true});
-  setTimeout(()=>{ if(document.body.contains(splash)) startNow(); }, 2400);
-})();
+/* ===== Boot (proteção anti-trava) ===== */
+let bootStarted=false;
+window.__BOOT = async function(){
+  if(bootStarted) return; bootStarted=true;
+  try{
+    await Promise.all([loadCSVs(), enumerateCameras()]);
+    await startCamera(deviceIndex);
+    camReady = !!vid.videoWidth;
+    startGPS(); startKmUpdate();
+    setInterval(updateStatusBar, 700);
+  }catch(e){ console.error('Falha no boot:', e); }
+};
 </script>
 
 </body>
