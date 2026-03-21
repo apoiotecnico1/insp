@@ -18,7 +18,7 @@
     overflow:hidden; -webkit-user-select:none; user-select:none;
   }
 
-  /* Canvas da app */
+  /* Área da câmera */
   #app{ position:fixed; inset:0; display:grid; grid-template-rows:1fr; }
   #camWrap{
     position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate;
@@ -26,7 +26,7 @@
   }
   #vid{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000 }
 
-  /* Topo: apenas Opções (⚙️) à direita */
+  /* Topo: somente ⚙️ (à direita) */
   #hudTop{
     position:absolute; top:10px; left:0; right:0; display:flex; justify-content:flex-end; z-index:7;
     padding:0 10px; pointer-events:none;
@@ -51,7 +51,7 @@
   .kmBadge .val{ font-variant-numeric:tabular-nums; letter-spacing:.01em }
   .pos-top-center{ top:10px; left:50%; transform:translateX(-50%); }
 
-  /* Chips (GPS/contador) deslocados para não sobrepor o ⚙️ */
+  /* Chips (GPS/contador) deslocados para não sobrepor ⚙️ */
   #chipsRight{
     position:absolute; top:60px; right:10px; display:flex; gap:8px; z-index:6; pointer-events:none;
   }
@@ -379,17 +379,15 @@ async function frameToBlobAndMeta(){
   return {blob, kmStr, tsStr};
 }
 
-/* ========= Escrita atômica anti‑0B: .part -> verifica -> final ========= */
+/* ========= Escrita à prova de 0 B: .part -> verifica -> final ========= */
 async function writeAtomicJpeg(dirHandle, finalName, primaryBlob){
-  // 1) Nome temporário .part
+  // 1) arquivo temporário .part.jpg
   const tempName = finalName.replace(/\.jpg$/i, `.${Date.now()}.part.jpg`);
-
-  // 2) Grava .part
   const tempFH = await dirHandle.getFileHandle(tempName, {create:true});
   let w = await tempFH.createWritable({keepExistingData:false});
   await w.write(primaryBlob); await w.close();
 
-  // 3) Verifica .part; se 0B, reescreve com fallback (dataURL->blob)
+  // 2) confere .part; se 0B, regrava com fallback (dataURL→Blob)
   let tempFile = await tempFH.getFile();
   if(tempFile.size===0){
     const q=Math.max(0.7, Math.min(1, state.jpgQ/100));
@@ -403,17 +401,17 @@ async function writeAtomicJpeg(dirHandle, finalName, primaryBlob){
     if(tempFile.size===0){ showToast('Falha ao salvar (0B)'); return null; }
   }
 
-  // 4) Copia .part -> final
+  // 3) grava o FINAL (copia do .part)
   const finalFH = await dirHandle.getFileHandle(finalName, {create:true});
   const wFinal = await finalFH.createWritable({keepExistingData:false});
   const buf = await tempFile.arrayBuffer();
   await wFinal.write(new Blob([buf], {type:'image/jpeg'}));
   await wFinal.close();
 
-  // 5) Remove .part (best effort)
+  // 4) remove o .part (best effort)
   try{ await dirHandle.removeEntry(tempName); }catch{}
 
-  // 6) Verifica final (robustez)
+  // 5) confere FINAL
   const f = await finalFH.getFile();
   if(f.size===0){ showToast('Falha ao salvar (final 0B)'); return null; }
 
@@ -429,14 +427,14 @@ async function capturePhoto(){
   try{
     if(!await verifyPermission(rootDirHandle,true)){ showToast('Permissão na pasta'); writing=false; return; }
 
-    const {blob, kmStr, tsStr}=await frameToBlobAndMeta();
+    const {blob, kmStr}=await frameToBlobAndMeta();
 
     // FOTO_{KM_K_mmm}_YYYY-MM-DD_HH-mm-ss.jpg
     const kPart = (kmStr||'KM —').replace('KM ','').replace('+','_').replace(',','_');
     const name  = `FOTO_${kPart}_${stampFile()}.jpg`;
 
     const fh = await writeAtomicJpeg(rootDirHandle, name, blob);
-    if(!fh) return; // já mostrou toast
+    if(!fh) return; // toast já exibido em falha
 
     sessionCount++; countTxt.textContent=String(sessionCount);
   }catch(e){
@@ -480,7 +478,7 @@ selMaxDim.addEventListener('change',()=>{ state.maxDim=Number(selMaxDim.value); 
 
 /* ========================= Boot ========================= */
 async function boot(){
-  // aplica defaults salvos
+  // valores salvos
   rngInterval.value=String(state.autoMs); lblInterval.textContent=String(state.autoMs);
   rngJpgQ.value=String(state.jpgQ); lblQ.textContent=String(state.jpgQ);
   selMaxDim.value=String(state.maxDim); lblDim.textContent=String(state.maxDim);
@@ -494,6 +492,9 @@ async function boot(){
     if(!lastPos){ kmText.textContent='—'; return; }
     const n=nearestKM(lastPos.lat,lastPos.lon); kmText.textContent = n ? fmtKmKmmm(n.km) : '—';
   }, 600);
+
+  // persistência opcional (melhora retenção de permissões em alguns Androids)
+  if('storage' in navigator && 'persist' in navigator.storage){ navigator.storage.persist().catch(()=>{}); }
 }
 boot();
 </script>
