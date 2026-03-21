@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+html_content = r'''<!DOCTYPE html>
 <html lang="pt-BR" data-theme="original">
 <head>
 <meta charset="utf-8" />
@@ -372,6 +372,10 @@ let photoCount = 0;
 let previewBuffer = []; // últimas 10
 let pdfWriter = null;
 
+// 🔹 NOVO: diretório/identificador da sessão automática
+let sessionDirHandle = null;
+let sessionName = null;
+
 /** Pequeno helper de escrita com contagem de bytes para montar xref corretamente */
 function makeByteWriter(stream){
   const enc = new TextEncoder();
@@ -442,11 +446,7 @@ function createPdfStreamWriter(stream){
       const imNum = await addStream(`<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, imgBuf);
 
       const {dw, dh, tx, ty} = fitToCell(w, h);
-      const content = `q
-${dw} 0 0 ${dh} ${tx} ${PH - (ty + dh)} cm
-/Im0 Do
-Q
-`;
+      const content = `q\n${dw} 0 0 ${dh} ${tx} ${PH - (ty + dh)} cm\n/Im0 Do\nQ\n`;
       const contNum = await addStream(`<< >>`, new TextEncoder().encode(content));
       const pageNum = await addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im0 ${imNum} 0 R >> >> /Contents ${contNum} 0 R >>`);
       pagesKids.push(pageNum);
@@ -473,7 +473,20 @@ Q
   };
 }
 
-/** Seleciona pasta e inicializa PDF */
+// Nome seguro: SESSAO_YYYY-MM-DD_HH-MM-SS
+function makeSessionFolderName() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+  return `SESSAO_${stamp}`;
+}
+
+// Retorna a pasta ativa (sessão se existir; senão raiz)
+function getActiveDir() {
+  return sessionDirHandle || rootDirHandle;
+}
+
+/** Seleciona pasta (raiz). PDF passa a ser aberto na sessão. */
 async function selectOutputFolder(){
   if(!('showDirectoryPicker' in window)){
     alert('Seu navegador não suporta seleção de pasta (File System Access API). Use Chrome/Edge no Android ou Desktop.');
@@ -483,29 +496,39 @@ async function selectOutputFolder(){
   stFolder.textContent = 'Pasta: OK';
   stFolder.className = 'st ok';
 
-  // Abre PDF do relatório (novo arquivo) e inicia writer
-  const pdfHandle = await rootDirHandle.getFileHandle(`RELATORIO_${new Date().toISOString().slice(0,10)}_${Date.now()}.pdf`, { create:true });
-  const stream = await pdfHandle.createWritable();
-  pdfWriter = createPdfStreamWriter(stream);
-  await pdfWriter.init();
-
+  // Não abrimos PDF aqui. PDF é por sessão.
   btnFinalizePdf.disabled = false;
-  stPdf.textContent = 'PDF: ABERTO';
-  stPdf.className = 'st ok';
+  stPdf.textContent = 'PDF: —';
+  stPdf.className = 'st';
 }
 
-/** Salva JPEG diretamente na pasta e adiciona ao PDF (incremental) */
+/** Salva JPEG diretamente na pasta ativa e adiciona ao PDF (se houver). Garante não-vazio. */
 async function savePhotoDirect(blob, filename, w, h){
   if(!rootDirHandle){
     await selectOutputFolder();
     if(!rootDirHandle) throw new Error('Pasta não selecionada');
   }
 
+  if(!blob || !blob.size){ throw new Error('Imagem inválida (0 bytes)'); }
+
+  const dir = getActiveDir();
+
   // 1) JPEG
-  const fileHandle = await rootDirHandle.getFileHandle(filename, { create:true });
+  const fileHandle = await dir.getFileHandle(filename, { create:true });
   const writable = await fileHandle.createWritable();
   await writable.write(blob);
   await writable.close();
+
+  // Verifica tamanho gravado
+  try{
+    const savedFile = await fileHandle.getFile();
+    if(!savedFile || !savedFile.size){
+      try{ if('removeEntry' in dir) await dir.removeEntry(filename); }catch{}
+      throw new Error('Falha ao gravar (arquivo vazio).');
+    }
+  }catch(e){
+    throw new Error('Não foi possível verificar o arquivo salvo: '+e.message);
+  }
 
   // 2) PDF (incremental)
   if(pdfWriter){
@@ -522,7 +545,8 @@ async function openVideoWriter(){
     await selectOutputFolder();
     if(!rootDirHandle) throw new Error('Pasta não selecionada');
   }
-  const h = await rootDirHandle.getFileHandle(`VIDEO_${new Date().toISOString().replace(/[:.]/g,'-')}.webm`, {create:true});
+  const dir = getActiveDir();
+  const h = await dir.getFileHandle(`VIDEO_${new Date().toISOString().replace(/[:.]/g,'-')}.webm`, {create:true});
   videoWritable = await h.createWritable();
 }
 async function closeVideoWriter(){
@@ -723,8 +747,8 @@ async function switchLens(target){
 }
 btnUltra.addEventListener('click', ()=>switchLens('ultra'));
 btnWide .addEventListener('click', ()=>switchLens('wide'));
-btnTele .addEventListener('click', ()=>switchLens('tele'));
-zoomRange.addEventListener('input', ()=>applyZoom(zoomRange.value));
+btnTele .addEventListener('click', () =>switchLens('tele'));
+zoomRange.addEventListener('input', () =>applyZoom(zoomRange.value));
 </script>
 
 <script>
@@ -789,6 +813,7 @@ function stampOverlay(ctx, w, h, kmStr, ids, ts, gpsLine){
 <script>
 /* ===== Captura (leve, sem acumular) ===== */
 const CAP_MAX_DIM = 1600; // mantém arquivo leve e rápido
+const MIN_JPEG_BYTES = 1024; // garante não 0B
 
 function addPreview(url, meta){
   previewBuffer.push({url, meta});
@@ -817,6 +842,40 @@ function buildFilename(kmStr, ts){
   return `FOTO_${safeKm}_${stamp}.jpg`;
 }
 
+// Valida se o frame não está vazio/escuro (amostra esparsa de pixels)
+function frameLooksValid(ctx, w, h){
+  try{
+    if(!w || !h) return false;
+    const samples = 36;
+    let sum = 0, count=0, varsum=0, last=null;
+    for(let i=0;i<samples;i++){
+      const x = Math.floor((i%samples)/Math.sqrt(samples) * (w-1));
+      const y = Math.floor((i/Math.sqrt(samples)) * (h-1));
+      const data = ctx.getImageData(Math.max(0,x), Math.max(0,y), 1, 1).data;
+      const lum = 0.2126*data[0]+0.7152*data[1]+0.0722*data[2];
+      sum += lum; count++;
+      if(last!=null){ const d=lum-last; varsum += d*d; }
+      last = lum;
+    }
+    const avg = sum / Math.max(1,count);
+    const variance = varsum / Math.max(1,(count-1));
+    // Heurística: precisa ter brilho médio e alguma variância (evita tela preta ou congelada)
+    return (avg > 8) && (variance > 5);
+  }catch(e){
+    // Alguns browsers podem bloquear getImageData sem permissões; assume ok
+    return true;
+  }
+}
+
+async function makeJpegFromCanvas(canvas, quality=0.85, retries=2){
+  for(let i=0;i<=retries;i++){
+    const blob = await new Promise(res => canvas.toBlob(res,'image/jpeg',quality));
+    if(blob && blob.size >= MIN_JPEG_BYTES){ return blob; }
+    await sleep(40);
+  }
+  return null;
+}
+
 async function captureOnce(){
   if(!(csvReady && camReady && gpsReady && lastPos)) return;
 
@@ -824,7 +883,18 @@ async function captureOnce(){
   const vw = vid.videoWidth||1280, vh=vid.videoHeight||720;
   const scale = (Math.max(vw,vh)>CAP_MAX_DIM) ? (CAP_MAX_DIM/Math.max(vw,vh)) : 1;
   const w = Math.round(vw*scale), h = Math.round(vh*scale);
+  if(!w || !h) { console.warn('Dimensões inválidas de captura'); return; }
   can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
+
+  // Garante que o frame não está vazio
+  if(!frameLooksValid(ctx, w, h)){
+    await sleep(40);
+    ctx.drawImage(vid,0,0,w,h);
+    if(!frameLooksValid(ctx, w, h)){
+      console.warn('Frame inválido (muito escuro/vazio). Foto descartada.');
+      return;
+    }
+  }
 
   const kmObj=nearestKM(lastPos.lat,lastPos.lon);
   const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
@@ -834,11 +904,19 @@ async function captureOnce(){
 
   stampOverlay(ctx, w, h, overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
 
-  const blob = await new Promise(res => can.toBlob(res,'image/jpeg',0.85));
+  let blob = await makeJpegFromCanvas(can, 0.85, 2);
+  if(!blob){ alert('Falha ao gerar JPEG (0B). Foto descartada.'); return; }
+
   const fname = buildFilename(kmStr, new Date());
 
-  // Salva direto na pasta + adiciona ao PDF
-  await savePhotoDirect(blob, fname, w, h);
+  try{
+    // Salva direto na pasta + adiciona ao PDF
+    await savePhotoDirect(blob, fname, w, h);
+  }catch(e){
+    console.error('Erro ao salvar foto:', e);
+    alert('Erro ao salvar foto: ' + e.message);
+    return;
+  }
 
   // Prévia (só últimas 10)
   const url = URL.createObjectURL(blob);
@@ -846,23 +924,55 @@ async function captureOnce(){
   addPreview(url, `${kmStr} • ${ts}`);
 }
 
-function startAutoCapture(){
+async function startAutoCapture(){
+  if(isAutoCapturing) return; // já em sessão
   if(!rootDirHandle){ alert('Selecione a pasta primeiro.'); return; }
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
-  isAutoCapturing=true; btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.style.background='linear-gradient(180deg, #ff7b7b, #ef4444)';
-  updateChip();
-  autoCaptureInterval=setInterval(()=>{ captureOnce().catch(()=>{}); }, 600);
+  try {
+    // Cria subpasta da sessão
+    sessionName = makeSessionFolderName();
+    sessionDirHandle = await rootDirHandle.getDirectoryHandle(sessionName, { create:true });
+
+    // Abre PDF dentro da sessão
+    const pdfHandle = await sessionDirHandle.getFileHandle(`RELATORIO_${sessionName}.pdf`, { create:true });
+    const stream = await pdfHandle.createWritable();
+    pdfWriter = createPdfStreamWriter(stream);
+    await pdfWriter.init();
+
+    // UI
+    stFolder.textContent = 'Pasta: OK (sessão)';
+    stFolder.className = 'st ok';
+    stPdf.textContent = 'PDF: ABERTO (sessão)';
+    stPdf.className = 'st ok';
+
+    isAutoCapturing=true; btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.style.background='linear-gradient(180deg, #ff7b7b, #ef4444)';
+    updateChip();
+    autoCaptureInterval=setInterval(()=>{ captureOnce().catch(()=>{}); }, 600);
+  } catch (e) {
+    alert('Falha ao iniciar Captura Auto: ' + e.message);
+  }
 }
-function stopAutoCapture(){
+async function stopAutoCapture(){
   if(!isAutoCapturing) return; isAutoCapturing=false;
   if(autoCaptureInterval){ clearInterval(autoCaptureInterval); autoCaptureInterval=null; }
+  // Finaliza PDF da sessão, se aberto
+  try{
+    if(pdfWriter){
+      await pdfWriter.finalize();
+      stPdf.textContent = 'PDF: FECHADO';
+      stPdf.className = 'st warn';
+      pdfWriter = null;
+    }
+  }catch(e){ console.warn('Falha ao finalizar PDF da sessão:', e); alert('Falha ao finalizar PDF: ' + e.message); }
+
+  sessionDirHandle = null; sessionName = null;
+  stFolder.textContent = 'Pasta: OK'; stFolder.className = 'st ok';
   btnAutoCapture.textContent='🎬 Captura Auto'; btnAutoCapture.style.background='linear-gradient(180deg, #ff7b45, #e5612e)';
   updateChip();
 }
 btnAutoCapture.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
 
 btnClear.addEventListener('click', ()=>{
-  // Limpa apenas pré-visualizações (arquivos já estão salvos em disco)
   previewBuffer.forEach(p=>{ try{ URL.revokeObjectURL(p.url);}catch{} });
   previewBuffer.length = 0; foto.removeAttribute('src'); renderGallery();
 });
@@ -957,14 +1067,14 @@ wrap.addEventListener('click', ()=>{ if(isRecordingVideo){ stopVideoRecording();
 btnSelectFolder.addEventListener('click', async ()=>{ await selectOutputFolder(); });
 
 btnFinalizePdf.addEventListener('click', async ()=>{
-  if(!pdfWriter){ alert('Nenhum PDF aberto. Selecione a pasta para iniciar um novo.'); return; }
+  if(!pdfWriter){ alert('Nenhum PDF aberto. Inicie a Captura Auto para abrir um PDF de sessão ou inicie manualmente.'); return; }
   btnFinalizePdf.disabled = true;
   try{
     await pdfWriter.finalize();
     stPdf.textContent = 'PDF: FECHADO';
     stPdf.className = 'st warn';
     pdfWriter = null;
-    alert('PDF finalizado com sucesso. Você pode abrir um novo relatório selecionando a pasta novamente.');
+    alert('PDF finalizado com sucesso. Você pode abrir um novo relatório iniciando outra sessão.');
   }catch(e){
     alert('Falha ao finalizar PDF: ' + e.message);
     btnFinalizePdf.disabled = false;
@@ -1036,3 +1146,9 @@ document.getElementById('btnStart').addEventListener('click', ()=>{/* evita FOUC
 
 </body>
 </html>
+'''
+
+with open('relatorio_fotografico_sessoes.html', 'w', encoding='utf-8') as f:
+    f.write(html_content)
+
+print('OK: relatorio_fotografico_sessoes.html gerado com sucesso.')
