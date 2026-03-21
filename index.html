@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<meta name="theme-color" content="#0b7a39" />
+<meta name="theme-color" content="#0a5ccf" />
 <title>Inspeção – Captura Direta (Foto)</title>
 <style>
   :root{
     --bg:#081227; --fg:#eaf2ff;
-    --hudA:rgba(8,14,30,.82); --hudB:rgba(6,10,24,.78);
-    --green:#0b7a39; --greenDark:#085e2c; --white:#ffffff;
-    --border:#dfe9e2; --shadow:0 14px 36px rgba(0,0,0,.45);
-    --btnH:68px;
+    --panelA:rgba(8,14,30,.82); --panelB:rgba(6,10,24,.78);
+    --blue:#0a77d5; --blueDark:#095fb0; --white:#ffffff; --border:#e9f2ff;
+    --shadow:0 14px 36px rgba(0,0,0,.45);
+    --btnH:68px; --accent:#25D366; --warn:#eab308; --danger:#ef4444;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
   html,body{height:100%}
@@ -20,29 +20,40 @@
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans",sans-serif;
     overflow:hidden; -webkit-user-select:none; user-select:none;
   }
-
   /* Tela cheia */
   #app{ position:fixed; inset:0; display:grid; grid-template-rows:1fr; }
   #camWrap{ position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate; }
   #vid{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000 }
 
-  /* HUD topo: placa verde (KM) */
+  /* HUD topo: PLACA AZUL “km” */
   #hudTop{
-    position:absolute; top:10px; left:0; right:0; display:flex; justify-content:center; z-index:3; pointer-events:none;
+    position:absolute; top:10px; left:0; right:0; display:flex; justify-content:space-between; align-items:flex-start; z-index:3;
+    padding:0 10px; pointer-events:none;
   }
   .road-sign{
-    display:inline-flex; align-items:center; gap:10px; padding:10px 16px;
-    background:linear-gradient(180deg, var(--green), var(--greenDark));
-    color:var(--white); font-weight:900; letter-spacing:.02em;
-    border-radius:12px;
-    border:4px solid var(--border);
-    box-shadow: 0 8px 24px rgba(0,0,0,.45), inset 0 0 0 2px rgba(255,255,255,.65);
+    display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+    min-width:116px; padding:10px 14px 12px;
+    background:linear-gradient(180deg, var(--blue), var(--blueDark));
+    color:var(--white); border-radius:14px;
+    border:6px solid var(--border);
+    box-shadow: 0 8px 24px rgba(0,0,0,.45), inset 0 0 0 2px rgba(255,255,255,.75);
     text-shadow: 0 1px 0 rgba(0,0,0,.35);
-    pointer-events:none;
   }
-  .road-sign .km{ font-size:1.1rem }
+  .road-sign .km-label{
+    font-weight:900; font-size:1.15rem; letter-spacing:.02em; line-height:1;
+  }
+  .road-sign .km-num{
+    font-weight:900; font-size:1.9rem; letter-spacing:.02em; line-height:1.05; margin-top:6px;
+  }
 
-  /* HUD base: único botão */
+  /* Engrenagem (opções) */
+  #gear{ pointer-events:auto;
+    display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px;
+    background:linear-gradient(180deg,var(--panelA),var(--panelB));
+    border:1px solid rgba(255,255,255,.16); box-shadow:var(--shadow); cursor:pointer; user-select:none;
+  }
+
+  /* HUD base: ÚNICO botão */
   #hudBottom{
     position:absolute; bottom:10px; left:0; right:0; display:flex; justify-content:center; z-index:3;
   }
@@ -59,14 +70,14 @@
   .btn.auto-on{ background:linear-gradient(180deg,#ff8f49,#e06a2d); color:#1b0b02; border-color:#c45722 }
   .btn.primary{ background:linear-gradient(180deg,#31e27b,#22c55e); color:#062a1a; border-color:#1fb85b }
 
-  /* Gate de pasta */
+  /* Modal pasta */
   #folderGate{
     position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center;
     background:radial-gradient(1200px 600px at 50% -10%, #0c2a3f, transparent 65%), #060a12;
   }
   .gateCard{
     background:linear-gradient(180deg, rgba(16,26,64,.9), rgba(14,22,52,.9));
-    border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:20px; width:min(92vw, 440px);
+    border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:20px; width:min(92vw, 460px);
     color:#cfe1ff; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.5);
   }
   .gateCard h2{ margin:0 0 10px } .gateCard p{ margin:0 0 14px; opacity:.9 }
@@ -78,6 +89,19 @@
     background:linear-gradient(180deg, rgba(0,0,0,.78), rgba(0,0,0,.64));
     border:1px solid rgba(255,255,255,.16); color:#eaf2ff; padding:10px 14px; border-radius:12px;
   }
+
+  /* Painel opções (popover) */
+  #opts{
+    position:absolute; right:10px; top:58px; z-index:4; display:none;
+    background:linear-gradient(180deg,var(--panelA),var(--panelB));
+    border:1px solid rgba(255,255,255,.16); border-radius:12px; box-shadow:var(--shadow);
+    padding:12px; min-width:240px; pointer-events:auto;
+  }
+  #opts h4{ margin:0 0 8px; font-size:1rem }
+  .row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin:8px 0 }
+  .row button{ padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.16); background:#0c1436; color:#eaf2ff; font-weight:800; cursor:pointer }
+  .row input[type="range"]{ width:140px }
+  .dim{ font-size:.86rem; opacity:.85 }
 </style>
 </head>
 <body>
@@ -85,15 +109,36 @@
   <div id="camWrap">
     <video id="vid" autoplay playsinline muted></video>
 
-    <!-- KM estilo placa verde -->
+    <!-- HUD topo: placa + engrenagem -->
     <div id="hudTop">
-      <div class="road-sign"><span>🛣️</span><span class="km" id="kmLive">KM —</span></div>
+      <div class="road-sign" id="sign">
+        <div class="km-label">km</div>
+        <div class="km-num" id="kmNum">—</div>
+      </div>
+      <div id="gear">⚙️ Opções</div>
     </div>
 
-    <!-- Único controle: AUTO -->
+    <!-- HUD base: único botão -->
     <div id="hudBottom">
       <button id="btnAuto" class="btn primary">🎬 INICIAR AUTO</button>
     </div>
+  </div>
+</div>
+
+<!-- Painel de Opções -->
+<div id="opts">
+  <h4>Opções</h4>
+  <div class="row">
+    <span>Alternar câmera</span>
+    <button id="btnSwap">🔄 Trocar</button>
+  </div>
+  <div class="row">
+    <span>Intervalo (ms)</span>
+    <input id="rngInterval" type="range" min="300" max="2000" step="50">
+  </div>
+  <div class="row">
+    <span class="dim">Atual: <b id="lblInterval">—</b> ms</span>
+    <button id="btnCloseOpts">Fechar</button>
   </div>
 </div>
 
@@ -110,40 +155,53 @@
 <div id="toast"></div>
 
 <script>
-/* ======= Estado/Refs ======= */
+/* ================= Estado/Refs ================= */
 let rootDirHandle=null;
 let csvKMReady=false, camReady=false, gpsReady=false;
 let lastPos=null;
-let isAuto=false, autoTimer=null, AUTO_MS=800;
-let photoBusy=false;          // evita concorrência
-let photoQueue=Promise.resolve(); // fila serial para garantia adicional
+let isAuto=false, autoTimer=null;
+let photoBusy=false;
+let photoQueue=Promise.resolve();
 
 const vid=document.getElementById('vid');
-const kmLive=document.getElementById('kmLive');
+const kmNum=document.getElementById('kmNum');
 const btnAuto=document.getElementById('btnAuto');
-const folderGate=document.getElementById('folderGate');
-const btnPickFolder=document.getElementById('btnPickFolder');
-const toast=document.getElementById('toast');
+const folderGate=document.getElementById('folderGate'); const btnPickFolder=document.getElementById('btnPickFolder');
 
-/* ======= Utils ======= */
-function showToast(msg,ms=1400){ toast.textContent=msg; toast.style.display='block'; clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.style.display='none',ms); }
-function fmtKm(v){ let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
+const gear=document.getElementById('gear'), opts=document.getElementById('opts');
+const btnSwap=document.getElementById('btnSwap'), rngInterval=document.getElementById('rngInterval'), lblInterval=document.getElementById('lblInterval');
+
+/* Persistência do intervalo */
+const DEF_INTERVAL = Number(localStorage.getItem('auto_ms')||'800');
+rngInterval.value = String(DEF_INTERVAL); lblInterval.textContent = rngInterval.value;
+
+/* ================= Utils ================= */
+function showToast(msg,ms=1500){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(showToast.t); showToast.t=setTimeout(()=>t.style.display='none',ms); }
+function fmtKmRaw(v){ let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return {K, m}; }
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
 function stampStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}-${String(d.getMinutes()).padStart(2,'0')}-${String(d.getSeconds()).padStart(2,'0')}`; }
 
-/* ======= Pasta ======= */
+/* ================= Pasta (perm) ================= */
+async function verifyPermission(handle, readWrite){
+  const opts = { mode: readWrite ? 'readwrite' : 'read' };
+  if (await handle.queryPermission?.(opts) === 'granted') return true;
+  if (await handle.requestPermission?.(opts) === 'granted') return true;
+  return false;
+}
 async function pickFolder(){
   try{
     rootDirHandle = await window.showDirectoryPicker({mode:'readwrite'});
+    const ok = await verifyPermission(rootDirHandle, true);
+    if(!ok){ showToast('Permissão negada'); return; }
     folderGate.style.display='none';
     showToast('Pasta OK');
-  }catch(e){ showToast('Seleção de pasta cancelada'); }
+  }catch(e){ showToast('Seleção cancelada'); }
 }
 btnPickFolder.addEventListener('click', pickFolder);
 
-/* ======= CSV do KM ======= */
+/* ================= KM (CSV) ================= */
 let kmPoints=[], kmGrid=new Map();
 const CELL=0.005;
 function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
@@ -182,20 +240,40 @@ function nearestKM(lat,lon){
   let best=null,bd=Infinity; for(const p of c){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
 }
 
-/* ======= Câmera ======= */
-async function startCamera(){
+/* ================= Câmera / Troca ================= */
+let deviceList=[], deviceIndex=0, currentStream=null;
+async function enumerateCameras(){
   try{
-    const st=await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} },
-      audio:false
-    });
+    const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+    tmp.getTracks().forEach(t=>t.stop());
+  }catch{}
+  const devs=await navigator.mediaDevices.enumerateDevices();
+  deviceList = devs.filter(d=>d.kind==='videoinput');
+  const saved=localStorage.getItem('camId'); const idx=deviceList.findIndex(d=>d.deviceId===saved);
+  deviceIndex = idx>=0?idx:0;
+}
+async function startCamera(idx=deviceIndex){
+  try{
+    currentStream?.getTracks().forEach(t=>t.stop());
+    const dev=deviceList[idx];
+    const cons = dev
+      ? { video:{ deviceId:{exact:dev.deviceId}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false }
+      : { video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false };
+    const st=await navigator.mediaDevices.getUserMedia(cons);
     vid.srcObject=st;
     await new Promise(res=>{ if(vid.readyState>=1&&vid.videoWidth) res(); else vid.onloadedmetadata=()=>res(); });
-    camReady=true;
+    camReady=true; currentStream=st;
+    if(dev) localStorage.setItem('camId',dev.deviceId);
   }catch(e){ camReady=false; showToast('Falha na câmera'); }
 }
+btnSwap.addEventListener('click', async ()=>{
+  if(!deviceList.length) await enumerateCameras();
+  if(!deviceList.length) return;
+  deviceIndex=(deviceIndex+1)%deviceList.length;
+  await startCamera(deviceIndex);
+});
 
-/* ======= GPS ======= */
+/* ================= GPS ================= */
 function startGPS(){
   if(!('geolocation' in navigator)){ gpsReady=false; return; }
   navigator.geolocation.getCurrentPosition(p=>{
@@ -207,14 +285,24 @@ function startGPS(){
   },()=>{ gpsReady=false; }, {enableHighAccuracy:true, timeout:12000});
 }
 
-/* ======= Carimbo (na foto) ======= */
+/* ================= Placa KM ao vivo ================= */
+function updateSign(){
+  if(lastPos && csvKMReady){
+    const n=nearestKM(lastPos.lat,lastPos.lon);
+    if(n){ const {K} = fmtKmRaw(n.km); kmNum.textContent = String(K); }
+    else kmNum.textContent='—';
+  }
+}
+setInterval(updateSign, 600);
+
+/* ================= Carimbo na foto ================= */
 function stampOverlay(ctx,w,h,kmStr,tsStr,gpsStr){
   const bandH=Math.max(100,Math.round(h*0.14));
   ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
   if(kmStr){
     ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.05)}px system-ui`;
     ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
-    ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.5)); ctx.shadowBlur=0;
+    ctx.fillText(`km ${kmStr}`,20,h-bandH+Math.round(bandH*0.5)); ctx.shadowBlur=0;
   }
   if(tsStr){
     ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.font=`700 ${Math.round(h*0.03)}px system-ui`;
@@ -226,92 +314,132 @@ function stampOverlay(ctx,w,h,kmStr,tsStr,gpsStr){
   }
 }
 
-/* ======= Foto: gravação robusta (sem 0 KB) ======= */
-const photoCan=document.createElement('canvas'), photoCtx=photoCan.getContext('2d',{alpha:false});
+/* ================= Captura/Gravação ROBUSTA (sem 0 KB) ================= */
 const MAX_DIM=1920;
+
+/* Preferência por OffscreenCanvas (convertToBlob) */
+async function renderToJpegBlob(video, maxDim=MAX_DIM, quality=0.92){
+  const vw=video.videoWidth||1920, vh=video.videoHeight||1080;
+  const sc=(Math.max(vw,vh)>maxDim)? (maxDim/Math.max(vw,vh)) : 1;
+  const w=Math.round(vw*sc), h=Math.round(vh*sc);
+
+  // 1) OffscreenCanvas (robusto e rápido)
+  if('OffscreenCanvas' in window){
+    const off=new OffscreenCanvas(w,h); const octx=off.getContext('2d',{alpha:false});
+    octx.drawImage(video,0,0,w,h);
+
+    // carimbo
+    const kmText = kmNum.textContent && kmNum.textContent!=='—' ? kmNum.textContent : null;
+    const ts=new Date().toLocaleString();
+    let gpsStr = '';
+    if(lastPos) gpsStr = `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
+    stampOverlay(octx,w,h,kmText,ts,gpsStr);
+
+    try{
+      const blob=await off.convertToBlob({type:'image/jpeg', quality});
+      if(blob && blob.size>0) return blob;
+    }catch(e){ /* cai para os próximos métodos */ }
+  }
+
+  // 2) Canvas normal + toBlob
+  const can=document.createElement('canvas'); const ctx=can.getContext('2d',{alpha:false});
+  can.width=w; can.height=h; ctx.drawImage(video,0,0,w,h);
+
+  const kmText2 = kmNum.textContent && kmNum.textContent!=='—' ? kmNum.textContent : null;
+  const ts2=new Date().toLocaleString();
+  let gpsStr2 = '';
+  if(lastPos) gpsStr2 = `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
+  stampOverlay(ctx,w,h,kmText2,ts2,gpsStr2);
+
+  const blob = await new Promise(res=>can.toBlob(res,'image/jpeg',quality));
+  if(blob && blob.size>0) return blob;
+
+  // 3) Fallback final: dataURL → Uint8Array → Blob
+  const dataURL = can.toDataURL('image/jpeg', quality);
+  const u8 = dataURLtoU8(dataURL);
+  return new Blob([u8], {type:'image/jpeg'});
+}
+
 function dataURLtoU8(dataURL){
   const b64=dataURL.split(',')[1]; const bin=atob(b64); const u8=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); return u8;
-}
-async function safeWriteFile(fileHandle, payload){
-  const w=await fileHandle.createWritable();
-  if(payload instanceof Blob){
-    const u8=new Uint8Array(await payload.arrayBuffer());
-    await w.write(u8);
-  }else if(payload instanceof Uint8Array){
-    await w.write(payload);
-  }else{
-    await w.write(payload);
-  }
-  await w.close();
-  // Verificação rápida: reabre e confere tamanho
-  try{
-    const f=await fileHandle.getFile();
-    if(f.size===0) throw new Error('zero-bytes');
-  }catch(e){
-    throw e;
-  }
+  for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  return u8;
 }
 
-async function capturePhotoOnce(){
-  if(photoBusy) return; // impede concorrência
-  if(!(rootDirHandle && camReady && gpsReady && csvKMReady && lastPos)) return;
+async function writeFileBytes(fileHandle, bytesOrBlob){
+  const ok = await verifyPermission(rootDirHandle, true);
+  if(!ok) throw new Error('No permission');
+
+  const w=await fileHandle.createWritable();
+  try{
+    await w.truncate(0);
+    let u8;
+    if(bytesOrBlob instanceof Blob) u8=new Uint8Array(await bytesOrBlob.arrayBuffer());
+    else if(bytesOrBlob instanceof Uint8Array) u8=bytesOrBlob;
+    else u8=new Uint8Array(bytesOrBlob);
+    await w.write(u8);
+  }finally{
+    await w.close();
+  }
+
+  // verifica tamanho
+  const f=await fileHandle.getFile();
+  if(f.size===0) throw new Error('zero-bytes');
+  return f.size;
+}
+
+async function savePhotoNow(){
+  // fila serial + semáforo — garante “uma por vez”
+  if(photoBusy) return;
+  if(!(rootDirHandle && camReady && gpsReady && csvKMReady && lastPos && vid.videoWidth)) return;
+
   photoBusy = true;
   try{
-    const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
-    const sc=(Math.max(vw,vh)>MAX_DIM)? (MAX_DIM/Math.max(vw,vh)) : 1;
-    const w=Math.round(vw*sc), h=Math.round(vh*sc);
-    photoCan.width=w; photoCan.height=h; photoCtx.drawImage(vid,0,0,w,h);
-
-    const km=kmLive.textContent||'KM —';
-    const ts=new Date().toLocaleString();
-    const gps=`${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
-    stampOverlay(photoCtx,w,h,km,ts,gps);
-
-    // 1ª tentativa: Blob
-    let blob = await new Promise(res=>photoCan.toBlob(res,'image/jpeg',0.92));
-    let data = null;
-    if(blob && blob.size>0){ data = blob; }
-    else { // fallback: dataURL -> Uint8Array
-      data = dataURLtoU8(photoCan.toDataURL('image/jpeg',0.92));
-    }
-
-    const safeKm = km.replace('KM ','').replace('+','_').replace(/\s/g,'');
-    const name = `FOTO_${safeKm}_${stampStr()}.jpg`;
+    const blob = await renderToJpegBlob(vid, MAX_DIM, 0.92);
+    const kmText = kmNum.textContent && kmNum.textContent!=='—' ? kmNum.textContent : '—';
+    const safeKm = kmText.replace(/\s+/g,'_');
+    const name = `FOTO_km_${safeKm}_${stampStr()}.jpg`;
     const fh = await rootDirHandle.getFileHandle(name,{create:true});
 
-    // 1ª escrita
     try{
-      await safeWriteFile(fh, data);
-    }catch(err1){
-      // Reescrita com caminho alternativo (se a 1ª falhou ou ficou 0 KB)
+      await writeFileBytes(fh, blob);
+    }catch(e1){
+      // reescreve com dataURL caso algum encoder tenha falhado silenciosamente
+      const can = document.createElement('canvas');
+      const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
+      const sc=(Math.max(vw,vh)>MAX_DIM)? (MAX_DIM/Math.max(vw,vh)) : 1;
+      const w=Math.round(vw*sc), h=Math.round(vh*sc);
+      can.width=w; can.height=h;
+      const ctx=can.getContext('2d',{alpha:false});
+      ctx.drawImage(vid,0,0,w,h);
+      const dataURL=can.toDataURL('image/jpeg',0.9);
+      const u8=dataURLtoU8(dataURL);
       try{
-        const retry = data instanceof Blob ? dataURLtoU8(photoCan.toDataURL('image/jpeg',0.9)) : data;
-        await safeWriteFile(fh, retry);
-      }catch(err2){
-        console.error('Falha ao salvar foto (retries):', err1, err2);
-        showToast('Falha ao salvar foto'); // feedback mínimo
+        await writeFileBytes(fh, u8);
+      }catch(e2){
+        console.error('Falha ao salvar foto:', e1, e2);
+        showToast('Falha ao salvar foto');
       }
     }
   }catch(err){
-    console.error('Erro captura:', err);
+    console.error('Erro na captura:', err);
     showToast('Falha na captura');
   }finally{
-    photoBusy = false;
+    photoBusy=false;
   }
 }
 
-/* ======= AUTO ======= */
+/* ================= AUTO ================= */
 function startAuto(){
   if(isAuto) return;
+  const interval = Math.max(300, Math.min(2000, Number(rngInterval.value)||800));
+  rngInterval.value = String(interval); lblInterval.textContent = String(interval);
+  localStorage.setItem('auto_ms', String(interval));
+
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady)){ showToast('Aguarde Pasta/Câmera/GPS/CSV'); return; }
   isAuto=true;
   btnAuto.textContent='⏹ PARAR AUTO'; btnAuto.classList.add('auto-on'); btnAuto.classList.remove('primary');
-
-  // Laço com FILA SERIAL para garantir que não há perda/escrita concorrente
-  autoTimer=setInterval(()=>{
-    photoQueue = photoQueue.then(()=>capturePhotoOnce()).catch(()=>{});
-  }, AUTO_MS);
+  autoTimer=setInterval(()=>{ photoQueue = photoQueue.then(()=>savePhotoNow()).catch(()=>{}); }, interval);
   showToast('Auto ON');
 }
 function stopAuto(){
@@ -323,20 +451,28 @@ function stopAuto(){
 }
 btnAuto.addEventListener('click', ()=>{ if(isAuto) stopAuto(); else startAuto(); });
 
-/* ======= KM ao vivo ======= */
-function refreshKM(){
-  if(lastPos && csvKMReady){
-    const best=nearestKM(lastPos.lat,lastPos.lon);
-    kmLive.textContent = best ? fmtKm(best.km) : 'KM —';
-  }
-}
-setInterval(refreshKM, 600);
+/* ================= Opções (engrenagem) ================= */
+gear.addEventListener('click', ()=>{
+  opts.style.display = (opts.style.display==='block'?'none':'block');
+});
+document.getElementById('btnCloseOpts').addEventListener('click', ()=>{ opts.style.display='none'; });
+rngInterval.addEventListener('input', ()=>{ lblInterval.textContent=rngInterval.value; });
 
-/* ======= Boot ======= */
+/* ================= KM refresh ================= */
+setInterval(()=>{
+  if(lastPos && csvKMReady){
+    const n=nearestKM(lastPos.lat,lastPos.lon);
+    if(n){ const {K} = fmtKmRaw(n.km); kmNum.textContent=String(K); }
+    else kmNum.textContent='—';
+  }
+}, 600);
+
+/* ================= Boot ================= */
 async function boot(){
-  await loadKM();
-  await startCamera();
+  await enumerateCameras();
+  await startCamera(deviceIndex);
   startGPS();
+  await loadKM();
 }
 boot();
 </script>
