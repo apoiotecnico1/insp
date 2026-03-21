@@ -155,11 +155,14 @@
 <div id="toast"></div>
 
 <script>
-/* ============ Estado/Refs ============ */
+/* ===== Estado/Refs ===== */
 let rootDirHandle=null;
 let csvKMReady=false, camReady=false, gpsReady=false;
 let lastPos=null;
-let isAuto=false, autoTimer=null, photoBusy=false, photoQueue=Promise.resolve();
+let isAuto=false, autoTimer=null;
+let photoBusy=false;               // semáforo
+let photoQueue=Promise.resolve();  // fila serial
+
 let deviceList=[], deviceIndex=0, currentStream=null;
 
 const vid=document.getElementById('vid');
@@ -168,24 +171,25 @@ const btnAuto=document.getElementById('btnAuto');
 const folderGate=document.getElementById('folderGate'), btnPickFolder=document.getElementById('btnPickFolder');
 const gear=document.getElementById('gear'), opts=document.getElementById('opts');
 const btnSwap=document.getElementById('btnSwap'), rngInterval=document.getElementById('rngInterval'), lblInterval=document.getElementById('lblInterval');
-const DEF_INTERVAL = Number(localStorage.getItem('auto_ms')||'800'); rngInterval.value=String(DEF_INTERVAL); lblInterval.textContent=rngInterval.value;
 
-/* ============ Util ============ */
+const DEF_INTERVAL = Number(localStorage.getItem('auto_ms')||'800');
+rngInterval.value=String(DEF_INTERVAL); lblInterval.textContent=rngInterval.value;
+
+/* ===== Utils ===== */
 function showToast(msg,ms=1500){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(showToast.t); showToast.t=setTimeout(()=>t.style.display='none',ms); }
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
 function stampStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours())}-${String(d.getMinutes())}-${String(d.getSeconds())}`; }
-function fmtKMMM(val){ // recebe km decimal → {K, mmm string}
-  const K=Math.floor(val); let m=Math.round((val-K)*1000); if(m>=1000){m-=1000; }
-  return {K, mmm:String(m).padStart(3,'0')};
-}
+function fmtKMMM(val){ const K=Math.floor(val); let m=Math.round((val-K)*1000); if(m>=1000){m-=1000;} return {K, mmm:String(m).padStart(3,'0')}; }
 
-/* ============ Pasta/Permissão ============ */
+/* ===== Pasta/Permissões ===== */
 async function verifyPermission(handle, rw){
   const opt={mode:rw?'readwrite':'read'};
-  const q=await handle.queryPermission?.(opt); if(q==='granted') return true;
-  const r=await handle.requestPermission?.(opt); return r==='granted';
+  const q=await handle.queryPermission?.(opt);
+  if(q==='granted') return true;
+  const r=await handle.requestPermission?.(opt);
+  return r==='granted';
 }
 async function pickFolder(){
   try{
@@ -197,7 +201,7 @@ async function pickFolder(){
 }
 btnPickFolder.addEventListener('click', pickFolder);
 
-/* ============ KM (CSV) ============ */
+/* ===== CSV KM ===== */
 let kmPoints=[], kmGrid=new Map();
 const CELL=0.005;
 function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
@@ -244,7 +248,7 @@ function refreshSign(){
 }
 setInterval(refreshSign, 600);
 
-/* ============ Câmera / Troca ============ */
+/* ===== Câmera / Troca ===== */
 async function enumerateCameras(){
   try{ const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); tmp.getTracks().forEach(t=>t.stop()); }catch{}
   const devs=await navigator.mediaDevices.enumerateDevices();
@@ -272,7 +276,7 @@ btnSwap.addEventListener('click', async ()=>{
   deviceIndex=(deviceIndex+1)%deviceList.length; await startCamera(deviceIndex);
 });
 
-/* ============ GPS ============ */
+/* ===== GPS ===== */
 function startGPS(){
   if(!('geolocation' in navigator)){ gpsReady=false; return; }
   navigator.geolocation.getCurrentPosition(p=>{
@@ -284,114 +288,112 @@ function startGPS(){
   },()=>{ gpsReady=false; }, {enableHighAccuracy:true, timeout:12000});
 }
 
-/* ============ Carimbo ============ */
+/* ===== Carimbo na foto ===== */
 function stampOverlay(ctx,w,h,kmKVal,kmMVal,tsStr,gpsStr){
   const bandH=Math.max(100,Math.round(h*0.14));
   ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
+
   if(kmKVal){
     ctx.fillStyle='#b7ffcf'; ctx.textAlign='left';
     const fBig=Math.round(h*0.05), fSmall=Math.round(h*0.03);
+    const baseY = h - bandH + Math.round(bandH*0.50);
+
     ctx.font=`900 ${fBig}px system-ui`;
     const kmTxt=`km ${kmKVal}`;
     ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
-    ctx.fillText(kmTxt,20,h-bandH+Math.round(bandH*0.50));
+    ctx.fillText(kmTxt,20,baseY);
     ctx.shadowBlur=0;
+
     if(kmMVal){
       ctx.font=`900 ${fSmall}px system-ui`;
-      ctx.fillText('+'+kmMVal, 20+ctx.measureText(kmTxt).width+10, h-bandH+Math.round(bandH*0.50)-Math.round(fBig*0.25));
+      const wTxt = ctx.measureText(kmTxt).width;
+      ctx.fillText('+'+kmMVal, 20 + wTxt + 10, baseY - Math.round(fBig*0.25));
     }
   }
-  if(tsStr){ ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.font=`700 ${Math.round(h*0.03)}px system-ui`; ctx.fillText(tsStr,20,h-18); }
-  if(gpsStr){ ctx.fillStyle='#cfe7ff'; ctx.textAlign='left'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`; ctx.fillText(gpsStr,20,h-bandH+28); }
+  if(tsStr){
+    ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.font=`700 ${Math.round(h*0.03)}px system-ui`;
+    ctx.fillText(tsStr,20,h-18);
+  }
+  if(gpsStr){
+    ctx.fillStyle='#cfe7ff'; ctx.textAlign='left'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
+    ctx.fillText(gpsStr,20,h-bandH+28);
+  }
 }
 
-/* ============ Captura robusta (sem 0 B) ============ */
+/* ===== Captura → toBlob → write(blob) (igual ao do relatório) ===== */
 const MAX_DIM=1920;
-function dataURLtoU8(dataURL){ const b64=dataURL.split(',')[1]; const bin=atob(b64); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); return u8; }
-async function writeFileBytes(fileHandle, payload){
-  await verifyPermission(rootDirHandle,true);
-  const w=await fileHandle.createWritable();
-  try{
-    await w.truncate(0);
-    if(payload instanceof Blob){
-      await w.write(await payload.arrayBuffer());
-    }else if(payload instanceof Uint8Array){
-      await w.write(payload);
-    }else{
-      await w.write(payload);
-    }
-  }finally{ await w.close(); }
-  const f=await fileHandle.getFile();
-  if(f.size===0) throw new Error('zero-bytes');
-  return f.size;
-}
-async function videoFrameToBlob(){
+async function createJpegBlobFromVideo(){
   const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
   const sc=(Math.max(vw,vh)>MAX_DIM)? (MAX_DIM/Math.max(vw,vh)) : 1;
   const w=Math.round(vw*sc), h=Math.round(vh*sc);
 
-  // Preferência: OffscreenCanvas + convertToBlob
-  if('OffscreenCanvas' in window){
-    const off=new OffscreenCanvas(w,h); const octx=off.getContext('2d',{alpha:false});
-    octx.drawImage(vid,0,0,w,h);
-    const kVal = kmK.textContent!=='—' ? kmK.textContent : null;
-    const mVal = kmM.textContent.replace('+','');
-    const ts=new Date().toLocaleString();
-    let gps=''; if(lastPos) gps=`${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
-    stampOverlay(octx,w,h,kVal,mVal,ts,gps);
-    try{
-      const blob=await off.convertToBlob({type:'image/jpeg', quality:0.92});
-      if(blob && blob.size>0) return blob;
-    }catch{}
-  }
-  // Canvas normal
   const can=document.createElement('canvas'); const ctx=can.getContext('2d',{alpha:false});
   can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
-  const kVal2 = kmK.textContent!=='—' ? kmK.textContent : null;
-  const mVal2 = kmM.textContent.replace('+','');
-  const ts2=new Date().toLocaleString();
-  let gps2=''; if(lastPos) gps2=`${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
-  stampOverlay(ctx,w,h,kVal2,mVal2,ts2,gps2);
 
-  const b=await new Promise(res=>can.toBlob(res,'image/jpeg',0.92));
-  if(b && b.size>0) return b;
-  // Fallback final
-  return new Blob([dataURLtoU8(can.toDataURL('image/jpeg',0.9))], {type:'image/jpeg'});
+  const kVal = kmK.textContent!=='—' ? kmK.textContent : null;
+  const mVal = kmM.textContent.replace('+','');
+  const ts=new Date().toLocaleString();
+  let gps=''; if(lastPos) gps=`${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
+  stampOverlay(ctx,w,h,kVal,mVal,ts,gps);
+
+  // === ESQUEMA QUE FUNCIONAVA NO RELATÓRIO ===
+  const blob = await new Promise(res=>can.toBlob(res,'image/jpeg',0.92));
+  if(blob && blob.size>0) return blob;
+
+  // Fallback simples (raro): dataURL → Blob
+  const dataURL = can.toDataURL('image/jpeg',0.9);
+  const byteString = atob(dataURL.split(',')[1]);
+  const u8 = new Uint8Array(byteString.length);
+  for(let i=0;i<byteString.length;i++) u8[i]=byteString.charCodeAt(i);
+  return new Blob([u8], {type:'image/jpeg'});
 }
-async function savePhotoNow(){
+
+async function savePhotoOnce(){
   if(photoBusy) return;
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady && lastPos && vid.videoWidth)) return;
 
   photoBusy=true;
   try{
-    const blob = await videoFrameToBlob();
+    // Revalida permissão (alguns Android “esquecem” após inatividade)
+    const ok = await verifyPermission(rootDirHandle, true);
+    if(!ok){ showToast('Permissão na pasta perdida'); photoBusy=false; return; }
+
+    const blob = await createJpegBlobFromVideo();
     const kText = kmK.textContent!=='—' ? kmK.textContent : '—';
     const mText = kmM.textContent.replace('+','');
     const name = `FOTO_km_${kText}_${mText}_${stampStr()}.jpg`;
+
     const fh = await rootDirHandle.getFileHandle(name,{create:true});
-    // 1ª tentativa
-    try{
-      await writeFileBytes(fh, blob);
-    }catch(e1){
-      // Reescreve com bytes puros (dataURL)
-      const can=document.createElement('canvas'); const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
-      const sc=(Math.max(vw,vh)>MAX_DIM)? (MAX_DIM/Math.max(vw,vh)) : 1; const w=Math.round(vw*sc), h=Math.round(vh*sc);
-      can.width=w; can.height=h; const ctx=can.getContext('2d',{alpha:false}); ctx.drawImage(vid,0,0,w,h);
-      const u8=dataURLtoU8(can.toDataURL('image/jpeg',0.9));
-      await writeFileBytes(fh, u8);
+    const w = await fh.createWritable();
+    await w.write(blob);         // <-- exatamente como no relatório
+    await w.close();
+
+    // Sanidade: confirma tamanho; se 0 B, reescreve via fallback dataURL
+    const f=await fh.getFile();
+    if(f.size===0){
+      const blob2 = await createJpegBlobFromVideo(); // recaptura rápida
+      const w2 = await fh.createWritable();
+      await w2.write(blob2);
+      await w2.close();
     }
-  }catch(err){ console.error('Salvar foto erro:', err); showToast('Falha ao salvar foto'); }
-  finally{ photoBusy=false; }
+  }catch(err){
+    console.error('Salvar foto erro:', err);
+    showToast('Falha ao salvar foto');
+  }finally{
+    photoBusy=false;
+  }
 }
 
-/* ============ AUTO ============ */
+/* ===== AUTO ===== */
 function startAuto(){
   if(isAuto) return;
   const interval = Math.max(300, Math.min(2000, Number(rngInterval.value)||800));
   rngInterval.value=String(interval); lblInterval.textContent=rngInterval.value; localStorage.setItem('auto_ms', String(interval));
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady)){ showToast('Aguarde Pasta/Câmera/GPS/CSV'); return; }
   isAuto=true; btnAuto.textContent='⏹ PARAR AUTO'; btnAuto.classList.add('auto-on'); btnAuto.classList.remove('primary');
-  autoTimer=setInterval(()=>{ photoQueue = photoQueue.then(()=>savePhotoNow()).catch(()=>{}); }, interval);
+
+  // Fila serial garante que a próxima só começa após a anterior terminar
+  autoTimer=setInterval(()=>{ photoQueue = photoQueue.then(()=>savePhotoOnce()).catch(()=>{}); }, interval);
   showToast('Auto ON');
 }
 function stopAuto(){
@@ -401,19 +403,31 @@ function stopAuto(){
 }
 btnAuto.addEventListener('click', ()=>{ if(isAuto) stopAuto(); else startAuto(); });
 
-/* ============ Opções UI ============ */
+/* ===== Opções ===== */
 gear.addEventListener('click', ()=>{ opts.style.display = (opts.style.display==='block'?'none':'block'); });
 document.getElementById('btnCloseOpts').addEventListener('click', ()=>{ opts.style.display='none'; });
 rngInterval.addEventListener('input', ()=>{ lblInterval.textContent=rngInterval.value; });
+btnSwap.addEventListener('click', async ()=>{
+  if(!deviceList.length) await enumerateCameras();
+  if(!deviceList.length) return;
+  deviceIndex=(deviceIndex+1)%deviceList.length; await startCamera(deviceIndex);
+});
 
-/* ============ Boot ============ */
+/* ===== Atualização de KM na placa ===== */
+setInterval(()=>{
+  if(lastPos && csvKMReady){
+    const n=nearestKM(lastPos.lat,lastPos.lon);
+    if(n){ const o=n.km; const K=Math.floor(o); let m=Math.round((o-K)*1000); if(m>=1000){m-=1000;} kmK.textContent=String(K); kmM.textContent='+'+String(m).padStart(3,'0'); }
+    else { kmK.textContent='—'; kmM.textContent='+000'; }
+  }
+}, 600);
+
+/* ===== Boot ===== */
 async function boot(){
   await enumerateCameras();
   await startCamera(deviceIndex);
   startGPS();
   await loadKM();
-  // Seta intervalo salvo
-  rngInterval.value=String(DEF_INTERVAL); lblInterval.textContent=rngInterval.value;
 }
 boot();
 </script>
