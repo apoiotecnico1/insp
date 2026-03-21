@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#0a5ccf" />
 <title>Inspeção – Captura Direta (Foto)</title>
 <style>
+  /* ===========================================================
+     ESTILO GERAL (UI mínima, alto contraste, uso em campo)
+     =========================================================== */
   :root{
     --panelA:rgba(8,14,30,.82); --panelB:rgba(6,10,24,.78);
     --btnH:68px; --badgeBg:rgba(10,16,40,.78); --badgeBr:rgba(255,255,255,.18);
@@ -18,15 +21,15 @@
     overflow:hidden; -webkit-user-select:none; user-select:none;
   }
 
-  /* Tela */
   #app{ position:fixed; inset:0; display:grid; grid-template-rows:1fr; }
   #camWrap{
     position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate;
-    touch-action:none; /* pinch-zoom custom */
+    /* Impede o zoom do navegador e habilita pinch-zoom custom */
+    touch-action:none;
   }
   #vid{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000 }
 
-  /* HUD topo: só Opções */
+  /* HUD topo: apenas Opções (sem compartilhar exposto na tela) */
   #hudTop{
     position:absolute; top:10px; left:0; right:0; display:flex; justify-content:flex-end; z-index:4;
     padding:0 10px; pointer-events:none;
@@ -38,7 +41,7 @@
     cursor:pointer; user-select:none; color:#eaf2ff; font-weight:900; margin-left:8px;
   }
 
-  /* KM HUD (pequeno, destacado, sem desenho) */
+  /* KM HUD em tempo real (pequeno, destacado, sem “desenhos”) */
   #kmHud{ position:absolute; z-index:5; pointer-events:none; }
   .kmBadge{
     display:inline-flex; align-items:center; gap:8px;
@@ -50,14 +53,14 @@
   .kmBadge .label{ opacity:.9; letter-spacing:.02em }
   .kmBadge .val{ font-variant-numeric:tabular-nums; letter-spacing:.01em }
 
-  /* Posições do KM (selecionável) */
+  /* Posições do KM (selecionável nas opções) */
   .pos-top-center{ top:10px; left:50%; transform:translateX(-50%); }
   .pos-top-left{ top:10px; left:10px; }
   .pos-top-right{ top:10px; right:10px; }
   .pos-mid-left{ top:50%; left:10px; transform:translateY(-50%); }
   .pos-mid-right{ top:50%; right:10px; transform:translateY(-50%); }
 
-  /* HUD base: botão único com status */
+  /* Botão AUTO com status ao vivo embutido */
   #hudBottom{
     position:absolute; bottom:10px; left:0; right:0; display:flex; justify-content:center; z-index:3;
   }
@@ -77,7 +80,7 @@
   .btn .main{ font-size:1.02rem; font-weight:900 }
   .btn .sub{ font-size:.9rem; font-weight:800; opacity:.95 }
 
-  /* Gate pasta – SIMPLES */
+  /* Gate de pasta – minimalista (só o essencial) */
   #folderGate{
     position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center;
     background:#060a12;
@@ -92,7 +95,7 @@
   .gateCard p{ margin:0 0 14px; opacity:.95; font-weight:700 }
   .gateCard .btn{ width:100%; height:56px }
 
-  /* Toast */
+  /* Toast (avisos rápidos) */
   #toast{
     position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:none; z-index:20;
     background:linear-gradient(180deg, rgba(0,0,0,.78), rgba(0,0,0,.64));
@@ -111,12 +114,12 @@
   .row select, .row button, .row input[type="range"], .row input[type="checkbox"]{
     border-radius:10px; border:1px solid rgba(255,255,255,.16); background:#0c1436; color:#eaf2ff; font-weight:800;
   }
-  .row select{ padding:8px 10px; max-width: 100% }
+  .row select{ padding:8px 10px; max-width:100% }
   .row button{ padding:8px 10px; cursor:pointer }
   .row input[type="range"]{ width:160px }
   .row label{ display:flex; align-items:center; gap:8px; font-weight:800 }
   .dim{ font-size:.86rem; opacity:.85 }
-  .grow{ flex:1 1 auto; min-width: 140px }
+  .grow{ flex:1 1 auto; min-width:140px }
 </style>
 </head>
 <body>
@@ -124,17 +127,17 @@
   <div id="camWrap">
     <video id="vid" autoplay playsinline muted></video>
 
-    <!-- KM em tempo real (pequeno e destacado) -->
+    <!-- KM em tempo real (HUD) -->
     <div id="kmHud" class="pos-top-center">
       <div class="kmBadge"><span class="label" id="kmLabel">KM</span> <span class="val" id="kmText">—</span></div>
     </div>
 
-    <!-- HUD topo: só Opções -->
+    <!-- HUD topo: somente Opções -->
     <div id="hudTop">
-      <div id="btnGear"  class="chipBtn" title="Opções">⚙️ Opções</div>
+      <div id="btnGear" class="chipBtn" title="Opções">⚙️ Opções</div>
     </div>
 
-    <!-- HUD base: botão com status ao vivo -->
+    <!-- HUD base: botão AUTO com status -->
     <div id="hudBottom">
       <button id="btnAuto" class="btn primary">
         <span class="main">🎬 INICIAR AUTO</span>
@@ -147,7 +150,7 @@
 <div id="opts">
   <h4>Opções</h4>
 
-  <!-- Câmera: seletor + trocar -->
+  <!-- Seletor de câmera + ciclo -->
   <div class="row">
     <span>Câmera</span>
     <select id="selCamera" class="grow"></select>
@@ -218,7 +221,7 @@
   </div>
 </div>
 
-<!-- Gate: selecionar pasta (SIMPLIFICADO) -->
+<!-- Gate de pasta – simples -->
 <div id="folderGate" aria-modal="true" role="dialog">
   <div class="gateCard">
     <h2>Selecionar pasta de saída</h2>
@@ -230,9 +233,56 @@
 <div id="toast"></div>
 
 <script>
-/* =================== ESTADO/REFS =================== */
-let rootDirHandle=null;  let csvKMReady=false, camReady=false, gpsReady=false; let lastPos=null;
-let isAuto=false, autoTimer=null, writing=false, queue=Promise.resolve(); let wakeLock=null, keepAliveTimer=null;
+/* =====================================================================
+   ARQUITETURA E FLUXO (AUTO-EXPLICATIVO PARA PROGRAMADORES)
+   ---------------------------------------------------------------------
+   1) Gate de pasta (File System Access API):
+      - Pede ao usuário a pasta onde as fotos serão salvas diretamente.
+      - Revalida permissão antes de cada escrita (Android pode “esquecer”).
+
+   2) Câmera e HUD:
+      - Abre getUserMedia com preferências (1920x1080@30).
+      - Lista todas as câmeras por deviceId (labels após permissão).
+      - Troca de câmera por deviceId (confiável). Fallback: facingMode.
+      - Pinch-to-zoom:
+         * Se a câmera suporta 'zoom' (capabilities), aplica zoom de lente.
+         * Caso contrário, aplica zoom virtual (recorte) na captura (sai na foto).
+      - Torch/Lanterna: se suportado, liga/desliga via constraints.
+
+   3) KM em tempo real (HUD):
+      - Lê 'SNVBR116SPRJ.csv'; monta grade espacial para busca rápida.
+      - Atualiza a cada ~600ms o KM mais próximo (formatos: KM, K,mmm, K+mmm).
+      - O KM na HUD é independente do carimbo; no carimbo sempre vai KM + valor.
+
+   4) Captura automática (AUTO):
+      - Botão alterna Iniciar/Parar.
+      - Wake Lock: mantém tela ligada enquanto AUTO ativo.
+      - Loop serial (Promise chain) evita concorrência de gravação.
+      - Cada iteração: captura frame → aplica filtro do preset → aplica zoom virtual se preciso
+        → carimba a faixa: KM na linha 1, Data/Hora na linha 2 (padrão SEMPRE)
+        → toBlob('image/jpeg', qualidade) → write(blob) → close()
+      - Fallback: se toBlob falhar, usa dataURL → Blob e grava.
+      - Nome do arquivo: FOTO_km_K_mmm_DD-MM-AAAA_HH-mm-ss.jpg (padrão brasileiro).
+      - Botão exibe: pasta, intervalo, tempo decorrido, contagem de fotos.
+
+   5) Compartilhar:
+      - Disponível dentro de Opções (não polui a tela).
+      - Captura instantânea (mesmo carimbo) → Web Share API (WhatsApp).
+      - Fallback: abre wa.me com texto e oferece download do JPEG.
+
+   Observações:
+      - Requisitos: HTTPS (File System Access + Wake Lock + Share).
+      - Navegadores sem Wake Lock: fallback “tick” (mantém ativo).
+      - Se labels vierem vazios, abra uma vez a câmera (permite labels).
+===================================================================== */
+
+/* =================== ESTADO/REFS GERAIS =================== */
+let rootDirHandle=null;           // Pasta de destino
+let csvKMReady=false, camReady=false, gpsReady=false;
+let lastPos=null;
+
+let isAuto=false, autoTimer=null, writing=false, queue=Promise.resolve();
+let wakeLock=null, keepAliveTimer=null;
 
 /* Câmeras/zoom/torch */
 let deviceList=[], currentDeviceId=null;
@@ -240,13 +290,13 @@ let camStream=null, camTrack=null, camCap=null;
 let zoomSupported=false, zoomMin=1, zoomMax=1, zoomVal=1, virtualZoom=1;
 let torchOn=false;
 
-/* Preset */
+/* Preset de cena (filtro) */
 let captureFilter='none';
 
-/* Sessão (status no botão) */
+/* Sessão (status do botão) */
 let sessionPhotoCount=0, sessionStartTs=0, autoUiTimer=null;
 
-/* DOM */
+/* DOM refs */
 const camWrap=document.getElementById('camWrap'), vid=document.getElementById('vid');
 const kmHud=document.getElementById('kmHud'), kmLabel=document.getElementById('kmLabel'), kmText=document.getElementById('kmText');
 const btnAuto=document.getElementById('btnAuto'), btnGear=document.getElementById('btnGear'), opts=document.getElementById('opts'), btnCloseOpts=document.getElementById('btnCloseOpts');
@@ -259,12 +309,12 @@ const selMaxDim=document.getElementById('selMaxDim'), lblDim=document.getElement
 const selKmFmt=document.getElementById('selKmFmt'), selKmPos=document.getElementById('selKmPos');
 const toast=document.getElementById('toast');
 
-/* CONFIG persistida */
+/* =================== CONFIG PERSISTIDA (localStorage) =================== */
 const state={
   autoMs:Number(localStorage.getItem('auto_ms')||'800'),
   jpgQ:Number(localStorage.getItem('jpg_q')||'92'),
   maxDim:Number(localStorage.getItem('max_dim')||'1920'),
-  kmFmt:localStorage.getItem('km_fmt')||'comma',
+  kmFmt:localStorage.getItem('km_fmt')||'comma',      // 'label' | 'comma' | 'plus'
   kmPos:localStorage.getItem('km_pos')||'pos-top-center',
   preset:localStorage.getItem('scene_preset')||'padrao'
 };
@@ -274,17 +324,42 @@ function showToast(msg,ms=1500){ toast.textContent=msg; toast.style.display='blo
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
-function stampStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours())}-${String(d.getMinutes())}-${String(d.getSeconds())}`; }
-function fmtKMMM(val){ const K=Math.floor(val); let m=Math.round((val-K)*1000); if(m>=1000){m-=1000;} return {K, mmm:String(m).padStart(3,'0')}; }
+
+/* Data/Hora em BR para nome de arquivo: DD-MM-AAAA_HH-mm-ss */
+function stampStrBR(){
+  const d=new Date();
+  const DD=String(d.getDate()).padStart(2,'0');
+  const MM=String(d.getMonth()+1).padStart(2,'0');
+  const AAAA=d.getFullYear();
+  const HH=String(d.getHours()).padStart(2,'0');
+  const m =String(d.getMinutes()).padStart(2,'0');
+  const s =String(d.getSeconds()).padStart(2,'0');
+  return `${DD}-${MM}-${AAAA}_${HH}-${m}-${s}`;
+}
+
+/* Exibição “tempo decorrido” (mm:ss) */
 function pad2(n){ return String(n).padStart(2,'0'); }
 function fmtElapsed(ms){ const s=Math.floor(ms/1000); const mm=Math.floor(s/60); const ss=s%60; return `${pad2(mm)}:${pad2(ss)}`; }
 
-/* =================== WAKE LOCK =================== */
-async function requestWakeLock(){ try{ if('wakeLock' in navigator){ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener?.('release',()=>{ if(isAuto) requestWakeLock(); }); } else { keepAliveTimer=setInterval(()=>{},30000); } }catch(e){} }
+/* KM decimal → {K, mmm} */
+function fmtKMMM(val){ const K=Math.floor(val); let m=Math.round((val-K)*1000); if(m>=1000){m-=1000;} return {K, mmm:String(m).padStart(3,'0')}; }
+
+/* =================== WAKE LOCK (manter tela ligada) =================== */
+async function requestWakeLock(){
+  try{
+    if('wakeLock' in navigator){
+      wakeLock=await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener?.('release',()=>{ if(isAuto) requestWakeLock(); });
+    }else{
+      // fallback leve (mantém evento ativo)
+      keepAliveTimer=setInterval(()=>{},30000);
+    }
+  }catch(e){ /* ignora */ }
+}
 async function releaseWakeLock(){ try{ await wakeLock?.release?.(); }catch{} finally{ wakeLock=null; } if(keepAliveTimer){ clearInterval(keepAliveTimer); keepAliveTimer=null; } }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&isAuto){ requestWakeLock(); updateAutoButtonUI(); }});
 
-/* =================== PASTA/PERMISSÃO =================== */
+/* =================== PASTA / PERMISSÃO (File System Access) =================== */
 async function verifyPermission(handle,rw){ const opt={mode:rw?'readwrite':'read'}; const q=await handle.queryPermission?.(opt); if(q==='granted') return true; const r=await handle.requestPermission?.(opt); return r==='granted'; }
 btnPickFolder.addEventListener('click', async ()=>{ try{
   rootDirHandle = await window.showDirectoryPicker({mode:'readwrite'});
@@ -296,16 +371,54 @@ btnPickFolder.addEventListener('click', async ()=>{ try{
 let kmPoints=[], kmGrid=new Map(); const CELL=0.005;
 function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
 function gridInsert(grid,p){ const k=cellKey(p.lat,p.lon); const a=grid.get(k); a?a.push(p):grid.set(k,[p]); }
-function gridCands(grid,lat,lon,minCount=120,maxR=5){ const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[]; for(let r=0;r<=maxR && out.length<minCount;r++){ for(let dy=-r;dy<=r;dy++){ for(let dx=-r;dx<=r;dx++){ if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue; const a=grid.get(`${ky+dy},${kx+dx}`); if(a) out.push(...a); }}} return out; }
-async function loadKM(){ try{ const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text()); const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean); kmPoints=[]; for(const ln of lines){ const c=ln.split(';'); const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])}; const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])}; const t=(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon))?t1:(Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon))?t2:null; if(t) kmPoints.push(t);} kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p); csvKMReady = kmPoints.length>0; }catch{ csvKMReady=false; } }
-function nearestKM(lat,lon){ if(!kmPoints.length) return null; const c=gridCands(kmGrid,lat,lon,140); if(!c.length) return null; let best=null,bd=Infinity; for(const p of c){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best; }
-function updateKmHud(){ if(!csvKMReady || !lastPos){ kmText.textContent='—'; return; } const n=nearestKM(lastPos.lat,lastPos.lon); if(!n){ kmText.textContent='—'; return; } const {K, mmm}=fmtKMMM(n.km); if(state.kmFmt==='label') kmText.textContent=''; else if(state.kmFmt==='plus') kmText.textContent=`${K}+${mmm}`; else kmText.textContent=`${K},${mmm}`; }
+function gridCands(grid,lat,lon,minCount=120,maxR=5){
+  const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[];
+  for(let r=0;r<=maxR && out.length<minCount;r++){
+    for(let dy=-r;dy<=r;dy++){
+      for(let dx=-r;dx<=r;dx++){
+        if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue;
+        const a=grid.get(`${ky+dy},${kx+dx}`); if(a) out.push(...a);
+      }
+    }
+  } return out;
+}
+async function loadKM(){
+  try{
+    const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
+    const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+    kmPoints=[];
+    for(const ln of lines){
+      const c=ln.split(';');
+      const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
+      const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])};
+      const t=(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon))?t1:
+               (Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon))?t2:null;
+      if(t) kmPoints.push(t);
+    }
+    kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p);
+    csvKMReady = kmPoints.length>0;
+  }catch{ csvKMReady=false; }
+}
+function nearestKM(lat,lon){
+  if(!kmPoints.length) return null;
+  const c=gridCands(kmGrid,lat,lon,140); if(!c.length) return null;
+  let best=null,bd=Infinity; for(const p of c){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
+}
+
+/* Atualização do KM na HUD (a cada ~600ms) */
+function updateKmHud(){
+  if(!csvKMReady || !lastPos){ kmText.textContent='—'; return; }
+  const n=nearestKM(lastPos.lat,lastPos.lon); if(!n){ kmText.textContent='—'; return; }
+  const {K, mmm}=fmtKMMM(n.km);
+  kmLabel.textContent='KM';
+  if(state.kmFmt==='label') kmText.textContent='';
+  else if(state.kmFmt==='plus') kmText.textContent=`${K}+${mmm}`;
+  else kmText.textContent=`${K},${mmm}`;
+}
 setInterval(updateKmHud, 600);
 
-/* =================== CÂMERA: listar, abrir, trocar =================== */
-async function stopCamera(){
-  try{ camStream?.getTracks()?.forEach(t=>t.stop()); }catch{} finally{ camStream=null; camTrack=null; camCap=null; }
-}
+/* =================== CÂMERA: listar/abrir/trocar =================== */
+async function stopCamera(){ try{ camStream?.getTracks()?.forEach(t=>t.stop()); }catch{} finally{ camStream=null; camTrack=null; camCap=null; } }
 function populateCameraSelect(){
   selCamera.innerHTML='';
   if(!deviceList.length){
@@ -315,7 +428,7 @@ function populateCameraSelect(){
   deviceList.forEach((d,i)=>{
     const opt=document.createElement('option');
     opt.value=d.deviceId;
-    opt.textContent = d.label || `Câmera ${i+1}`;
+    opt.textContent=d.label || `Câmera ${i+1}`;
     selCamera.appendChild(opt);
   });
   if(currentDeviceId){
@@ -325,15 +438,12 @@ function populateCameraSelect(){
 }
 async function enumerateCameras(){
   try{
-    // garante permissão para obter labels
-    try{
-      const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-      tmp.getTracks().forEach(t=>t.stop());
-    }catch{}
+    // Abrir uma vez destrava labels (em alguns navegadores)
+    try{ const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); tmp.getTracks().forEach(t=>t.stop()); }catch{}
     const devs=await navigator.mediaDevices.enumerateDevices();
     deviceList=devs.filter(d=>d.kind==='videoinput');
     populateCameraSelect();
-  }catch(e){ deviceList=[]; populateCameraSelect(); }
+  }catch{ deviceList=[]; populateCameraSelect(); }
 }
 async function startCameraWithConstraints(cons){
   await stopCamera();
@@ -345,72 +455,56 @@ async function startCameraWithConstraints(cons){
   camTrack=st.getVideoTracks()[0];
   currentDeviceId = camTrack.getSettings?.().deviceId || null;
   camCap=camTrack.getCapabilities?.()||null;
-  if(camCap && camCap.zoom){ zoomSupported=true; zoomMin=camCap.zoom.min??1; zoomMax=camCap.zoom.max??1; zoomVal=camTrack.getSettings?.().zoom ?? zoomMin; } else { zoomSupported=false; virtualZoom=1; }
+
+  // Ajusta capacidades de zoom da lente (se houver)
+  if(camCap && camCap.zoom){ zoomSupported=true; zoomMin=camCap.zoom.min??1; zoomMax=camCap.zoom.max??1; zoomVal=camTrack.getSettings?.().zoom ?? zoomMin; }
+  else{ zoomSupported=false; virtualZoom=1; }
 }
 async function startCameraByDeviceId(id){
   try{
     await startCameraWithConstraints({
-      video:{ deviceId:{ exact:id }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} },
-      audio:false
+      video:{ deviceId:{ exact:id }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false
     });
-    await enumerateCameras(); // atualiza labels/seleção
+    await enumerateCameras();
     showToast('Câmera trocada');
   }catch(e){
-    // fallback por facingMode
+    // Fallback por facingMode
     const facing=(vid.srcObject?.getVideoTracks?.()[0]?.getSettings?.().facingMode)||'environment';
     const nextFacing=facing==='environment'?'user':'environment';
     try{
       await startCameraWithConstraints({
-        video:{ facingMode:{ exact: nextFacing }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} },
-        audio:false
+        video:{ facingMode:{ exact: nextFacing }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false
       });
       await enumerateCameras();
       showToast('Câmera trocada (fallback)');
-    }catch(e2){
-      showToast('Falha ao trocar câmera');
-    }
+    }catch{ showToast('Falha ao trocar câmera'); }
   }
 }
 async function startCameraDefault(){
   try{
     await startCameraWithConstraints({
-      video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} },
-      audio:false
+      video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false
     });
     await enumerateCameras();
-  }catch(e){
-    showToast('Falha na câmera');
-  }
+  }catch{ showToast('Falha na câmera'); }
 }
-async function switchCameraNext(){
-  if(!deviceList.length){ await enumerateCameras(); }
-  if(!deviceList.length){ showToast('Nenhuma câmera encontrada'); return; }
-  const idx=deviceList.findIndex(d=>d.deviceId===currentDeviceId);
-  const next = deviceList[(idx+1) % deviceList.length];
-  await startCameraByDeviceId(next.deviceId);
-}
-
-/* eventos do seletor/botão */
-selCamera.addEventListener('change', async ()=>{
-  const id=selCamera.value;
-  if(id) await startCameraByDeviceId(id);
-});
+/* Seletor e botão de troca */
+selCamera.addEventListener('change', async ()=>{ const id=selCamera.value; if(id) await startCameraByDeviceId(id); });
 btnSwap.addEventListener('click', ()=>{ switchCameraNext().catch(()=>{}); });
-
+async function switchCameraNext(){ if(!deviceList.length){ await enumerateCameras(); } if(!deviceList.length){ showToast('Nenhuma câmera encontrada'); return; } const idx=deviceList.findIndex(d=>d.deviceId===currentDeviceId); const next=deviceList[(idx+1)%deviceList.length]; await startCameraByDeviceId(next.deviceId); }
 /* Torch */
-async function toggleTorch(){
+btnTorch.addEventListener('click', async ()=>{
   try{
     const cap=camTrack?.getCapabilities?.(); if(!cap || !('torch' in cap)){ showToast('Lanterna não suportada'); return; }
-    torchOn=!torchOn; await camTrack.applyConstraints({advanced:[{torch:torchOn}]});
-    showToast(torchOn? 'Lanterna ON':'Lanterna OFF');
-  }catch(e){ showToast('Falha ao alternar lanterna'); }
-}
-btnTorch.addEventListener('click', ()=>{ toggleTorch().catch(()=>{}) });
-
-/* Detecção de mudanças no hardware (plug/desplug) */
+    torchOn=!torchOn;
+    await camTrack.applyConstraints({advanced:[{torch:torchOn}]});
+    showToast(torchOn?'Lanterna ON':'Lanterna OFF');
+  }catch{ showToast('Falha ao alternar lanterna'); }
+});
+/* Atualiza lista se hardware muda */
 navigator.mediaDevices.addEventListener?.('devicechange', ()=>{ enumerateCameras().catch(()=>{}); });
 
-/* =================== Pinch-to-zoom =================== */
+/* =================== PINCH-TO-ZOOM =================== */
 const pointers=new Map(); let startDist=0, startZoom=1;
 function distance(a,b){ const dx=b.x-a.x, dy=b.y-a.y; return Math.hypot(dx,dy); }
 camWrap.addEventListener('pointerdown',(e)=>{ camWrap.setPointerCapture?.(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); });
@@ -426,9 +520,10 @@ camWrap.addEventListener('pointermove',async(e)=>{
 });
 ['pointerup','pointercancel','pointerleave'].forEach(ev=>camWrap.addEventListener(ev,(e)=>{ pointers.delete(e.pointerId); if(pointers.size<2) startDist=0; }));
 
-/* =================== Presets de cena =================== */
+/* =================== PRESETS DE CENA =================== */
 async function applyPreset(name){
-  state.preset=name; localStorage.setItem('scene_preset',name); captureFilter='none'; const adv=[];
+  state.preset=name; localStorage.setItem('scene_preset',name);
+  captureFilter='none'; const adv=[];
   if(name==='noite'){ captureFilter='brightness(1.18) contrast(1.08) saturate(1.05)'; adv.push({whiteBalanceMode:'continuous'}); }
   else if(name==='luz'){ captureFilter='brightness(0.95) contrast(1.06)'; adv.push({whiteBalanceMode:'continuous'}); }
   else if(name==='movimento'){ captureFilter='contrast(1.10)'; }
@@ -437,26 +532,36 @@ async function applyPreset(name){
 }
 selPreset.addEventListener('change', ()=>{ applyPreset(selPreset.value); });
 
-/* =================== Carimbo simples na foto =================== */
-function drawStamp(ctx,w,h,kmStr){
-  const bandH=Math.max(72,Math.round(h*0.10));
+/* =================== CARIMBO NA FOTO (KM linha 1, DATA/HORA linha 2) =================== */
+function drawStamp(ctx, w, h, kmStr, tsStr){
+  const bandH=Math.max(72,Math.round(h*0.10));   // faixa discreta (10% da altura máx)
+  const fMain=Math.round(h*0.038);               // KM (linha de cima)
+  const fSub =Math.round(h*0.026);               // Data/Hora (linha de baixo)
   ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(0,h-bandH,w,bandH);
-  const fMain=Math.round(h*0.038);
   ctx.fillStyle='#d8ffe6'; ctx.textAlign='left'; ctx.font=`900 ${fMain}px system-ui`;
-  ctx.fillText(kmStr,16,h-bandH+Math.round(bandH*0.60));
+  const baseY=h-bandH+Math.round(bandH*0.60);    // baseline da linha do KM
+  ctx.fillText(kmStr,16,baseY);
+  if(tsStr){
+    ctx.fillStyle='#ffffff'; ctx.font=`700 ${fSub}px system-ui`;
+    ctx.fillText(tsStr,16,h-16);
+  }
 }
 
-/* =================== CAPTURA → toBlob → write(blob) =================== */
+/* =================== CAPTURA & SALVAMENTO (toBlob → write → close) =================== */
 async function frameToJpegBlob(){
   const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
   const sc=(Math.max(vw,vh)>state.maxDim)? (state.maxDim/Math.max(vw,vh)) : 1;
   const w=Math.round(vw*sc), h=Math.round(vh*sc);
+
   const can=document.createElement('canvas'); const ctx=can.getContext('2d',{alpha:false});
   can.width=w; can.height=h;
 
+  // Aplica filtro do preset no frame
   ctx.filter=captureFilter;
-  if(zoomSupported || virtualZoom<=1.001){ ctx.drawImage(vid,0,0,w,h); }
-  else{
+  if(zoomSupported || virtualZoom<=1.001){
+    ctx.drawImage(vid,0,0,w,h);
+  }else{
+    // Zoom virtual (recorte central) – sai na foto
     const z=Math.max(1, Math.min(virtualZoom,6));
     const srcW=Math.round(vw/z), srcH=Math.round(vh/z);
     const sx=Math.floor((vw-srcW)/2), sy=Math.floor((vh-srcH)/2);
@@ -464,42 +569,77 @@ async function frameToJpegBlob(){
   }
   ctx.filter='none';
 
+  // Compor texto do KM para o carimbo
   let kmStr='KM —';
   if(csvKMReady && lastPos){
     const n=nearestKM(lastPos.lat,lastPos.lon);
-    if(n){ const {K, mmm}=fmtKMMM(n.km); kmStr=(state.kmFmt==='plus')?`KM ${K}+${mmm}`:`KM ${K},${mmm}`; }
+    if(n){
+      const {K, mmm}=fmtKMMM(n.km);
+      kmStr = (state.kmFmt==='plus') ? `KM ${K}+${mmm}` : `KM ${K},${mmm}`;
+    }
   }
-  drawStamp(ctx,w,h,kmStr);
 
+  // Data/Hora (sempre) – formatação local padrão do navegador (pt-BR)
+  const tsStr = new Date().toLocaleString();
+
+  drawStamp(ctx, w, h, kmStr, tsStr);
+
+  // ESQUEMA DO RELATÓRIO: Blob JPEG direto
   const q=Math.max(0.7, Math.min(1, state.jpgQ/100));
   const blob=await new Promise(res=>can.toBlob(res,'image/jpeg',q));
   if(blob && blob.size>0) return blob;
+
   // Fallback: dataURL → Blob
-  const dataURL=can.toDataURL('image/jpeg',q); const bin=atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
+  const dataURL=can.toDataURL('image/jpeg',q);
+  const bin=atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
   return new Blob([u8], {type:'image/jpeg'});
 }
 
+/* Grava um arquivo com verificação pós-fechamento */
 async function savePhotoOnce(){
-  if(writing) return;
+  if(writing) return;                              // evita concorrência
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady && vid.videoWidth)) return;
+
   writing=true;
   try{
-    const ok=await verifyPermission(rootDirHandle,true); if(!ok){ showToast('Permissão na pasta'); writing=false; return; }
+    const ok=await verifyPermission(rootDirHandle,true);
+    if(!ok){ showToast('Permissão na pasta'); writing=false; return; }
+
     const blob=await frameToJpegBlob();
+
+    // Nome: FOTO_km_K_mmm_DD-MM-AAAA_HH-mm-ss.jpg (padrão BR)
     let kPart='K', mPart='000';
-    if(csvKMReady && lastPos){ const n=nearestKM(lastPos.lat,lastPos.lon); if(n){ const {K, mmm}=fmtKMMM(n.km); kPart=String(K); mPart=mmm; } }
-    const name=`FOTO_km_${kPart}_${mPart}_${stampStr()}.jpg`;
+    if(csvKMReady && lastPos){
+      const n=nearestKM(lastPos.lat,lastPos.lon);
+      if(n){ const {K, mmm}=fmtKMMM(n.km); kPart=String(K); mPart=mmm; }
+    }
+    const name=`FOTO_km_${kPart}_${mPart}_${stampStrBR()}.jpg`;
+
     const fh=await rootDirHandle.getFileHandle(name,{create:true});
-    const w=await fh.createWritable(); await w.write(blob); await w.close();
+    const w=await fh.createWritable();
+    await w.write(blob);           // fluxo estável
+    await w.close();
+
+    // Verificação simples – se 0 B, reescreve
     const f=await fh.getFile();
-    if(f.size===0){ const b2=await frameToJpegBlob(); const w2=await fh.createWritable(); await w2.write(b2); await w2.close(); }
-    sessionPhotoCount++; updateAutoButtonUI();
-  }catch(err){ console.error('Salvar foto erro:',err); showToast('Falha ao salvar foto'); }
-  finally{ writing=false; }
+    if(f.size===0){
+      const b2=await frameToJpegBlob();
+      const w2=await fh.createWritable(); await w2.write(b2); await w2.close();
+    }
+
+    // Atualiza contagem (status no botão)
+    sessionPhotoCount++;
+    updateAutoButtonUI();
+  }catch(err){
+    console.error('Salvar foto erro:',err);
+    showToast('Falha ao salvar foto');
+  }finally{
+    writing=false;
+  }
 }
 
-/* =================== Botão AUTO: status ao vivo =================== */
+/* =================== BOTÃO AUTO: status ao vivo =================== */
 function updateAutoButtonUI(){
   if(!isAuto){
     btnAuto.classList.remove('auto-on'); btnAuto.classList.add('primary');
@@ -508,6 +648,7 @@ function updateAutoButtonUI(){
     return;
   }
   btnAuto.classList.add('auto-on'); btnAuto.classList.remove('primary');
+
   const folderName = rootDirHandle?.name || '—';
   const elapsed = sessionStartTs ? fmtElapsed(Date.now() - sessionStartTs) : '00:00';
   btnAuto.innerHTML = `
@@ -522,47 +663,61 @@ function updateAutoButtonUI(){
 function startAuto(){
   if(isAuto) return;
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady)){ showToast('Aguarde Pasta/Câmera/GPS/CSV'); return; }
+
   isAuto=true; sessionPhotoCount=0; sessionStartTs=Date.now();
-  requestWakeLock();
+
+  requestWakeLock();                      // mantém a tela ligada
   updateAutoButtonUI();
   if(autoUiTimer) clearInterval(autoUiTimer);
-  autoUiTimer = setInterval(updateAutoButtonUI, 1000);
+  autoUiTimer=setInterval(updateAutoButtonUI,1000);
+
+  // Fila serial: garante 1 gravação por vez
   queue=queue.then(()=>savePhotoOnce()).catch(()=>{});
   autoTimer=setInterval(()=>{ queue=queue.then(()=>savePhotoOnce()).catch(()=>{}); }, state.autoMs);
+
   showToast('Auto ON');
 }
 function stopAuto(){
   if(!isAuto) return;
   isAuto=false;
+
   clearInterval(autoTimer); autoTimer=null;
   clearInterval(autoUiTimer); autoUiTimer=null;
+
   releaseWakeLock();
   updateAutoButtonUI();
   showToast('Auto OFF');
 }
 btnAuto.addEventListener('click', ()=>{ if(isAuto) stopAuto(); else startAuto(); });
 
-/* =================== Opções (KM e geral) =================== */
+/* =================== OPÇÕES (KM HUD, presets, etc.) =================== */
 function applyKmOptions(){
+  // Posição do KM na HUD
   kmHud.className=''; kmHud.classList.add(state.kmPos);
+  // Persistência
   localStorage.setItem('km_fmt', state.kmFmt);
   localStorage.setItem('km_pos', state.kmPos);
+  // Reflete nos selects
   selKmFmt.value=state.kmFmt; selKmPos.value=state.kmPos;
+  // Atualiza a HUD imediatamente
   updateKmHud();
 }
 btnGear.addEventListener('click', ()=>{ opts.style.display = (opts.style.display==='block'?'none':'block'); });
 btnCloseOpts.addEventListener('click', ()=>{ opts.style.display='none'; });
+
 selKmFmt.addEventListener('change', ()=>{ state.kmFmt=selKmFmt.value; applyKmOptions(); });
 selKmPos.addEventListener('change', ()=>{ state.kmPos=selKmPos.value; applyKmOptions(); });
+
 rngInterval.addEventListener('input', ()=>{ state.autoMs=Number(rngInterval.value); lblInterval.textContent=rngInterval.value; localStorage.setItem('auto_ms', String(state.autoMs)); updateAutoButtonUI(); });
 rngJpgQ.addEventListener('input',   ()=>{ state.jpgQ  =Number(rngJpgQ.value); lblQ.textContent=rngJpgQ.value; localStorage.setItem('jpg_q',  String(state.jpgQ)); });
 selMaxDim.addEventListener('change',()=>{ state.maxDim=Number(selMaxDim.value); lblDim.textContent=selMaxDim.value; localStorage.setItem('max_dim',String(state.maxDim)); });
 
-/* =================== Compartilhar (opções) – removido da tela principal =================== */
+/* Compartilhar (nas opções) – não exposto na tela principal
+   - Captura instantânea com o mesmo carimbo e abre Web Share API. */
 async function shareInstant(){
   try{
     const blob=await frameToJpegBlob();
-    const file=new File([blob],`captura_${stampStr()}.jpg`,{type:'image/jpeg',lastModified:Date.now()});
+    const file=new File([blob],`captura_${stampStrBR()}.jpg`,{type:'image/jpeg',lastModified:Date.now()});
     if(navigator.canShare && navigator.canShare({files:[file]})){
       await navigator.share({ files:[file], text:'Evidência de inspeção – captura instantânea.' });
     }else{
@@ -575,7 +730,7 @@ async function shareInstant(){
 }
 document.getElementById('btnShare')?.addEventListener('click', ()=>{ shareInstant().catch(()=>{}) });
 
-/* =================== GPS =================== */
+/* =================== GPS (necessário para correlacionar com CSV) =================== */
 function startGPS(){
   if(!('geolocation' in navigator)){ gpsReady=false; return; }
   navigator.geolocation.getCurrentPosition(p=>{
@@ -589,7 +744,7 @@ function startGPS(){
 
 /* =================== BOOT =================== */
 async function boot(){
-  // aplica UI inicial das opções
+  // Opções (carrega valores salvos)
   rngInterval.value=String(state.autoMs); lblInterval.textContent=String(state.autoMs);
   rngJpgQ.value=String(state.jpgQ); lblQ.textContent=String(state.jpgQ);
   selMaxDim.value=String(state.maxDim); lblDim.textContent=String(state.maxDim);
