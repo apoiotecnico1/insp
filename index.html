@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0b1020" />
-<title>Relatório Fotográfico – Mobile (Ultra‑Leve + Cam Switch + Auto PDF)</title>
+<title>Relatório Fotográfico – Mobile (Ultra‑Leve + Auto PDF + Fullscreen)</title>
 <style>
   :root{
     --bg:#203e92; --bg2:#0b1224; --surface:#0f1731cc; --surface-strong:#1b368f;
@@ -53,7 +53,6 @@
   button{flex:1 1 180px;padding:12px 14px;font-size:.98rem;border:0;border-radius:12px;cursor:pointer;background: linear-gradient(180deg, var(--btnGradA), var(--btnGradB)); color:var(--fg); font-weight:900; border:1px solid var(--btnBorder)}
   button:disabled{opacity:.5;cursor:not-allowed}
   #btnAutoCapture{ background: linear-gradient(180deg, #ff7b45, #e5612e); color:#1b0b02 }
-  #btnVideoRecord{ background: linear-gradient(180deg, #f2544b, #cc3e36); color:#fff }
   #btnFinalizePdf{ background: linear-gradient(180deg, var(--pdfA), var(--pdfB)); color:var(--pdfText) }
   #btnSelectFolder{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#072414 }
   #btnClear{ background: linear-gradient(180deg, #ff6161, #ef4444); color:#fff }
@@ -80,7 +79,27 @@
   .splash-inner h2{ margin:0 0 6px }
   .splash-inner p{ margin:4px 0 12px; opacity:.9 }
 
-  /* [NOVO] Barra flutuante fixa (controles essenciais) */
+  /* [NOVO] Overlay de Progresso/Feedback */
+  #progressOverlay{
+    position: fixed; inset:0; z-index: 2001;
+    display:none; align-items:center; justify-content:center;
+    background: rgba(5,10,20,.55); backdrop-filter: blur(4px) saturate(140%);
+  }
+  .progress-card{
+    min-width:260px; max-width:86vw; color:#e7f0ff;
+    background: linear-gradient(180deg, rgba(12,20,49,.9), rgba(8,14,36,.9));
+    border:1px solid var(--border); border-radius:16px; padding:14px 16px;
+    box-shadow: 0 12px 28px rgba(0,0,0,.45);
+    text-align:center; font-weight:800;
+  }
+  .progress-icon{ font-size:1.6rem; margin-bottom:6px }
+  .progress-msg{ font-size:1rem; }
+  .progress-sub{ font-size:.86rem; opacity:.85; margin-top:6px }
+  .progress-ok { color:#b1ffd1 }
+  .progress-warn { color:#ffdfa8 }
+  .progress-bad { color:#ffc1c1 }
+
+  /* [NOVO] Barra flutuante fixa (controles essenciais, discretos) */
   .floatBar{
     position: fixed;
     left: 50%;
@@ -88,7 +107,7 @@
     bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
     width: min(980px, calc(100vw - 24px));
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
     padding: 8px;
     background: linear-gradient(180deg, rgba(12,20,49,.86), rgba(8,14,36,.86));
@@ -97,18 +116,31 @@
     box-shadow: 0 12px 28px rgba(0,0,0,.45);
     z-index: 120; /* acima da câmera */
     backdrop-filter: saturate(140%) blur(6px);
+    opacity:.32; transition: opacity .18s ease;
   }
+  .floatBar:hover,
+  .floatBar:focus-within,
+  .floatBar.show{ opacity:.96 }
+
   .floatBar button{ padding:14px 12px; font-size:1rem; }
   #fbAuto{ background: linear-gradient(180deg, #ff7b45, #e5612e); color:#1b0b02 }
   #fbFinalize{ background: linear-gradient(180deg, var(--pdfA), var(--pdfB)); color:var(--pdfText) }
   #fbSelect{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#072414 }
   #fbSwitch{ background: linear-gradient(180deg, #0d1430, #0a0f26); color:#e7edff }
+  #fbFs{ background: linear-gradient(180deg,#0d1430,#0a0f26); color:#d8e6ff }
 
-  @media (min-width:720px){
-    .floatBar{ grid-template-columns: repeat(4, 1fr); }
+  .floatBar .label{ display:inline }
+  .btnIcon{ display:inline-flex; align-items:center; justify-content:center; gap:8px }
+
+  /* Icon-only no mobile */
+  @media (max-width:900px){
+    .floatBar{ gap:6px; padding:6px }
+    .floatBar button{ padding:10px 8px; font-size:1.05rem }
+    .floatBar .label{ display:none }
+    .btnIcon{ width:46px; height:46px; border-radius:999px; padding:0; }
   }
 
-  /* [NOVO] Oculta a linha antiga de botões em telas estreitas (celular) */
+  /* Oculta a linha antiga de botões em telas estreitas (celular) */
   @media (max-width:900px){
     .desktopOnly{ display:none !important; }
   }
@@ -119,7 +151,7 @@
 <div id="splash">
   <div class="splash-inner">
     <h2>RELATÓRIO FOTOGRÁFICO</h2>
-    <p>Toque em <b>Começar</b> e autorize a <b>câmera</b>. Depois selecione a <b>pasta</b> para salvar fotos e PDF.</p>
+    <p>Toque em <b>Começar</b> e autorize a <b>câmera</b>. Depois selecione a <b>pasta</b> para salvar PDF (e JPEGs, se desejar).</p>
     <div class="row" style="justify-content:center"><button id="btnStart">✅ Começar</button></div>
     <p id="splashNote" style="font-size:.9rem;opacity:.8;margin-top:10px"></p>
   </div>
@@ -181,10 +213,20 @@
         <label style="margin-right:10px"><input type="checkbox" id="optGps"> GPS (lat,lon)</label>
       </fieldset>
 
-      <!-- [NOVO] Toggle para modo PDF direto -->
       <fieldset style="border:1px solid var(--border); border-radius:10px; padding:8px 10px;">
         <legend style="padding:0 6px; font-weight:900; color:#dfe7ff">Gravação</legend>
         <label style="margin-right:10px"><input type="checkbox" id="optSaveJpegs"> Salvar JPEGs individuais</label>
+        <label style="margin-left:16px">⏱️ Intervalo (auto):
+          <select id="intervalSel" title="Intervalo da Captura Automática">
+            <option value="500">0,5 s</option>
+            <option value="750">0,75 s</option>
+            <option value="1000" selected>1,0 s</option>
+            <option value="1500">1,5 s</option>
+            <option value="2000">2,0 s</option>
+            <option value="2500">2,5 s</option>
+            <option value="3000">3,0 s</option>
+          </select>
+        </label>
         <span style="color:#9fe9ff;font-size:.85rem">💾 PDF incremental direto na subpasta da sessão</span>
       </fieldset>
     </div>
@@ -198,7 +240,7 @@
   </div>
 </div>
 
-<!-- Linha antiga de botões: mantém para desktop, oculta em mobile -->
+<!-- Linha antiga (desktop); no mobile a floatBar assume -->
 <div class="card desktopOnly">
   <div class="row">
     <button id="btnSelectFolder">📁 Selecionar pasta</button>
@@ -218,12 +260,22 @@
   <div id="gal" class="gallery"></div>
 </div>
 
+<!-- [NOVO] Overlay de progresso/feedback -->
+<div id="progressOverlay" role="dialog" aria-live="assertive" aria-modal="true">
+  <div class="progress-card">
+    <div id="progIcon" class="progress-icon">⏳</div>
+    <div id="progMsg" class="progress-msg">Aguardando…</div>
+    <div id="progSub" class="progress-sub"></div>
+  </div>
+</div>
+
 <!-- [NOVO] Barra flutuante fixa (para uso no carro) -->
 <div id="floatBar" class="floatBar" hidden>
-  <button id="fbSelect">📁 Pasta</button>
-  <button id="fbAuto">🎬 Captura Auto</button>
-  <button id="fbFinalize" disabled>📄 Finalizar PDF</button>
-  <button id="fbSwitch">🔄 Trocar Câmera</button>
+  <button id="fbSelect" class="btnIcon" title="Selecionar pasta">📁 <span class="label">Pasta</span></button>
+  <button id="fbAuto" class="btnIcon" title="Iniciar/Parar captura">🎬 <span class="label">Captura</span></button>
+  <button id="fbFinalize" class="btnIcon" title="Finalizar PDF" disabled>📄 <span class="label">Finalizar</span></button>
+  <button id="fbSwitch" class="btnIcon" title="Trocar Câmera">🔄 <span class="label">Trocar</span></button>
+  <button id="fbFs" class="btnIcon" title="Tela cheia">⛶ <span class="label">Tela Cheia</span></button>
 </div>
 
 <script>
@@ -248,6 +300,9 @@ let currentStream=null, currentTrack=null, currentCap=null; let deviceList=[]; l
 // FS + PDF
 let rootDirHandle=null; let sessionDirHandle=null; let sessionName=null; let pdfWriter=null; let pdfVolume=0; let pdfPageCount=0;
 
+// Intervalo de captura (0,5 a 3,0 s)
+let captureIntervalMs = Number(localStorage.getItem('captureIntervalMs') || 1000);
+
 /******************** Referências *********************/
 const diagEl=document.getElementById('diag');
 const stContext=document.getElementById('stContext'); const stCam=document.getElementById('stCam'); const stCams=document.getElementById('stCams');
@@ -267,8 +322,20 @@ const fbAuto=document.getElementById('fbAuto');
 const fbFinalize=document.getElementById('fbFinalize');
 const fbSwitch=document.getElementById('fbSwitch');
 
-// [NOVO] Toggle salvar JPEGs
+// [NOVO] Overlay/feedback
+const progressOverlay = document.getElementById('progressOverlay');
+const progIcon = document.getElementById('progIcon');
+const progMsg  = document.getElementById('progMsg');
+const progSub  = document.getElementById('progSub');
+
+// [NOVO] Full screen
+const fbFs = document.getElementById('fbFs');
+let isFullscreen = false;
+let uiHideTimer = null;   // auto-hide brilho da barra
+
+// [NOVO] Opções
 const optSaveJpegs=document.getElementById('optSaveJpegs');
+const intervalSel=document.getElementById('intervalSel');
 
 /******************** Diagnóstico *********************/
 function diag(msg, level='warn'){ diagEl.style.display='block'; diagEl.className=''; if(level==='bad') diagEl.classList.add('bad'); else if(level==='ok') diagEl.classList.add('ok'); else diagEl.classList.add(''); diagEl.innerHTML = msg; }
@@ -320,11 +387,11 @@ wrap.addEventListener('touchmove',(ev)=>{ if(pinchState && ev.touches.length===2
 wrap.addEventListener('wheel',(ev)=>{ if(!ev.ctrlKey && !ev.metaKey) return; ev.preventDefault(); const delta=Math.sign(ev.deltaY)*-0.2; const base=currentCap?.zoom? Number(zoomRange.value||1) : digitalZoom; let target=base*(1+delta); if(currentCap?.zoom){ target=clamp(target, Number(zoomRange.min||1), Number(zoomRange.max||6)); applyZoom(target); } else { target=clamp(target, DIGITAL_ZOOM_MIN, DIGITAL_ZOOM_MAX); digitalZoom=target; vid.style.transform=`scale(${digitalZoom})`; zoomVal.textContent=`${digitalZoom.toFixed(1)}×`; } },{passive:false});
 
 cameraSel.addEventListener('change', async ()=>{ deviceIndex=Number(cameraSel.value||0); await startCameraByIndex(deviceIndex); });
-btnCycle.addEventListener('click', async ()=>{ if(!deviceList.length){ await enumerateCameras(); } deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCameraByIndex(deviceIndex); });
-btnFacing.addEventListener('click', async ()=>{ await startCameraFacing(facingMode==='environment'?'user':'environment'); });
-btnUltra.addEventListener('click', async ()=>{ if(currentCap?.zoom){ await applyZoom(Number(zoomRange.min||1)); } else { await applyZoom(1); } });
-btnWide.addEventListener('click', async ()=>{ if(currentCap?.zoom){ await applyZoom(Math.max(1, Number(zoomRange.min||1))); } else { await applyZoom(1); } });
-btnTele.addEventListener('click', async ()=>{ if(currentCap?.zoom){ await applyZoom(Math.min(2, Number(zoomRange.max||2))); } else { await applyZoom(Math.min(2, DIGITAL_ZOOM_MAX)); } });
+btnCycle?.addEventListener('click', async ()=>{ if(!deviceList.length){ await enumerateCameras(); } deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCameraByIndex(deviceIndex); });
+btnFacing?.addEventListener('click', async ()=>{ await startCameraFacing(facingMode==='environment'?'user':'environment'); });
+btnUltra?.addEventListener('click', async ()=>{ if(currentCap?.zoom){ await applyZoom(Number(zoomRange.min||1)); } else { await applyZoom(1); } });
+btnWide?.addEventListener('click', async ()=>{ if(currentCap?.zoom){ await applyZoom(Math.max(1, Number(zoomRange.min||1))); } else { await applyZoom(1); } });
+btnTele?.addEventListener('click', async ()=>{ if(currentCap?.zoom){ await applyZoom(Math.min(2, Number(zoomRange.max||2))); } else { await applyZoom(Math.min(2, DIGITAL_ZOOM_MAX)); } });
 zoomRange.addEventListener('input', ()=>applyZoom(zoomRange.value));
 
 /******************** KM ao vivo *********************/
@@ -450,30 +517,55 @@ async function makeJpeg(canvas,q=0.85,retries=2){
   for(let i=0;i<=retries;i++){ const b=await new Promise(res=>canvas.toBlob(res,'image/jpeg',q)); if(b && b.size>=MIN_JPEG_BYTES) return b; await sleep(40);} return null;
 }
 
-/* [NOVO] Helper para sincronizar rótulos/habilitações dos botões nas duas áreas */
+/* Helpers de botões (sincronizam barra desktop e flutuante) */
 function setAutoButtonRunning(running){
   const txt = running ? '⏹️ Parar' : '🎬 Captura Auto';
   const bg  = running ? 'linear-gradient(180deg,#ff7b7b,#ef4444)' : 'linear-gradient(180deg,#ff7b45,#e5612e)';
   if(btnAutoCapture){ btnAutoCapture.textContent=txt; btnAutoCapture.style.background=bg; }
-  if(fbAuto){ fbAuto.textContent=txt; fbAuto.style.background=bg; }
+  if(fbAuto){ fbAuto.textContent=running ? '⏹️' : '🎬'; fbAuto.style.background=bg; }
 }
 function setFinalizeEnabled(enabled){
   if(btnFinalizePdf){ btnFinalizePdf.disabled = !enabled; }
   if(fbFinalize){ fbFinalize.disabled = !enabled; }
 }
 
+/* [NOVO] Controle de Overlay/Feedback */
+function showProgress(msg, sub='', icon='⏳', style=''){
+  progressOverlay.style.display = 'flex';
+  progIcon.textContent = icon;
+  progIcon.className = 'progress-icon ' + (style||'');
+  progMsg.textContent = msg || 'Aguarde…';
+  progSub.textContent = sub || '';
+}
+function updateProgress(msg, sub='', icon){
+  if(icon){ progIcon.textContent = icon; }
+  if(msg!=null) progMsg.textContent = msg;
+  if(sub!=null) progSub.textContent = sub;
+}
+function hideProgress(){
+  progressOverlay.style.display = 'none';
+  progMsg.textContent=''; progSub.textContent=''; progIcon.textContent='⏳';
+  progIcon.className='progress-icon';
+}
+
+/* [NOVO] Trava/Destrava UI enquanto finaliza */
+function setUIBusy(busy){
+  const allBtns = [
+    btnSelectFolder, btnAutoCapture, btnFinalizePdf, btnClear,
+    fbSelect, fbAuto, fbFinalize, fbSwitch, fbFs
+  ].filter(Boolean);
+  allBtns.forEach(b => b.disabled = !!busy);
+}
+
+/******************** Sessão Auto + Intervalo selecionável *********************/
 async function savePhotoAndPdf(blobOrig, filename, stampedCanvas){
   await ensureSessionAndPdf();
-
-  // [NOVO] Modo PDF direto: salva JPEG apenas se marcado
   const saveJpegs = !!optSaveJpegs?.checked;
   if(saveJpegs){
     const fh=await sessionDirHandle.getFileHandle(filename,{create:true});
     const w=await fh.createWritable(); await w.write(blobOrig); await w.close();
     const saved=await fh.getFile(); if(!saved||!saved.size){ throw new Error('Falha ao gravar (arquivo vazio).'); }
   }
-
-  // 2) Versão reduzida embutida no PDF (sempre)
   const reduced=await makeAdaptiveReducedJpeg(stampedCanvas);
   await rotatePdfIfNeeded();
   await pdfWriter.addImagePage(reduced.blob, reduced.w, reduced.h);
@@ -484,6 +576,7 @@ async function savePhotoAndPdf(blobOrig, filename, stampedCanvas){
 async function captureOnce(){
   if(!(camReady)){ diag('Câmera não pronta. Autorize e inicie a câmera.', 'warn'); return; }
   const vw=vid.videoWidth||1280, vh=vid.videoHeight||720;
+  const CAP_MAX_DIM=1600;
   const scale=(Math.max(vw,vh)>CAP_MAX_DIM)? (CAP_MAX_DIM/Math.max(vw,vh)) : 1; const w=Math.round(vw*scale), h=Math.round(vh*scale);
   if(!w||!h){ diag('Dimensões de vídeo inválidas.', 'bad'); return; }
   can.width=w; can.height=h; const g=ctx; g.clearRect(0,0,w,h); drawVideoInto(g,w,h);
@@ -506,57 +599,150 @@ async function captureOnce(){
   }catch(e){ diag('Erro ao salvar foto: '+e.message, 'bad'); }
 }
 
-btnClear?.addEventListener('click', () => {
-  previewBuffer.forEach(p=>{ try{ URL.revokeObjectURL(p.url);}catch{} });
-  previewBuffer.length=0; foto.removeAttribute('src'); renderGallery();
-});
-wrap.addEventListener('click', () => { if(isAutoCapturing){ stopAutoCapture(); } else { captureOnce(); } });
-
-/******************** Sessão Auto *********************/
 async function startAutoCapture(){
   if(isAutoCapturing) return;
   if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) return; }
   await ensureSessionAndPdf();
+
+  // entra em tela cheia (gesto do usuário)
+  enterFullscreen().catch(()=>{});
+
   isAutoCapturing=true;
   setAutoButtonRunning(true);
-  autoCaptureInterval=setInterval(()=>{ captureOnce().catch(()=>{}); }, 600);
+  // usa o intervalo selecionado
+  if(autoCaptureInterval) clearInterval(autoCaptureInterval);
+  autoCaptureInterval=setInterval(()=>{ captureOnce().catch(()=>{}); }, captureIntervalMs);
 }
+
 async function stopAutoCapture(){
-  if(!isAutoCapturing) return;
+  // Se nada estiver rodando e não houver PDF, apenas reseta labels
+  if(!isAutoCapturing && !pdfWriter){
+    chip(stPdf,'PDF: —','warn');
+    setAutoButtonRunning(false);
+    return;
+  }
+
   isAutoCapturing=false;
   if(autoCaptureInterval){ clearInterval(autoCaptureInterval); autoCaptureInterval=null; }
   setAutoButtonRunning(false);
-  try{
-    if(pdfWriter){ await pdfWriter.finalize(); chip(stPdf,'PDF: FECHADO','warn'); }
-  }catch(e){ diag('Falha ao finalizar PDF: '+e.message, 'warn'); }
-  pdfWriter=null; pdfPageCount=0; pdfVolume=0; sessionDirHandle=null; sessionName=null;
-}
-btnAutoCapture?.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
-btnFinalizePdf?.addEventListener('click', async ()=>{
-  if(!pdfWriter){ await ensureSessionAndPdf(); }
-  setFinalizeEnabled(false);
-  try{ await pdfWriter.finalize(); chip(stPdf,'PDF: FECHADO','warn'); pdfWriter=null; pdfPageCount=0; pdfVolume=0; }
-  catch(e){ diag('Falha ao finalizar PDF: '+e.message,'bad'); setFinalizeEnabled(true); }
-});
-btnSelectFolder?.addEventListener('click', async ()=>{ await selectOutputFolder(); });
 
-/* [NOVO] Ligações da barra flutuante */
+  // Feedback de andamento
+  showProgress('Parando captura…', 'Aguarde, finalizando arquivos e PDF.', '⏳');
+  setUIBusy(true);
+
+  try{
+    if(pdfWriter){
+      updateProgress('Finalizando PDF…', `Volume v${String(pdfVolume).padStart(2,'0')} • páginas: ${pdfPageCount}`, '📄');
+      await pdfWriter.finalize();
+      updateProgress('PDF finalizado', `v${String(pdfVolume).padStart(2,'0')} • ${pdfPageCount} págs`, '✅','progress-ok');
+      chip(stPdf,'PDF: FECHADO','warn');
+    }else{
+      updateProgress('Captura parada', 'Nenhum PDF aberto no momento.', 'ℹ️','progress-warn');
+    }
+  }catch(e){
+    updateProgress('Falha ao finalizar PDF', String(e?.message||e), '⚠️', 'progress-bad');
+    diag('Falha ao finalizar PDF: '+(e?.message||e), 'bad');
+  }finally{
+    pdfWriter=null; pdfPageCount=0; pdfVolume=0; sessionDirHandle=null; sessionName=null;
+    setTimeout(()=>{ hideProgress(); setUIBusy(false); }, 900);
+  }
+}
+
+/******************** Fullscreen helpers *********************/
+async function enterFullscreen(){
+  const el = document.documentElement;
+  try{
+    if(el.requestFullscreen) await el.requestFullscreen({ navigationUI:'hide' });
+    else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    isFullscreen = true;
+  }catch{}
+  try{
+    if(screen.orientation && screen.orientation.lock){
+      await screen.orientation.lock('landscape');
+    }
+  }catch{}
+  fbFs && (fbFs.title = 'Sair da tela cheia');
+}
+async function exitFullscreen(){
+  try{
+    if(document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
+    else if(document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }catch{}
+  isFullscreen = false;
+  fbFs && (fbFs.title = 'Tela cheia');
+}
+function toggleFullscreen(){ isFullscreen ? exitFullscreen() : enterFullscreen(); }
+fbFs?.addEventListener('click', toggleFullscreen);
+
+/******************** Ligações UI *********************/
+btnAutoCapture?.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
 fbAuto.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
-fbFinalize.addEventListener('click', async ()=>{
+
+async function finalizePdfNow(){
   if(!pdfWriter){ await ensureSessionAndPdf(); }
-  setFinalizeEnabled(false);
-  try{ await pdfWriter.finalize(); chip(stPdf,'PDF: FECHADO','warn'); pdfWriter=null; pdfPageCount=0; pdfVolume=0; }
-  catch(e){ diag('Falha ao finalizar PDF: '+e.message,'bad'); setFinalizeEnabled(true); }
-});
+  showProgress('Finalizando PDF…', `v${String(pdfVolume).padStart(2,'0')}`, '📄');
+  setUIBusy(true);
+  try{
+    await pdfWriter.finalize();
+    chip(stPdf,'PDF: FECHADO','warn');
+    updateProgress('PDF finalizado', `v${String(pdfVolume).padStart(2,'0')}`, '✅','progress-ok');
+    pdfWriter=null; pdfPageCount=0; pdfVolume=0;
+  }catch(e){
+    updateProgress('Erro ao finalizar PDF', String(e?.message||e), '⚠️', 'progress-bad');
+    diag('Falha ao finalizar PDF: '+(e?.message||e),'bad');
+  }finally{
+    setTimeout(()=>{ hideProgress(); setUIBusy(false); }, 900);
+  }
+}
+btnFinalizePdf?.addEventListener('click', finalizePdfNow);
+fbFinalize.addEventListener('click', finalizePdfNow);
+
+btnSelectFolder?.addEventListener('click', async ()=>{ await selectOutputFolder(); });
 fbSelect.addEventListener('click', async ()=>{ await selectOutputFolder(); });
+
 fbSwitch.addEventListener('click', async ()=>{ if(!deviceList.length){ await enumerateCameras(); } deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCameraByIndex(deviceIndex); });
 
+btnClear?.addEventListener('click', () => {
+  previewBuffer.forEach(p=>{ try{ URL.revokeObjectURL(p.url);}catch{} });
+  previewBuffer.length=0; foto.removeAttribute('src'); renderGallery();
+});
+
+wrap.addEventListener('click', () => { if(isAutoCapturing){ stopAutoCapture(); } else { captureOnce(); } });
+
+/* Realce temporário da barra ao interagir */
+function nudgeFloatBar(){
+  if(!floatBar) return;
+  floatBar.classList.add('show');
+  if(uiHideTimer) clearTimeout(uiHideTimer);
+  uiHideTimer = setTimeout(()=> floatBar.classList.remove('show'), 1300);
+}
+['pointerdown','pointermove','touchstart','mousemove','keydown'].forEach(evt=>{
+  window.addEventListener(evt, nudgeFloatBar, {passive:true});
+});
+
+/******************** Intervalo (0,5s a 3s) *********************/
+// Inicializa o seletor com o valor persistido
+if(intervalSel){
+  intervalSel.value = String(captureIntervalMs);
+  intervalSel.addEventListener('change', ()=>{
+    const v = Number(intervalSel.value||1000);
+    captureIntervalMs = Math.min(3000, Math.max(500, v));
+    localStorage.setItem('captureIntervalMs', String(captureIntervalMs));
+    // se já estiver capturando, reinicia o setInterval com o novo valor
+    if(isAutoCapturing){
+      if(autoCaptureInterval) clearInterval(autoCaptureInterval);
+      autoCaptureInterval = setInterval(()=>{ captureOnce().catch(()=>{}); }, captureIntervalMs);
+    }
+  });
+}
+
 /******************** Boot *********************/
+function chipContext(){ chip(stContext, 'Contexto: ' + (isSecure()? 'seguro/OK':'não seguro'), isSecure()? 'ok':'warn'); }
 applyTheme();
-chip(stContext, 'Contexto: ' + (isSecure()? 'seguro/OK':'não seguro'), isSecure()? 'ok':'warn');
+chipContext();
 splashNote.textContent = isSecure()? 'Se a câmera não abrir, confira as permissões do navegador.' : 'Abra via HTTPS ou localhost para máxima compatibilidade (câmera/arquivos).';
 
-/* [NOVO] Persistência do modo (salvar JPEGs) */
+/* Persistência do modo JPEGs */
 try{
   const savedPref = localStorage.getItem('optSaveJpegs') ?? 'false'; // padrão: PDF direto (false)
   optSaveJpegs.checked = savedPref === 'true';
@@ -571,7 +757,7 @@ btnStart.addEventListener('click', async ()=>{
   await startCameraByIndex(idx); camReady=!!vid.videoWidth;
   if(btnAutoCapture) btnAutoCapture.disabled=!camReady;
 
-  // [NOVO] Exibe a barra flutuante após iniciar
+  // Exibe a barra flutuante após iniciar
   floatBar.hidden=false;
 
   startGPS();
