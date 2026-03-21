@@ -21,7 +21,10 @@
 
   /* Tela cheia */
   #app{ position:fixed; inset:0; display:grid; grid-template-rows:1fr; }
-  #camWrap{ position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate; }
+  #camWrap{
+    position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate;
+    touch-action:none; /* habilita pinch-zoom custom sem o zoom da página */
+  }
   #vid{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000 }
 
   /* HUD topo: placa azul + compartilhar */
@@ -39,7 +42,8 @@
     text-shadow: 0 1px 0 rgba(0,0,0,.35);
   }
   .km-label{ font:900 1.05rem system-ui; letter-spacing:.02em; line-height:1 }
-  .km-eq{ font:900 1.65rem system-ui; letter-spacing:.02em; line-height:1.05 }   /* “km = XX” */
+  .km-big  { font:900 1.9rem system-ui; letter-spacing:.02em; line-height:1.05; margin-top:6px }
+  .km-mini { font:900 1.02rem system-ui; transform:translateY(-2px) }
 
   .chipBtn{
     pointer-events:auto;
@@ -92,11 +96,14 @@
   <div id="camWrap">
     <video id="vid" autoplay playsinline muted></video>
 
-    <!-- HUD topo: placa azul + compartilhar -->
+    <!-- HUD topo: placa KM estilo primeiro HTML + compartilhar -->
     <div id="hudTop">
       <div class="road-sign">
-        <div class="km-label">km</div>
-        <div class="km-eq" id="kmEq">km = —</div>
+        <div class="km-label">KM</div>
+        <div style="display:flex;align-items:flex-end;gap:8px">
+          <div class="km-big" id="kmK">—</div>
+          <div class="km-mini" id="kmM">+000</div>
+        </div>
       </div>
       <div id="btnShare" class="chipBtn" title="Enviar por WhatsApp">📤 Compartilhar</div>
     </div>
@@ -127,23 +134,31 @@ let csvKMReady=false, camReady=false, gpsReady=false;
 let lastPos=null;
 let isAuto=false, autoTimer=null, writing=false, queue=Promise.resolve();
 
+/* Wake Lock (mantém tela ligada) */
+let wakeLock=null, keepAliveTimer=null;
+
+/* Zoom */
+let camCap=null, camTrack=null;
+let zoomSupported=false, zoomMin=1, zoomMax=1, zoomStep=0.1, zoomVal=1;
+let virtualZoom=1; // para fallback (crop na captura)
+
+/* DOM */
+const camWrap=document.getElementById('camWrap');
 const vid=document.getElementById('vid');
-const kmEq=document.getElementById('kmEq');
+const kmK=document.getElementById('kmK'), kmM=document.getElementById('kmM');
 const btnAuto=document.getElementById('btnAuto');
 const folderGate=document.getElementById('folderGate'), btnPickFolder=document.getElementById('btnPickFolder');
 const btnShare=document.getElementById('btnShare');
 const toast=document.getElementById('toast');
 
-/* CONFIG FIXA (sem opções na tela) */
+/* CONFIG FIXA */
 const AUTO_MS = 800;        // intervalo fixo
 const MAX_DIM = 1920;       // resolução máxima (maior lado)
 const JPG_Q   = 0.92;       // qualidade JPG
 const SHOW_TS = false;      // sem data/hora no carimbo por padrão
-const SHOW_GPS= false;      // sem coordenadas no carimbo por padrão
-const KM_STAMP_MODE = 'comma'; // sempre "km K,mmm" dentro da FOTO
+const SHOW_GPS= false;      // sem coordenadas por padrão
 
-/* =============== WAKE LOCK (manter tela ligada) =============== */
-let wakeLock=null, keepAliveTimer=null;
+/* =================== WAKE LOCK =================== */
 async function requestWakeLock(){
   try{
     if('wakeLock' in navigator){
@@ -152,7 +167,7 @@ async function requestWakeLock(){
     }else{
       keepAliveTimer = setInterval(()=>{}, 30000);
     }
-  }catch(e){ console.warn('WakeLock falhou:', e); }
+  }catch(e){ console.warn('WakeLock:', e); }
 }
 async function releaseWakeLock(){
   try{ await wakeLock?.release?.(); }catch{} finally{ wakeLock=null; }
@@ -229,13 +244,14 @@ function nearestKM(lat,lon){
 function refreshSign(){
   if(!lastPos || !csvKMReady) return;
   const n=nearestKM(lastPos.lat,lastPos.lon);
-  if(!n){ kmEq.textContent='km = —'; return; }
-  const {K} = fmtKMMM(n.km);
-  kmEq.textContent = `km = ${K}`;
+  if(!n){ kmK.textContent='—'; kmM.textContent='+000'; return; }
+  const {K, mmm}=fmtKMMM(n.km);
+  kmK.textContent=String(K);
+  kmM.textContent='+'+mmm;
 }
 setInterval(refreshSign, 600);
 
-/* =================== CÂMERA =================== */
+/* =================== CÂMERA + PINCH-ZOOM =================== */
 async function startCamera(){
   try{
     const st=await navigator.mediaDevices.getUserMedia({
@@ -246,25 +262,50 @@ async function startCamera(){
     await vid.play().catch(()=>{});
     await new Promise(res=>{ if(vid.readyState>=2 && vid.videoWidth) res(); else vid.onloadeddata=()=>res(); });
     camReady=true;
+
+    camTrack = st.getVideoTracks()[0];
+    camCap = camTrack.getCapabilities?.()||null;
+    if(camCap && camCap.zoom){
+      zoomSupported=true;
+      zoomMin=camCap.zoom.min??1; zoomMax=camCap.zoom.max??1; zoomStep=camCap.zoom.step??0.1;
+      zoomVal=Math.max(zoomMin, Math.min(zoomMax, camTrack.getSettings?.().zoom ?? zoomMin));
+    }else{
+      zoomSupported=false; virtualZoom=1; // fallback por crop no canvas
+    }
   }catch(e){ camReady=false; showToast('Falha na câmera'); }
 }
 
-/* =================== GPS =================== */
-function startGPS(){
-  if(!('geolocation' in navigator)){ gpsReady=false; return; }
-  navigator.geolocation.getCurrentPosition(p=>{
-    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
-    gpsReady=true;
-    navigator.geolocation.watchPosition(pos=>{
-      lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
-    },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
-  },()=>{ gpsReady=false; }, {enableHighAccuracy:true, timeout:12000});
-}
+/* Pinch-to-zoom */
+const pointers=new Map();
+let startDist=0, startZoom=1;
+function distance(p1,p2){ const dx=p2.x-p1.x, dy=p2.y-p1.y; return Math.hypot(dx,dy); }
+
+camWrap.addEventListener('pointerdown', (e)=>{ camWrap.setPointerCapture?.(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); });
+camWrap.addEventListener('pointermove', async (e)=>{
+  if(!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===2){
+    const [a,b]=[...pointers.values()];
+    const dist=distance(a,b);
+    if(!startDist){ startDist=dist; startZoom = zoomSupported? zoomVal : virtualZoom; return; }
+    const scale = dist / startDist;
+    const target = Math.max(zoomMin||1, Math.min((zoomMax||6), startZoom * scale));
+    if(zoomSupported){
+      try{ await camTrack.applyConstraints({advanced:[{zoom:target}]}); zoomVal=target; }catch{}
+    }else{
+      virtualZoom = target; // usado no crop da captura
+    }
+  }
+});
+function endPointer(e){ pointers.delete(e.pointerId); if(pointers.size<2){ startDist=0; } }
+camWrap.addEventListener('pointerup', endPointer);
+camWrap.addEventListener('pointercancel', endPointer);
+camWrap.addEventListener('pointerleave', endPointer);
 
 /* =================== CARIMBO NA FOTO =================== */
-/* — pequeno, alinhado, linha única: “km K,mmm” — */
+/* — pequeno, alinhado, uma linha: “KM K,mmm” — */
 function drawStamp(ctx,w,h,kmText,tsStr,gpsStr){
-  const bandH=Math.max(72,Math.round(h*0.10));  // faixa menor pra não sobrepor
+  const bandH=Math.max(72,Math.round(h*0.10));  // faixa menor
   ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(0,h-bandH,w,bandH);
   const fMain=Math.round(h*0.038);   // tamanho contido
   const fSub =Math.round(h*0.026);
@@ -273,37 +314,41 @@ function drawStamp(ctx,w,h,kmText,tsStr,gpsStr){
   ctx.fillStyle='#d8ffe6'; ctx.textAlign='left'; ctx.font=`900 ${fMain}px system-ui`;
   ctx.fillText(kmText,16,h-bandH+Math.round(bandH*0.60));
 
-  // Data/Hora (opcional, default OFF)
-  if (SHOW_TS){
-    ctx.fillStyle='#fff'; ctx.font=`700 ${fSub}px system-ui`;
-    ctx.fillText(tsStr,16,h-16);
-  }
-  // GPS (opcional, default OFF)
-  if (SHOW_GPS && gpsStr){
-    ctx.fillStyle='#cfe7ff'; ctx.font=`600 ${fSub}px system-ui`;
-    ctx.fillText(gpsStr,16,h-bandH+24);
-  }
+  // Data/Hora e GPS (desligados por padrão)
+  if(false){/* SHOW_TS false fixo (sem opções visuais) */}
+  if(false){/* SHOW_GPS false fixo (sem opções visuais) */}
 }
 
 /* =================== CAPTURA → toBlob → write(blob) =================== */
 async function frameToJpegBlob(){
   const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
+
+  // resolução final (máximo lado)
   const sc=(Math.max(vw,vh)>MAX_DIM)? (MAX_DIM/Math.max(vw,vh)) : 1;
   const w=Math.round(vw*sc), h=Math.round(vh*sc);
 
   const can=document.createElement('canvas'); const ctx=can.getContext('2d',{alpha:false});
-  can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
+  can.width=w; can.height=h;
 
-  // KM para o carimbo na FOTO: “km K,mmm”
-  let kmText='km —';
+  // Fonte: recorte se for zoom virtual; se zoom nativo, pega frame inteiro
+  if(zoomSupported || virtualZoom<=1.001){
+    ctx.drawImage(vid,0,0,w,h);
+  }else{
+    // Crop central proporcional ao virtualZoom
+    const z = Math.max(1, Math.min(virtualZoom, 6));
+    const srcW = Math.round(vw / z), srcH = Math.round(vh / z);
+    const sx = Math.floor((vw - srcW)/2), sy = Math.floor((vh - srcH)/2);
+    ctx.drawImage(vid, sx, sy, srcW, srcH, 0, 0, w, h);
+  }
+
+  // KM para carimbo: “KM K,mmm”
+  let kmText='KM —';
   if (csvKMReady && lastPos){
     const n=nearestKM(lastPos.lat,lastPos.lon);
-    if(n){ const {K, mmm}=fmtKMMM(n.km); kmText = `km ${K},${mmm}`; }
+    if(n){ const {K, mmm}=fmtKMMM(n.km); kmText = `KM ${K},${mmm}`; }
   }
-  const ts=new Date().toLocaleString();
-  let gps=''; if(SHOW_GPS && lastPos) gps=`${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
 
-  drawStamp(ctx,w,h,kmText,ts,gps);
+  drawStamp(ctx,w,h,kmText);
 
   // ESQUEMA DO RELATÓRIO
   const blob = await new Promise(res=>can.toBlob(res,'image/jpeg',JPG_Q));
@@ -327,7 +372,7 @@ async function savePhotoOnce(){
 
     const blob = await frameToJpegBlob();
 
-    // Nome: FOTO_km_K_mmm_YYYY-MM-DD_HH-MM-SS.jpg (usa vírgula no carimbo, mas no nome usa "_")
+    // Nome: FOTO_km_K_mmm_YYYY-MM-DD_HH-MM-SS.jpg
     let kPart='K', mPart='000';
     if (csvKMReady && lastPos){
       const n=nearestKM(lastPos.lat,lastPos.lon);
@@ -340,7 +385,7 @@ async function savePhotoOnce(){
     await w.write(blob);          // ← igual ao relatório
     await w.close();
 
-    // checagem simples
+    // sanidade
     const f=await fh.getFile();
     if(f.size===0){
       const blob2=await frameToJpegBlob();
@@ -359,8 +404,7 @@ function startAuto(){
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady)){ showToast('Aguarde Pasta/Câmera/GPS/CSV'); return; }
   isAuto=true;
   btnAuto.textContent='⏹ PARAR AUTO'; btnAuto.classList.add('auto-on'); btnAuto.classList.remove('primary');
-
-  requestWakeLock();                 // mantém a tela ligada
+  requestWakeLock();
   queue = queue.then(()=>savePhotoOnce()).catch(()=>{});
   autoTimer=setInterval(()=>{ queue = queue.then(()=>savePhotoOnce()).catch(()=>{}); }, AUTO_MS);
   showToast('Auto ON');
@@ -392,6 +436,18 @@ async function shareInstant(){
   }catch(err){ console.error('Share erro:', err); showToast('Não foi possível compartilhar'); }
 }
 btnShare.addEventListener('click', ()=>{ shareInstant().catch(()=>{}); });
+
+/* =================== GPS =================== */
+function startGPS(){
+  if(!('geolocation' in navigator)){ gpsReady=false; return; }
+  navigator.geolocation.getCurrentPosition(p=>{
+    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    gpsReady=true;
+    navigator.geolocation.watchPosition(pos=>{
+      lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
+    },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
+  },()=>{ gpsReady=false; }, {enableHighAccuracy:true, timeout:12000});
+}
 
 /* =================== BOOT =================== */
 async function boot(){
