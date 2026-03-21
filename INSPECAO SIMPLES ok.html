@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#0b1020" />
+<title>Inspeção Rodoviária – Captura Direta (Foto/MP4)</title>
+<style>
+  :root{
+    --bg:#0a1026; --fg:#eaf2ff; --muted:#b7c6ee;
+    --hudA:rgba(10,16,40,.82); --hudB:rgba(6,12,30,.78);
+    --ok:#22c55e; --warn:#eab308; --danger:#ef4444; --accent:#25D366;
+    --border:#1d2a58; --card:#0e173bcc;
+    --shadow: 0 14px 36px rgba(0,0,0,.45);
+    --btnH:64px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:linear-gradient(180deg,#0b122b,#0a1024); color:var(--fg);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans",sans-serif;
+    overflow:hidden; /* sem rolagem */
+  }
+
+  /* Canvas de app em tela cheia */
+  #app{
+    position:fixed; inset:0; display:grid; grid-template-rows:1fr; place-items:stretch;
+  }
+  #camWrap{
+    position:relative; width:100%; height:100%; overflow:hidden; background:#000;
+    isolation:isolate;
+  }
+  #vid{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000;
+  }
+
+  /* HUD mínimo sobreposto */
+  .hud{
+    position:absolute; left:0; right:0; display:flex; justify-content:space-between;
+    padding:10px; z-index:3; pointer-events:none;
+  }
+  #hudTop{ top:0 }
+  #hudBottom{ bottom:0; align-items:flex-end }
+  .chip{
+    pointer-events:auto;
+    display:inline-flex; align-items:center; gap:10px;
+    background:linear-gradient(180deg, var(--hudA), var(--hudB));
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:12px; padding:8px 12px; font-weight:900;
+    box-shadow:var(--shadow);
+  }
+  .chip b{ color:#dff5ff }
+  .right{ margin-left:auto; display:flex; gap:8px }
+
+  /* Botões grandes (somente dois) */
+  .controls{
+    pointer-events:auto; display:flex; gap:12px; margin:0 auto;
+  }
+  .btn{
+    height:var(--btnH); min-width:180px; padding:0 18px;
+    border-radius:14px; border:1px solid var(--border);
+    background:linear-gradient(180deg,#101a44,#0c1436);
+    color:var(--fg); font-weight:900; font-size:1.06rem; letter-spacing:.02em;
+    display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer;
+    box-shadow:var(--shadow);
+  }
+  .btn:active{ transform:translateY(1px) }
+  .btn.auto-on{ background:linear-gradient(180deg,#ff8f49,#e06a2d); color:#1b0b02; border-color:#c45722 }
+  .btn.rec-on{ background:linear-gradient(180deg,#f2544b,#cc3e36); color:#fff; border-color:#b82e2a }
+  .btn.primary{ background:linear-gradient(180deg,#2ff07f,#25d366); color:#062a1a; border-color:#1fb85b }
+
+  /* Modal inicial para escolher pasta (uma ação) */
+  #folderGate{
+    position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(1200px 600px at 50% -10%, #0c2a3f, transparent 65%), #060a12;
+  }
+  .gateCard{
+    background:linear-gradient(180deg, rgba(16,26,64,.9), rgba(14,22,52,.9));
+    border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:20px; width:min(92vw, 440px);
+    color:#cfe1ff; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.5);
+  }
+  .gateCard h2{ margin:0 0 10px }
+  .gateCard p{ margin:0 0 14px; opacity:.9 }
+  .gateCard .btn{ width:100%; min-width:unset; height:56px; }
+  .hint{ font-size:.9rem; color:#a7b7e0; margin-top:10px }
+
+  /* Feedback discreto (bolha) */
+  #toast{
+    position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
+    background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,.6));
+    border:1px solid rgba(255,255,255,.16); color:#eaf2ff; padding:10px 14px; border-radius:12px; display:none; z-index:9;
+  }
+
+  /* Sem seleção acidental */
+  *{ -webkit-tap-highlight-color: transparent }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="camWrap">
+    <video id="vid" autoplay playsinline muted></video>
+
+    <!-- HUD topo: KM à esquerda, GPS à direita -->
+    <div class="hud" id="hudTop">
+      <div class="chip">🛣️ <b id="kmLive">KM —</b></div>
+      <div class="right">
+        <div class="chip" id="gpsChip">📡 <b id="gpsTxt">—</b></div>
+        <div class="chip">📷 <b id="countTxt">0</b></div>
+      </div>
+    </div>
+
+    <!-- HUD base: somente dois botões -->
+    <div class="hud" id="hudBottom" style="justify-content:center">
+      <div class="controls">
+        <button id="btnAuto" class="btn primary">🎬 INICIAR AUTO</button>
+        <button id="btnRec" class="btn">⏺ INICIAR REC</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de pasta -->
+<div id="folderGate" aria-modal="true" role="dialog">
+  <div class="gateCard">
+    <h2>Selecionar Pasta de Saída</h2>
+    <p>As <b>fotos (JPG)</b> e os <b>vídeos (MP4)</b> serão gravados diretamente na pasta escolhida.</p>
+    <button id="btnPickFolder" class="btn primary">📁 Escolher pasta</button>
+    <div class="hint">Requisitos: Chrome/Edge em <b>HTTPS</b>. Mantenha o arquivo <code>SNVBR116SPRJ.csv</code> na mesma pasta do HTML.</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- MP4 Muxer (para WebCodecs) -->
+<script type="module">
+  import MP4Muxer from "https://cdn.jsdelivr.net/npm/mp4-muxer@6.0.2/+esm";
+  window.MP4Muxer = MP4Muxer;
+</script>
+
+<script>
+/* ========= Estado ========= */
+let rootDirHandle=null;
+let csvReady=false, camReady=false, gpsReady=false;
+let lastPos=null;
+let sessionCount=0;
+
+let isAuto=false, autoTimer=null, AUTO_MS=700;
+
+let isRec=false, videoWritable=null, videoBytes=0, mediaRecorder=null, rafId=null, wc={encoder:null,muxer:null,vTrack:null};
+const VID_W=1920, VID_H=1080, VID_FPS=30, VID_BITRATE=5_000_000; // boa qualidade
+
+/* ========= Refs ========= */
+const vid=document.getElementById('vid');
+const kmLive=document.getElementById('kmLive');
+const gpsTxt=document.getElementById('gpsTxt');
+const countTxt=document.getElementById('countTxt');
+const btnAuto=document.getElementById('btnAuto');
+const btnRec=document.getElementById('btnRec');
+const folderGate=document.getElementById('folderGate');
+const btnPickFolder=document.getElementById('btnPickFolder');
+const toast=document.getElementById('toast');
+
+/* ========= Util ========= */
+function showToast(msg,ms=1400){ toast.textContent=msg; toast.style.display='block'; clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.style.display='none',ms); }
+function fmtKm(v){ let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
+function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
+function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
+function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
+function fileStamp(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}-${String(d.getMinutes()).padStart(2,'0')}-${String(d.getSeconds()).padStart(2,'0')}`; }
+
+/* ========= Pasta ========= */
+async function pickFolder(){
+  try{
+    rootDirHandle = await window.showDirectoryPicker({mode:'readwrite'});
+    folderGate.style.display='none';
+    showToast('Pasta OK');
+  }catch(e){ showToast('Seleção de pasta cancelada'); }
+}
+btnPickFolder.addEventListener('click', pickFolder);
+
+/* ========= CSV KM ========= */
+let kmPoints=[], kmGrid=new Map();
+const CELL=0.005;
+function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
+function gridInsert(grid,p){ const k=cellKey(p.lat,p.lon); const a=grid.get(k); a?a.push(p):grid.set(k,[p]); }
+function gridCands(grid,lat,lon,minCount=120,maxR=5){
+  const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[];
+  for(let r=0;r<=maxR && out.length<minCount;r++){
+    for(let dy=-r;dy<=r;dy++){
+      for(let dx=-r;dx<=r;dx++){
+        if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue;
+        const a=grid.get(`${ky+dy},${kx+dx}`); if(a) out.push(...a);
+      }
+    }
+  } return out;
+}
+async function loadKM(){
+  try{
+    const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
+    const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+    kmPoints=[];
+    for(const ln of lines){
+      const c=ln.split(';');
+      const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
+      const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])};
+      const t = (Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon))?t1:
+                (Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon))?t2:null;
+      if(t) kmPoints.push(t);
+    }
+    kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p);
+    csvReady = kmPoints.length>0;
+  }catch{ csvReady=false; }
+}
+function nearestKM(lat,lon){
+  if(!kmPoints.length) return null;
+  const c=gridCands(kmGrid,lat,lon,140); if(!c.length) return null;
+  let best=null,bd=Infinity; for(const p of c){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
+}
+
+/* ========= Câmera ========= */
+let currentStream=null, currentTrack=null, currentCap=null, videoAR=16/9;
+async function startCamera(){
+  try{
+    currentStream?.getTracks().forEach(t=>t.stop());
+    const st=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30}},
+      audio:false
+    });
+    vid.srcObject=st;
+    await new Promise(res=>{ if(vid.readyState>=1&&vid.videoWidth) res(); else vid.onloadedmetadata=()=>res(); });
+    currentStream=st; currentTrack=st.getVideoTracks()[0];
+    currentCap=currentTrack.getCapabilities?.()||null;
+    videoAR=(vid.videoWidth&&vid.videoHeight)? vid.videoWidth/vid.videoHeight : 16/9;
+    camReady=true;
+  }catch(e){ camReady=false; showToast('Falha na câmera'); }
+}
+
+/* ========= GPS ========= */
+function startGPS(){
+  if(!('geolocation' in navigator)){ gpsReady=false; gpsTxt.textContent='—'; return; }
+  navigator.geolocation.getCurrentPosition(p=>{
+    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    gpsReady=true;
+    gpsTxt.textContent = `±${Math.round(p.coords.accuracy||0)}m`;
+    navigator.geolocation.watchPosition(pos=>{
+      lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
+      gpsTxt.textContent = `±${Math.round(lastPos.acc||0)}m`;
+    },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
+  },()=>{ gpsReady=false; gpsTxt.textContent='—'; }, {enableHighAccuracy:true, timeout:12000});
+}
+setInterval(()=>{
+  if(lastPos){
+    const best=nearestKM(lastPos.lat,lastPos.lon);
+    kmLive.textContent = best? fmtKm(best.km): 'KM —';
+  }
+}, 600);
+
+/* ========= Carimbo (foto & vídeo) ========= */
+function stampOverlay(ctx,w,h,kmStr,tsStr,gpsStr){
+  const bandH=Math.max(100,Math.round(h*0.14));
+  ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
+  if(kmStr){
+    ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.05)}px system-ui`;
+    ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
+    ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.5)); ctx.shadowBlur=0;
+  }
+  if(tsStr){
+    ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.font=`700 ${Math.round(h*0.03)}px system-ui`;
+    ctx.fillText(tsStr,20,h-18);
+  }
+  if(gpsStr){
+    ctx.fillStyle='#cfe7ff'; ctx.textAlign='left'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
+    ctx.fillText(gpsStr,20,h-bandH+28);
+  }
+}
+
+/* ========= Captura de foto (JPG direto na pasta) ========= */
+const photoCan=document.createElement('canvas'), photoCtx=photoCan.getContext('2d',{alpha:false});
+const MAX_DIM=1920;
+async function capturePhoto(){
+  if(!(rootDirHandle && camReady && gpsReady && lastPos)) return;
+  const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
+  const sc=(Math.max(vw,vh)>MAX_DIM)? (MAX_DIM/Math.max(vw,vh)) : 1;
+  const w=Math.round(vw*sc), h=Math.round(vh*sc);
+  photoCan.width=w; photoCan.height=h; photoCtx.drawImage(vid,0,0,w,h);
+
+  const km=kmLive.textContent||'KM —';
+  const ts=new Date().toLocaleString();
+  const gps=`${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
+  stampOverlay(photoCtx,w,h,km,ts,gps);
+
+  const blob=await new Promise(res=>photoCan.toBlob(res,'image/jpeg',0.9));
+  const name=`FOTO_${km.replace('KM ','').replace('+','_')}_${fileStamp(new Date())}.jpg`;
+  const fh=await rootDirHandle.getFileHandle(name,{create:true});
+  const wr=await fh.createWritable(); await wr.write(blob); await wr.close();
+
+  sessionCount++; countTxt.textContent=String(sessionCount);
+}
+
+/* ========= AUTO captura ========= */
+function startAuto(){
+  if(isAuto) return;
+  if(!(rootDirHandle && camReady && gpsReady && csvReady)){ showToast('Aguarde Pasta/Câmera/GPS/CSV'); return; }
+  isAuto=true; btnAuto.textContent='⏹ PARAR AUTO'; btnAuto.classList.add('auto-on'); btnAuto.classList.remove('primary');
+  autoTimer=setInterval(()=>{ capturePhoto().catch(()=>{}); }, AUTO_MS);
+  showToast('Auto ON');
+}
+function stopAuto(){
+  if(!isAuto) return;
+  isAuto=false; btnAuto.textContent='🎬 INICIAR AUTO'; btnAuto.classList.remove('auto-on'); btnAuto.classList.add('primary');
+  clearInterval(autoTimer); autoTimer=null; showToast('Auto OFF');
+}
+btnAuto.addEventListener('click', ()=>{ if(isAuto) stopAuto(); else startAuto(); });
+
+/* ========= Gravação de vídeo MP4 ========= */
+/* Caminho preferencial:
+   1) MediaRecorder MP4 (se suportado)
+   2) WebCodecs + MP4Muxer (H.264 AnnexB, sem áudio) – compatível e leve */
+const recCan=document.createElement('canvas'), recCtx=recCan.getContext('2d');
+recCan.width=VID_W; recCan.height=VID_H;
+
+async function openVideoFile(ext){
+  const name=`VIDEO_${fileStamp(new Date())}.${ext}`;
+  const fh=await rootDirHandle.getFileHandle(name,{create:true});
+  videoWritable=await fh.createWritable(); videoBytes=0;
+}
+async function closeVideoFile(){ if(videoWritable){ await videoWritable.close(); videoWritable=null; } }
+
+async function startRecMediaRecorderMP4(){
+  const stream=recCan.captureStream(VID_FPS);
+  // Desenho na canvas
+  let on=true;
+  (function draw(){
+    if(!on) return;
+    recCtx.drawImage(vid,0,0,VID_W,VID_H);
+    const km=kmLive.textContent||'KM —'; const ts=new Date().toLocaleString();
+    const gps= lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
+    stampOverlay(recCtx,VID_W,VID_H,km,ts,gps);
+    rafId=requestAnimationFrame(draw);
+  })();
+
+  const mime='video/mp4;codecs=h264';
+  if(!MediaRecorder.isTypeSupported?.(mime)) throw new Error('MP4_MR_UNSUPPORTED');
+
+  await openVideoFile('mp4');
+  mediaRecorder=new MediaRecorder(stream,{mimeType:mime, videoBitsPerSecond:VID_BITRATE});
+  mediaRecorder.ondataavailable=async e=>{ if(e.data?.size && videoWritable){ await videoWritable.write(e.data); videoBytes+=e.data.size; } };
+  mediaRecorder.onstop=async()=>{ on=false; if(rafId){ cancelAnimationFrame(rafId); rafId=null; } await closeVideoFile(); isRec=false; btnRec.textContent='⏺ INICIAR REC'; btnRec.classList.remove('rec-on'); showToast('MP4 salvo'); };
+  mediaRecorder.start(1000);
+  isRec=true; btnRec.textContent='⏹ PARAR REC'; btnRec.classList.add('rec-on');
+}
+
+async function startRecWebCodecsMP4(){
+  if(!(window.VideoEncoder && window.MP4Muxer)) throw new Error('WC_UNAVAILABLE');
+  await openVideoFile('mp4');
+
+  const muxer=new MP4Muxer.MP4Muxer({
+    target:"file", fastStart:"in-memory", firstTimestampBehavior:"offset",
+    onData:async (u8)=>{ if(videoWritable){ await videoWritable.write(u8); videoBytes+=u8.byteLength; } }
+  });
+  const vTrack=muxer.addTrack({codec:"avc1.42E01E", width:VID_W, height:VID_H, timescale:1e6});
+  const ok=await VideoEncoder.isConfigSupported({codec:"avc1.42E01E", width:VID_W, height:VID_H, bitrate:VID_BITRATE, framerate:VID_FPS, avc:{format:"annexb"}});
+  if(!ok.supported) throw new Error('H264_UNSUPPORTED');
+
+  const enc=new VideoEncoder({
+    output:(chunk)=>muxer.addSample(vTrack, chunk, {duration:Math.round(1e6/VID_FPS), dts:chunk.timestamp, pts:chunk.timestamp, keyframe:(chunk.type==='key')}),
+    error:(e)=>console.error('VideoEncoder',e)
+  });
+  enc.configure({codec:"avc1.42E01E", width:VID_W, height:VID_H, bitrate:VID_BITRATE, framerate:VID_FPS, avc:{format:"annexb"}});
+
+  let running=true; let t0=performance.now(), lastKey=-1;
+  (function draw(){
+    if(!running) return;
+    recCtx.drawImage(vid,0,0,VID_W,VID_H);
+    const km=kmLive.textContent||'KM —'; const ts=new Date().toLocaleString();
+    const gps= lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
+    stampOverlay(recCtx,VID_W,VID_H,km,ts,gps);
+
+    const elapsed=performance.now()-t0; const tUS=Math.round(elapsed*1000);
+    // Capture canvas into VideoFrame for encoding
+    const vf=new VideoFrame(recCan,{timestamp:tUS});
+    const sec=Math.floor(elapsed/1000); const forceKey=(sec!==lastKey); if(forceKey) lastKey=sec;
+    enc.encode(vf,{keyFrame:forceKey}); vf.close();
+
+    rafId=requestAnimationFrame(draw);
+  })();
+
+  isRec=true; btnRec.textContent='⏹ PARAR REC'; btnRec.classList.add('rec-on');
+
+  return {
+    async stop(){
+      try{ await enc.flush(); enc.close(); }catch{}
+      try{ muxer.finalize(); }catch{}
+      running=false; if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
+      await closeVideoFile();
+      isRec=false; btnRec.textContent='⏺ INICIAR REC'; btnRec.classList.remove('rec-on'); showToast('MP4 salvo');
+    }
+  };
+}
+
+let activeStopper=null;
+btnRec.addEventListener('click', async ()=>{
+  if(!rootDirHandle){ showToast('Selecione a pasta'); return; }
+  if(!camReady){ showToast('Câmera indisponível'); return; }
+
+  if(!isRec){
+    // tentar MediaRecorder MP4; se não, WebCodecs
+    try{
+      await startRecMediaRecorderMP4();
+      activeStopper={ stop: async()=>{ try{ mediaRecorder?.stop(); }catch{} } };
+    }catch(e){
+      try{
+        activeStopper = await startRecWebCodecsMP4();
+      }catch(err){
+        showToast('MP4 não suportado neste navegador');
+      }
+    }
+  }else{
+    try{ await activeStopper?.stop?.(); }catch{}
+  }
+});
+
+/* ========= Boot ========= */
+async function boot(){
+  await loadKM();
+  await startCamera();
+  startGPS();
+}
+boot();
+</script>
+</body>
+</html>
