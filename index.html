@@ -10,10 +10,9 @@
     --bg:#203e92; --bg2:#0b1224;
     --surface:#0f1731cc; --surface-strong:#1b368f;
     --fg:#e8eeff; --muted:#a9b7df; --border:#1e284d;
-    --glow:#43ff9b; --glow2:#29e3ff; --warn:#eab308; --danger:#ef4444; --ok:#22c55e;
+    --ok:#22c55e; --warn:#eab308; --danger:#ef4444;
     --shadow: 0 10px 28px rgba(0,0,0,.38);
-    --radius: 14px;
-    --camH: 42vh;
+    --radius: 14px; --camH: 42vh;
     --btnGradA:#0d1430; --btnGradB:#0a0f26; --btnBorder:#20305e;
     --camGradA:#0b1230; --camGradB:#07102a; --camBorder:#213066;
     --pdfA:#857b5d; --pdfB:#eab308; --pdfText:#231c00;
@@ -42,10 +41,7 @@
   }
 
   /* ===== Barra de status ===== */
-  #statusBar{
-    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
-    max-width:980px; margin:0 auto 10px;
-  }
+  #statusBar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; max-width:980px; margin:0 auto 10px; }
   .st{
     display:inline-flex; align-items:center; gap:6px;
     background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.28));
@@ -53,8 +49,7 @@
     padding:6px 10px; border-radius:999px; font-size:.82rem; font-weight:800; color:#dfe7ff;
     box-shadow: 0 4px 12px rgba(0,0,0,.28);
   }
-  .ok{ color:#b1ffd1 }
-  .warn{ color:#ffdfa8 }
+  .ok{ color:#b1ffd1 } .warn{ color:#ffdfa8 }
 
   /* ===== Câmera fixa no topo ===== */
   #camCard{
@@ -72,33 +67,42 @@
   #can{display:none}
   #camSpacer{ height: calc(var(--camH) + 24px + env(safe-area-inset-top, 0px)); max-width:980px; margin: 0 auto 8px; }
 
-  /* ===== HUD discreto ===== */
+  /* ===== HUD sobre o vídeo ===== */
+  .mini{
+    pointer-events:auto; border:1px solid rgba(255,255,255,.18);
+    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.45));
+    color:#e6ebff; border-radius:10px; padding:6px 8px; font-weight:900; font-size:.9rem; cursor:pointer;
+    box-shadow: 0 6px 16px rgba(0,0,0,.28);
+  }
+  #btnMiniCycle{ position:absolute; left:10px; top:10px; }         /* trocar câmera (discreto) */
+  #btnMiniPower{ position:absolute; right:10px; top:10px; }        /* ligar/parar câmera */
+  #btnRecStop { position:absolute; right:10px; bottom:10px; display:none } /* STOP durante gravação */
+
+  /* Zoom discreto (sem barra) */
+  #zoomPad{
+    position:absolute; left:50%; bottom:10px; transform:translateX(-50%);
+    display:none; align-items:center; gap:8px;
+    padding:6px 10px; border-radius:12px; border:1px solid rgba(255,255,255,.18);
+    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.45));
+    box-shadow: 0 6px 16px rgba(0,0,0,.28);
+  }
+  #zoomLbl{ min-width:48px; text-align:center; font-weight:900 }
+
+  /* Pill contadores */
   #hud{
     position:absolute; left:10px; bottom:10px; right:10px; display:flex; gap:8px; align-items:center; justify-content:space-between; pointer-events:none;
   }
   .pill{
-    pointer-events:auto;
-    display:inline-flex; align-items:center; gap:8px;
+    pointer-events:auto; display:inline-flex; align-items:center; gap:8px;
     background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.45));
     border:1px solid rgba(255,255,255,.18); color:#e6ebff;
     padding:6px 10px; border-radius:12px; font-size:.84rem; font-weight:900;
     box-shadow: 0 6px 16px rgba(0,0,0,.28);
   }
-  .mini{
-    pointer-events:auto;
-    border:1px solid rgba(255,255,255,.18);
-    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.45));
-    color:#e6ebff; border-radius:10px; padding:6px 8px; font-weight:900; font-size:.9rem; cursor:pointer;
-  }
-  /* botões sobre o vídeo */
-  #btnMiniCycle{position:absolute; left:10px; top:10px;}
-  #btnMiniPower{position:absolute; right:10px; top:10px;}
-  #zoomBox{ position:absolute; left:50%; bottom:10px; transform:translateX(-50%); display:flex; align-items:center; gap:8px; background:linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.45)); padding:6px 10px; border:1px solid rgba(255,255,255,.18); border-radius:12px; }
-  #zoomMini{ width:160px }
 
   /* Chip REC/AUTO mínimo */
   .chip{
-    position: absolute; right: 12px; bottom: 56px;
+    position: absolute; left:50%; top:10px; transform:translateX(-50%);
     background: linear-gradient(180deg, rgba(127,29,29,.8), rgba(90,14,14,.72));
     border: 1px solid #dc2626; color: #ffe2e2; padding: 6px 10px; border-radius: 999px;
     font-size: .8rem; font-weight: 900; display: none; user-select: none; box-shadow: var(--shadow);
@@ -202,22 +206,25 @@
     <video id="vid" autoplay playsinline muted></video>
     <canvas id="can" width="1280" height="720"></canvas>
 
-    <!-- HUD -->
+    <!-- botões discretos -->
     <button id="btnMiniCycle" class="mini" title="Trocar câmera">🔁</button>
     <button id="btnMiniPower" class="mini" title="Ligar/Parar câmera">⏻</button>
+    <button id="btnRecStop" class="mini" title="Parar gravação">⏹️ STOP</button>
 
-    <div id="zoomBox" style="display:none">
-      <span style="font-weight:900">🔍</span>
-      <input id="zoomMini" type="range" min="1" max="1" step="0.1" value="1" />
-      <span id="zoomVal" style="font-weight:900; min-width:48px; text-align:right">1.0×</span>
+    <!-- Zoom discreto -->
+    <div id="zoomPad">
+      <button id="btnZoomDec" class="mini" title="Diminuir zoom">−</button>
+      <span id="zoomLbl">1.0×</span>
+      <button id="btnZoomInc" class="mini" title="Aumentar zoom">+</button>
     </div>
 
+    <!-- HUD -->
     <div id="hud">
-      <div id="hudLeft" class="pill">📷 <span id="hudPhotos">0</span></div>
+      <div class="pill">📷 <span id="hudPhotos">0</span></div>
       <div id="hudRight" class="pill" style="display:none">⏺ <span id="hudVideoSize">0.0</span> MB</div>
     </div>
 
-    <!-- Chip REC/AUTO mínimo -->
+    <!-- Chip REC/AUTO -->
     <div id="chip" class="chip" aria-live="polite" aria-atomic="true"></div>
   </div>
 </div>
@@ -244,9 +251,15 @@
   <div id="gal" class="gallery"></div>
 </div>
 
+<!-- ====== MÓDULO MP4 MUXER PARA CHROME/EDGE ====== -->
+<script type="module">
+  import MP4Muxer from "https://cdn.jsdelivr.net/npm/mp4-muxer@6.0.2/+esm";
+  window.MP4Muxer = MP4Muxer;
+</script>
+
 <!-- ====== SCRIPTS ====== -->
 
-<!-- Splash animado -->
+<!-- Splash -->
 <script>
 (function(){
   const splash = document.getElementById('splash');
@@ -257,19 +270,16 @@
 
   let W, H, columns, fontSize = 16, drops = [], raf = null, started = false;
 
-  function resize(){
-    canvas.width = W = window.innerWidth;
-    canvas.height = H = window.innerHeight;
+  function resize(){ canvas.width = W = window.innerWidth; canvas.height = H = window.innerHeight;
     fontSize = Math.max(14, Math.min(24, Math.floor(W / 64)));
-    columns = Math.floor(W / fontSize);
-    drops = new Array(columns).fill(1);
+    columns = Math.floor(W / fontSize); drops = new Array(columns).fill(1);
   }
   window.addEventListener('resize', resize);
 
   function draw(){
     ctx.fillStyle = 'rgba(6,10,18,0.08)'; ctx.fillRect(0,0,W,H);
     ctx.fillStyle = '#39ff88';
-    ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+    ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
     for(let i=0;i<drops.length;i++){
       const char = String.fromCharCode(0x30A0 + Math.floor(Math.random()*96));
       ctx.fillText(char, i*fontSize, drops[i]*fontSize);
@@ -305,31 +315,33 @@ function bytesToMB(b){ return (b/1048576).toFixed(1); }
 /* ===== Estado ===== */
 let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null;
-let isRecordingVideo=false; let mediaRecorder=null;
 let kmUpdateInterval=null;
 
 const overlayOpts = { showKM:true, showTs:true, showIds:true, showGps:false };
 
+/* Sessão atual */
+let sessionPhotos = 0;
+
 /* ===== Referências ===== */
 const vid=document.getElementById('vid'); const can=document.getElementById('can'); const ctx=can.getContext('2d',{alpha:false});
 const foto=document.getElementById('foto'); const wrap=document.getElementById('wrap'); const chip=document.getElementById('chip');
-const kmTop=document.getElementById('kmTop'); const gal=document.getElementById('gal');
 
 const stCsv=document.getElementById('stCsv'); const stCam=document.getElementById('stCam'); const stGps=document.getElementById('stGps'); const stFotos=document.getElementById('stFotos'); const stFolder=document.getElementById('stFolder'); const stPdf=document.getElementById('stPdf');
+const kmTop=document.getElementById('kmTop'); const gal=document.getElementById('gal');
 
 const btnSelectFolder = document.getElementById('btnSelectFolder'); const btnFinalizePdf = document.getElementById('btnFinalizePdf'); const btnClear = document.getElementById('btnClear');
 const btnAutoCapture=document.getElementById('btnAutoCapture'); const btnVideoRecord=document.getElementById('btnVideoRecord');
+const btnMiniCycle=document.getElementById('btnMiniCycle'); const btnMiniPower=document.getElementById('btnMiniPower'); const btnRecStop=document.getElementById('btnRecStop');
 
-const btnMiniCycle=document.getElementById('btnMiniCycle');
-const btnMiniPower=document.getElementById('btnMiniPower');
-const zoomBox=document.getElementById('zoomBox'); const zoomMini=document.getElementById('zoomMini'); const zoomVal=document.getElementById('zoomVal');
+const zoomPad=document.getElementById('zoomPad'); const btnZoomDec=document.getElementById('btnZoomDec'); const btnZoomInc=document.getElementById('btnZoomInc'); const zoomLbl=document.getElementById('zoomLbl');
 
 /* HUD */
 const hudPhotos=document.getElementById('hudPhotos'); const hudRight=document.getElementById('hudRight'); const hudVideoSize=document.getElementById('hudVideoSize');
+</script>
 
+<script>
 /* ===== File System Access + PDF incremental ===== */
 let rootDirHandle = null;
-let photoCount = 0;
 let previewBuffer = []; // últimas 10
 let pdfWriter = null;
 
@@ -344,33 +356,17 @@ function makeByteWriter(stream){
 }
 function createPdfStreamWriter(stream){
   const writer = makeByteWriter(stream);
-  const offsets = []; // offsets[objectNumber] = byte offset
-  const pagesKids = [];
+  const offsets = []; const pagesKids = [];
   const PW = 595, PH = 842, M = 24;
-  let nextNum = 3; // 1=/Catalog, 2=/Pages
-  let closed = false;
-
+  let nextNum = 3; let closed = false;
   const xrefPad = n => String(n).padStart(10,'0');
-
-  async function writeObjWithNum(num, body){
-    offsets[num] = writer.pos;
-    await writer.writeStr(`${num} 0 obj\n${body}\nendobj\n`);
-  }
-  async function addObj(body){
-    const num = nextNum++;
-    await writeObjWithNum(num, body);
-    return num;
-  }
+  async function writeObjWithNum(num, body){ offsets[num] = writer.pos; await writer.writeStr(`${num} 0 obj\n${body}\nendobj\n`); }
+  async function addObj(body){ const num = nextNum++; await writeObjWithNum(num, body); return num; }
   async function addStream(dict, data){
-    const num = nextNum++;
-    offsets[num] = writer.pos;
+    const num = nextNum++; offsets[num] = writer.pos;
     const header = `${num} 0 obj\n${dict.replace('>>','')} /Length ${data.length} >>\nstream\n`;
-    await writer.writeStr(header);
-    await writer.writeBin(data);
-    await writer.writeStr(`\nendstream\nendobj\n`);
-    return num;
+    await writer.writeStr(header); await writer.writeBin(data); await writer.writeStr(`\nendstream\nendobj\n`); return num;
   }
-
   function fitToCell(imgW, imgH){
     let cellW = PW - 2*M, cellH = PH - 2*M;
     let dw = cellW, dh = Math.round(imgH*(cellW/imgW));
@@ -379,7 +375,6 @@ function createPdfStreamWriter(stream){
     const ty = M + Math.round((cellH - dh)/2);
     return {dw, dh, tx, ty};
   }
-
   return {
     async init(){ await writer.writeStr('%PDF-1.4\n'); },
     async addImagePage(blob, knownW, knownH){
@@ -408,15 +403,9 @@ Q
       if(closed) return; closed = true;
       await writeObjWithNum(2, `<< /Type /Pages /Kids [ ${pagesKids.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pagesKids.length} >>`);
       await writeObjWithNum(1, `<< /Type /Catalog /Pages 2 0 R >>`);
-
-      const xrefStart = writer.pos;
-      const count = Math.max(1, offsets.length-1) + 1;
+      const xrefStart = writer.pos; const count = Math.max(1, offsets.length-1) + 1;
       let xr = `xref\n0 ${count}\n0000000000 65535 f \n`;
-      for(let i=1;i<count;i++){
-        const off = offsets[i] ?? 0;
-        const inUse = (offsets[i] != null);
-        xr += `${xrefPad(off)} 00000 ${inUse?'n':'f'} \n`;
-      }
+      for(let i=1;i<count;i++){ const off = offsets[i] ?? 0; const inUse = (offsets[i] != null); xr += `${String(off).padStart(10,'0')} 00000 ${inUse?'n':'f'} \n`; }
       await writer.writeStr(xr);
       await writer.writeStr(`trailer\n<< /Size ${count} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`);
       await stream.close();
@@ -426,23 +415,22 @@ Q
 
 async function selectOutputFolder(){
   if(!('showDirectoryPicker' in window)){
-    alert('Seu navegador não suporta seleção de pasta (File System Access API). Use Chrome/Edge no Android ou Desktop.');
+    alert('Navegador sem File System Access API. Use Chrome/Edge no Android ou Desktop (HTTPS).');
     return;
   }
   rootDirHandle = await window.showDirectoryPicker({ mode:'readwrite' });
 
-  // Nome da pasta exibido
+  // Nome da pasta
   try{
     const name = rootDirHandle.name || 'OK';
     stFolder.textContent = 'Pasta: ' + name;
     stFolder.className = 'st ok';
     btnSelectFolder.textContent = '📁 Pasta: ' + name;
   }catch{
-    stFolder.textContent = 'Pasta: OK';
-    stFolder.className = 'st ok';
+    stFolder.textContent = 'Pasta: OK'; stFolder.className = 'st ok';
   }
 
-  // Abre PDF do relatório (novo arquivo)
+  // Novo PDF
   const pdfHandle = await rootDirHandle.getFileHandle(`RELATORIO_${new Date().toISOString().slice(0,10)}_${Date.now()}.pdf`, { create:true });
   const stream = await pdfHandle.createWritable();
   pdfWriter = createPdfStreamWriter(stream);
@@ -451,13 +439,13 @@ async function selectOutputFolder(){
   btnFinalizePdf.disabled = false;
   stPdf.textContent = 'PDF: ABERTO';
   stPdf.className = 'st ok';
+
+  // zera contagem da sessão ao escolher nova pasta
+  sessionPhotos = 0; hudPhotos.textContent = sessionPhotos; stFotos.textContent = 'Fotos: ' + sessionPhotos;
 }
 
 async function savePhotoDirect(blob, filename, w, h){
-  if(!rootDirHandle){
-    await selectOutputFolder();
-    if(!rootDirHandle) throw new Error('Pasta não selecionada');
-  }
+  if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta não selecionada'); }
 
   // JPEG
   const fileHandle = await rootDirHandle.getFileHandle(filename, { create:true });
@@ -466,13 +454,12 @@ async function savePhotoDirect(blob, filename, w, h){
   await writable.close();
 
   // PDF incremental
-  if(pdfWriter){
-    await pdfWriter.addImagePage(blob, w, h);
-  }
+  if(pdfWriter){ await pdfWriter.addImagePage(blob, w, h); }
 
-  photoCount++;
-  hudPhotos.textContent = photoCount;
-  stFotos.textContent = 'Fotos: ' + photoCount;
+  // Contagem sessão
+  sessionPhotos++;
+  hudPhotos.textContent = sessionPhotos;
+  stFotos.textContent = 'Fotos: ' + sessionPhotos;
 }
 </script>
 
@@ -551,7 +538,7 @@ function nearestKM(lat,lon){
 </script>
 
 <script>
-/* ===== Câmera / Zoom (sem fit inteligente) ===== */
+/* ===== Câmera / Zoom (discreto) ===== */
 let currentStream=null, currentTrack=null, currentCap=null; let deviceList=[], deviceIndex=0;
 let videoAR = 16/9;
 
@@ -572,11 +559,19 @@ function lensHint(label=''){ const s=String(label).toLowerCase();
 function saveCamPrefs(){
   const dev=deviceList[deviceIndex]; if(dev){
     localStorage.setItem('camDeviceId',dev.deviceId);
-    const z=Number(zoomMini.value||1);
-    if(currentCap?.zoom) localStorage.setItem('camZoom_'+dev.deviceId,z);
+    if(currentCap?.zoom) localStorage.setItem('camZoom_'+dev.deviceId, String(currentZoom));
   }
 }
 function loadCamPrefsFor(id){ const z=localStorage.getItem('camZoom_'+id); return z?Number(z):null; }
+
+async function enumerateCameras(){
+  try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{}
+  const devices=await navigator.mediaDevices.enumerateDevices();
+  deviceList=devices.filter(d=>d.kind==='videoinput');
+  deviceList.sort((a,b)=>{ const A=/back|rear|environment/i.test(a.label), B=/back|rear|environment/i.test(b.label); if(A && !B) return -1; if(!A && B) return 1; return a.label.localeCompare(b.label); });
+  const savedId=localStorage.getItem('camDeviceId'); const idx=Math.max(0, deviceList.findIndex(d=>d.deviceId===savedId));
+  deviceIndex=idx>=0?idx:0;
+}
 
 async function startCamera(deviceIdx=deviceIndex){
   try{
@@ -594,46 +589,49 @@ async function startCamera(deviceIdx=deviceIndex){
     if (vid.videoWidth && vid.videoHeight) { videoAR = vid.videoWidth / vid.videoHeight; }
     applyCamHeight();
 
-    // Zoom discreto na tela
-    if(currentCap && currentCap.zoom){
-      zoomMini.min=currentCap.zoom.min??1; zoomMini.max=currentCap.zoom.max??1; zoomMini.step=currentCap.zoom.step??0.1;
-      let z=loadCamPrefsFor(dev?.deviceId) ?? (currentCap.zoom.min ?? 1);
-      z=Math.min(zoomMini.max, Math.max(zoomMini.min, z)); await applyZoom(z,true);
-      zoomBox.style.display='';
-    }else{ zoomBox.style.display='none'; }
+    // Zoom discreto
+    setupZoomUI();
 
-    camReady=!!vid.videoWidth; deviceIndex=deviceIdx; saveCamPrefs();
-    stCam.textContent = 'Câmera: OK';
-    stCam.className = 'st ok';
+    camReady=!!vid.videoWidth;
+    deviceIndex=deviceIdx; saveCamPrefs();
+    stCam.textContent='Câmera: OK'; stCam.className='st ok';
+    cameraPaused=false; btnMiniPower.textContent='⏻';
   }catch(e){
     camReady=false; stCam.textContent='Câmera: —'; stCam.className='st warn';
   }
   updateStatusBar();
 }
-async function applyZoom(val, noSave=false){
-  if(!(currentTrack && currentCap && currentCap.zoom)) return;
-  const z=Number(val);
-  try{ await currentTrack.applyConstraints({advanced:[{zoom:z}]}); }
-  catch{ try{ await currentTrack.applyConstraints({zoom:z}); }catch(e){} }
-  zoomMini.value=z; zoomVal.textContent=`${Number(z).toFixed(1)}×`; if(!noSave) saveCamPrefs();
-}
-async function enumerateCameras(){
-  try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{}
-  const devices=await navigator.mediaDevices.enumerateDevices();
-  deviceList=devices.filter(d=>d.kind==='videoinput');
-  deviceList.sort((a,b)=>{ const A=/back|rear|environment/i.test(a.label), B=/back|rear|environment/i.test(b.label); if(A && !B) return -1; if(!A && B) return 1; return a.label.localeCompare(b.label); });
-  const savedId=localStorage.getItem('camDeviceId'); const idx=Math.max(0, deviceList.findIndex(d=>d.deviceId===savedId));
-  deviceIndex=idx>=0?idx:0;
-}
 
-/* Mini botões na tela */
+/* Zoom plus/minus */
+let currentZoom=1, zoomMin=1, zoomMax=1, zoomStep=0.1;
+async function applyZoom(z){
+  if(!(currentTrack && currentCap && currentCap.zoom)) return;
+  const val = Math.max(zoomMin, Math.min(zoomMax, Number(z)));
+  try{ await currentTrack.applyConstraints({advanced:[{zoom:val}]}); }
+  catch{ try{ await currentTrack.applyConstraints({zoom:val}); }catch(e){} }
+  currentZoom=val; zoomLbl.textContent = currentZoom.toFixed(1)+'×'; saveCamPrefs();
+}
+function setupZoomUI(){
+  if(currentCap && currentCap.zoom){
+    zoomMin=currentCap.zoom.min??1; zoomMax=currentCap.zoom.max??1; zoomStep=currentCap.zoom.step??0.1;
+    let z = loadCamPrefsFor(deviceList[deviceIndex]?.deviceId) ?? (currentCap.zoom.min ?? 1);
+    z = Math.max(zoomMin, Math.min(zoomMax, z));
+    applyZoom(z);
+    zoomPad.style.display='flex';
+  } else {
+    zoomPad.style.display='none';
+  }
+}
+btnZoomDec.addEventListener('click', ()=>applyZoom((currentZoom - zoomStep)));
+btnZoomInc.addEventListener('click', ()=>applyZoom((currentZoom + zoomStep)));
+
+/* Trocar câmera (mini) */
 btnMiniCycle.addEventListener('click', async ()=>{
   if(!deviceList.length){ await enumerateCameras(); }
   if(!deviceList.length) return;
   deviceIndex=(deviceIndex+1)%deviceList.length;
   await startCamera(deviceIndex);
 });
-zoomMini.addEventListener('input', ()=>applyZoom(zoomMini.value));
 
 /* Parar/Ligar câmera (⏻) */
 let cameraPaused=false;
@@ -646,7 +644,6 @@ btnMiniPower.addEventListener('click', async ()=>{
     btnMiniPower.textContent='▶️';
   }else{
     await startCamera(deviceIndex);
-    cameraPaused=false; btnMiniPower.textContent='⏻';
   }
 });
 </script>
@@ -675,7 +672,7 @@ function updateStatusBar(){
   statusChip(stCam,  'Câmera: ' + (camReady?'OK':(cameraPaused?'Parada':'Aguardando…')), (camReady?'ok':'warn'));
   const gpsTxt = gpsReady ? (lastPos? `OK (±${Math.round(lastPos.acc||0)} m)`:'OK') : 'Aguardando…';
   statusChip(stGps,  'GPS: ' + gpsTxt, gpsReady?'ok':'warn');
-  statusChip(stFotos,'Fotos: ' + photoCount, photoCount>0?'ok':'');
+  statusChip(stFotos,'Fotos: ' + sessionPhotos, sessionPhotos>0?'ok':'');
 }
 </script>
 
@@ -706,7 +703,7 @@ function stampOverlay(ctx, w, h, kmStr, ids, ts, gpsLine){
 </script>
 
 <script>
-/* ===== Captura (leve) ===== */
+/* ===== Captura (leve, com PDF incremental) ===== */
 const CAP_MAX_DIM = 1600;
 
 function addPreview(url, meta){
@@ -800,16 +797,21 @@ function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); 
 </script>
 
 <script>
-/* ===== Vídeo (stream direto) ===== */
+/* ===== Vídeo – MP4 preferencial (WebCodecs/MP4Muxer), fallback WebM ===== */
 let videoWritable = null;
 let videoBytesWritten = 0;
+let isRecordingVideo = false;
+let mediaRecorder = null;
+let wc = { encoder:null, muxer:null, trackId:null };
+let rafId = null;
 
-async function openVideoWriter(){
-  if(!rootDirHandle){
-    await selectOutputFolder();
-    if(!rootDirHandle) throw new Error('Pasta não selecionada');
-  }
-  const name = `VIDEO_${new Date().toISOString().replace(/[:.]/g,'-')}.webm`;
+const VID_FPS = 30;
+const VID_BITRATE = 1_600_000; // ~1.6 Mbps
+const VID_GOP = 30;
+
+async function openVideoWriterMp4(){
+  if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta não selecionada'); }
+  const name = `VIDEO_${new Date().toISOString().replace(/[:.]/g,'-')}.mp4`;
   const h = await rootDirHandle.getFileHandle(name, {create:true});
   videoWritable = await h.createWritable();
   videoBytesWritten = 0;
@@ -821,74 +823,211 @@ async function closeVideoWriter(){
   hudRight.style.display='none';
 }
 
-async function startVideoRecording(){
-  if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle){ alert('Selecione a pasta'); return; } }
-  if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
+/* MP4 com WebCodecs + MP4Muxer */
+async function startVideoRecordingMP4(){
+  if(!(window.VideoEncoder && window.VideoFrame && window.MP4Muxer)){
+    throw new Error('WebCodecs/MP4Muxer indisponíveis');
+  }
+  const W = (vid.videoWidth||1280), H = (vid.videoHeight||720);
 
-  try{
-    const videoStream=vid.srcObject; if(!videoStream){ alert('Câmera não disponível'); return; }
+  await openVideoWriterMp4();
 
-    const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=vid.videoWidth||1280; overlayCanvas.height=vid.videoHeight||720; const overlayCtx=overlayCanvas.getContext('2d');
-    const canvasStream=overlayCanvas.captureStream(30);
-    const audioTracks=videoStream.getAudioTracks(); if(audioTracks.length>0){ canvasStream.addTrack(audioTracks[0]); }
-
-    await openVideoWriter();
-
-    const options={ mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 };
-    const mimeOk = MediaRecorder.isTypeSupported(options.mimeType) ? options.mimeType : 'video/webm';
-    mediaRecorder=new MediaRecorder(canvasStream, { ...options, mimeType:mimeOk });
-
-    mediaRecorder.ondataavailable = async (e) => {
-      if(e.data && e.data.size && videoWritable){
-        await videoWritable.write(e.data);
-        videoBytesWritten += e.data.size;
+  wc.muxer = new MP4Muxer.MP4Muxer({
+    target: "file",
+    fastStart: "in-memory",
+    firstTimestampBehavior: "offset",
+    onData: async (data) => {
+      if(videoWritable){
+        await videoWritable.write(data);
+        videoBytesWritten += data.byteLength;
         hudVideoSize.textContent = bytesToMB(videoBytesWritten);
       }
-    };
-    mediaRecorder.onstop = async ()=>{
-      isRecordingVideo=false;
+    }
+  });
+
+  const support = await VideoEncoder.isConfigSupported({
+    codec: "avc1.42E01E", width: W, height: H, bitrate: VID_BITRATE, framerate: VID_FPS, avc: {format: "annexb"}
+  });
+  if(!support.supported) throw new Error('H.264 não suportado');
+
+  wc.trackId = wc.muxer.addTrack({ codec: "avc1.42E01E", width: W, height: H, timescale: 1e6 });
+
+  wc.encoder = new VideoEncoder({
+    output: (chunk) => {
+      wc.muxer.addSample(wc.trackId, chunk, {
+        duration: Math.round(1e6 / VID_FPS),
+        dts: chunk.timestamp,
+        pts: chunk.timestamp,
+        keyframe: chunk.type === "key"
+      });
+    },
+    error: (e) => { console.error('VideoEncoder error:', e); }
+  });
+  wc.encoder.configure({ codec: "avc1.42E01E", width: W, height: H, bitrate: VID_BITRATE, framerate: VID_FPS, avc: {format: "annexb"} });
+
+  const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=W; overlayCanvas.height=H; const overlayCtx=overlayCanvas.getContext('2d');
+
+  let startTs = performance.now();
+  let lastKeySecond = -1;
+
+  const draw = () => {
+    if(!isRecordingVideo) return;
+    overlayCtx.drawImage(vid, 0, 0, W, H);
+    const kmObj=nearestKM(lastPos?.lat||0,lastPos?.lon||0);
+    const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+    const ids=nearestN(lastPos?.lat||0,lastPos?.lon||0,5);
+    const ts=new Date().toLocaleString();
+    const gpsLine = overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
+    stampOverlay(overlayCtx, W, H, overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
+
+    const elapsed = performance.now() - startTs;
+    const timestampUS = Math.round(elapsed * 1000);
+    const vf = new VideoFrame(overlayCanvas, { timestamp: timestampUS });
+    const sec = Math.floor(elapsed/1000); const forceKey = (sec !== lastKeySecond); if(forceKey) lastKeySecond = sec;
+    wc.encoder.encode(vf, { keyFrame: forceKey }); vf.close();
+
+    rafId = requestAnimationFrame(draw);
+  };
+
+  isRecordingVideo = true; updateChip();
+  btnRecStop.style.display='inline-block'; // mostra STOP
+  draw();
+
+  return {
+    async stop(){
+      if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
+      try{ await wc.encoder.flush(); wc.encoder.close(); }catch{}
+      try{ wc.muxer.finalize(); }catch{}
       await closeVideoWriter();
-      updateChip();
-      stopKmUpdate();
-    };
-
-    mediaRecorder.start(1000);
-    isRecordingVideo=true; updateChip();
-
-    const drawLoop=()=>{
-      if(!isRecordingVideo) return;
-      overlayCtx.drawImage(vid, 0, 0, overlayCanvas.width, overlayCanvas.height);
-      const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
-      const ids=nearestN(lastPos.lat,lastPos.lon,5); const ts=new Date().toLocaleString();
-      const gpsLine = overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
-      stampOverlay(overlayCtx, overlayCanvas.width, overlayCanvas.height,
-        overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
-      requestAnimationFrame(drawLoop);
-    };
-    drawLoop(); startKmUpdate();
-  }catch(e){ console.error('Erro ao iniciar gravação:', e); alert('Erro ao iniciar gravação: '+e.message); isRecordingVideo=false; updateChip(); }
+      wc = { encoder:null, muxer:null, trackId:null };
+      isRecordingVideo = false; updateChip();
+      btnRecStop.style.display='none';
+    }
+  };
 }
-function stopVideoRecording(){
-  if(!isRecordingVideo || !mediaRecorder) return;
-  isRecordingVideo=false;
-  try{ mediaRecorder.stop(); }catch{}
+
+/* Safari MP4 nativo */
+async function startVideoRecordingSafariMP4(){
+  const videoStream=vid.srcObject; if(!videoStream) throw new Error('Câmera não disponível');
+  const W = (vid.videoWidth||1280), H = (vid.videoHeight||720);
+
+  if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta não selecionada'); }
+  const h = await rootDirHandle.getFileHandle(`VIDEO_${new Date().toISOString().replace(/[:.]/g,'-')}.mp4`, {create:true});
+  videoWritable = await h.createWritable();
+  videoBytesWritten = 0; hudRight.style.display='inline-flex'; hudVideoSize.textContent = bytesToMB(0);
+
+  const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=W; overlayCanvas.height=H; const overlayCtx=overlayCanvas.getContext('2d');
+  const canvasStream=overlayCanvas.captureStream(VID_FPS);
+  const audioTracks=videoStream.getAudioTracks(); if(audioTracks.length>0){ canvasStream.addTrack(audioTracks[0]); }
+  const mime = 'video/mp4;codecs=h264,mp4a.40.2';
+  if(!MediaRecorder.isTypeSupported(mime)){ throw new Error('MediaRecorder MP4 não suportado'); }
+  mediaRecorder=new MediaRecorder(canvasStream, { mimeType:mime, videoBitsPerSecond: VID_BITRATE });
+
+  mediaRecorder.ondataavailable = async (e) => {
+    if(e.data && e.data.size && videoWritable){
+      await videoWritable.write(e.data);
+      videoBytesWritten += e.data.size; hudVideoSize.textContent = bytesToMB(videoBytesWritten);
+    }
+  };
+  mediaRecorder.onstop = async ()=>{ await closeVideoWriter(); isRecordingVideo=false; updateChip(); btnRecStop.style.display='none'; };
+
+  mediaRecorder.start(1000);
+  isRecordingVideo=true; updateChip(); btnRecStop.style.display='inline-block';
+
+  const drawLoop=()=>{ if(!isRecordingVideo) return;
+    overlayCtx.drawImage(vid, 0, 0, W, H);
+    const kmObj=nearestKM(lastPos?.lat||0,lastPos?.lon||0); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+    const ids=nearestN(lastPos?.lat||0,lastPos?.lon||0,5); const ts=new Date().toLocaleString();
+    const gpsLine = overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
+    stampOverlay(overlayCtx, W, H, overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
+    requestAnimationFrame(drawLoop);
+  };
+  drawLoop();
+
+  return { async stop(){ try{ mediaRecorder.stop(); }catch{} } };
+}
+
+/* Fallback WebM */
+async function startVideoRecordingWebM(){
+  const videoStream=vid.srcObject; if(!videoStream) throw new Error('Câmera não disponível');
+  const W = (vid.videoWidth||1280), H = (vid.videoHeight||720);
+
+  if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta não selecionada'); }
+  const h = await rootDirHandle.getFileHandle(`VIDEO_${new Date().toISOString().replace(/[:.]/g,'-')}.webm`, {create:true});
+  videoWritable = await h.createWritable();
+  videoBytesWritten = 0; hudRight.style.display='inline-flex'; hudVideoSize.textContent = bytesToMB(0);
+
+  const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=W; overlayCanvas.height=H; const overlayCtx=overlayCanvas.getContext('2d');
+  const canvasStream=overlayCanvas.captureStream(VID_FPS);
+  const audioTracks=videoStream.getAudioTracks(); if(audioTracks.length>0){ canvasStream.addTrack(audioTracks[0]); }
+  const options={ mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: VID_BITRATE };
+  const mimeOk = MediaRecorder.isTypeSupported(options.mimeType) ? options.mimeType : 'video/webm';
+  mediaRecorder=new MediaRecorder(canvasStream, { ...options, mimeType:mimeOk });
+
+  mediaRecorder.ondataavailable = async (e) => {
+    if(e.data && e.data.size && videoWritable){
+      await videoWritable.write(e.data);
+      videoBytesWritten += e.data.size; hudVideoSize.textContent = bytesToMB(videoBytesWritten);
+    }
+  };
+  mediaRecorder.onstop = async ()=>{ await closeVideoWriter(); isRecordingVideo=false; updateChip(); btnRecStop.style.display='none'; };
+
+  mediaRecorder.start(1000);
+  isRecordingVideo=true; updateChip(); btnRecStop.style.display='inline-block';
+
+  const drawLoop=()=>{ if(!isRecordingVideo) return;
+    overlayCtx.drawImage(vid, 0, 0, W, H);
+    const kmObj=nearestKM(lastPos?.lat||0,lastPos?.lon||0); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+    const ids=nearestN(lastPos?.lat||0,lastPos?.lon||0,5); const ts=new Date().toLocaleString();
+    const gpsLine = overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
+    stampOverlay(overlayCtx, W, H, overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
+    requestAnimationFrame(drawLoop);
+  };
+  drawLoop();
+
+  return { async stop(){ try{ mediaRecorder.stop(); }catch{} } };
+}
+
+/* Orquestrador start/stop */
+let activeStopper = null;
+
+async function startVideoRecording(){
+  if(isRecordingVideo) return;
+  if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
+
+  // Safari: MP4 nativo
+  if('MediaRecorder' in window && MediaRecorder.isTypeSupported?.('video/mp4;codecs=h264')){
+    try{ activeStopper = await startVideoRecordingSafariMP4(); return; }catch(e){ console.warn('Safari MP4 falhou:', e); }
+  }
+  // Chrome/Edge: MP4 via WebCodecs
+  try{ activeStopper = await startVideoRecordingMP4(); return; }catch(e){ console.warn('WebCodecs+MP4 falhou:', e); }
+  // Fallback: WebM
+  try{ activeStopper = await startVideoRecordingWebM(); }catch(e){ console.error('WebM falhou:', e); alert('Não foi possível iniciar gravação neste dispositivo.'); }
+}
+async function stopVideoRecording(){
+  if(!isRecordingVideo || !activeStopper) return;
+  isRecordingVideo = false;
+  try{ await activeStopper.stop(); }catch(e){ console.warn('stop error:', e); }
+  activeStopper = null;
   updateChip();
 }
+
 btnVideoRecord.addEventListener('click', async ()=>{
   if(isRecordingVideo){
-    btnVideoRecord.disabled=true; stopVideoRecording(); setTimeout(()=>{ btnVideoRecord.disabled=false; }, 500);
+    await stopVideoRecording();
   } else {
-    btnVideoRecord.disabled=true; try{ await startVideoRecording(); }catch(e){ console.error('Erro na gravação:', e); } btnVideoRecord.disabled=false;
+    await startVideoRecording();
   }
 });
+btnRecStop.addEventListener('click', async ()=>{ if(isRecordingVideo) await stopVideoRecording(); });
 </script>
 
 <script>
 /* ===== Interações ===== */
-wrap.addEventListener('click', ()=>{ /* Toque no vídeo: captura única se livre */
-  if(isRecordingVideo){ /* ignore */ }
-  else if(isAutoCapturing){ /* ignore */ }
-  else if(csvReady && camReady && gpsReady){ captureOnce(); }
+wrap.addEventListener('click', ()=>{ /* Toque no vídeo: evita distrair durante direção */
+  // Intencionalmente desabilitado: manter foco na direção.
+  // Se quiser capturar por toque, descomente:
+  // if(!isRecordingVideo && !isAutoCapturing && csvReady && camReady && gpsReady){ captureOnce(); }
 });
 btnSelectFolder.addEventListener('click', async ()=>{ await selectOutputFolder(); });
 
@@ -897,8 +1036,7 @@ btnFinalizePdf.addEventListener('click', async ()=>{
   btnFinalizePdf.disabled = true;
   try{
     await pdfWriter.finalize();
-    stPdf.textContent = 'PDF: FECHADO';
-    stPdf.className = 'st warn';
+    stPdf.textContent = 'PDF: FECHADO'; stPdf.className = 'st warn';
     pdfWriter = null;
     alert('PDF finalizado com sucesso. Para iniciar um novo, selecione a pasta novamente.');
   }catch(e){
@@ -909,19 +1047,11 @@ btnFinalizePdf.addEventListener('click', async ()=>{
 </script>
 
 <script>
-/* ===== Opções do carimbo (sem UI extra) ===== */
-overlayOpts.showKM  = (localStorage.getItem('opt_km')  ?? '1')==='1';
-overlayOpts.showTs  = (localStorage.getItem('opt_ts')  ?? '1')==='1';
-overlayOpts.showIds = (localStorage.getItem('opt_ids') ?? '1')==='1';
-overlayOpts.showGps = (localStorage.getItem('opt_gps') ?? '0')==='1';
-</script>
-
-<script>
 /* ===== Boot ===== */
-function updateStatusBar(){ /* redefinida acima */ }
+function updateStatusBar(){ /* já definida acima */ }
+function ready(){ return csvReady && camReady && gpsReady; }
 
 async function boot(){
-  // CSVs + câmeras
   await Promise.all([loadCSVs(), enumerateCameras()]);
   await startCamera(deviceIndex);
   camReady = !!vid.videoWidth;
