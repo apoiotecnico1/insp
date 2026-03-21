@@ -22,7 +22,7 @@
   #app{ position:fixed; inset:0; display:grid; grid-template-rows:1fr; }
   #camWrap{
     position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate;
-    touch-action:none; /* habilita pinch-zoom custom */
+    touch-action:none; /* pinch-zoom custom */
   }
   #vid{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000 }
 
@@ -63,16 +63,19 @@
   }
   .btn{
     pointer-events:auto;
-    height:var(--btnH); min-width:240px; padding:0 22px;
+    height:var(--btnH); min-width:260px; padding:10px 22px;
     border-radius:14px; border:2px solid #1f2b56;
     background:linear-gradient(180deg,#0f1a45,#0c1436);
-    color:#eaf2ff; font-weight:900; font-size:1.12rem; letter-spacing:.02em;
-    display:flex; align-items:center; justify-content:center; gap:12px; cursor:pointer;
+    color:#eaf2ff; font-weight:900; font-size:1.06rem; letter-spacing:.02em;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer;
+    text-align:center; white-space:normal; line-height:1.15;
     box-shadow:0 14px 36px rgba(0,0,0,.45);
   }
   .btn:active{ transform:translateY(1px) }
   .btn.auto-on{ background:linear-gradient(180deg,#ff8f49,#e06a2d); color:#1b0b02; border-color:#c45722 }
   .btn.primary{ background:linear-gradient(180deg,#31e27b,#22c55e); color:#062a1a; border-color:#1fb85b }
+  .btn .main{ font-size:1.02rem; font-weight:900 }
+  .btn .sub{ font-size:.9rem; font-weight:800; opacity:.95 }
 
   /* Gate pasta */
   #folderGate{
@@ -126,9 +129,11 @@
       <div id="btnGear"  class="chipBtn" title="Opções do KM">⚙️ Opções</div>
     </div>
 
-    <!-- HUD base: único botão -->
+    <!-- HUD base: botão com status ao vivo -->
     <div id="hudBottom">
-      <button id="btnAuto" class="btn primary">🎬 INICIAR AUTO</button>
+      <button id="btnAuto" class="btn primary">
+        <span class="main">🎬 INICIAR AUTO</span>
+      </button>
     </div>
   </div>
 </div>
@@ -174,15 +179,18 @@
 let rootDirHandle=null;  // pasta destino
 let csvKMReady=false, camReady=false, gpsReady=false;
 let lastPos=null;
-let isAuto=false, autoTimer=null, writing=false, queue=Promise.resolve();
 
-/* Wake Lock (mantém tela ligada) */
+let isAuto=false, autoTimer=null, writing=false, queue=Promise.resolve();
 let wakeLock=null, keepAliveTimer=null;
 
 /* Zoom (lente/virtual) */
 let camTrack=null, camCap=null; let zoomSupported=false, zoomMin=1, zoomMax=1, zoomVal=1, virtualZoom=1;
 
-/* DOM */
+/* Contadores/estado do AUTO para o botão */
+let sessionPhotoCount=0;
+let sessionStartTs=0;
+let autoUiTimer=null;
+
 const camWrap=document.getElementById('camWrap'), vid=document.getElementById('vid');
 const kmHud=document.getElementById('kmHud'), kmLabel=document.getElementById('kmLabel'), kmText=document.getElementById('kmText');
 const btnAuto=document.getElementById('btnAuto'), btnShare=document.getElementById('btnShare');
@@ -191,7 +199,7 @@ const toast=document.getElementById('toast');
 const btnGear=document.getElementById('btnGear'), opts=document.getElementById('opts'), btnCloseOpts=document.getElementById('btnCloseOpts');
 const selKmFmt=document.getElementById('selKmFmt'), selKmPos=document.getElementById('selKmPos');
 
-/* CONFIG BÁSICA (salvo no aparelho) */
+/* CONFIG BÁSICA (persistidas) */
 const state={
   autoMs: Number(localStorage.getItem('auto_ms')||'800'),
   jpgQ  : Number(localStorage.getItem('jpg_q')||'92'),
@@ -212,7 +220,7 @@ async function requestWakeLock(){
   }catch(e){ console.warn('WakeLock:',e); }
 }
 async function releaseWakeLock(){ try{ await wakeLock?.release?.(); }catch{} finally{ wakeLock=null; } if(keepAliveTimer){ clearInterval(keepAliveTimer); keepAliveTimer=null; } }
-document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&isAuto){ requestWakeLock(); }});
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&isAuto){ requestWakeLock(); updateAutoButtonUI(); }});
 window.addEventListener('pagehide',releaseWakeLock); window.addEventListener('beforeunload',releaseWakeLock);
 
 /* =================== UI/UTILS =================== */
@@ -222,6 +230,8 @@ function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
 function stampStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours())}-${String(d.getMinutes())}-${String(d.getSeconds())}`; }
 function fmtKMMM(val){ const K=Math.floor(val); let m=Math.round((val-K)*1000); if(m>=1000){m-=1000;} return {K, mmm:String(m).padStart(3,'0')}; }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function fmtElapsed(ms){ const s=Math.floor(ms/1000); const mm=Math.floor(s/60); const ss=s%60; return `${pad2(mm)}:${pad2(ss)}`; }
 
 /* =================== Pasta/Permissão =================== */
 async function verifyPermission(handle,rw){ const opt={mode:rw?'readwrite':'read'}; const q=await handle.queryPermission?.(opt); if(q==='granted') return true; const r=await handle.requestPermission?.(opt); return r==='granted'; }
@@ -229,6 +239,7 @@ async function pickFolder(){ try{
   rootDirHandle = await window.showDirectoryPicker({mode:'readwrite'});
   const ok=await verifyPermission(rootDirHandle,true); if(!ok){ showToast('Permissão negada'); return; }
   folderGate.style.display='none'; showToast('Pasta OK');
+  updateAutoButtonUI(); // já mostra a pasta no botão se estiver rodando
 }catch(e){ showToast('Seleção cancelada'); } }
 btnPickFolder.addEventListener('click', pickFolder);
 
@@ -265,20 +276,14 @@ function nearestKM(lat,lon){
   const c=gridCands(kmGrid,lat,lon,140); if(!c.length) return null;
   let best=null,bd=Infinity; for(const p of c){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
 }
-
-/* =================== KM HUD (tela) =================== */
-function applyKmHud(){
-  // posição
-  kmHud.className = ''; kmHud.classList.add(state.kmPos);
-}
 function updateKmHud(){
   if(!csvKMReady || !lastPos){ kmText.textContent='—'; return; }
   const n=nearestKM(lastPos.lat,lastPos.lon); if(!n){ kmText.textContent='—'; return; }
   const {K, mmm}=fmtKMMM(n.km);
-  kmLabel.textContent = 'KM';
-  if(state.kmFmt==='label') kmText.textContent = '';               // só “KM”
-  else if(state.kmFmt==='plus') kmText.textContent = `${K}+${mmm}`; // KM K+mmm
-  else kmText.textContent = `${K},${mmm}`;                          // KM K,mmm
+  kmLabel.textContent='KM';
+  if(state.kmFmt==='label') kmText.textContent='';
+  else if(state.kmFmt==='plus') kmText.textContent=`${K}+${mmm}`;
+  else kmText.textContent=`${K},${mmm}`;
 }
 setInterval(updateKmHud, 600);
 
@@ -291,8 +296,7 @@ async function startCamera(){
     if(camCap && camCap.zoom){ zoomSupported=true; zoomMin=camCap.zoom.min??1; zoomMax=camCap.zoom.max??1; zoomVal=camTrack.getSettings?.().zoom ?? zoomMin; } else { zoomSupported=false; virtualZoom=1; }
   }catch(e){ camReady=false; showToast('Falha na câmera'); }
 }
-
-/* Pinch-to-zoom (nativo se suportado; senão virtual) */
+/* Pinch-to-zoom */
 const pointers=new Map(); let startDist=0, startZoom=1;
 function distance(a,b){ const dx=b.x-a.x, dy=b.y-a.y; return Math.hypot(dx,dy); }
 camWrap.addEventListener('pointerdown',(e)=>{ camWrap.setPointerCapture?.(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); });
@@ -300,15 +304,15 @@ camWrap.addEventListener('pointermove',async(e)=>{
   if(!pointers.has(e.pointerId)) return; pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pointers.size===2){
     const [p1,p2]=[...pointers.values()]; const dist=distance(p1,p2);
-    if(!startDist){ startDist=dist; startZoom = zoomSupported? zoomVal : virtualZoom; return; }
-    const target = Math.max(zoomMin, Math.min(zoomMax||6, startZoom * (dist/startDist)));
+    if(!startDist){ startDist=dist; startZoom= zoomSupported? zoomVal : virtualZoom; return; }
+    const target=Math.max(zoomMin, Math.min(zoomMax||6, startZoom*(dist/startDist)));
     if(zoomSupported){ try{ await camTrack.applyConstraints({advanced:[{zoom:target}]}); zoomVal=target; }catch{} }
     else { virtualZoom=target; }
   }
 });
 ['pointerup','pointercancel','pointerleave'].forEach(ev=>camWrap.addEventListener(ev,(e)=>{ pointers.delete(e.pointerId); if(pointers.size<2) startDist=0; }));
 
-/* =================== Carimbo na FOTO (simples e alinhado) =================== */
+/* =================== Carimbo simples na FOTO =================== */
 function drawStamp(ctx,w,h,kmStr){
   const bandH=Math.max(72,Math.round(h*0.10));
   ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(0,h-bandH,w,bandH);
@@ -325,7 +329,6 @@ async function frameToJpegBlob(){
   const can=document.createElement('canvas'); const ctx=can.getContext('2d',{alpha:false});
   can.width=w; can.height=h;
 
-  // aplica zoom virtual se necessário
   if(zoomSupported || virtualZoom<=1.001){
     ctx.drawImage(vid,0,0,w,h);
   }else{
@@ -335,14 +338,13 @@ async function frameToJpegBlob(){
     ctx.drawImage(vid,sx,sy,srcW,srcH,0,0,w,h);
   }
 
-  // string do KM para FOTO (sempre KM + valor)
+  // KM para a foto
   let kmStr='KM —';
   if(csvKMReady && lastPos){
     const n=nearestKM(lastPos.lat,lastPos.lon);
     if(n){
       const {K, mmm}=fmtKMMM(n.km);
-      if(state.kmFmt==='plus') kmStr=`KM ${K}+${mmm}`;
-      else kmStr=`KM ${K},${mmm}`; // default
+      kmStr = (state.kmFmt==='plus') ? `KM ${K}+${mmm}` : `KM ${K},${mmm}`;
     }
   }
   drawStamp(ctx,w,h,kmStr);
@@ -350,6 +352,7 @@ async function frameToJpegBlob(){
   const q=Math.max(0.7, Math.min(1, state.jpgQ/100));
   const blob=await new Promise(res=>can.toBlob(res,'image/jpeg',q));
   if(blob && blob.size>0) return blob;
+
   // Fallback: dataURL → Blob
   const dataURL=can.toDataURL('image/jpeg',q);
   const bin=atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
@@ -367,7 +370,7 @@ async function savePhotoOnce(){
 
     const blob=await frameToJpegBlob();
 
-    // Nome do arquivo: FOTO_km_K_mmm_YYYY-MM-DD_HH-MM-SS.jpg
+    // Nome: FOTO_km_K_mmm_YYYY-MM-DD_HH-MM-SS.jpg
     let kPart='K', mPart='000';
     if(csvKMReady && lastPos){
       const n=nearestKM(lastPos.lat,lastPos.lon);
@@ -377,7 +380,7 @@ async function savePhotoOnce(){
 
     const fh=await rootDirHandle.getFileHandle(name,{create:true});
     const w=await fh.createWritable();
-    await w.write(blob);  // ← mesmo esquema do relatório
+    await w.write(blob);  // ← fluxo estável (igual relatório)
     await w.close();
 
     // checagem
@@ -386,24 +389,59 @@ async function savePhotoOnce(){
       const blob2=await frameToJpegBlob();
       const w2=await fh.createWritable(); await w2.write(blob2); await w2.close();
     }
+
+    // contador
+    sessionPhotoCount++;
+    updateAutoButtonUI(); // atualiza contagem visível no botão
   }catch(err){ console.error('Salvar foto erro:',err); showToast('Falha ao salvar foto'); }
   finally{ writing=false; }
+}
+
+/* =================== Botão AUTO: status ao vivo =================== */
+function updateAutoButtonUI(){
+  if(!isAuto){
+    btnAuto.classList.remove('auto-on'); btnAuto.classList.add('primary');
+    btnAuto.innerHTML = `<span class="main">🎬 INICIAR AUTO</span>`;
+    if(autoUiTimer){ clearInterval(autoUiTimer); autoUiTimer=null; }
+    return;
+  }
+  btnAuto.classList.add('auto-on'); btnAuto.classList.remove('primary');
+
+  const folderName = rootDirHandle?.name || '—';
+  const elapsed = sessionStartTs ? fmtElapsed(Date.now() - sessionStartTs) : '00:00';
+  btnAuto.innerHTML = `
+    <span class="main">⏹ Captura automática em andamento</span>
+    <span class="sub">📁 Pasta: <b>${folderName}</b></span>
+    <span class="sub">⏱️ Intervalo: <b>${state.autoMs}</b> ms • ⏳ Tempo: <b>${elapsed}</b></span>
+    <span class="sub">📷 Fotos: <b>${sessionPhotoCount}</b></span>
+  `;
 }
 
 /* =================== AUTO + Wake Lock =================== */
 function startAuto(){
   if(isAuto) return;
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady)){ showToast('Aguarde Pasta/Câmera/GPS/CSV'); return; }
-  isAuto=true; btnAuto.textContent='⏹ PARAR AUTO'; btnAuto.classList.add('auto-on'); btnAuto.classList.remove('primary');
+  isAuto=true; sessionPhotoCount=0; sessionStartTs=Date.now();
   requestWakeLock();
+
+  // inicia UI e cronômetro de tempo no botão
+  updateAutoButtonUI();
+  if(autoUiTimer) clearInterval(autoUiTimer);
+  autoUiTimer = setInterval(updateAutoButtonUI, 1000);
+
+  // primeira captura + loop
   queue=queue.then(()=>savePhotoOnce()).catch(()=>{});
   autoTimer=setInterval(()=>{ queue=queue.then(()=>savePhotoOnce()).catch(()=>{}); }, state.autoMs);
   showToast('Auto ON');
 }
 function stopAuto(){
   if(!isAuto) return;
-  isAuto=false; btnAuto.textContent='🎬 INICIAR AUTO'; btnAuto.classList.remove('auto-on'); btnAuto.classList.add('primary');
-  clearInterval(autoTimer); autoTimer=null; releaseWakeLock(); showToast('Auto OFF');
+  isAuto=false;
+  clearInterval(autoTimer); autoTimer=null;
+  clearInterval(autoUiTimer); autoUiTimer=null;
+  releaseWakeLock();
+  updateAutoButtonUI();
+  showToast('Auto OFF');
 }
 btnAuto.addEventListener('click', ()=>{ if(isAuto) stopAuto(); else startAuto(); });
 
@@ -426,12 +464,9 @@ btnShare.addEventListener('click', ()=>{ shareInstant().catch(()=>{}) });
 
 /* =================== Opções do KM (somente visual de tela) =================== */
 function applyKmOptions(){
-  // formato
-  localStorage.setItem('km_fmt', state.kmFmt);
-  // posição
   kmHud.className=''; kmHud.classList.add(state.kmPos);
+  localStorage.setItem('km_fmt', state.kmFmt);
   localStorage.setItem('km_pos', state.kmPos);
-  // valores atuais
   selKmFmt.value=state.kmFmt; selKmPos.value=state.kmPos;
   updateKmHud();
 }
@@ -454,11 +489,12 @@ function startGPS(){
 
 /* =================== BOOT =================== */
 async function boot(){
-  applyKmOptions(); // carrega posição/formato salvos
+  applyKmOptions(); // aplica formato/posição salvos
   await startCamera();
   startGPS();
   await loadKM();
   updateKmHud();
+  updateAutoButtonUI();
 }
 boot();
 </script>
