@@ -7,7 +7,7 @@
 <title>Inspeção – Captura Direta (Foto)</title>
 <style>
   /* ===========================================================
-     ESTILO GERAL (UI mínima, alto contraste, uso em campo)
+     UI mínima e robusta p/ uso em campo (alto contraste)
      =========================================================== */
   :root{
     --panelA:rgba(8,14,30,.82); --panelB:rgba(6,10,24,.78);
@@ -24,12 +24,11 @@
   #app{ position:fixed; inset:0; display:grid; grid-template-rows:1fr; }
   #camWrap{
     position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate;
-    /* Impede o zoom da página e habilita pinch-zoom custom */
-    touch-action:none;
+    touch-action:none; /* pinch-zoom custom sem zoom da página */
   }
   #vid{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000 }
 
-  /* HUD topo: NX + Opções */
+  /* HUD topo: NX (link) + Opções (sem compartilhar exposto) */
   #hudTop{
     position:absolute; top:10px; left:0; right:0; display:flex; justify-content:space-between; z-index:4;
     padding:0 10px; pointer-events:none;
@@ -42,12 +41,11 @@
   }
   .btnRow{ display:flex; gap:8px; }
 
-  /* KM HUD em tempo real (pequeno, destacado, sem “desenhos”) */
+  /* KM HUD (pequeno, destacado) */
   #kmHud{ position:absolute; z-index:5; pointer-events:none; }
   .kmBadge{
     display:inline-flex; align-items:center; gap:8px;
-    background:var(--badgeBg);
-    border:1px solid var(--badgeBr);
+    background:var(--badgeBg); border:1px solid var(--badgeBr);
     border-radius:12px; padding:6px 10px; font-weight:900; font-size:1rem;
     box-shadow:0 12px 30px rgba(0,0,0,.45);
   }
@@ -61,19 +59,14 @@
   .pos-mid-left{ top:50%; left:10px; transform:translateY(-50%); }
   .pos-mid-right{ top:50%; right:10px; transform:translateY(-50%); }
 
-  /* Botão AUTO com status ao vivo embutido */
-  #hudBottom{
-    position:absolute; bottom:10px; left:0; right:0; display:flex; justify-content:center; z-index:3;
-  }
+  /* Botão AUTO com status embutido */
+  #hudBottom{ position:absolute; bottom:10px; left:0; right:0; display:flex; justify-content:center; z-index:3; }
   .btn{
-    pointer-events:auto;
-    height:var(--btnH); min-width:260px; padding:10px 22px;
+    pointer-events:auto; height:var(--btnH); min-width:260px; padding:10px 22px;
     border-radius:14px; border:2px solid #1f2b56;
-    background:linear-gradient(180deg,#0f1a45,#0c1436);
-    color:#eaf2ff; font-weight:900; font-size:1.06rem; letter-spacing:.02em;
+    background:linear-gradient(180deg,#0f1a45,#0c1436); color:#eaf2ff; font-weight:900; font-size:1.06rem;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer;
-    text-align:center; white-space:normal; line-height:1.15;
-    box-shadow:0 14px 36px rgba(0,0,0,.45);
+    text-align:center; white-space:normal; line-height:1.15; box-shadow:0 14px 36px rgba(0,0,0,.45);
   }
   .btn:active{ transform:translateY(1px) }
   .btn.auto-on{ background:linear-gradient(180deg,#ff8f49,#e06a2d); color:#1b0b02; border-color:#c45722 }
@@ -81,7 +74,7 @@
   .btn .main{ font-size:1.02rem; font-weight:900 }
   .btn .sub{ font-size:.9rem; font-weight:800; opacity:.95 }
 
-  /* Gate de pasta – minimalista */
+  /* Gate de pasta – minimalista (somente o essencial) */
   #folderGate{
     position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center;
     background:#060a12;
@@ -96,7 +89,7 @@
   .gateCard p{ margin:0 0 14px; opacity:.95; font-weight:700 }
   .gateCard .btn{ width:100%; height:56px }
 
-  /* Toast (avisos rápidos) */
+  /* Toast (avisos) */
   #toast{
     position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:none; z-index:20;
     background:linear-gradient(180deg, rgba(0,0,0,.78), rgba(0,0,0,.64));
@@ -106,19 +99,16 @@
   /* Painel Opções (expandido) */
   #opts{
     position:absolute; right:10px; top:58px; z-index:6; display:none;
-    background:linear-gradient(180deg,var(--panelA),var(--panelB));
-    border:1px solid rgba(255,255,255,.16); border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.45);
-    padding:12px; min-width:340px; pointer-events:auto;
+    background:linear-gradient(180deg,var(--panelA),var(--panelB)); border:1px solid rgba(255,255,255,.16);
+    border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.45); padding:12px; min-width:340px; pointer-events:auto;
   }
   #opts h4{ margin:0 0 8px; font-size:1rem }
   .row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin:10px 0; flex-wrap:wrap }
   .row select, .row button, .row input[type="range"]{
     border-radius:10px; border:1px solid rgba(255,255,255,.16); background:#0c1436; color:#eaf2ff; font-weight:800;
   }
-  .row select{ padding:8px 10px; max-width:100% }
-  .row button{ padding:8px 10px; cursor:pointer }
-  .row input[type="range"]{ width:160px }
-  .dim{ font-size:.86rem; opacity:.85 }
+  .row select{ padding:8px 10px; max-width:100% } .row button{ padding:8px 10px; cursor:pointer }
+  .row input[type="range"]{ width:160px } .dim{ font-size:.86rem; opacity:.85 } .btnRow{ display:flex; gap:8px }
   .grow{ flex:1 1 auto; min-width:140px }
 </style>
 </head>
@@ -155,7 +145,6 @@
 <div id="opts">
   <h4>Opções</h4>
 
-  <!-- Câmera: seletor + ciclo -->
   <div class="row">
     <span>Câmera</span>
     <select id="selCamera" class="grow"></select>
@@ -221,7 +210,7 @@
     </select>
   </div>
 
-  <!-- Relatório fotográfico (discreto) -->
+  <!-- Relatório (PDF) da sessão -->
   <div class="row" style="border-top:1px dashed rgba(255,255,255,.16);padding-top:8px;margin-top:8px">
     <span>Relatório (PDF)</span>
     <div class="btnRow">
@@ -248,47 +237,33 @@
 
 <script>
 /* =====================================================================
-   ARQUITETURA (auto-explicativa p/ programadores)
+   ARQUITETURA (explicação p/ programadores)
    ---------------------------------------------------------------------
-   - Pede uma pasta (File System Access) e salva cada FOTO diretamente.
-   - Câmera com troca por deviceId (seletor + botão), pinch-zoom de lente
-     (quando suportado) ou zoom virtual (recorte) que sai na captura.
-   - HUD mostra KM do CSV em tempo real (3 formatos/posições).
-   - Botão AUTO: liga/desliga captura automática; exibe status no texto.
-   - Wake Lock mantém a tela ligada no AUTO.
-   - Presets aplicam ajustes leves (via constraints e/ou filtro canvas).
-   - Carimbo da FOTO: linha 1 = KM; linha 2 = Data/Hora (sempre ativo).
-   - Relatório fotográfico (PDF): junta todas as fotos da sessão atual,
-     1 por página (A4), com legenda KM + Data/Hora; salva na pasta e
-     permite compartilhar via Web Share.
+   SALVAMENTO RESTAURADO (como nas versões que funcionavam):
+   -> canvas.toBlob('image/jpeg', qualidade)
+      → fileHandle.createWritable().write(blob) → close()
+   -> Fallback APENAS se toBlob retornar null: toDataURL → Blob.
+   -> Sem truncate(0), sem escrever Uint8Array, sem regravações.
+   -> AUTO com trava 'writing': se estiver salvando, o tick é ignorado.
 ===================================================================== */
 
-/* =================== ESTADO/REFS GERAIS =================== */
-let rootDirHandle=null;           // Pasta de destino
-let csvKMReady=false, camReady=false, gpsReady=false;
-let lastPos=null;
-
-let isAuto=false, autoTimer=null, writing=false, queue=Promise.resolve();
+/* ===== Estado base ===== */
+let rootDirHandle=null; let csvKMReady=false, camReady=false, gpsReady=false; let lastPos=null;
+let isAuto=false, autoTimer=null; let writing=false; /* <- TRAVA única, simples */
 let wakeLock=null, keepAliveTimer=null;
 
-/* Câmeras/zoom/torch */
-let deviceList=[], currentDeviceId=null;
-let camStream=null, camTrack=null, camCap=null;
-let zoomSupported=false, zoomMin=1, zoomMax=1, zoomVal=1, virtualZoom=1;
-let torchOn=false;
+/* Câmera/zoom/torch */
+let deviceList=[], currentDeviceId=null; let camStream=null, camTrack=null, camCap=null;
+let zoomSupported=false, zoomMin=1, zoomMax=1, zoomVal=1, virtualZoom=1; let torchOn=false;
 
-/* Preset de cena (filtro) */
+/* Preset (filtro) */
 let captureFilter='none';
 
-/* Sessão (status do botão e controle de arquivos da sessão) */
+/* Sessão e PDF */
 let sessionPhotoCount=0, sessionStartTs=0, autoUiTimer=null;
-/* Guarda fotos da sessão atual para o PDF: {handle, name, kmStr, tsStr} */
-let sessionPhotos=[];
+let sessionPhotos=[]; let latestPdfHandle=null, latestPdfName='';
 
-/* Último PDF gerado */
-let latestPdfHandle=null, latestPdfName='';
-
-/* DOM refs */
+/* DOM */
 const camWrap=document.getElementById('camWrap'), vid=document.getElementById('vid');
 const kmHud=document.getElementById('kmHud'), kmLabel=document.getElementById('kmLabel'), kmText=document.getElementById('kmText');
 const btnAuto=document.getElementById('btnAuto'), btnGear=document.getElementById('btnGear'), opts=document.getElementById('opts'), btnCloseOpts=document.getElementById('btnCloseOpts');
@@ -299,64 +274,38 @@ const rngInterval=document.getElementById('rngInterval'), lblInterval=document.g
 const rngJpgQ=document.getElementById('rngJpgQ'), lblQ=document.getElementById('lblQ');
 const selMaxDim=document.getElementById('selMaxDim'), lblDim=document.getElementById('lblDim');
 const selKmFmt=document.getElementById('selKmFmt'), selKmPos=document.getElementById('selKmPos');
-const toast=document.getElementById('toast');
-const btnNX=document.getElementById('btnNX');
+const toast=document.getElementById('toast'); const btnNX=document.getElementById('btnNX');
 const btnGenPdf=document.getElementById('btnGenPdf'), btnSharePdf=document.getElementById('btnSharePdf');
 
-/* =================== CONFIG PERSISTIDA (localStorage) =================== */
+/* ===== Config persistida ===== */
 const state={
   autoMs:Number(localStorage.getItem('auto_ms')||'800'),
   jpgQ:Number(localStorage.getItem('jpg_q')||'92'),
   maxDim:Number(localStorage.getItem('max_dim')||'1920'),
-  kmFmt:localStorage.getItem('km_fmt')||'comma',      // 'label' | 'comma' | 'plus'
+  kmFmt:localStorage.getItem('km_fmt')||'comma',
   kmPos:localStorage.getItem('km_pos')||'pos-top-center',
   preset:localStorage.getItem('scene_preset')||'padrao'
 };
 
-/* =================== UTILS =================== */
+/* ===== Utils ===== */
 function showToast(msg,ms=1500){ toast.textContent=msg; toast.style.display='block'; clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.style.display='none',ms); }
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
-
-/* Data/Hora BR p/ NOME de arquivo: DD-MM-AAAA_HH-mm-ss */
-function stampStrBR(){
-  const d=new Date();
-  const DD=String(d.getDate()).padStart(2,'0');
-  const MM=String(d.getMonth()+1).padStart(2,'0');
-  const AAAA=d.getFullYear();
-  const HH=String(d.getHours()).padStart(2,'0');
-  const m =String(d.getMinutes()).padStart(2,'0');
-  const s =String(d.getSeconds()).padStart(2,'0');
-  return `${DD}-${MM}-${AAAA}_${HH}-${m}-${s}`;
-}
-
-/* Exibição “tempo decorrido” (mm:ss) */
-function pad2(n){ return String(n).padStart(2,'0'); }
-function fmtElapsed(ms){ const s=Math.floor(ms/1000); const mm=Math.floor(s/60); const ss=s%60; return `${pad2(mm)}:${pad2(ss)}`; }
-
-/* KM decimal → {K, mmm} */
+/* Nome BR: DD-MM-AAAA_HH-mm-ss */
+function stampStrBR(){ const d=new Date(); const DD=String(d.getDate()).padStart(2,'0'); const MM=String(d.getMonth()+1).padStart(2,'0'); const AAAA=d.getFullYear(); const HH=String(d.getHours()).padStart(2,'0'); const m=String(d.getMinutes()).padStart(2,'0'); const s=String(d.getSeconds()).padStart(2,'0'); return `${DD}-${MM}-${AAAA}_${HH}-${m}-${s}`; }
+function pad2(n){ return String(n).padStart(2,'0'); } function fmtElapsed(ms){ const s=Math.floor(ms/1000); const mm=Math.floor(s/60); const ss=s%60; return `${pad2(mm)}:${pad2(ss)}`; }
 function fmtKMMM(val){ const K=Math.floor(val); let m=Math.round((val-K)*1000); if(m>=1000){m-=1000;} return {K, mmm:String(m).padStart(3,'0')}; }
 
-/* =================== WAKE LOCK (manter tela ligada) =================== */
-let keepAliveTimer=null, wakeLock=null;
-async function requestWakeLock(){
-  try{
-    if('wakeLock' in navigator){
-      wakeLock=await navigator.wakeLock.request('screen');
-      wakeLock.addEventListener?.('release',()=>{ if(isAuto) requestWakeLock(); });
-    }else{
-      keepAliveTimer=setInterval(()=>{},30000);
-    }
-  }catch(e){}
-}
+/* ===== Wake Lock ===== */
+async function requestWakeLock(){ try{ if('wakeLock' in navigator){ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener?.('release',()=>{ if(isAuto) requestWakeLock(); }); }else{ keepAliveTimer=setInterval(()=>{},30000); } }catch(e){} }
 async function releaseWakeLock(){ try{ await wakeLock?.release?.(); }catch{} finally{ wakeLock=null; } if(keepAliveTimer){ clearInterval(keepAliveTimer); keepAliveTimer=null; } }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&isAuto){ requestWakeLock(); updateAutoButtonUI(); }});
 
-/* =================== Link NX =================== */
+/* ===== NX link ===== */
 btnNX.addEventListener('click', ()=>{ window.open('https://apoiotecnico1.github.io/nx', '_blank'); });
 
-/* =================== PASTA / PERMISSÃO =================== */
+/* ===== Pasta / permissão ===== */
 async function verifyPermission(handle,rw){ const opt={mode:rw?'readwrite':'read'}; const q=await handle.queryPermission?.(opt); if(q==='granted') return true; const r=await handle.requestPermission?.(opt); return r==='granted'; }
 btnPickFolder.addEventListener('click', async ()=>{ try{
   rootDirHandle = await window.showDirectoryPicker({mode:'readwrite'});
@@ -364,159 +313,53 @@ btnPickFolder.addEventListener('click', async ()=>{ try{
   folderGate.style.display='none'; showToast('Pasta OK'); updateAutoButtonUI();
 }catch(e){ showToast('Seleção cancelada'); }});
 
-/* =================== KM (CSV) =================== */
+/* ===== KM (CSV) ===== */
 let kmPoints=[], kmGrid=new Map(); const CELL=0.005;
 function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
 function gridInsert(grid,p){ const k=cellKey(p.lat,p.lon); const a=grid.get(k); a?a.push(p):grid.set(k,[p]); }
-function gridCands(grid,lat,lon,minCount=120,maxR=5){
-  const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[];
-  for(let r=0;r<=maxR && out.length<minCount;r++){
-    for(let dy=-r;dy<=r;dy++){
-      for(let dx=-r;dx<=r;dx++){
-        if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue;
-        const a=grid.get(`${ky+dy},${kx+dx}`); if(a) out.push(...a);
-      }
-    }
-  } return out;
-}
-async function loadKM(){
-  try{
-    const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
-    const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
-    kmPoints=[];
-    for(const ln of lines){
-      const c=ln.split(';');
-      const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
-      const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])};
-      const t=(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon))?t1:
-               (Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon))?t2:null;
-      if(t) kmPoints.push(t);
-    }
-    kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p);
-    csvKMReady = kmPoints.length>0;
-  }catch{ csvKMReady=false; }
-}
-function nearestKM(lat,lon){
-  if(!kmPoints.length) return null;
-  const c=gridCands(kmGrid,lat,lon,140); if(!c.length) return null;
-  let best=null,bd=Infinity; for(const p of c){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
-}
-function updateKmHud(){
-  if(!csvKMReady || !lastPos){ kmText.textContent='—'; return; }
-  const n=nearestKM(lastPos.lat,lastPos.lon); if(!n){ kmText.textContent='—'; return; }
-  const {K, mmm}=fmtKMMM(n.km);
-  kmLabel.textContent='KM';
-  if(state.kmFmt==='label') kmText.textContent='';
-  else if(state.kmFmt==='plus') kmText.textContent=`${K}+${mmm}`;
-  else kmText.textContent=`${K},${mmm}`;
-}
+function gridCands(grid,lat,lon,minCount=120,maxR=5){ const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[]; for(let r=0;r<=maxR && out.length<minCount;r++){ for(let dy=-r;dy<=r;dy++){ for(let dx=-r;dx<=r;dx++){ if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue; const a=grid.get(`${ky+dy},${kx+dx}`); if(a) out.push(...a); }}} return out; }
+async function loadKM(){ try{ const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text()); const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean); kmPoints=[]; for(const ln of lines){ const c=ln.split(';'); const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])}; const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])}; const t=(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon))?t1:(Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon))?t2:null; if(t) kmPoints.push(t); } kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p); csvKMReady = kmPoints.length>0; }catch{ csvKMReady=false; } }
+function nearestKM(lat,lon){ if(!kmPoints.length) return null; const c=gridCands(kmGrid,lat,lon,140); if(!c.length) return null; let best=null,bd=Infinity; for(const p of c){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best; }
+function updateKmHud(){ if(!csvKMReady || !lastPos){ kmText.textContent='—'; return; } const n=nearestKM(lastPos.lat,lastPos.lon); if(!n){ kmText.textContent='—'; return; } const {K, mmm}=fmtKMMM(n.km); kmLabel.textContent='KM'; if(state.kmFmt==='label') kmText.textContent=''; else if(state.kmFmt==='plus') kmText.textContent=`${K}+${mmm}`; else kmText.textContent=`${K},${mmm}`; }
 setInterval(updateKmHud, 600);
 
-/* =================== CÂMERA: listar/abrir/trocar =================== */
+/* ===== Câmera / troca por deviceId ===== */
 async function stopCamera(){ try{ camStream?.getTracks()?.forEach(t=>t.stop()); }catch{} finally{ camStream=null; camTrack=null; camCap=null; } }
-function populateCameraSelect(){
-  selCamera.innerHTML='';
-  if(!deviceList.length){
-    const opt=document.createElement('option'); opt.value=''; opt.textContent='(câmera padrão)'; selCamera.appendChild(opt); return;
-  }
-  deviceList.forEach((d,i)=>{ const opt=document.createElement('option'); opt.value=d.deviceId; opt.textContent=d.label || `Câmera ${i+1}`; selCamera.appendChild(opt); });
-  if(currentDeviceId){ const idx=deviceList.findIndex(d=>d.deviceId===currentDeviceId); if(idx>=0) selCamera.selectedIndex=idx; }
-}
-async function enumerateCameras(){
-  try{
-    try{ const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); tmp.getTracks().forEach(t=>t.stop()); }catch{}
-    const devs=await navigator.mediaDevices.enumerateDevices();
-    deviceList=devs.filter(d=>d.kind==='videoinput');
-    populateCameraSelect();
-  }catch{ deviceList=[]; populateCameraSelect(); }
-}
-async function startCameraWithConstraints(cons){
-  await stopCamera();
-  const st=await navigator.mediaDevices.getUserMedia(cons);
-  camStream=st; vid.srcObject=st;
-  await vid.play().catch(()=>{});
-  await new Promise(res=>{ if(vid.readyState>=2&&vid.videoWidth) res(); else vid.onloadeddata=()=>res(); });
-  camReady=true;
-  camTrack=st.getVideoTracks()[0];
-  currentDeviceId = camTrack.getSettings?.().deviceId || null;
-  camCap=camTrack.getCapabilities?.()||null;
-  if(camCap && camCap.zoom){ zoomSupported=true; zoomMin=camCap.zoom.min??1; zoomMax=camCap.zoom.max??1; zoomVal=camTrack.getSettings?.().zoom ?? zoomMin; }
-  else{ zoomSupported=false; virtualZoom=1; }
-}
-async function startCameraByDeviceId(id){
-  try{
-    await startCameraWithConstraints({ video:{ deviceId:{ exact:id }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false });
-    await enumerateCameras(); showToast('Câmera trocada');
-  }catch(e){
-    const facing=(vid.srcObject?.getVideoTracks?.()[0]?.getSettings?.().facingMode)||'environment';
-    const nextFacing=facing==='environment'?'user':'environment';
-    try{
-      await startCameraWithConstraints({ video:{ facingMode:{ exact: nextFacing }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false });
-      await enumerateCameras(); showToast('Câmera trocada (fallback)');
-    }catch{ showToast('Falha ao trocar câmera'); }
-  }
-}
-async function startCameraDefault(){
-  try{
-    await startCameraWithConstraints({ video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false });
-    await enumerateCameras();
-  }catch{ showToast('Falha na câmera'); }
-}
+function populateCameraSelect(){ selCamera.innerHTML=''; if(!deviceList.length){ const opt=document.createElement('option'); opt.value=''; opt.textContent='(câmera padrão)'; selCamera.appendChild(opt); return; } deviceList.forEach((d,i)=>{ const opt=document.createElement('option'); opt.value=d.deviceId; opt.textContent=d.label || `Câmera ${i+1}`; selCamera.appendChild(opt); }); if(currentDeviceId){ const idx=deviceList.findIndex(d=>d.deviceId===currentDeviceId); if(idx>=0) selCamera.selectedIndex=idx; } }
+async function enumerateCameras(){ try{ try{ const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); tmp.getTracks().forEach(t=>t.stop()); }catch{} const devs=await navigator.mediaDevices.enumerateDevices(); deviceList=devs.filter(d=>d.kind==='videoinput'); populateCameraSelect(); }catch{ deviceList=[]; populateCameraSelect(); } }
+async function startCameraWithConstraints(cons){ await stopCamera(); const st=await navigator.mediaDevices.getUserMedia(cons); camStream=st; vid.srcObject=st; await vid.play().catch(()=>{}); await new Promise(res=>{ if(vid.readyState>=2&&vid.videoWidth) res(); else vid.onloadeddata=()=>res(); }); camReady=true; camTrack=st.getVideoTracks()[0]; currentDeviceId=camTrack.getSettings?.().deviceId || null; camCap=camTrack.getCapabilities?.()||null; if(camCap && camCap.zoom){ zoomSupported=true; zoomMin=camCap.zoom.min??1; zoomMax=camCap.zoom.max??1; zoomVal=camTrack.getSettings?.().zoom ?? zoomMin; } else { zoomSupported=false; virtualZoom=1; } }
+async function startCameraByDeviceId(id){ try{ await startCameraWithConstraints({ video:{ deviceId:{ exact:id }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false }); await enumerateCameras(); showToast('Câmera trocada'); }catch(e){ const facing=(vid.srcObject?.getVideoTracks?.()[0]?.getSettings?.().facingMode)||'environment'; const nextFacing=facing==='environment'?'user':'environment'; try{ await startCameraWithConstraints({ video:{ facingMode:{ exact: nextFacing }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false }); await enumerateCameras(); showToast('Câmera trocada (fallback)'); }catch{ showToast('Falha ao trocar câmera'); } } }
+async function startCameraDefault(){ try{ await startCameraWithConstraints({ video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false }); await enumerateCameras(); }catch{ showToast('Falha na câmera'); } }
 selCamera.addEventListener('change', async ()=>{ const id=selCamera.value; if(id) await startCameraByDeviceId(id); });
-btnSwap.addEventListener('click', ()=>{ switchCameraNext().catch(()=>{}); });
-async function switchCameraNext(){ if(!deviceList.length){ await enumerateCameras(); } if(!deviceList.length){ showToast('Nenhuma câmera encontrada'); return; } const idx=deviceList.findIndex(d=>d.deviceId===currentDeviceId); const next=deviceList[(idx+1)%deviceList.length]; await startCameraByDeviceId(next.deviceId); }
-/* Torch */
-btnTorch.addEventListener('click', async ()=>{
-  try{
-    const cap=camTrack?.getCapabilities?.(); if(!cap || !('torch' in cap)){ showToast('Lanterna não suportada'); return; }
-    torchOn=!torchOn; await camTrack.applyConstraints({advanced:[{torch:torchOn}]});
-    showToast(torchOn?'Lanterna ON':'Lanterna OFF');
-  }catch{ showToast('Falha ao alternar lanterna'); }
-});
-/* Atualiza lista se hardware muda */
+btnSwap.addEventListener('click', async ()=>{ if(!deviceList.length){ await enumerateCameras(); } if(!deviceList.length){ showToast('Nenhuma câmera encontrada'); return; } const idx=deviceList.findIndex(d=>d.deviceId===currentDeviceId); const next=deviceList[(idx+1)%deviceList.length]; await startCameraByDeviceId(next.deviceId); });
+btnTorch.addEventListener('click', async ()=>{ try{ const cap=camTrack?.getCapabilities?.(); if(!cap || !('torch' in cap)){ showToast('Lanterna não suportada'); return; } torchOn=!torchOn; await camTrack.applyConstraints({advanced:[{torch:torchOn}]}); showToast(torchOn?'Lanterna ON':'Lanterna OFF'); }catch{ showToast('Falha ao alternar lanterna'); }});
 navigator.mediaDevices.addEventListener?.('devicechange', ()=>{ enumerateCameras().catch(()=>{}); });
 
-/* =================== PINCH-TO-ZOOM =================== */
-const pointers=new Map(); let startDist=0, startZoom=1;
-function distance(a,b){ const dx=b.x-a.x, dy=b.y-a.y; return Math.hypot(dx,dy); }
+/* ===== Pinch-to-zoom ===== */
+const pointers=new Map(); let startDist=0, startZoom=1; function distance(a,b){ const dx=b.x-a.x, dy=b.y-a.y; return Math.hypot(dx,dy); }
 camWrap.addEventListener('pointerdown',(e)=>{ camWrap.setPointerCapture?.(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); });
-camWrap.addEventListener('pointermove',async(e)=>{
-  if(!pointers.has(e.pointerId)) return; pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(pointers.size===2){
-    const [p1,p2]=[...pointers.values()]; const dist=distance(p1,p2);
-    if(!startDist){ startDist=dist; startZoom= zoomSupported? zoomVal : virtualZoom; return; }
-    const target=Math.max(zoomMin, Math.min(zoomMax||6, startZoom*(dist/startDist)));
-    if(zoomSupported){ try{ await camTrack.applyConstraints({advanced:[{zoom:target}]}); zoomVal=target; }catch{} }
-    else { virtualZoom=target; }
-  }
-});
+camWrap.addEventListener('pointermove',async(e)=>{ if(!pointers.has(e.pointerId)) return; pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); if(pointers.size===2){ const [p1,p2]=[...pointers.values()]; const dist=distance(p1,p2); if(!startDist){ startDist=dist; startZoom= zoomSupported? zoomVal : virtualZoom; return; } const target=Math.max(zoomMin, Math.min(zoomMax||6, startZoom*(dist/startDist))); if(zoomSupported){ try{ await camTrack.applyConstraints({advanced:[{zoom:target}]}); zoomVal=target; }catch{} } else { virtualZoom=target; } } });
 ['pointerup','pointercancel','pointerleave'].forEach(ev=>camWrap.addEventListener(ev,(e)=>{ pointers.delete(e.pointerId); if(pointers.size<2) startDist=0; }));
 
-/* =================== PRESETS DE CENA =================== */
-async function applyPreset(name){
-  state.preset=name; localStorage.setItem('scene_preset',name);
-  captureFilter='none'; const adv=[];
-  if(name==='noite'){ captureFilter='brightness(1.18) contrast(1.08) saturate(1.05)'; adv.push({whiteBalanceMode:'continuous'}); }
-  else if(name==='luz'){ captureFilter='brightness(0.95) contrast(1.06)'; adv.push({whiteBalanceMode:'continuous'}); }
-  else if(name==='movimento'){ captureFilter='contrast(1.10)'; }
-  else if(name==='neblina'){ captureFilter='contrast(1.12) saturate(1.10) brightness(1.04)'; }
-  if(adv.length && camTrack){ try{ await camTrack.applyConstraints({advanced:adv}); }catch{} }
-}
+/* ===== Presets (filtro leve no canvas; constraints quando possível) ===== */
+function applyPreset(name){ state.preset=name; localStorage.setItem('scene_preset',name); captureFilter='none'; const adv=[]; if(name==='noite'){ captureFilter='brightness(1.18) contrast(1.08) saturate(1.05)'; adv.push({whiteBalanceMode:'continuous'}); } else if(name==='luz'){ captureFilter='brightness(0.95) contrast(1.06)'; adv.push({whiteBalanceMode:'continuous'}); } else if(name==='movimento'){ captureFilter='contrast(1.10)'; } else if(name==='neblina'){ captureFilter='contrast(1.12) saturate(1.10) brightness(1.04)'; } if(adv.length && camTrack){ camTrack.applyConstraints({advanced:adv}).catch(()=>{}); } }
 selPreset.addEventListener('change', ()=>{ applyPreset(selPreset.value); });
 
-/* =================== CARIMBO NA FOTO (KM e Data/Hora) =================== */
+/* ===== Carimbo na foto (linha 1: KM / linha 2: Data e Hora) ===== */
 function drawStamp(ctx, w, h, kmStr, tsStr){
-  const bandH=Math.max(72,Math.round(h*0.10));
-  const fMain=Math.round(h*0.038), fSub=Math.round(h*0.026);
+  const bandH=Math.max(72,Math.round(h*0.10)); const fMain=Math.round(h*0.038), fSub=Math.round(h*0.026);
   ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(0,h-bandH,w,bandH);
   ctx.fillStyle='#d8ffe6'; ctx.textAlign='left'; ctx.font=`900 ${fMain}px system-ui`;
-  const baseY=h-bandH+Math.round(bandH*0.60);
-  ctx.fillText(kmStr,16,baseY);
+  const baseY=h-bandH+Math.round(bandH*0.60); ctx.fillText(kmStr,16,baseY);
   if(tsStr){ ctx.fillStyle='#ffffff'; ctx.font=`700 ${fSub}px system-ui`; ctx.fillText(tsStr,16,h-16); }
 }
 
-/* =================== CAPTURA & SALVAMENTO =================== */
-async function frameToJpegBlobAndMeta(){
+/* ====== *** SALVAMENTO RESTAURADO *** ==================================
+   Captura → toBlob → write(blob) → close()
+   Fallback APENAS se toBlob retornar null: dataURL → Blob.
+   Sem bytes puros, sem truncate, sem regravação.
+======================================================================= */
+async function frameToJpegBlobAndMeta_Simple(){
   const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
   const sc=(Math.max(vw,vh)>state.maxDim)? (state.maxDim/Math.max(vw,vh)) : 1;
   const w=Math.round(vw*sc), h=Math.round(vh*sc);
@@ -524,11 +367,9 @@ async function frameToJpegBlobAndMeta(){
   const can=document.createElement('canvas'); const ctx=can.getContext('2d',{alpha:false});
   can.width=w; can.height=h;
 
-  // aplica filtro do preset e zoom (nativo/virtual)
   ctx.filter=captureFilter;
-  if(zoomSupported || virtualZoom<=1.001){
-    ctx.drawImage(vid,0,0,w,h);
-  }else{
+  if(zoomSupported || virtualZoom<=1.001){ ctx.drawImage(vid,0,0,w,h); }
+  else{
     const z=Math.max(1, Math.min(virtualZoom,6));
     const srcW=Math.round(vw/z), srcH=Math.round(vh/z);
     const sx=Math.floor((vw-srcW)/2), sy=Math.floor((vh-srcH)/2);
@@ -536,62 +377,54 @@ async function frameToJpegBlobAndMeta(){
   }
   ctx.filter='none';
 
-  // KM + Data/Hora para o carimbo e para o PDF
   let kmStr='KM —';
   if(csvKMReady && lastPos){
     const n=nearestKM(lastPos.lat,lastPos.lon);
     if(n){ const {K, mmm}=fmtKMMM(n.km); kmStr=(state.kmFmt==='plus')?`KM ${K}+${mmm}`:`KM ${K},${mmm}`; }
   }
   const tsStr=new Date().toLocaleString();
-
-  drawStamp(ctx, w, h, kmStr, tsStr);
+  drawStamp(ctx,w,h,kmStr,tsStr);
 
   const q=Math.max(0.7, Math.min(1, state.jpgQ/100));
-  const blob=await new Promise(res=>can.toBlob(res,'image/jpeg',q));
-  if(blob && blob.size>0) return {blob, kmStr, tsStr};
-
-  // Fallback: dataURL → Blob
-  const dataURL=can.toDataURL('image/jpeg',q); const bin=atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
-  return { blob: new Blob([u8], {type:'image/jpeg'}), kmStr, tsStr };
+  let blob=await new Promise(res=>can.toBlob(res,'image/jpeg',q));
+  if(!blob){ // fallback único (quando toBlob dá null)
+    const dataURL=can.toDataURL('image/jpeg',q);
+    const bin=atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+    blob=new Blob([u8], {type:'image/jpeg'});
+  }
+  return {blob, kmStr, tsStr};
 }
 
 async function savePhotoOnce(){
-  if(writing) return;
+  if(writing) return;                                  // trava simples
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady && vid.videoWidth)) return;
 
   writing=true;
   try{
+    // revalida permissão (Android pode “esquecer”)
     const ok=await verifyPermission(rootDirHandle,true);
     if(!ok){ showToast('Permissão na pasta'); writing=false; return; }
 
-    const {blob, kmStr, tsStr}=await frameToJpegBlobAndMeta();
+    const {blob, kmStr, tsStr}=await frameToJpegBlobAndMeta_Simple();
 
-    // Nome: FOTO_km_K_mmm_DD-MM-AAAA_HH-mm-ss.jpg (BR)
+    // Nome BR: FOTO_km_K_mmm_DD-MM-AAAA_HH-mm-ss.jpg
     let kPart='K', mPart='000';
     if(kmStr.startsWith('KM ')){
       const m = kmStr.replace('KM ','').replace(',','_').replace('+','_');
-      const parts=m.split('_');
-      kPart=parts[0]||kPart; mPart=parts[1]||mPart;
+      const parts=m.split('_'); kPart=parts[0]||kPart; mPart=parts[1]||mPart;
     }
     const name=`FOTO_km_${kPart}_${mPart}_${stampStrBR()}.jpg`;
 
     const fh=await rootDirHandle.getFileHandle(name,{create:true});
     const w=await fh.createWritable();
-    await w.write(blob);           // fluxo estável
+    await w.write(blob);               // ← o caminho “bom” restaurado
     await w.close();
 
-    // Verifica tamanho, regrava se 0 B
-    const f=await fh.getFile();
-    if(f.size===0){
-      const redo=await frameToJpegBlobAndMeta();
-      const w2=await fh.createWritable(); await w2.write(redo.blob); await w2.close();
-    }
-
-    // Atualiza sessão
+    // atualiza sessão
     sessionPhotoCount++;
     sessionPhotos.push({handle: fh, name, kmStr, tsStr});
-    latestPdfHandle=null; latestPdfName='';       // invalida PDF anterior
+    latestPdfHandle=null; latestPdfName=''; // invalida PDF anterior
     btnSharePdf.disabled=true;
 
     updateAutoButtonUI();
@@ -599,11 +432,11 @@ async function savePhotoOnce(){
     console.error('Salvar foto erro:',err);
     showToast('Falha ao salvar foto');
   }finally{
-    writing=false;
+    writing=false;                      // libera a trava
   }
 }
 
-/* =================== BOTÃO AUTO: status ao vivo =================== */
+/* ===== Botão AUTO: status embutido ===== */
 function updateAutoButtonUI(){
   if(!isAuto){
     btnAuto.classList.remove('auto-on'); btnAuto.classList.add('primary');
@@ -622,7 +455,10 @@ function updateAutoButtonUI(){
   `;
 }
 
-/* =================== AUTO + Wake Lock =================== */
+/* ===== AUTO + Wake Lock ====
+   Laço simples: setInterval → se "writing" estiver true, PULA o tick
+   (sem fila/Promise chain) — igual ao “modo antigo que funcionava”.
+================================ */
 function startAuto(){
   if(isAuto) return;
   if(!(rootDirHandle && camReady && gpsReady && csvKMReady)){ showToast('Aguarde Pasta/Câmera/GPS/CSV'); return; }
@@ -635,8 +471,10 @@ function startAuto(){
   if(autoUiTimer) clearInterval(autoUiTimer);
   autoUiTimer=setInterval(updateAutoButtonUI,1000);
 
-  queue=queue.then(()=>savePhotoOnce()).catch(()=>{});
-  autoTimer=setInterval(()=>{ queue=queue.then(()=>savePhotoOnce()).catch(()=>{}); }, state.autoMs);
+  // primeira captura imediata
+  savePhotoOnce().catch(()=>{});
+  // loop simples — se estiver escrevendo, esse tick é ignorado
+  autoTimer=setInterval(()=>{ if(!writing) savePhotoOnce().catch(()=>{}); }, state.autoMs);
 
   showToast('Auto ON');
 }
@@ -653,7 +491,7 @@ function stopAuto(){
 }
 btnAuto.addEventListener('click', ()=>{ if(isAuto) stopAuto(); else startAuto(); });
 
-/* =================== OPÇÕES / KM HUD =================== */
+/* ===== Opções (HUD KM, presets, etc.) ===== */
 function applyKmOptions(){
   kmHud.className=''; kmHud.classList.add(state.kmPos);
   localStorage.setItem('km_fmt', state.kmFmt);
@@ -670,103 +508,68 @@ rngJpgQ.addEventListener('input',   ()=>{ state.jpgQ  =Number(rngJpgQ.value); lb
 selMaxDim.addEventListener('change',()=>{ state.maxDim=Number(selMaxDim.value); lblDim.textContent=selMaxDim.value; localStorage.setItem('max_dim',String(state.maxDim)); });
 selPreset.addEventListener('change', ()=>{ applyPreset(selPreset.value); localStorage.setItem('scene_preset', selPreset.value); });
 
-/* =================== RELATÓRIO (PDF) =================== */
-/* Builder simples de PDF (1.4): imagens JPEG como XObject,
-   1 página por foto (A4: 595x842 pt), legenda (KM + Data/Hora) em texto.
-   Escreve direto no arquivo da pasta e depois permite compartilhar. */
-async function measureImageWH(blob){
-  // Tenta ImageBitmap (rápido); fallback <img> naturalWidth/Height
-  try{
-    const bm=await createImageBitmap(blob);
-    const w=bm.width, h=bm.height; bm.close(); return {w,h};
-  }catch{
-    const url=URL.createObjectURL(blob);
-    const img=new Image(); img.src=url;
-    await new Promise((res,rej)=>{ img.onload=()=>res(); img.onerror=rej; });
-    const w=img.naturalWidth, h=img.naturalHeight; URL.revokeObjectURL(url);
-    return {w,h};
-  }
+/* ===== Relatório (PDF) — igual antes ===== */
+async function createImageBitmapSafe(blob){
+  try{ return await createImageBitmap(blob); }catch{ return null; }
 }
-
+async function measureImageWH(blob){
+  const bm=await createImageBitmapSafe(blob);
+  if(bm){ const w=bm.width, h=bm.height; bm.close(); return {w,h}; }
+  const url=URL.createObjectURL(blob); const img=new Image(); img.src=url;
+  await new Promise((res,rej)=>{ img.onload=()=>res(); img.onerror=rej; }); const w=img.naturalWidth, h=img.naturalHeight; URL.revokeObjectURL(url);
+  return {w,h};
+}
 async function generatePdfFromSession(){
   if(!sessionPhotos.length){ showToast('Sem fotos na sessão'); return; }
   if(!rootDirHandle){ showToast('Selecione a pasta'); return; }
 
-  // Cria arquivo PDF
   const pdfName=`RELATORIO_FOTOS_${stampStrBR()}.pdf`;
   const fh=await rootDirHandle.getFileHandle(pdfName,{create:true});
   const ws=await fh.createWritable();
 
-  // Writer helpers
-  let pos=0, obj=0, xref=[0];
+  let pos=0,obj=0,xref=[0];
   async function w(s){ const u=(s instanceof Uint8Array)?s:new TextEncoder().encode(s); await ws.write(u); pos+=u.length; }
   async function objWrite(body){ obj+=1; xref.push(pos); await w(`${obj} 0 obj\n${body}\nendobj\n`); return obj; }
-  async function streamWrite(dict, u8){
-    obj+=1; xref.push(pos);
-    await w(`${obj} 0 obj\n${dict.replace('>>','')} /Length ${u8.length} >>\nstream\n`); await w(u8); await w(`\nendstream\nendobj\n`);
-    return obj;
-  }
+  async function streamWrite(dict,u8){ obj+=1; xref.push(pos); await w(`${obj} 0 obj\n${dict.replace('>>','')} /Length ${u8.length} >>\nstream\n`); await w(u8); await w(`\nendstream\nendobj\n`); return obj; }
 
-  // Header + font
   await w('%PDF-1.4\n');
   const fontRef=await objWrite('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
 
   const PW=595, PH=842, M=28, CAP=36;
   const pageRefs=[];
-
-  // Para cada foto da sessão: lê bytes, mede W/H, cria XObject, escreve Page
   for(const it of sessionPhotos){
-    const file=await it.handle.getFile();
-    const blob=file; const u8=new Uint8Array(await blob.arrayBuffer());
-    const {w:imgW, h:imgH}=await measureImageWH(blob);
-
-    // XObject da imagem (JPEG: DCTDecode)
+    const file=await it.handle.getFile(); const blob=file; const u8=new Uint8Array(await blob.arrayBuffer());
+    const {w:imgW,h:imgH}=await measureImageWH(blob);
     const imgRef=await streamWrite(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, u8);
 
-    // Fit na página A4 (deixa espaço CAP para legenda)
     let dw=PW-2*M, dh=Math.round(imgH*((PW-2*M)/imgW));
     if(dh>PH-2*M-CAP){ dh=PH-2*M-CAP; dw=Math.round(imgW*(dh/imgH)); }
     const tx=M + Math.round((PW-2*M-dw)/2);
     const ty=M + CAP + Math.round((PH-2*M-CAP-dh)/2);
-    const imY = PH-(ty+dh);
+    const imY=PH-(ty+dh);
 
-    // Legenda (KM + Data/Hora)
-    const line1 = `${it.kmStr||'KM —'} • ${it.tsStr||''}`;
+    const line = `${it.kmStr||'KM —'} • ${it.tsStr||''}`;
     const x=M+4, y=M+8;
-
-    // Conteúdo (imagem + texto)
     const ops=[
       `q\n${dw} 0 0 ${dh} ${tx} ${imY} cm\n/Im0 Do\nQ`,
-      `BT /F1 11 Tf 1 0 0 1 ${x} ${y+10} Tm (${line1.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)')}) Tj ET`
+      `BT /F1 11 Tf 1 0 0 1 ${x} ${y+10} Tm (${line.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)')}) Tj ET`
     ].join('\n');
     const contRef=await streamWrite('<< >>', new TextEncoder().encode(ops));
     const resDict=`<< /XObject << /Im0 ${imgRef} 0 R >> /Font << /F1 ${fontRef} 0 R >> >>`;
     const pageRef=await objWrite(`<< /Type /Page /Parent 0 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources ${resDict} /Contents ${contRef} 0 R >>`);
     pageRefs.push(pageRef);
   }
-
-  // /Pages e /Catalog
   const kids=pageRefs.map(r=>`${r} 0 R`).join(' ');
   const pagesRef=await objWrite(`<< /Type /Pages /Kids [ ${kids} ] /Count ${pageRefs.length} >>`);
-  // Corrige /Parent dos pages: opcional (leitores toleram Parent depois)
-  // Simplesmente referencia páginas ao /Pages
-  // Catalog
   const catalogRef=await objWrite(`<< /Type /Catalog /Pages ${pagesRef} 0 R >>`);
 
-  // xref/trailer
-  const start=pos;
-  let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`;
+  const start=pos; let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`;
   for(let i=1;i<xref.length;i++){ xr+=String(xref[i]).padStart(10,'0')+' 00000 n \n'; }
-  await w(xr);
-  await w(`trailer\n<< /Size ${xref.length} /Root ${catalogRef} 0 R >>\nstartxref\n${start}\n%%EOF`);
+  await w(xr); await w(`trailer\n<< /Size ${xref.length} /Root ${catalogRef} 0 R >>\nstartxref\n${start}\n%%EOF`);
   await ws.close();
 
-  latestPdfHandle=fh; latestPdfName=pdfName;
-  btnSharePdf.disabled=false;
-  showToast(`PDF gerado: ${pdfName}`);
+  latestPdfHandle=fh; latestPdfName=pdfName; btnSharePdf.disabled=false; showToast(`PDF gerado: ${pdfName}`);
 }
-
-/* Compartilhar PDF (lê do arquivo criado) */
 async function sharePdf(){
   try{
     if(!latestPdfHandle){ showToast('Gere o PDF primeiro'); return; }
@@ -774,43 +577,39 @@ async function sharePdf(){
     if(navigator.canShare && navigator.canShare({files:[file]})){
       await navigator.share({ files:[file], text:'Relatório fotográfico' });
     }else{
-      // Fallback: baixa o PDF
-      const url=URL.createObjectURL(file);
-      const a=document.createElement('a'); a.href=url; a.download=latestPdfName||file.name; a.click();
-      setTimeout(()=>URL.revokeObjectURL(url),3000);
-      showToast('PDF baixado (compartilhe pelo app)');
+      const url=URL.createObjectURL(file); const a=document.createElement('a'); a.href=url; a.download=latestPdfName||file.name; a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),3000); showToast('PDF baixado');
     }
   }catch(e){ showToast('Não foi possível compartilhar'); }
 }
-btnGenPdf.addEventListener('click', ()=>{ generatePdfFromSession().catch(()=>{}); });
-btnSharePdf.addEventListener('click', ()=>{ sharePdf().catch(()=>{}); });
+btnGenPdf.addEventListener('click', ()=>{ generatePdfFromSession().catch(()=>{}) });
+btnSharePdf.addEventListener('click', ()=>{ sharePdf().catch(()=>{}) });
 
-/* =================== GPS =================== */
+/* ===== GPS ===== */
 function startGPS(){
   if(!('geolocation' in navigator)){ gpsReady=false; return; }
   navigator.geolocation.getCurrentPosition(p=>{
-    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
-    gpsReady=true;
+    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy}; gpsReady=true;
     navigator.geolocation.watchPosition(pos=>{
       lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
     },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
   },()=>{ gpsReady=false; }, {enableHighAccuracy:true, timeout:12000});
 }
 
-/* =================== BOOT =================== */
+/* ===== Boot ===== */
 async function boot(){
-  // Opções (carrega valores salvos)
+  // aplica opções salvas
   rngInterval.value=String(state.autoMs); lblInterval.textContent=String(state.autoMs);
   rngJpgQ.value=String(state.jpgQ); lblQ.textContent=String(state.jpgQ);
   selMaxDim.value=String(state.maxDim); lblDim.textContent=String(state.maxDim);
   selKmFmt.value=state.kmFmt; selKmPos.value=state.kmPos; selPreset.value=state.preset;
-  applyKmOptions();
+  kmHud.className=''; kmHud.classList.add(state.kmPos);
 
   await startCameraDefault();
   startGPS();
   await loadKM();
   updateKmHud();
-  await applyPreset(state.preset);
+  applyPreset(state.preset);
 }
 boot();
 </script>
