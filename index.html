@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0b1020" />
-<title>Inspeção Rodoviária – Relatório Fotográfico (Confiável)</title>
+<title>Inspeção Rodoviária – Relatório Fotográfico (Rápido & Confiável)</title>
 <style>
   :root{
     --brand:#25D366;
@@ -66,9 +66,8 @@
   .btn:disabled{ opacity:.6; cursor:not-allowed }
   .btn.brand{ background:linear-gradient(180deg,#2ff07f,#25d366); color:#052c1a; border-color:#1fb85b }
   .btn.warn{ background:linear-gradient(180deg,#ff8f49,#e06a2d); color:#1b0b02; border-color:#c45722 }
-  .btn.danger{ background:linear-gradient(180deg,#f2544b,#cc3e36); color:#fff; border-color:#b82e2a }
 
-  /* CÂMERA */
+  /* Câmera */
   #camWrap{
     position:relative; height:var(--camH); border-radius:14px; overflow:hidden; margin-bottom:10px;
     background:#000; border:1px solid #15204c; box-shadow: var(--shadow);
@@ -185,7 +184,7 @@
         </div>
       </div>
       <div class="card">
-        <h3 style="margin:0 0 8px">Configuração do Carimbo</h3>
+        <h3 style="margin:0 0 8px">Configuração</h3>
         <div class="row">
           <label style="display:flex;gap:8px;align-items:center;font-weight:900">
             Legendas no PDF:
@@ -212,7 +211,7 @@
       </div>
     </section>
 
-    <!-- CONFIG simpes (atalho de pasta) -->
+    <!-- CONFIG (atalho pasta) -->
     <section class="view hidden" id="viewConfig">
       <div class="card">
         <h3 style="margin:0 0 8px">Pasta</h3>
@@ -245,14 +244,14 @@ document.querySelectorAll('.bottomnav .navbtn').forEach(b=>{
 });
 document.getElementById('btnGoReport').onclick=()=>document.querySelector('.bottomnav .navbtn[data-tab="viewReport"]').click();
 
-/* ===== Estado básico ===== */
+/* ===== Estado ===== */
 let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null, gpsAcc=Infinity;
 
 let rootDirHandle=null;
 let sessionOn=false, capTimer=null, capInterval=700, sessionPhotos=0;
 
-/* ===== Referências ===== */
+/* ===== Refs ===== */
 const stFolder=document.getElementById('stFolder'), stPdf=document.getElementById('stPdf'),
       stCsv=document.getElementById('stCsv'), stCam=document.getElementById('stCam'), stGps=document.getElementById('stGps'), stFotos=document.getElementById('stFotos');
 const repPdf=document.getElementById('repPdf'), repPhotos=document.getElementById('repPhotos'), repFolder=document.getElementById('repFolder');
@@ -275,7 +274,7 @@ async function selectOutputFolder(){
   repFolder.textContent=name;
 }
 
-/* ===== CSV (KM) – mínimo confiável ===== */
+/* ===== CSV (KM) – leve e suficiente ===== */
 let kmPoints=[], kmGrid=new Map();
 const CELL=0.005;
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
@@ -304,7 +303,7 @@ async function loadKM(){
 }
 function nearestKM(lat,lon){
   if(!kmPoints.length) return null;
-  function gridCands(grid,lat,lon,minCount=120,maxR=5){
+  function gridCands(grid,lat,lon,minCount=140,maxR=5){
     const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[];
     for(let r=0;r<=maxR && out.length<minCount;r++){
       for(let dy=-r;dy<=r;dy++){ for(let dx=-r;dx<=r;dx++){
@@ -415,7 +414,11 @@ function stampOverlay(ctx,w,h,kmStr,tsStr,gpsStr){
   }
 }
 
-/* ===== PDF Incremental: XObjects agora, PÁGINAS no finalize ===== */
+/* ===== PDF Incremental Seguro =====
+   - Durante a sessão: grava XObject (imagem) imediatamente (streaming).
+   - No finalize: escreve conteúdos/páginas, /Pages, /Catalog, xref, trailer.
+   - Sem reprocessar binários → rápido e sem travar.
+*/
 class PdfIncrementalSafe {
   constructor(){ this.reset(); }
   reset(){
@@ -436,61 +439,54 @@ class PdfIncrementalSafe {
     if(!this.active) return;
     const u8=new Uint8Array(await blob.arrayBuffer());
     const im=await this._str(`<< /Type /XObject /Subtype /Image /Width ${meta.w} /Height ${meta.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, u8);
-    // guardo apenas a referência do objeto da imagem e dados para montar a página depois
     this.photos.push({ imObj:im, ...meta });
   }
   async finalize(){
     if(!this.active) return;
     const PW=595, PH=842, M=28, CAP=28;
-    const pagesKids=[];
-    // 1) Crio /Pages primeiro, mas ainda sem Kids
-    const pagesObjNum = this.objNo + 1; // reservarei este número mentalmente
-    // 2) Para cada foto, crio um conteúdo e uma Page apontando para /Pages = pagesObjNum
+    const pageNums=[];
+    const baseObj=this.objNo; // base antes de criar páginas
+    const pagesParentNum = baseObj + (this.photos.length*2) + 1; 
+    // ^ cálculo conservador: por foto vou criar 2 objetos (conteúdo + page). Depois vem /Pages.
+
+    // 1) Escrever conteúdo + Page para cada foto (Page referencia /Parent pagesParentNum 0 R)
     for(const p of this.photos){
-      // fit imagem
+      // fit
       let dw=PW-2*M, dh=Math.round(p.h*((PW-2*M)/p.w));
       if(dh>PH-2*M-CAP){ dh=PH-2*M-CAP; dw=Math.round(p.w*(dh/p.h)); }
       const tx=M + Math.round((PW-2*M-dw)/2);
       const ty=M + CAP + Math.round((PH-2*M-CAP-dh)/2);
 
-      const ops=[];
-      // imagem como /Im0
-      ops.push(`q\n${dw} 0 0 ${dh} ${tx} ${PH-(ty+dh)} cm\n/Im0 Do\nQ`);
-      // legenda (Auto/Sempre/Nunca)
+      // legenda?
       let needLegend=false;
       const leg=legendSel.value;
       if(leg==='on') needLegend=true; else if(leg==='auto') needLegend=!overlayOpts.showKM;
+
+      const ops=[];
+      // imagem
+      ops.push(`q\n${dw} 0 0 ${dh} ${tx} ${PH-(ty+dh)} cm\n/Im0 Do\nQ`);
+      // legenda (duas linhas)
       if(needLegend){
         const line1=`${p.kmStr||'KM —'}${p.ts?` • ${p.ts}`:''}`;
-        const line2=(typeof p.lat==='number' && typeof p.lon==='number')?`GPS: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}`:'';
+        const line2=(typeof p.lat==='number'&&typeof p.lon==='number')?`GPS: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}`:'';
         const x=M+6, y=M+6;
         ops.push(`BT /F1 11 Tf 1 0 0 1 ${x} ${y+10} Tm (${this._esc(line1)}) Tj ET`);
-        if(line2) ops.push(`BT /F1 10 Tf 1 0 0 1 ${x} ${y} Tm (${this._esc(line2)}) Tj ET`);
+        if(line2){ ops.push(`BT /F1 10 Tf 1 0 0 1 ${x} ${y} Tm (${this._esc(line2)}) Tj ET`); }
       }
-
-      const cont=await this._str('<< >>', new TextEncoder().encode(ops.join('\n')));
+      const contNum=await this._str('<< >>', new TextEncoder().encode(ops.join('\n')));
       const res=`<< /XObject << /Im0 ${p.imObj} 0 R >> /Font << /F1 ${this.font} 0 R >> >>`;
-      const page=await this._obj(`<< /Type /Page /Parent ${pagesObjNum} 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources ${res} /Contents ${cont} 0 R >>`);
-      pagesKids.push(page);
+      const pageNum=await this._obj(`<< /Type /Page /Parent ${pagesParentNum} 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources ${res} /Contents ${contNum} 0 R >>`);
+      pageNums.push(pageNum);
     }
-    // 3) Agora escrevo /Pages com Kids reais
-    const kidsStr = pagesKids.map(n=>`${n} 0 R`).join(' ');
-    const pagesWrittenNum = await this._obj(`<< /Type /Pages /Kids [ ${kidsStr} ] /Count ${pagesKids.length} >>`);
-    // pagesWrittenNum DEVE ser igual a pagesObjNum se a reserva mental bateu, mas mesmo que não seja,
-    // os /Parent já apontam para pagesObjNum (reservado). Para garantir 100%, reescrever /Parent exige xref streams complexas.
-    // Então truque: garanti pagesObjNum realmente valendo criando antes um objeto vazio.
-    // (Fiz isso acima “virtualmente”. Agora conserto de forma segura:)
-    // Se pagesWrittenNum !== pagesObjNum, não há como reescrever os pages anteriores sem xref stream.
-    // Solução: Reservar de verdade ANTES:
-    // -> (Implementado abaixo: reservei "na prática").
-    // Para manter simples aqui, garantirei a reserva real:
 
-    // (Nada a fazer aqui – o fluxo acima já funciona porque pagesObjNum foi “reserva real” abaixo do método _reserveObj.)
+    // 2) /Pages (Kids = pageNums)
+    const kidsStr=pageNums.map(n=>`${n} 0 R`).join(' ');
+    const pagesNum=await this._obj(`<< /Type /Pages /Kids [ ${kidsStr} ] /Count ${pageNums.length} >>`);
 
-    // 4) Catalog
-    const catalog=await this._obj(`<< /Type /Catalog /Pages ${pagesWrittenNum} 0 R >>`);
+    // 3) Catalog
+    const catalog=await this._obj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
 
-    // 5) XRef/Trailer
+    // 4) XRef/Trailer
     const start=this.pos; let xr=`xref\n0 ${this.xref.length}\n0000000000 65535 f \n`;
     for(let i=1;i<this.xref.length;i++){ xr+=String(this.xref[i]).padStart(10,'0')+' 00000 n \n'; }
     await this._w(xr);
@@ -526,19 +522,20 @@ async function captureOnce(){
   const tsStr=new Date().toLocaleString();
   const gpsStr=`${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
 
+  // Carimbo na imagem (KM/TS, GPS opcional conforme overlay)
   stampOverlay(ctx, w, h, overlayOpts.showKM?kmStr:'', overlayOpts.showTs?tsStr:'', overlayOpts.showGps?gpsStr:'');
 
   const blob=await new Promise(res=>can.toBlob(res,'image/jpeg',0.85));
 
-  // Salva também o JPG na pasta (além do PDF)
+  // Salva o JPG na pasta (auditoria)
   const fh=await rootDirHandle.getFileHandle(fileName(kmStr,new Date()),{create:true});
   const wr=await fh.createWritable(); await wr.write(blob); await wr.close();
 
-  // Adiciona a imagem como XObject (página criada no finalize)
+  // Adiciona XObject imediatamente (stream) – leve: sem reprocessar no final
   await pdf.addImageXObject(blob, { w, h, kmStr, ts:tsStr, lat:lastPos.lat, lon:lastPos.lon });
 
+  // Contadores & prévia
   sessionPhotos++; hudPhotos.textContent=sessionPhotos; stFotos.textContent='📷 Fotos: '+sessionPhotos; repPhotos.textContent=sessionPhotos;
-
   const url=URL.createObjectURL(blob); lastShot.src=url;
 }
 
