@@ -1,750 +1,1038 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="original">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<meta name="theme-color" content="#0a1024" />
-<title>Inspeção – Captura Direta (Foto)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1020" />
+<title>Relatório Fotográfico – Iluminação (Leve)</title>
 <style>
+  /* ======= Tema (Original + Neutro) ======= */
   :root{
-    --panelA:rgba(8,14,30,.82); --panelB:rgba(6,10,24,.78);
-    --badgeBg:rgba(10,16,40,.78); --badgeBr:rgba(255,255,255,.18);
-    --ok:#22c55e; --warn:#eab308; --danger:#ef4444;
+    /* ORIGINAL (cores com leve brilho) */
+    --bg:#203e92; --bg2:#0b1224;
+    --surface:#0f1731cc; --surface-strong:#1b368f;
+    --fg:#e8eeff; --muted:#a9b7df; --border:#1e284d;
+    --glow:#43ff9b; --glow2:#29e3ff; --warn:#eab308; --danger:#ef4444; --ok:#22c55e; --wa:#25D366;
+    --shadow: 0 10px 28px rgba(0,0,0,.38);
+    --radius: 14px;
+    --camH: 42vh; /* ajustada via JS */
+    --btnGradA:#0d1430; --btnGradB:#0a0f26; --btnBorder:#20305e;
+    --camGradA:#0b1230; --camGradB:#07102a; --camBorder:#213066;
+    --pdfA:#857b5d; --pdfB:#eab308; --pdfText:#231c00;
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  [data-theme="neutral"]{
+    --bg:#0d1117; --bg2:#0f141c;
+    --surface:#0f1726ee; --surface-strong:#192238;
+    --fg:#e6edf3; --muted:#a9b1bb; --border:#1f2a3b;
+    --glow:#9dd3b3; --glow2:#8fd3e3; --warn:#d6b34d; --danger:#d95454; --ok:#28b864; --wa:#22c35e;
+    --btnGradA:#1f2a3b; --btnGradB:#162131; --btnBorder:#2a384d;
+    --camGradA:#0c1322; --camGradB:#0a111d; --camBorder:#1a2638;
+    --pdfA:#f1d16a; --pdfB:#caa21d; --pdfText:#1d1600;
+  }
+
+  *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; background:linear-gradient(180deg,#0b122b,#0a1024); color:#eaf2ff;
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans",sans-serif;
-    overflow:hidden; -webkit-user-select:none; user-select:none;
+    margin:0; color:var(--fg); background:
+      radial-gradient(1200px 600px at 10% -10%, #16306a33, transparent 70%),
+      radial-gradient(1000px 600px at 120% 10%, #0b553355, transparent 70%),
+      var(--bg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+    padding:12px; line-height:1.35; overflow-x:hidden;
+  }
+  h1{margin:0 0 10px;text-align:center;font-size:1.28rem; letter-spacing:.02em}
+
+  .card{
+    background: linear-gradient(180deg, var(--surface), rgba(15,23,49,.7));
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding:12px; margin:0 auto 12px;
+    max-width:980px; box-shadow: var(--shadow);
   }
 
-  /* Tela */
-  #app{ position:fixed; inset:0; display:grid; grid-template-rows:1fr; }
-  #camWrap{
-    position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate;
-    touch-action:none; /* pinch-zoom custom sem zoom da página */
+  /* ===== Barra de status ===== */
+  #statusBar{
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    max-width:980px; margin:0 auto 10px;
   }
-  #vid{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000 }
+  .st{
+    display:inline-flex; align-items:center; gap:6px;
+    background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.28));
+    border:1px solid rgba(255,255,255,.14);
+    padding:6px 10px; border-radius:999px; font-size:.82rem; font-weight:800; color:#dfe7ff;
+    box-shadow: 0 4px 12px rgba(0,0,0,.28);
+  }
+  .ok{ color:#b1ffd1 }
+  .warn{ color:#ffdfa8 }
+  .bad{ color:#ffc1c1 }
 
-  /* Topo: somente ⚙️ (direita) */
-  #hudTop{
-    position:absolute; top:10px; left:0; right:0; display:flex; justify-content:flex-end; z-index:8;
-    padding:0 10px; pointer-events:none;
+  details.controls > summary{
+    cursor:pointer; list-style:none; outline:none; user-select:none;
+    font-weight:900; color:#dfe7ff; display:flex; align-items:center; gap:8px;
   }
-  .chipBtn{
-    pointer-events:auto; display:flex; align-items:center; justify-content:center;
-    width:44px; height:44px; border-radius:12px; font-size:20px;
-    background:linear-gradient(180deg,var(--panelA),var(--panelB));
-    border:1px solid rgba(255,255,255,.16); box-shadow:0 14px 36px rgba(0,0,0,.45);
-    cursor:pointer; user-select:none; color:#eaf2ff; font-weight:900;
+  details.controls > summary::before{ content:'⚙️'; display:inline-block; transform:translateY(1px) }
+  details.controls > summary::-webkit-details-marker{display:none}
+  details.controls[open] > summary{ color:#b6caff }
+  .ctrlGrid{display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding-top:8px}
+  select, input[type=range], button.small{
+    border-radius:12px; border:1px solid var(--border);
+    background:#0c1431; color:#e7edff; font-weight:800; padding:9px 11px;
   }
+  button.small{font-size:.9rem}
 
-  /* KM central (topo) */
-  #kmHud{ position:absolute; z-index:6; pointer-events:none; }
-  .kmBadge{
-    display:inline-flex; align-items:center; gap:8px;
-    background:var(--badgeBg); border:1px solid var(--badgeBr);
-    border-radius:12px; padding:6px 10px; font-weight:900; font-size:1rem;
-    box-shadow:0 12px 30px rgba(0,0,0,.45);
+  /* ===== Câmera fixa no topo ===== */
+  #camCard{
+    position: fixed; left: 50%; top: calc( env(safe-area-inset-top, 0px) + 0px ); transform: translateX(-50%);
+    width: calc(100vw - 24px); max-width:980px; height: var(--camH);
+    z-index: 100; padding: 0; margin: 12px auto; border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--camGradA), var(--camGradB));
+    border:1px solid var(--camBorder); box-shadow: 0 14px 36px rgba(0,0,0,.45), inset 0 0 0 1px #0d1b4e;
   }
-  .kmBadge .label{ opacity:.9; letter-spacing:.02em }
-  .kmBadge .val{ font-variant-numeric:tabular-nums; letter-spacing:.01em }
-  .pos-top-center{ top:10px; left:50%; transform:translateX(-50%); }
-  .pos-top-left{ top:10px; left:10px; }
-  .pos-top-right{ top:10px; right:10px; }
-  .pos-mid-left{ top:50%; left:10px; transform:translateY(-50%); }
-  .pos-mid-right{ top:50%; right:10px; transform:translateY(-50%); }
+  #wrap{ position: relative; height: 100%; border-radius: var(--radius); overflow: hidden }
+  #vid{
+    width: 100%; height: 100%; display: block; background:#000; border-radius: var(--radius);
+    object-fit: contain; object-position: center; touch-action: pan-y;
+  }
+  #can{display:none}
+  #camSpacer{ height: calc(var(--camH) + 24px + env(safe-area-inset-top, 0px)); max-width:980px; margin: 0 auto 8px; }
 
-  /* Chips (GPS / contador) deslocados para não sobrepor o ⚙️ */
-  #chipsRight{
-    position:absolute; top:60px; right:10px; display:flex; gap:8px; z-index:7; pointer-events:none;
+  /* Chip e STOP mínimos */
+  .chip{
+    position: absolute; right: 12px; top: 12px;
+    background: linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,.55));
+    border: 1px solid rgba(255,255,255,.25);
+    color: #e6ebff; padding: 6px 10px; border-radius: 999px;
+    font-size: .8rem; font-weight: 900; letter-spacing: .03em;
+    display: none; user-select: none; box-shadow: var(--shadow);
   }
-  .chipSmall{
-    display:inline-flex; align-items:center; gap:6px; pointer-events:none;
-    background:linear-gradient(180deg,var(--panelA),var(--panelB));
-    border:1px solid rgba(255,255,255,.16);
-    border-radius:12px; padding:6px 10px; font-weight:900; font-size:.92rem;
-    box-shadow:0 12px 30px rgba(0,0,0,.45);
-  }
+  .chip.on{ display: inline-flex; align-items: center; gap: 8px }
+  .chip.rec{ background: linear-gradient(180deg, rgba(127,29,29,.8), rgba(90,14,14,.72)); border-color:#dc2626; color:#ffe2e2; }
+  .chip.auto{ background: linear-gradient(180deg, rgba(90,50,17,.78), rgba(77,38,7,.72)); border-color:#f59e0b; color:#fde68a; }
 
-  /* FAB AUTO (ícone) + pulso quando ON */
-  #fabWrap{
-    position:absolute; bottom:14px; left:0; right:0; display:flex; justify-content:center; z-index:8;
-  }
-  #btnAuto{
-    width:72px; height:72px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:900; cursor:pointer;
-    background:linear-gradient(180deg,#31e27b,#22c55e); color:#042d1a; border:2px solid #1fb85b;
-    box-shadow:0 14px 36px rgba(0,0,0,.45);
-  }
-  #btnAuto.on{ background:linear-gradient(180deg,#ff8f49,#e06a2d); color:#1b0b02; border-color:#c45722; animation:pulse 1.4s infinite }
-  @keyframes pulse{
-    0%{ box-shadow:0 0 0 0 rgba(255,138,76,.5) }
-    70%{ box-shadow:0 0 0 18px rgba(255,138,76,0) }
-    100%{ box-shadow:0 0 0 0 rgba(255,138,76,0) }
-  }
-
-  /* Gate pasta */
-  #folderGate{
-    position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:#060a12;
-  }
-  .gateCard{
-    background:linear-gradient(180deg, rgba(16,26,64,.92), rgba(14,22,52,.92));
-    border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:18px; width:min(92vw, 420px);
-    color:#cfe1ff; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.5);
-  }
-  .gateCard h2{ margin:0 0 10px; font-size:1.15rem }
-  .gateCard p{ margin:0 0 14px; opacity:.95; font-weight:700 }
-  .iconBtn{
-    width:72px; height:56px; border-radius:12px; font-size:24px; display:inline-flex; align-items:center; justify-content:center;
-    border:2px solid #1f2b56; background:linear-gradient(180deg,#0f1a45,#0c1436); color:#eaf2ff; font-weight:900; cursor:pointer;
+  #btnOverlayStop{
+    position:absolute; right:10px; bottom:10px; z-index:120;
+    display:none; align-items:center; justify-content:center;
+    width:46px; height:46px; border-radius:999px; border:1px solid #a11b1b;
+    background: linear-gradient(180deg, #cc3e36, #a72b25); color:#fff; font-weight:900; box-shadow:0 6px 18px rgba(0,0,0,.35);
   }
 
-  /* Toast */
-  #toast{
-    position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:none; z-index:20;
-    background:linear-gradient(180deg, rgba(0,0,0,.78), rgba(0,0,0,.64));
-    border:1px solid rgba(255,255,255,.16); color:#eaf2ff; padding:10px 14px; border-radius:12px;
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button{
+    flex:1 1 180px; padding:12px 14px; font-size:.98rem; border:0; border-radius:12px; cursor:pointer;
+    background: linear-gradient(180deg, var(--btnGradA), var(--btnGradB)); color:var(--fg); font-weight:900;
+    border:1px solid var(--btnBorder); box-shadow: 0 6px 18px rgba(0,0,0,.25);
+    transition: transform .06s ease, box-shadow .12s ease, filter .12s ease;
   }
+  button:hover{ filter:brightness(1.05) }
+  button:active{ transform: translateY(1px); box-shadow: 0 3px 12px rgba(0,0,0,.25) }
+  #btnAutoCapture{ background: linear-gradient(180deg, #ff7b45, #e5612e); color:#1b0b02 }
+  #btnVideoRecord{ background: linear-gradient(180deg, #f2544b, #cc3e36); color:#fff }
+  #btnFinalizePdf{ background: linear-gradient(180deg, var(--pdfA), var(--pdfB)); color:var(--pdfText) }
+  #btnSelectFolder{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#072414 }
+  #btnClear{ background: linear-gradient(180deg, #ff6161, #ef4444); color:#fff }
+  button:disabled{opacity:.5;cursor:not-allowed; filter:grayscale(.2)}
+  @media (max-width:420px){ button{flex:1 1 140px;font-size:.95rem} }
 
-  /* Opções (abre sob o ⚙️) */
-  #opts{
-    position:absolute; right:10px; top:58px; z-index:9; display:none;
-    background:linear-gradient(180deg,var(--panelA),var(--panelB)); border:1px solid rgba(255,255,255,.16);
-    border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.45); padding:12px; min-width:360px; pointer-events:auto;
+  #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:8px; box-shadow: var(--shadow)}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+  .thumb{border:1px solid #243053;border-radius:10px;overflow:hidden;background:#0a122a}
+  .thumb img{width:100%;display:block}
+  .meta{padding:6px 8px;font-size:.78rem;color:#c7d2fe}
+
+  #kmPlaque{
+    text-align:center; padding:8px 12px;
+    background: linear-gradient(180deg, #0d3b8e, #0a2e6d);
+    border:2px solid #e6ecff; border-radius:12px; margin:0 auto 8px; max-width:980px;
+    font-weight:900; font-size:1rem; color:#ffffff; box-shadow:0 6px 16px rgba(0,0,0,.28); text-shadow: 0 1px 0 rgba(0,0,0,.35);
   }
-  #opts h4{ margin:0 0 8px; font-size:1rem }
-  .row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin:10px 0; flex-wrap:wrap }
-  .row select, .row button, .row input[type="range"], .row input[type="text"]{
-    border-radius:10px; border:1px solid rgba(255,255,255,.16); background:#0c1436; color:#eaf2ff; font-weight:800;
+  #kmPlaque span{ letter-spacing:.02em }
+
+  /* ===== Splash ===== */
+  #splash{
+    position: fixed; inset: 0; z-index: 2000;
+    background: radial-gradient(1200px 600px at 50% -10%, #0c2a3f, transparent 65%), #060a12;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
   }
-  .row select{ padding:8px 10px; max-width:100% }
-  .row button{ padding:8px 10px; cursor:pointer }
-  .row input[type="range"]{ width:160px }
-  .row input[type="text"]{ padding:8px 10px; width:100%; }
-  .dim{ font-size:.86rem; opacity:.85 } .btnRow{ display:flex; gap:8px } .grow{ flex:1 1 auto; min-width:140px }
+  #rainCanvas{ position:absolute; inset:0; width:100%; height:100% }
+  .splash-inner{ position: relative; z-index: 2; text-align: center; padding: 24px 18px; }
+  .title{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-weight: 900; font-size: clamp(1.2rem, 4vw, 2.4rem);
+    letter-spacing: .06em; color: #b7ffcf;
+    text-shadow: 0 0 10px #22c55e55, 0 0 22px #22c55e77, 0 0 40px #22c55e55, 0 1px 0 #0b1d14;
+    white-space: nowrap; overflow: hidden; border-right: 2px solid #43ff9b;
+    margin: 0 auto 10px; width: 0;
+  }
+  .subtitle{ font-weight:700; color:#9fe9ff; letter-spacing:.04em; opacity:.9 }
+  .splash-actions{ margin-top:16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap }
+  .splash-btn{
+    padding:10px 14px; border-radius:12px; border:1px solid #1b3b32;
+    background: linear-gradient(180deg, #1b4c3b, #123c2e); color:#c8ffdf; font-weight:900; cursor:pointer;
+    box-shadow: 0 8px 20px rgba(0,0,0,.35);
+  }
+  .splash-btn:hover{ filter: brightness(1.08) }
+  .splash-fade{ animation: splashout .6s ease forwards }
+  @keyframes splashout{ to{ opacity:0; transform: scale(1.01) } }
+  @keyframes typing { from { width: 0 } to { width: 24ch } }
+  @keyframes caret { 0%, 100% { border-right-color: transparent } 50% { border-right-color: #43ff9b } }
 </style>
 </head>
 <body>
-<div id="app">
-  <div id="camWrap">
+
+<!-- ===== SPLASH ===== -->
+<div id="splash" aria-label="Tela de abertura do relatório fotográfico">
+  <canvas id="rainCanvas"></canvas>
+  <div class="splash-inner">
+    <h2 class="title" id="splashTitle">RELATÓRIO DE INSPEÇÃO</h2>
+    <div class="subtitle">FOTOS COM DATA • KM • IDs • GPS</div>
+    <div class="splash-actions">
+      <button class="splash-btn" id="btnStart">SEJA BEM-VINDO</button>
+    </div>
+  </div>
+</div>
+
+<h1>📸 Relatório Fotográfico</h1>
+
+<!-- ===== Barra de Status ===== -->
+<div id="statusBar" aria-live="polite">
+  <span id="stCsv"  class="st">CSV: —</span>
+  <span id="stCam"  class="st">Câmera: —</span>
+  <span id="stGps"  class="st">GPS: —</span>
+  <span id="stFotos" class="st">Fotos: 0</span>
+  <span id="stPersist" class="st">Persistência: —</span>
+  <span id="stFolder" class="st">Pasta: —</span>
+  <span id="stPdf" class="st">PDF: —</span>
+</div>
+
+<div id="camSpacer"></div>
+<div id="kmPlaque"><span id="kmTop">KM —</span></div>
+
+<!-- CONTROLES -->
+<div class="card">
+  <details class="controls">
+    <summary>Controles (toque para abrir)</summary>
+    <div class="ctrlGrid">
+      <!-- Tema -->
+      <label>🎨 Tema:
+        <select id="themeSel">
+          <option value="original" selected>Original</option>
+          <option value="neutral">Neutro</option>
+        </select>
+      </label>
+
+      <!-- Câmera -->
+      <label>🎥 Câmera:
+        <select id="cameraSel"></select>
+      </label>
+      <button id="btnCycle" class="small" title="Trocar Câmera">Trocar</button>
+      <button id="btnUltra" class="small" title="Ultra‑wide (0.5×)">0.5×</button>
+      <button id="btnWide"  class="small" title="Wide (1×)">1×</button>
+      <button id="btnTele"  class="small" title="Tele (2×+)">2×</button>
+      <label id="zoomWrap" style="display:none">🔍 Zoom:
+        <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" />
+        <span id="zoomVal" style="margin-left:6px">1.0×</span>
+      </label>
+
+      <!-- Preenchimento -->
+      <label>🖼️ Preenchimento:
+        <select id="fitModeSel" title="Como a imagem ocupa o espaço do topo">
+          <option value="auto" selected>Auto (inteligente)</option>
+          <option value="contain">Sem corte</option>
+          <option value="cover">Cobrir (pode cortar)</option>
+        </select>
+      </label>
+
+      <!-- Itens do carimbo -->
+      <fieldset style="border:1px solid var(--border); border-radius:10px; padding:8px 10px;">
+        <legend style="padding:0 6px; font-weight:900; color:#dfe7ff">Itens no carimbo</legend>
+        <label style="margin-right:10px"><input type="checkbox" id="optKm" checked> KM</label>
+        <label style="margin-right:10px"><input type="checkbox" id="optTs" checked> Data/Hora</label>
+        <label style="margin-right:10px"><input type="checkbox" id="optIds" checked> IDs próximos</label>
+        <label style="margin-right:10px"><input type="checkbox" id="optGps"> GPS (lat,lon)</label>
+      </fieldset>
+
+      <span style="color:#9fe9ff;font-size:.85rem">💾 Anti-perda + gravação direta: ATIVO</span>
+    </div>
+  </details>
+</div>
+
+<!-- VÍDEO -->
+<div class="card" id="camCard">
+  <div id="wrap">
     <video id="vid" autoplay playsinline muted></video>
+    <canvas id="can" width="1280" height="720"></canvas>
 
-    <!-- KM -->
-    <div id="kmHud" class="pos-top-center">
-      <div class="kmBadge"><span class="label">KM</span> <span class="val" id="kmText">—</span></div>
-    </div>
-
-    <!-- GPS / Contador -->
-    <div id="chipsRight">
-      <div class="chipSmall">📡 <b id="gpsTxt">—</b></div>
-      <div class="chipSmall">📷 <b id="countTxt">0</b></div>
-    </div>
-
-    <!-- Topo: ⚙️ -->
-    <div id="hudTop">
-      <div class="chipBtn" id="btnGear" title="Opções" aria-label="Opções">⚙️</div>
-    </div>
-
-    <!-- FAB AUTO -->
-    <div id="fabWrap">
-      <button id="btnAuto" class="" title="Iniciar/Pausar" aria-label="Iniciar captura automática">⏺</button>
-    </div>
+    <button id="btnOverlayStop" title="Parar">⏹️</button>
+    <div id="chip" class="chip" aria-live="polite" aria-atomic="true"></div>
   </div>
 </div>
 
-<!-- Opções -->
-<div id="opts" role="dialog" aria-label="Opções">
-  <h4>Opções</h4>
-
+<!-- AÇÕES -->
+<div class="card">
   <div class="row">
-    <span>Câmera</span>
-    <select id="selCamera" class="grow" aria-label="Selecionar câmera"></select>
-    <button id="btnSwap" title="Trocar câmera" aria-label="Trocar câmera">🔄</button>
-  </div>
-
-  <div class="row">
-    <span>Lanterna</span>
-    <button id="btnTorch" title="Lanterna" aria-label="Lanterna">🔦</button>
-  </div>
-
-  <div class="row">
-    <span>Preset de cena</span>
-    <select id="selPreset" class="grow">
-      <option value="padrao" selected>Padrão</option>
-      <option value="noite">Noite</option>
-      <option value="luz">Muita luz</option>
-      <option value="movimento">Movimento</option>
-      <option value="neblina">Neblina</option>
-    </select>
-  </div>
-
-  <div class="row">
-    <span>Intervalo (ms)</span>
-    <input id="rngInterval" type="range" min="300" max="2000" step="50">
-    <span class="dim"><b id="lblInterval">—</b> ms</span>
-  </div>
-
-  <div class="row">
-    <span>Qualidade JPG</span>
-    <input id="rngJpgQ" type="range" min="70" max="100" step="1">
-    <span class="dim"><b id="lblQ">—</b>%</span>
-  </div>
-
-  <div class="row">
-    <span>Resolução máx. (px)</span>
-    <select id="selMaxDim">
-      <option value="1280">1280</option>
-      <option value="1600">1600</option>
-      <option value="1920" selected>1920</option>
-      <option value="2560">2560</option>
-    </select>
-    <span class="dim">Atual: <b id="lblDim">—</b> px</span>
-  </div>
-
-  <div class="row">
-    <span>KM na HUD</span>
-    <select id="selKmFmt">
-      <option value="label">KM (apenas)</option>
-      <option value="comma" selected>KM K,mmm</option>
-      <option value="plus">KM K+mmm</option>
-    </select>
-  </div>
-
-  <div class="row">
-    <span>Posição do KM</span>
-    <select id="selKmPos">
-      <option value="pos-top-center" selected>Topo (centro)</option>
-      <option value="pos-top-left">Topo (esq.)</option>
-      <option value="pos-top-right">Topo (dir.)</option>
-      <option value="pos-mid-left">Meio (esq.)</option>
-      <option value="pos-mid-right">Meio (dir.)</option>
-    </select>
-  </div>
-
-  <!-- Capa/rodapé do PDF -->
-  <div class="row" style="border-top:1px dashed rgba(255,255,255,.16);padding-top:8px;margin-top:8px">
-    <span>Capa do PDF</span>
-    <div class="grow">
-      <input id="txtRptTitle"  type="text" placeholder="Título (capa)" />
-      <input id="txtRptTrecho" type="text" placeholder="Trecho / Obra (capa)" />
-      <input id="txtRptOper"   type="text" placeholder="Operador (capa)" />
-      <input id="txtRptFooter" type="text" placeholder="Rodapé (todas as páginas)" />
-    </div>
-  </div>
-
-  <!-- Relatório PDF da sessão -->
-  <div class="row">
-    <span>Relatório</span>
-    <div class="btnRow">
-      <button id="btnGenPdf"   title="Gerar PDF (sessão)" aria-label="Gerar PDF">📄</button>
-      <button id="btnSharePdf" title="Compartilhar PDF" aria-label="Compartilhar PDF" disabled>📤</button>
-    </div>
+    <button id="btnSelectFolder">📁 Selecionar pasta</button>
+    <button id="btnAutoCapture">🎬 Captura Auto</button>
+    <button id="btnVideoRecord">⏺️ Gravar Vídeo</button>
+    <button id="btnFinalizePdf" disabled>📄 Finalizar PDF</button>
+    <button id="btnClear" disabled>🧹 Limpar Pré-visualizações</button>
   </div>
 </div>
 
-<!-- Gate: selecionar pasta -->
-<div id="folderGate" aria-modal="true" role="dialog">
-  <div class="gateCard">
-    <h2>Selecionar pasta de saída</h2>
-    <p>As <b>fotos (JPG)</b> serão gravadas diretamente na pasta escolhida.</p>
-    <button id="btnPickFolder" class="iconBtn" title="Selecionar pasta" aria-label="Selecionar pasta">📁</button>
-    <div class="dim" style="margin-top:10px">Requisitos: Chrome/Edge em <b>HTTPS</b>. Mantenha <code>SNVBR116SPRJ.csv</code> na mesma pasta do HTML.</div>
-  </div>
+<!-- Foto + Últimas 10 -->
+<div class="card">
+  <h2 style="margin:0 0 6px;font-size:1rem">Prévia (última foto)</h2>
+  <img id="foto" alt="Prévia da foto capturada">
 </div>
 
-<div id="toast"></div>
+<div class="card">
+  <h2 style="margin:0 0 6px;font-size:1rem">Últimas 10 fotos</h2>
+  <div id="gal" class="gallery"></div>
+</div>
+
+<!-- ====== SCRIPTS ====== -->
+
+<!-- Splash animado (Matrix) -->
+<script>
+(function(){
+  const splash = document.getElementById('splash');
+  const title  = document.getElementById('splashTitle');
+  const btnStart = document.getElementById('btnStart');
+  const canvas = document.getElementById('rainCanvas');
+  const ctx = canvas.getContext('2d');
+
+  let W, H, columns, fontSize = 16, drops = [], raf = null, started = false;
+
+  function resize(){
+    canvas.width = W = window.innerWidth;
+    canvas.height = H = window.innerHeight;
+    fontSize = Math.max(14, Math.min(24, Math.floor(W / 64)));
+    columns = Math.floor(W / fontSize);
+    drops = new Array(columns).fill(1);
+  }
+  window.addEventListener('resize', resize);
+
+  function draw(){
+    ctx.fillStyle = 'rgba(6,10,18,0.08)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#39ff88';
+    ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+    for(let i=0;i<drops.length;i++){
+      const char = String.fromCharCode(0x30A0 + Math.floor(Math.random()*96));
+      ctx.fillText(char, i*fontSize, drops[i]*fontSize);
+      if(drops[i]*fontSize > H && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+    raf = requestAnimationFrame(draw);
+  }
+  function typeIn(){ title.style.animation = `typing 1200ms steps(24, end) forwards, caret 650ms step-end 6`; }
+  function start(){
+    if(started) return; started = true;
+    splash.classList.add('splash-fade');
+    setTimeout(()=>{ splash.style.display='none'; boot(); }, 580);
+  }
+  resize(); draw(); typeIn();
+  const auto = setTimeout(start, 2200);
+  btnStart.addEventListener('click', ()=>{ clearTimeout(auto); start(); });
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden && raf){ cancelAnimationFrame(raf); raf = null; }
+    else if(!raf){ raf = requestAnimationFrame(draw); }
+  }, {passive:true});
+})();
+</script>
 
 <script>
-/* ===== Estado/Refs ===== */
-let rootDirHandle=null; let csvReady=false, camReady=false, gpsReady=false; let lastPos=null;
-let isAuto=false, autoTimer=null, writing=false; let wakeLock=null, keepAliveTimer=null;
-
-/* Câmera/zoom/torch */
-let deviceList=[], currentDeviceId=null; let camStream=null, camTrack=null, camCap=null;
-let zoomSupported=false, zoomMin=1, zoomMax=1, zoomVal=1, virtualZoom=1; let torchOn=false;
-
-/* Sessão */
-let sessionCount=0; let sessionPhotos=[]; // {handle, name, kmStr, tsStr}
-
-/* DOM */
-const camWrap=document.getElementById('camWrap'), vid=document.getElementById('vid');
-const kmText=document.getElementById('kmText'), gpsTxt=document.getElementById('gpsTxt');
-const countTxt=document.getElementById('countTxt'), btnAuto=document.getElementById('btnAuto');
-const btnGear=document.getElementById('btnGear'), opts=document.getElementById('opts');
-const btnPickFolder=document.getElementById('btnPickFolder'), folderGate=document.getElementById('folderGate');
-const selCamera=document.getElementById('selCamera'), btnSwap=document.getElementById('btnSwap'), btnTorch=document.getElementById('btnTorch');
-const selPreset=document.getElementById('selPreset');
-const rngInterval=document.getElementById('rngInterval'), lblInterval=document.getElementById('lblInterval');
-const rngJpgQ=document.getElementById('rngJpgQ'), lblQ=document.getElementById('lblQ');
-const selMaxDim=document.getElementById('selMaxDim'), lblDim=document.getElementById('lblDim');
-const selKmFmt=document.getElementById('selKmFmt'), selKmPos=document.getElementById('selKmPos');
-const txtRptTitle=document.getElementById('txtRptTitle'), txtRptTrecho=document.getElementById('txtRptTrecho'), txtRptOper=document.getElementById('txtRptOper'), txtRptFooter=document.getElementById('txtRptFooter');
-const btnGenPdf=document.getElementById('btnGenPdf'), btnSharePdf=document.getElementById('btnSharePdf');
-const toast=document.getElementById('toast');
-
-/* ===== Config persistida ===== */
-const state={
-  autoMs:Number(localStorage.getItem('auto_ms')||'700'),
-  jpgQ:Number(localStorage.getItem('jpg_q')||'90'),
-  maxDim:Number(localStorage.getItem('max_dim')||'1920'),
-  kmFmt:localStorage.getItem('km_fmt')||'comma',
-  kmPos:localStorage.getItem('km_pos')||'pos-top-center',
-  preset:localStorage.getItem('scene_preset')||'padrao',
-  rptTitle:localStorage.getItem('rpt_title')||'Relatório Fotográfico',
-  rptTrecho:localStorage.getItem('rpt_trecho')||'',
-  rptOper:localStorage.getItem('rpt_oper')||'',
-  rptFooter:localStorage.getItem('rpt_footer')||''
-};
-
-/* ===== Utils ===== */
-function showToast(msg,ms=1400){ toast.textContent=msg; toast.style.display='block'; clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.style.display='none',ms); }
+/* ===== Utilitários ===== */
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
-function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
-function stampFile(){ const d=new Date(); const YY=d.getFullYear(); const MM=String(d.getMonth()+1).padStart(2,'0'); const DD=String(d.getDate()).padStart(2,'0'); const HH=String(d.getHours()).padStart(2,'0'); const m=String(d.getMinutes()).padStart(2,'0'); const s=String(d.getSeconds()).padStart(2,'0'); return `${YY}-${MM}-${DD}_${HH}-${m}-${s}`; }
-function fmtKmKmmm(val){ const K=Math.floor(val); let m=Math.round((val-K)*1000); if(m>=1000){m-=1000;} return `${K}${state.kmFmt==='plus'?'+':','}${String(m).padStart(3,'0')}`; }
-function escPDF(str){ return String(str||'').replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
+function fmtKm(v){ let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
+function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
-/* ===== Wake Lock ===== */
-async function requestWakeLock(){ try{ if('wakeLock' in navigator){ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener?.('release',()=>{ if(isAuto) requestWakeLock(); }); } else { keepAliveTimer=setInterval(()=>{},30000); } }catch{} }
-async function releaseWakeLock(){ try{ await wakeLock?.release?.(); }catch{} finally{ wakeLock=null; } if(keepAliveTimer){ clearInterval(keepAliveTimer); keepAliveTimer=null; } }
-document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&isAuto){ requestWakeLock(); }});
+/* ===== Estado ===== */
+let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
+let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null;
+let isRecordingVideo=false; let mediaRecorder=null;
+let kmUpdateInterval=null;
 
-/* ===== Pasta ===== */
-async function verifyPermission(handle,rw){ const opt={mode:rw?'readwrite':'read'}; const q=await handle.queryPermission?.(opt); if(q==='granted') return true; const r=await handle.requestPermission?.(opt); return r==='granted'; }
-btnPickFolder.addEventListener('click', async ()=>{ try{
-  rootDirHandle = await window.showDirectoryPicker({mode:'readwrite'});
-  if(!await verifyPermission(rootDirHandle,true)){ showToast('Permissão negada'); return; }
-  folderGate.style.display='none'; showToast('Pasta OK');
-}catch{ showToast('Seleção cancelada'); }});
+const overlayOpts = { showKM:true, showTs:true, showIds:true, showGps:false };
 
-/* ===== CSV KM ===== */
-let kmPoints=[], kmGrid=new Map(); const CELL=0.005;
+/* ===== Referências ===== */
+const vid=document.getElementById('vid'); const can=document.getElementById('can'); const ctx=can.getContext('2d',{alpha:false});
+const foto=document.getElementById('foto'); const wrap=document.getElementById('wrap'); const chip=document.getElementById('chip'); const btnOverlayStop=document.getElementById('btnOverlayStop');
+const btnAutoCapture=document.getElementById('btnAutoCapture'); const btnVideoRecord=document.getElementById('btnVideoRecord'); const kmTop=document.getElementById('kmTop'); const gal=document.getElementById('gal');
+const cameraSel=document.getElementById('cameraSel'); const btnCycle=document.getElementById('btnCycle'); const btnUltra=document.getElementById('btnUltra'); const btnWide =document.getElementById('btnWide'); const btnTele =document.getElementById('btnTele'); const zoomWrap=document.getElementById('zoomWrap'); const zoomRange=document.getElementById('zoomRange'); const zoomVal=document.getElementById('zoomVal');
+const fitModeSel=document.getElementById('fitModeSel'); const themeSel=document.getElementById('themeSel');
+const stCsv=document.getElementById('stCsv'); const stCam=document.getElementById('stCam'); const stGps=document.getElementById('stGps'); const stFotos=document.getElementById('stFotos'); const stPersist=document.getElementById('stPersist'); const stFolder=document.getElementById('stFolder'); const stPdf=document.getElementById('stPdf');
+const btnSelectFolder = document.getElementById('btnSelectFolder'); const btnFinalizePdf = document.getElementById('btnFinalizePdf'); const btnClear = document.getElementById('btnClear');
+
+/* ===== File System Access + PDF incremental ===== */
+let rootDirHandle = null;
+let photoCount = 0;
+let previewBuffer = []; // últimas 10
+let pdfWriter = null;
+
+/** Pequeno helper de escrita com contagem de bytes para montar xref corretamente */
+function makeByteWriter(stream){
+  const enc = new TextEncoder();
+  let pos = 0;
+  return {
+    async writeStr(s){ const bin = enc.encode(s); await stream.write(bin); pos += bin.length; },
+    async writeBin(bin){ await stream.write(bin); pos += bin.length; },
+    get pos(){ return pos; }
+  };
+}
+
+/** Writer PDF incremental: 1 imagem por página (A4 retrato), com XObject DCTDecode */
+function createPdfStreamWriter(stream){
+  const writer = makeByteWriter(stream);
+  const offsets = []; // offsets[objectNumber] = byte offset
+  const pagesKids = [];
+  const PW = 595, PH = 842, M = 24;
+  let nextNum = 3; // 1=/Catalog, 2=/Pages (escrevemos ao final)
+  let closed = false;
+
+  const xrefPad = n => String(n).padStart(10,'0');
+
+  async function writeObjWithNum(num, body){
+    offsets[num] = writer.pos;
+    await writer.writeStr(`${num} 0 obj\n${body}\nendobj\n`);
+  }
+  async function addObj(body){
+    const num = nextNum++;
+    await writeObjWithNum(num, body);
+    return num;
+  }
+  async function addStream(dict, data){
+    const num = nextNum++;
+    offsets[num] = writer.pos;
+    const header = `${num} 0 obj\n${dict.replace('>>','')} /Length ${data.length} >>\nstream\n`;
+    await writer.writeStr(header);
+    await writer.writeBin(data);
+    await writer.writeStr(`\nendstream\nendobj\n`);
+    return num;
+  }
+
+  function fitToCell(imgW, imgH){
+    let cellW = PW - 2*M, cellH = PH - 2*M;
+    let dw = cellW, dh = Math.round(imgH*(cellW/imgW));
+    if(dh > cellH){ dh=cellH; dw=Math.round(imgW*(cellH/imgH)); }
+    const tx = M + Math.round((cellW - dw)/2);
+    const ty = M + Math.round((cellH - dh)/2);
+    return {dw, dh, tx, ty};
+  }
+
+  return {
+    async init(){
+      await writer.writeStr('%PDF-1.4\n');
+    },
+    /** Adiciona uma página com a imagem (JPEG) já carimbada */
+    async addImagePage(blob, knownW, knownH){
+      if(closed) return;
+      // Com dimensões conhecidas evitamos decodificar
+      let w = knownW, h = knownH;
+      if(!(w && h)){
+        const dataUrl = URL.createObjectURL(blob);
+        const img = await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=dataUrl; });
+        URL.revokeObjectURL(dataUrl);
+        w = img.naturalWidth; h = img.naturalHeight;
+      }
+
+      const imgBuf = new Uint8Array(await blob.arrayBuffer());
+      const imNum = await addStream(`<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, imgBuf);
+
+      const {dw, dh, tx, ty} = fitToCell(w, h);
+      const content = `q
+${dw} 0 0 ${dh} ${tx} ${PH - (ty + dh)} cm
+/Im0 Do
+Q
+`;
+      const contNum = await addStream(`<< >>`, new TextEncoder().encode(content));
+      const pageNum = await addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im0 ${imNum} 0 R >> >> /Contents ${contNum} 0 R >>`);
+      pagesKids.push(pageNum);
+    },
+    async finalize(){
+      if(closed) return;
+      closed = true;
+      // /Pages (obj 2) e /Catalog (obj 1) no final
+      await writeObjWithNum(2, `<< /Type /Pages /Kids [ ${pagesKids.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pagesKids.length} >>`);
+      await writeObjWithNum(1, `<< /Type /Catalog /Pages 2 0 R >>`);
+
+      const xrefStart = writer.pos;
+      const count = Math.max(1, offsets.length-1) + 1;
+      let xr = `xref\n0 ${count}\n0000000000 65535 f \n`;
+      for(let i=1;i<count;i++){
+        const off = offsets[i] ?? 0;
+        const inUse = (offsets[i] != null);
+        xr += `${xrefPad(off)} 00000 ${inUse?'n':'f'} \n`;
+      }
+      await writer.writeStr(xr);
+      await writer.writeStr(`trailer\n<< /Size ${count} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`);
+      await stream.close();
+    }
+  };
+}
+
+/** Seleciona pasta e inicializa PDF */
+async function selectOutputFolder(){
+  if(!('showDirectoryPicker' in window)){
+    alert('Seu navegador não suporta seleção de pasta (File System Access API). Use Chrome/Edge no Android ou Desktop.');
+    return;
+  }
+  rootDirHandle = await window.showDirectoryPicker({ mode:'readwrite' });
+  stFolder.textContent = 'Pasta: OK';
+  stFolder.className = 'st ok';
+
+  // Abre PDF do relatório (novo arquivo) e inicia writer
+  const pdfHandle = await rootDirHandle.getFileHandle(`RELATORIO_${new Date().toISOString().slice(0,10)}_${Date.now()}.pdf`, { create:true });
+  const stream = await pdfHandle.createWritable();
+  pdfWriter = createPdfStreamWriter(stream);
+  await pdfWriter.init();
+
+  btnFinalizePdf.disabled = false;
+  stPdf.textContent = 'PDF: ABERTO';
+  stPdf.className = 'st ok';
+}
+
+/** Salva JPEG diretamente na pasta e adiciona ao PDF (incremental) */
+async function savePhotoDirect(blob, filename, w, h){
+  if(!rootDirHandle){
+    await selectOutputFolder();
+    if(!rootDirHandle) throw new Error('Pasta não selecionada');
+  }
+
+  // 1) JPEG
+  const fileHandle = await rootDirHandle.getFileHandle(filename, { create:true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(blob);
+  await writable.close();
+
+  // 2) PDF (incremental)
+  if(pdfWriter){
+    await pdfWriter.addImagePage(blob, w, h);
+  }
+
+  photoCount++;
+}
+
+/** Vídeo streaming direto na pasta */
+let videoWritable = null;
+async function openVideoWriter(){
+  if(!rootDirHandle){
+    await selectOutputFolder();
+    if(!rootDirHandle) throw new Error('Pasta não selecionada');
+  }
+  const h = await rootDirHandle.getFileHandle(`VIDEO_${new Date().toISOString().replace(/[:.]/g,'-')}.webm`, {create:true});
+  videoWritable = await h.createWritable();
+}
+async function closeVideoWriter(){
+  if(videoWritable){ await videoWritable.close(); videoWritable = null; }
+}
+</script>
+
+<script>
+/* ===== CSVs (IDs + KM) ===== */
+const CELL=0.005; const idGrid=new Map(), kmGrid=new Map();
 function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
 function gridInsert(grid,p){ const k=cellKey(p.lat,p.lon); const a=grid.get(k); a?a.push(p):grid.set(k,[p]); }
-function gridCands(grid,lat,lon,minCount=120,maxR=5){
+function gridCands(grid,lat,lon,minCount=60,maxR=5){
   const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[];
   for(let r=0;r<=maxR && out.length<minCount;r++){
-    for(let dy=-r;dy<=r;dy++){
+    for(let dy=-r;dy<=r;dy++){ const y=ky+dy;
       for(let dx=-r;dx<=r;dx++){
         if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue;
-        const a=grid.get(`${ky+dy},${kx+dx}`); if(a) out.push(...a);
+        const a=grid.get(`${y},${kx+dx}`); if(a) out.push(...a);
       }
     }
-  } return out;
+  } return out.length?out:[];
+}
+async function loadIDs(){
+  const txt=await fetch('./Dados_Completos_Grupo_2_all.csv',{cache:'no-store'}).then(r=>r.text());
+  const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+  const head=lines[0].split(';').map(h=>h.toLowerCase());
+  const iId=head.findIndex(h=>h.includes('id') && !h.includes('lat') && !h.includes('long'));
+  const iLat=head.findIndex(h=>h.includes('lat')); const iLon=head.findIndex(h=>h.includes('lon'));
+  dataset=[];
+  for(let i=1;i<lines.length;i++){
+    const c=lines[i].split(';');
+    const id=String(c[iId]||'').trim(), lat=parsePt(c[iLat]), lon=parsePt(c[iLon]);
+    if(!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    if(lat===0 && lon===0) continue; if(Math.abs(lat)>90 || Math.abs(lon)>180) continue;
+    dataset.push({id,lat,lon});
+  }
+  idGrid.clear(); for(const p of dataset) gridInsert(idGrid,p);
+}
+function pickTrio(c){
+  const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
+  if(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon)) return t1;
+  const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])};
+  if(Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon)) return t2;
+  return null;
 }
 async function loadKM(){
-  try{
-    const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
-    const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
-    kmPoints=[];
-    for(const ln of lines){
-      const c=ln.split(';');
-      const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
-      const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])};
-      const t=(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon))?t1:
-               (Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon))?t2:null;
-      if(t) kmPoints.push(t);
+  const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
+  const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+  kmPoints=[]; let lastKeep=null; const MIN_STEP=5;
+  for(let i=0;i<lines.length;i++){
+    const c=lines[i].split(';'); if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue;
+    const t=pickTrio(c); if(!t) continue;
+    if(!Number.isFinite(t.km)||!Number.isFinite(t.lat)||!Number.isFinite(t.lon)) continue;
+    if(!lastKeep){ kmPoints.push(t); lastKeep=t; } else {
+      const d=hav(lastKeep.lat,lastKeep.lon,t.lat,t.lon);
+      if(d>=MIN_STEP){ kmPoints.push(t); lastKeep=t; }
     }
-    kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p);
-    csvReady = kmPoints.length>0;
-  }catch{ csvReady=false; }
+  }
+  kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p);
+}
+async function loadCSVs(){
+  try{ await Promise.all([loadIDs(),loadKM()]); csvReady=dataset.length>0 && kmPoints.length>0; }
+  catch{ csvReady=false; }
+  updateStatusBar();
+}
+
+/* ===== Vizinho/KM ===== */
+function nearestN(lat,lon,n=5){
+  if(!dataset.length) return [];
+  const cand=gridCands(idGrid,lat,lon,Math.max(60,n*20));
+  const arr=cand.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}));
+  arr.sort((a,b)=>a.d-b.d); return arr.slice(0,n);
 }
 function nearestKM(lat,lon){
   if(!kmPoints.length) return null;
-  const c=gridCands(kmGrid,lat,lon,140); if(!c.length) return null;
-  let best=null,bd=Infinity; for(const p of c){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
+  const cand=gridCands(kmGrid,lat,lon,120); if(!cand.length) return null;
+  let best=null,bd=Infinity; for(const p of cand){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
 }
+</script>
 
-/* ===== HUD (KM + GPS) ===== */
-setInterval(()=>{
-  if(lastPos){
-    const n=nearestKM(lastPos.lat,lastPos.lon);
-    if(!n){ kmText.textContent='—'; return; }
-    if(state.kmFmt==='label') kmText.textContent='';
-    else kmText.textContent = fmtKmKmmm(n.km);
+<script>
+/* ===== Câmera / Zoom / Preenchimento ===== */
+let currentStream=null, currentTrack=null, currentCap=null; let deviceList=[], deviceIndex=0;
+let videoAR = 16/9;
+function lensHint(label=''){ const s=String(label).toLowerCase();
+  if(/tele|zoom\s?lens|50mm|70mm|3x|5x/.test(s)) return 'tele';
+  if(/ultra|wide\s?angle|0\.5x|0,5x|ultra\-wide|superwide|grande|wide \(ultra\)/.test(s)) return 'ultra';
+  if(/wide|1x|principal|main|back|rear/.test(s)) return 'wide'; return '';
+}
+function saveCamPrefs(){
+  const dev=deviceList[deviceIndex]; if(dev){
+    localStorage.setItem('camDeviceId',dev.deviceId);
+    const z=Number(zoomRange.value||1);
+    if(currentCap?.zoom) localStorage.setItem('camZoom_'+dev.deviceId,z);
   }
-}, 600);
+}
+function loadCamPrefsFor(id){ const z=localStorage.getItem('camZoom_'+id); return z?Number(z):null; }
+/* Layout fluido */
+function computeAvailableW(){ const pad = 24; return Math.min(window.innerWidth - pad, 980); }
+function computeMaxH(){
+  const reserve = 160;
+  const vv = window.visualViewport;
+  const safeTop = vv ? vv.offsetTop : 0;
+  return Math.max(220, (vv ? vv.height : window.innerHeight) - reserve - safeTop);
+}
+function applyFit(mode){
+  const w = computeAvailableW();
+  const idealH = Math.round(w / (videoAR || (16/9)));
+  const maxH = computeMaxH();
+  let objectFit = 'contain';
+  let targetH = idealH;
 
-/* ===== Câmera / seleção / lanterna ===== */
-async function stopCamera(){ try{ camStream?.getTracks()?.forEach(t=>t.stop()); }catch{} finally{ camStream=null; camTrack=null; camCap=null; } }
-function populateCameraSelect(){
-  selCamera.innerHTML='';
-  if(!deviceList.length){ const opt=document.createElement('option'); opt.value=''; opt.textContent='(câmera padrão)'; selCamera.appendChild(opt); return; }
-  deviceList.forEach((d,i)=>{ const opt=document.createElement('option'); opt.value=d.deviceId; opt.textContent=d.label || `Câmera ${i+1}`; selCamera.appendChild(opt); });
-  if(currentDeviceId){ const idx=deviceList.findIndex(d=>d.deviceId===currentDeviceId); if(idx>=0) selCamera.selectedIndex=idx; }
+  if(mode === 'contain'){ objectFit='contain'; targetH = Math.min(idealH, maxH); }
+  else if(mode === 'cover'){ objectFit='cover'; targetH = Math.min(idealH, maxH); }
+  else { // auto
+    if(idealH <= maxH){ objectFit='contain'; targetH=idealH; }
+    else { objectFit='cover'; targetH=maxH; }
+  }
+  document.documentElement.style.setProperty('--camH', targetH + 'px');
+  vid.style.objectFit = objectFit;
+}
+function updateCamLayout(){ const mode = localStorage.getItem('fitMode') || fitModeSel.value || 'auto'; applyFit(mode); }
+fitModeSel.addEventListener('change', ()=>{ localStorage.setItem('fitMode', fitModeSel.value); updateCamLayout(); });
+window.addEventListener('resize', updateCamLayout);
+if(window.visualViewport){ visualViewport.addEventListener('resize', updateCamLayout); visualViewport.addEventListener('scroll', updateCamLayout); }
+
+/* Tema */
+function applyTheme(val){
+  const mode = val || localStorage.getItem('theme') || 'original';
+  document.documentElement.setAttribute('data-theme', mode);
+  localStorage.setItem('theme', mode);
+  themeSel.value = mode;
+}
+themeSel.addEventListener('change', () => applyTheme(themeSel.value));
+
+/* ===== Start/Zoom ===== */
+async function startCamera(deviceIdx=deviceIndex){
+  try{
+    if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
+    currentStream=currentTrack=currentCap=null;
+    const dev=deviceList[deviceIdx];
+    const constraints=dev? {video:{deviceId:{exact:dev.deviceId}},audio:false} : {video:{facingMode:{ideal:'environment'}},audio:false};
+    const st=await navigator.mediaDevices.getUserMedia(constraints);
+    currentStream=st; vid.srcObject=st;
+
+    await new Promise(res=>{ if(vid.readyState>=1 && vid.videoWidth) return res(); vid.onloadedmetadata=()=>res(); setTimeout(res,1200); });
+    currentTrack=st.getVideoTracks()[0];
+    currentCap=currentTrack.getCapabilities? currentTrack.getCapabilities(): null;
+
+    if (vid.videoWidth && vid.videoHeight) { videoAR = vid.videoWidth / vid.videoHeight; }
+    updateCamLayout();
+
+    if(currentCap && currentCap.zoom){
+      zoomRange.min=currentCap.zoom.min??1; zoomRange.max=currentCap.zoom.max??1; zoomRange.step=currentCap.zoom.step??0.1;
+      let z=loadCamPrefsFor(dev?.deviceId) ?? (currentCap.zoom.min ?? 1);
+      z=Math.min(zoomRange.max, Math.max(zoomRange.min, z)); await applyZoom(z,true);
+      zoomWrap.style.display='';
+    }else{ zoomWrap.style.display='none'; }
+
+    camReady=!!vid.videoWidth; deviceIndex=deviceIdx; cameraSel.value=String(deviceIndex); saveCamPrefs();
+  }catch(e){ camReady=false; }
+  updateStatusBar();
+}
+async function applyZoom(val, noSave=false){
+  if(!(currentTrack && currentCap && currentCap.zoom)) return;
+  const z=Number(val);
+  try{ await currentTrack.applyConstraints({advanced:[{zoom:z}]}); }
+  catch{ try{ await currentTrack.applyConstraints({zoom:z}); }catch(e){} }
+  zoomRange.value=z; zoomVal.textContent=`${Number(z).toFixed(1)}×`; if(!noSave) saveCamPrefs();
 }
 async function enumerateCameras(){
-  try{
-    try{ const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); tmp.getTracks().forEach(t=>t.stop()); }catch{}
-    const devs=await navigator.mediaDevices.enumerateDevices();
-    deviceList=devs.filter(d=>d.kind==='videoinput'); populateCameraSelect();
-  }catch{ deviceList=[]; populateCameraSelect(); }
+  try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{}
+  const devices=await navigator.mediaDevices.enumerateDevices();
+  deviceList=devices.filter(d=>d.kind==='videoinput');
+  deviceList.sort((a,b)=>{ const A=/back|rear|environment/i.test(a.label), B=/back|rear|environment/i.test(b.label); if(A && !B) return -1; if(!A && B) return 1; return a.label.localeCompare(b.label); });
+  cameraSel.innerHTML='';
+  deviceList.forEach((d,i)=>{ const o=document.createElement('option'); const tag=lensHint(d.label);
+    o.value=String(i); o.textContent=d.label? `${d.label}${tag?` (${tag})`:''}` : `Câmera ${i+1}${tag?` (${tag})`:''}`; cameraSel.appendChild(o);
+  });
+  const savedId=localStorage.getItem('camDeviceId'); const idx=Math.max(0, deviceList.findIndex(d=>d.deviceId===savedId));
+  deviceIndex=idx>=0?idx:0; cameraSel.value=String(deviceIndex);
 }
-async function startCameraWithConstraints(cons){
-  await stopCamera();
-  const st=await navigator.mediaDevices.getUserMedia(cons);
-  camStream=st; vid.srcObject=st; await vid.play().catch(()=>{});
-  await new Promise(res=>{ if(vid.readyState>=2&&vid.videoWidth) res(); else vid.onloadeddata=()=>res(); });
-  camReady=true;
-  camTrack=st.getVideoTracks()[0];
-  currentDeviceId = camTrack.getSettings?.().deviceId || null;
-  camCap=camTrack.getCapabilities?.()||null;
-  if(camCap && camCap.zoom){ zoomSupported=true; zoomMin=camCap.zoom.min??1; zoomMax=camCap.zoom.max??1; zoomVal=camTrack.getSettings?.().zoom ?? zoomMin; }
-  else{ zoomSupported=false; virtualZoom=1; }
-}
-async function startCameraDefault(){ try{ await startCameraWithConstraints({ video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false }); }catch{ showToast('Falha na câmera'); } }
-async function startCameraByDeviceId(id){
-  try{
-    await startCameraWithConstraints({ video:{ deviceId:{ exact:id }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false });
-    await enumerateCameras(); showToast('Câmera trocada');
-  }catch{
-    const facing=(vid.srcObject?.getVideoTracks?.()[0]?.getSettings?.().facingMode)||'environment';
-    const nextFacing=facing==='environment'?'user':'environment';
-    try{ await startCameraWithConstraints({ video:{ facingMode:{ exact: nextFacing }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} }, audio:false }); await enumerateCameras(); showToast('Câmera trocada (fallback)'); }catch{ showToast('Falha ao trocar câmera'); }
+cameraSel.addEventListener('change', async ()=>{ deviceIndex=Number(cameraSel.value||0); await startCamera(deviceIndex); updateCamLayout(); });
+btnCycle.addEventListener('click', async ()=>{ deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCamera(deviceIndex); });
+async function switchLens(target){
+  const idx=deviceList.findIndex(d=>lensHint(d.label)===target && /back|rear|environment/i.test(d.label));
+  if(idx>=0){ await startCamera(idx); return; }
+  if(currentCap?.zoom){
+    const mn=Number(zoomRange.min||1), mx=Number(zoomRange.max||1);
+    if(target==='ultra') await applyZoom(mn);
+    else if(target==='wide') await applyZoom(Math.min(Math.max(1,mn),mx));
+    else await applyZoom(Math.min(Math.max(2,mn),mx));
+    return;
   }
+  const rearIdxs=deviceList.map((d,i)=>({d,i})).filter(x=>/back|rear|environment/i.test(x.d.label)).map(x=>x.i);
+  if(rearIdxs.length>1){ const next=rearIdxs.find(i=>i!==deviceIndex) ?? rearIdxs[0]; await startCamera(next); }
 }
-selCamera.addEventListener('change', async ()=>{ const id=selCamera.value; if(id) await startCameraByDeviceId(id); });
-btnSwap.addEventListener('click', async ()=>{
-  if(!deviceList.length){ await enumerateCameras(); }
-  if(!deviceList.length){ showToast('Nenhuma câmera encontrada'); return; }
-  const idx=deviceList.findIndex(d=>d.deviceId===currentDeviceId);
-  const next=deviceList[(idx+1)%deviceList.length];
-  await startCameraByDeviceId(next.deviceId);
-});
-btnTorch.addEventListener('click', async ()=>{
-  try{
-    const cap=camTrack?.getCapabilities?.(); if(!cap || !('torch' in cap)){ showToast('Lanterna não suportada'); return; }
-    torchOn=!torchOn; await camTrack.applyConstraints({advanced:[{torch:torchOn}]}); showToast(torchOn?'Lanterna ON':'Lanterna OFF');
-  }catch{ showToast('Falha ao alternar lanterna'); }
-});
-navigator.mediaDevices.addEventListener?.('devicechange', ()=>{ enumerateCameras().catch(()=>{}); });
+btnUltra.addEventListener('click', ()=>switchLens('ultra'));
+btnWide .addEventListener('click', ()=>switchLens('wide'));
+btnTele .addEventListener('click', ()=>switchLens('tele'));
+zoomRange.addEventListener('input', ()=>applyZoom(zoomRange.value));
+</script>
 
-/* ===== Pinch‑zoom: óptico (quando suportado) ou virtual ===== */
-const pointers=new Map(); let startDist=0, startZoom=1;
-function distance(a,b){ const dx=b.x-a.x, dy=b.y-a.y; return Math.hypot(dx,dy); }
-camWrap.addEventListener('pointerdown',(e)=>{ camWrap.setPointerCapture?.(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); });
-camWrap.addEventListener('pointermove',async (e)=>{
-  if(!pointers.has(e.pointerId)) return; pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(pointers.size===2){
-    const [p1,p2]=[...pointers.values()]; const dist=distance(p1,p2);
-    if(!startDist){ startDist=dist; startZoom= zoomSupported? (camTrack.getSettings?.().zoom ?? zoomMin) : virtualZoom; return; }
-    const target=Math.max(zoomMin, Math.min(zoomMax||6, startZoom*(dist/startDist)));
-    if(zoomSupported){ try{ await camTrack.applyConstraints({advanced:[{zoom:target}]}); zoomVal=target; }catch{} }
-    else { virtualZoom=target; }
-  }
-});
-['pointerup','pointercancel','pointerleave'].forEach(ev=>camWrap.addEventListener(ev,(e)=>{ pointers.delete(e.pointerId); if(pointers.size<2) startDist=0; }));
-
-/* ===== Presets (filtro leve) ===== */
-function applyPreset(name){
-  state.preset=name; localStorage.setItem('scene_preset',name);
-  const adv=[];
-  if(camTrack){
-    if(name==='noite' || name==='luz'){ adv.push({whiteBalanceMode:'continuous'}); }
-    camTrack.applyConstraints({advanced:adv}).catch(()=>{});
-  }
-}
-
-/* ===== Carimbo na foto ===== */
-function stampOverlay(ctx,w,h,kmStr,tsStr,gpsStr){
-  const bandH=Math.max(100,Math.round(h*0.14));
-  ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
-
-  if(gpsStr){
-    ctx.fillStyle='#cfe7ff'; ctx.textAlign='left'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
-    ctx.fillText(gpsStr, 20, h - bandH + 28);
-  }
-  if(kmStr){
-    ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.05)}px system-ui`;
-    ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
-    const kmStrFinal = (state.kmFmt==='label') ? 'KM' : kmStr;
-    ctx.fillText(kmStrFinal, 20, h - bandH + Math.round(bandH*0.50));
-    ctx.shadowBlur=0;
-  }
-  if(tsStr){
-    ctx.fillStyle='#ffffff'; ctx.textAlign='left'; ctx.font=`700 ${Math.round(h*0.03)}px system-ui`;
-    ctx.fillText(tsStr, 20, h - 18);
-  }
-}
-
-/* ===== Canvas/captura ===== */
-const capCanvas=document.createElement('canvas'), capCtx=capCanvas.getContext('2d',{alpha:false});
-async function frameToBlobAndMeta(){
-  const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
-  const sc=(Math.max(vw,vh)>state.maxDim)? (state.maxDim/Math.max(vw,vh)) : 1;
-  const w=Math.round(vw*sc), h=Math.round(vh*sc);
-
-  if(capCanvas.width!==w) capCanvas.width=w;
-  if(capCanvas.height!==h) capCanvas.height=h;
-
-  if(zoomSupported || virtualZoom<=1.001){
-    // óptico (já aplicado na lente) ou sem zoom virtual
-    capCtx.drawImage(vid,0,0,w,h);
-  }else{
-    // zoom virtual (cropa e redimensiona)
-    const z=Math.max(1, Math.min(virtualZoom,6));
-    const srcW=Math.round(vw/z), srcH=Math.round(vh/z);
-    const sx=Math.floor((vw-srcW)/2), sy=Math.floor((vh-srcH)/2);
-    capCtx.drawImage(vid, sx, sy, srcW, srcH, 0, 0, w, h);
-  }
-
-  const kmStrBase = (kmText.textContent && kmText.textContent!=='—') ? `KM ${fmtKmKmmm(Number(kmText.textContent.replace(/[+,]/g,'.'))||0)}` : 'KM —';
-  // NOTA: acima mantém padrão visual; o HUD já exibe com vírgula/+, esta string só garante prefixo "KM".
-  const tsStr = new Date().toLocaleString();
-  const gpsStr = lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
-
-  stampOverlay(capCtx, w, h, kmStrBase, tsStr, gpsStr);
-
-  const q=Math.max(0.7, Math.min(1, state.jpgQ/100));
-  let blob=await new Promise(res=>capCanvas.toBlob(res,'image/jpeg',q));
-  if(!blob){
-    const dataURL=capCanvas.toDataURL('image/jpeg',q);
-    const bin=atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
-    for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
-    blob=new Blob([u8], {type:'image/jpeg'});
-  }
-  return {blob, kmStr: kmStrBase, tsStr};
-}
-
-/* ===== Escrita à prova de 0B: .part -> verifica -> final ===== */
-async function writeAtomicJpeg(dirHandle, finalName, primaryBlob){
-  const tempName = finalName.replace(/\.jpg$/i, `.${Date.now()}.part.jpg`);
-  const tempFH = await dirHandle.getFileHandle(tempName, {create:true});
-  let w = await tempFH.createWritable({keepExistingData:false});
-  await w.write(primaryBlob); await w.close();
-
-  let tempFile = await tempFH.getFile();
-  if(tempFile.size===0){
-    const q=Math.max(0.7, Math.min(1, state.jpgQ/100));
-    const dataURL=capCanvas.toDataURL('image/jpeg',q);
-    const bin=atob(dataURL.split(',')[1]); const u8=new Uint8Array(bin.length);
-    for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
-    const fbBlob=new Blob([u8], {type:'image/jpeg'});
-    const w2=await tempFH.createWritable({keepExistingData:false});
-    await w2.write(fbBlob); await w2.close();
-    tempFile = await tempFH.getFile();
-    if(tempFile.size===0){ showToast('Falha ao salvar (0B)'); return null; }
-  }
-
-  const finalFH = await dirHandle.getFileHandle(finalName, {create:true});
-  const wFinal = await finalFH.createWritable({keepExistingData:false});
-  const buf = await tempFile.arrayBuffer();
-  await wFinal.write(new Blob([buf], {type:'image/jpeg'}));
-  await wFinal.close();
-
-  try{ await dirHandle.removeEntry(tempName); }catch{}
-
-  const f = await finalFH.getFile();
-  if(f.size===0){ showToast('Falha ao salvar (final 0B)'); return null; }
-  return finalFH;
-}
-
-/* ===== Capturar & salvar ===== */
-async function capturePhoto(){
-  if(writing) return;
-  if(!(rootDirHandle && camReady && gpsReady && csvReady)) return;
-
-  writing=true;
-  try{
-    if(!await verifyPermission(rootDirHandle,true)){ showToast('Permissão na pasta'); writing=false; return; }
-
-    const {blob, kmStr, tsStr}=await frameToBlobAndMeta();
-
-    // FOTO_{KM_K_mmm}_YYYY-MM-DD_HH-mm-ss.jpg
-    const kPart = (kmStr||'KM —').replace('KM ','').replace('+','_').replace(',','_');
-    const name  = `FOTO_${kPart}_${stampFile()}.jpg`;
-
-    const fh = await writeAtomicJpeg(rootDirHandle, name, blob);
-    if(!fh) return;
-
-    sessionPhotos.push({handle: fh, name, kmStr, tsStr});
-    sessionCount++; countTxt.textContent=String(sessionCount);
-  }catch(e){
-    console.error('Salvar foto erro:', e);
-    showToast('Falha ao salvar foto');
-  }finally{
-    writing=false;
-  }
-}
-
-/* ===== AUTO ===== */
-function startAuto(){
-  if(isAuto) return;
-  if(!(rootDirHandle && camReady && gpsReady && csvReady)){ showToast('Aguarde Pasta/Câmera/GPS/CSV'); return; }
-  isAuto=true; requestWakeLock();
-  btnAuto.classList.add('on'); btnAuto.textContent='⏹'; btnAuto.setAttribute('aria-label','Parar captura automática');
-  capturePhoto().catch(()=>{});
-  autoTimer=setInterval(()=>{ if(!writing) capturePhoto().catch(()=>{}); }, state.autoMs);
-  showToast('Auto ON');
-}
-function stopAuto(){
-  if(!isAuto) return;
-  isAuto=false; clearInterval(autoTimer); autoTimer=null; releaseWakeLock();
-  btnAuto.classList.remove('on'); btnAuto.textContent='⏺'; btnAuto.setAttribute('aria-label','Iniciar captura automática');
-  showToast('Auto OFF');
-}
-btnAuto.addEventListener('click', ()=>{ if(isAuto) stopAuto(); else startAuto(); });
-
-/* ===== PDF da sessão (capa/rodapé) ===== */
-async function createImageBitmapSafe(blob){ try{ return await createImageBitmap(blob); }catch{ return null; } }
-async function measureImageWH(blob){
-  const bm=await createImageBitmapSafe(blob);
-  if(bm){ const w=bm.width, h=bm.height; bm.close(); return {w,h}; }
-  const url=URL.createObjectURL(blob); const img=new Image(); img.src=url;
-  await new Promise((res,rej)=>{ img.onload=()=>res(); img.onerror=rej; });
-  const w=img.naturalWidth, h=img.naturalHeight; URL.revokeObjectURL(url); return {w,h};
-}
-async function generatePdfFromSession(){
-  if(!sessionPhotos.length){ showToast('Sem fotos na sessão'); return; }
-  if(!rootDirHandle){ showToast('Selecione a pasta'); return; }
-
-  const title=state.rptTitle||'Relatório Fotográfico';
-  const trecho=state.rptTrecho||''; const oper=state.rptOper||'';
-  const footer=state.rptFooter||''; const dataBR=new Date().toLocaleString();
-  const totalFotos=sessionPhotos.length; const totalPaginas=1 + totalFotos;
-
-  const pdfName=`RELATORIO_FOTOS_${stampFile()}.pdf`;
-  const fh=await rootDirHandle.getFileHandle(pdfName,{create:true}); const ws=await fh.createWritable();
-
-  let pos=0, obj=0, xref=[0];
-  async function w(s){ const u=(s instanceof Uint8Array)?s:new TextEncoder().encode(s); await ws.write(u); pos+=u.length; }
-  async function objWrite(body){ obj+=1; xref.push(pos); await w(`${obj} 0 obj\n${body}\nendobj\n`); return obj; }
-  async function streamWrite(dict,u8){ obj+=1; xref.push(pos); await w(`${obj} 0 obj\n${dict.replace('>>','')} /Length ${u8.length} >>\nstream\n`); await w(u8); await w(`\nendstream\nendobj\n`); return obj; }
-
-  await w('%PDF-1.4\n');
-  const fontRef=await objWrite('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
-
-  const PW=595, PH=842, M=28, CAP=36;
-  const pageRefs=[];
-
-  // CAPA
-  const capaOps=[];
-  capaOps.push(`BT /F1 18 Tf 1 0 0 1 ${M} ${PH - M - 60} Tm (${escPDF(title)}) Tj ET`);
-  if(trecho) capaOps.push(`BT /F1 12 Tf 1 0 0 1 ${M} ${PH - M - 90} Tm (${escPDF('Trecho/Obra: ' + trecho)}) Tj ET`);
-  if(oper)   capaOps.push(`BT /F1 12 Tf 1 0 0 1 ${M} ${PH - M - 110} Tm (${escPDF('Operador: ' + oper)}) Tj ET`);
-  capaOps.push(`BT /F1 12 Tf 1 0 0 1 ${M} ${PH - M - 130} Tm (${escPDF('Data: ' + dataBR)}) Tj ET`);
-  capaOps.push(`BT /F1 12 Tf 1 0 0 1 ${M} ${PH - M - 150} Tm (${escPDF('Total de fotos: ' + totalFotos)}) Tj ET`);
-  const footerCapa = `${footer ? footer + ' • ' : ''}p 1/${totalPaginas}`.trim();
-  if(footerCapa) capaOps.push(`BT /F1 9 Tf 1 0 0 1 ${M} ${M - 4} Tm (${escPDF(footerCapa)}) Tj ET`);
-  const capaContRef=await streamWrite('<< >>', new TextEncoder().encode(capaOps.join('\n')));
-  const capaRes=`<< /Font << /F1 ${fontRef} 0 R >> >>`;
-  const capaRef=await objWrite(`<< /Type /Page /Parent 0 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources ${capaRes} /Contents ${capaContRef} 0 R >>`);
-  pageRefs.push(capaRef);
-
-  // Páginas de foto
-  let pageIndex=1;
-  for(const it of sessionPhotos){
-    pageIndex++;
-    const file=await it.handle.getFile(); const u8=new Uint8Array(await file.arrayBuffer());
-    const {w:imgW,h:imgH}=await measureImageWH(file);
-
-    const imgRef=await streamWrite(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, u8);
-
-    let dw=PW-2*M, dh=Math.round(imgH*((PW-2*M)/imgW));
-    if(dh>PH-2*M-CAP){ dh=PH-2*M-CAP; dw=Math.round(imgW*(dh/imgH)); }
-    const tx=M + Math.round((PW-2*M-dw)/2);
-    const ty=M + CAP + Math.round((PH-2*M-CAP-dh)/2);
-    const imY=PH-(ty+dh);
-
-    const legend = `${it.kmStr||'KM —'} • ${it.tsStr||''}`;
-    const footerLine = `${footer ? footer + ' • ' : ''}p ${pageIndex}/${totalPaginas}`.trim();
-
-    const ops=[
-      `q\n${dw} 0 0 ${dh} ${tx} ${imY} cm\n/Im0 Do\nQ`,
-      `BT /F1 11 Tf 1 0 0 1 ${M+4} ${M+18} Tm (${escPDF(legend)}) Tj ET`,
-      footerLine ? `BT /F1 9 Tf 1 0 0 1 ${M} ${M - 4} Tm (${escPDF(footerLine)}) Tj ET` : ''
-    ].filter(Boolean).join('\n');
-
-    const contRef=await streamWrite('<< >>', new TextEncoder().encode(ops));
-    const resDict=`<< /XObject << /Im0 ${imgRef} 0 R >> /Font << /F1 ${fontRef} 0 R >> >>`;
-    const pageRef=await objWrite(`<< /Type /Page /Parent 0 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources ${resDict} /Contents ${contRef} 0 R >>`);
-    pageRefs.push(pageRef);
-  }
-
-  const kids=pageRefs.map(r=>`${r} 0 R`).join(' ');
-  const pagesRef=await objWrite(`<< /Type /Pages /Kids [ ${kids} ] /Count ${pageRefs.length} >>`);
-  const catalogRef=await objWrite(`<< /Type /Catalog /Pages ${pagesRef} 0 R >>`);
-
-  const start=pos; let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`;
-  for(let i=1;i<xref.length;i++){ xr+=String(xref[i]).padStart(10,'0')+' 00000 n \n'; }
-  await w(xr); await w(`trailer\n<< /Size ${xref.length} /Root ${catalogRef} 0 R >>\nstartxref\n${start}\n%%EOF`);
-  await ws.close();
-
-  latestPdfHandle=fh; latestPdfName=pdfName; btnSharePdf.disabled=false; showToast(`PDF gerado: ${pdfName}`);
-}
-async function sharePdf(){
-  try{
-    if(!latestPdfHandle){ showToast('Gere o PDF primeiro'); return; }
-    const file=await latestPdfHandle.getFile();
-    if(navigator.canShare && navigator.canShare({files:[file]})){
-      await navigator.share({ files:[file], text:'Relatório fotográfico' });
-    }else{
-      const url=URL.createObjectURL(file); const a=document.createElement('a'); a.href=url; a.download=latestPdfName||file.name; a.click();
-      setTimeout(()=>URL.revokeObjectURL(url),3000); showToast('PDF baixado');
-    }
-  }catch{ showToast('Não foi possível compartilhar'); }
-}
-btnGenPdf.addEventListener('click', ()=>{ generatePdfFromSession().catch(()=>{}) });
-btnSharePdf.addEventListener('click', ()=>{ sharePdf().catch(()=>{}) });
-
+<script>
 /* ===== GPS ===== */
 function startGPS(){
-  if(!('geolocation' in navigator)){ gpsReady=false; gpsTxt.textContent='—'; return; }
+  if(!('geolocation' in navigator)){ gpsReady=false; updateStatusBar(); return; }
   navigator.geolocation.getCurrentPosition(p=>{
     lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
-    gpsReady=true; gpsTxt.textContent=`±${Math.round(p.coords.accuracy||0)}m`;
+    gpsReady=true; updateStatusBar();
     navigator.geolocation.watchPosition(pos=>{
       lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
-      gpsTxt.textContent=`±${Math.round(lastPos.acc||0)}m`;
-    },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
-  },()=>{ gpsReady=false; gpsTxt.textContent='—'; }, {enableHighAccuracy:true, timeout:12000});
+    }, ()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
+  }, ()=>{
+    gpsReady=false; updateStatusBar();
+  }, {enableHighAccuracy:true, timeout:12000});
 }
-
-/* ===== Opções/UI ===== */
-btnGear.addEventListener('click', async ()=>{
-  const open=(opts.style.display!=='block');
-  if(open && !deviceList.length){ await enumerateCameras().catch(()=>{}); }
-  opts.style.display=open?'block':'none';
-});
-rngInterval.value=String(state.autoMs); lblInterval.textContent=String(state.autoMs);
-rngJpgQ.value=String(state.jpgQ); lblQ.textContent=String(state.jpgQ);
-selMaxDim.value=String(state.maxDim); lblDim.textContent=String(state.maxDim);
-selKmFmt.value=state.kmFmt; selKmPos.value=state.kmPos; selPreset.value=state.preset;
-
-rngInterval.addEventListener('input', ()=>{ state.autoMs=Number(rngInterval.value); lblInterval.textContent=rngInterval.value; localStorage.setItem('auto_ms',String(state.autoMs)); });
-rngJpgQ.addEventListener('input',   ()=>{ state.jpgQ  =Number(rngJpgQ.value); lblQ.textContent=rngJpgQ.value; localStorage.setItem('jpg_q',  String(state.jpgQ)); });
-selMaxDim.addEventListener('change',()=>{ state.maxDim=Number(selMaxDim.value); lblDim.textContent=selMaxDim.value; localStorage.setItem('max_dim',String(state.maxDim)); });
-selKmFmt.addEventListener('change', ()=>{ state.kmFmt=selKmFmt.value; localStorage.setItem('km_fmt', state.kmFmt); });
-selKmPos.addEventListener('change', ()=>{ state.kmPos=selKmPos.value; localStorage.setItem('km_pos', state.kmPos); const hud=document.getElementById('kmHud'); hud.className=''; hud.classList.add(state.kmPos); });
-selPreset.addEventListener('change', ()=>{ applyPreset(selPreset.value); });
-
-/* ===== Boot fluido (câmera → GPS → CSV) ===== */
-async function withTimeout(promise, ms, onTimeoutMsg='Tempo esgotado'){
-  const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(onTimeoutMsg), ms);
-  try{
-    const res=await Promise.race([
-      promise,
-      new Promise((_,rej)=>ctrl.signal.addEventListener('abort',()=>rej(new Error(onTimeoutMsg))))
-    ]);
-    return res;
-  }finally{ clearTimeout(t); }
-}
-async function boot(){
-  // aplica opções
-  const hud=document.getElementById('kmHud'); hud.className=''; hud.classList.add(state.kmPos);
-
-  try{ await withTimeout(startCameraDefault(), 5000, 'Câmera demorou'); }
-  catch{ await startCameraWithConstraints({ video:{ facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720} }, audio:false }).catch(()=>{}); }
-
-  setTimeout(()=>{ startGPS(); }, 50);
-  setTimeout(async()=>{ try{ await withTimeout(loadKM(), 6000, 'CSV lento'); }catch{} }, 120);
-
-  if('storage' in navigator && 'persist' in navigator.storage){ navigator.storage.persist().catch(()=>{}); }
-}
-boot();
 </script>
+
+<script>
+/* ===== Status Bar ===== */
+function statusChip(el, text, state){ el.textContent = text; el.className = 'st ' + (state||''); }
+function updateStatusBar(){
+  statusChip(stCsv,  'CSV: '  + (csvReady?'OK':'Carregando…'), csvReady?'ok':'warn');
+  statusChip(stCam,  'Câmera: ' + (camReady?'OK':'Aguardando…'), camReady?'ok':'warn');
+  const gpsTxt = gpsReady ? (lastPos? `OK (±${Math.round(lastPos.acc||0)} m)`:'OK') : 'Aguardando…';
+  statusChip(stGps,  'GPS: ' + gpsTxt, gpsReady?'ok':'warn');
+  statusChip(stFotos,'Fotos: ' + photoCount, photoCount>0?'ok':'');
+}
+</script>
+
+<script>
+/* ===== Carimbo ===== */
+function stampOverlay(ctx, w, h, kmStr, ids, ts, gpsLine){
+  const bandH=Math.max(144,Math.round(h*0.16));
+  ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
+
+  // Esquerda
+  if(overlayOpts.showKM && kmStr){
+    ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.055)}px system-ui`;
+    ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
+    ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52)); ctx.shadowBlur=0;
+  }
+
+  if(overlayOpts.showTs){
+    ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.font=`700 ${Math.round(h*0.032)}px system-ui`;
+    ctx.fillText(ts,20,h-Math.round(bandH*0.22));
+  }
+
+  if(overlayOpts.showGps && gpsLine){
+    ctx.fillStyle='#d7e5ff'; ctx.textAlign='left'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
+    ctx.fillText(gpsLine,20,h-Math.round(bandH*0.5));
+  }
+
+  // Direita (IDs)
+  if(overlayOpts.showIds && Array.isArray(ids)){
+    ctx.textAlign='right'; ctx.fillStyle='#d7e5ff'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
+    ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-bandH+28+i*26));
+  }
+}
+</script>
+
+<script>
+/* ===== Captura (leve, sem acumular) ===== */
+const CAP_MAX_DIM = 1600; // mantém arquivo leve e rápido
+
+function addPreview(url, meta){
+  previewBuffer.push({url, meta});
+  if(previewBuffer.length > 10){
+    const removed = previewBuffer.shift();
+    try{ URL.revokeObjectURL(removed.url); }catch{}
+  }
+  renderGallery();
+}
+function renderGallery(){
+  gal.innerHTML='';
+  previewBuffer.forEach((p,idx)=>{
+    const d=document.createElement('div'); d.className='thumb';
+    const im=document.createElement('img'); im.src=p.url;
+    const meta=document.createElement('div'); meta.className='meta'; meta.textContent=p.meta;
+    d.appendChild(im); d.appendChild(meta); gal.appendChild(d);
+  });
+  btnClear.disabled = previewBuffer.length===0;
+  updateStatusBar();
+}
+
+function buildFilename(kmStr, ts){
+  const safeKm = (kmStr||'KM_—').replace('KM ','').replace('+','_').replace(/\s/g,'');
+  const t = new Date(ts);
+  const stamp = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}_${String(t.getHours()).padStart(2,'0')}-${String(t.getMinutes()).padStart(2,'0')}-${String(t.getSeconds()).padStart(2,'0')}`;
+  return `FOTO_${safeKm}_${stamp}.jpg`;
+}
+
+async function captureOnce(){
+  if(!(csvReady && camReady && gpsReady && lastPos)) return;
+
+  // Define resolução alvo (reduz carga e tamanho)
+  const vw = vid.videoWidth||1280, vh=vid.videoHeight||720;
+  const scale = (Math.max(vw,vh)>CAP_MAX_DIM) ? (CAP_MAX_DIM/Math.max(vw,vh)) : 1;
+  const w = Math.round(vw*scale), h = Math.round(vh*scale);
+  can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
+
+  const kmObj=nearestKM(lastPos.lat,lastPos.lon);
+  const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+  const ids=nearestN(lastPos.lat,lastPos.lon,5);
+  const ts=new Date().toLocaleString();
+  const gpsLine = overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
+
+  stampOverlay(ctx, w, h, overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
+
+  const blob = await new Promise(res => can.toBlob(res,'image/jpeg',0.85));
+  const fname = buildFilename(kmStr, new Date());
+
+  // Salva direto na pasta + adiciona ao PDF
+  await savePhotoDirect(blob, fname, w, h);
+
+  // Prévia (só últimas 10)
+  const url = URL.createObjectURL(blob);
+  foto.src=url;
+  addPreview(url, `${kmStr} • ${ts}`);
+}
+
+function startAutoCapture(){
+  if(!rootDirHandle){ alert('Selecione a pasta primeiro.'); return; }
+  if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
+  isAutoCapturing=true; btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.style.background='linear-gradient(180deg, #ff7b7b, #ef4444)';
+  updateChip();
+  autoCaptureInterval=setInterval(()=>{ captureOnce().catch(()=>{}); }, 600);
+}
+function stopAutoCapture(){
+  if(!isAutoCapturing) return; isAutoCapturing=false;
+  if(autoCaptureInterval){ clearInterval(autoCaptureInterval); autoCaptureInterval=null; }
+  btnAutoCapture.textContent='🎬 Captura Auto'; btnAutoCapture.style.background='linear-gradient(180deg, #ff7b45, #e5612e)';
+  updateChip();
+}
+btnAutoCapture.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
+
+btnClear.addEventListener('click', ()=>{
+  // Limpa apenas pré-visualizações (arquivos já estão salvos em disco)
+  previewBuffer.forEach(p=>{ try{ URL.revokeObjectURL(p.url);}catch{} });
+  previewBuffer.length = 0; foto.removeAttribute('src'); renderGallery();
+});
+</script>
+
+<script>
+/* ===== Chip + STOP mínimos ===== */
+function updateChip(){
+  const labels=[]; let cls=['chip','on'];
+  if(isRecordingVideo){ labels.push('REC'); cls.push('rec'); }
+  if(isAutoCapturing){ labels.push('AUTO'); cls.push('auto'); }
+  if(!labels.length){
+    chip.className='chip'; chip.style.display='none'; chip.textContent='';
+    btnOverlayStop.style.display='none';
+  } else {
+    chip.textContent=labels.join(' • '); chip.className=cls.join(' '); chip.style.display='inline-flex';
+    btnOverlayStop.style.display='flex';
+  }
+}
+btnOverlayStop.addEventListener('click', ()=>{
+  if(isRecordingVideo) stopVideoRecording();
+  else if(isAutoCapturing) stopAutoCapture();
+});
+</script>
+
+<script>
+/* ===== KM ao vivo ===== */
+function updateKmDisplay(){ if(!lastPos) return; const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; kmTop.textContent=kmStr; }
+function startKmUpdate(){ updateKmDisplay(); kmUpdateInterval=setInterval(()=>{ updateKmDisplay(); updateStatusBar(); }, 400); }
+function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); kmUpdateInterval=null; } }
+</script>
+
+<script>
+/* ===== Vídeo (grava direto em arquivo) ===== */
+async function startVideoRecording(){
+  if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle){ alert('Selecione a pasta'); return; } }
+  if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
+
+  try{
+    const videoStream=vid.srcObject; if(!videoStream){ alert('Câmera não disponível'); return; }
+
+    // Canvas com overlay para o vídeo
+    const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=vid.videoWidth||1280; overlayCanvas.height=vid.videoHeight||720; const overlayCtx=overlayCanvas.getContext('2d');
+    const canvasStream=overlayCanvas.captureStream(30);
+    const audioTracks=videoStream.getAudioTracks(); if(audioTracks.length>0){ canvasStream.addTrack(audioTracks[0]); }
+
+    await openVideoWriter();
+
+    const options={ mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 };
+    const mimeOk = MediaRecorder.isTypeSupported(options.mimeType) ? options.mimeType : 'video/webm';
+    mediaRecorder=new MediaRecorder(canvasStream, { ...options, mimeType:mimeOk });
+
+    mediaRecorder.ondataavailable = async (e) => {
+      if(e.data && e.data.size && videoWritable){
+        await videoWritable.write(e.data);
+      }
+    };
+    mediaRecorder.onstop = async ()=>{
+      isRecordingVideo=false;
+      await closeVideoWriter();
+      updateChip();
+    };
+
+    mediaRecorder.start(1000);
+    isRecordingVideo=true; updateChip();
+
+    const drawLoop=()=>{
+      if(!isRecordingVideo) return;
+      overlayCtx.drawImage(vid, 0, 0, overlayCanvas.width, overlayCanvas.height);
+      const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+      const ids=nearestN(lastPos.lat,lastPos.lon,5); const ts=new Date().toLocaleString();
+      const gpsLine = overlayOpts.showGps && lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
+      stampOverlay(overlayCtx, overlayCanvas.width, overlayCanvas.height,
+        overlayOpts.showKM?kmStr:'', overlayOpts.showIds?ids:[], overlayOpts.showTs?ts:'', gpsLine);
+      requestAnimationFrame(drawLoop);
+    };
+    drawLoop(); startKmUpdate();
+  }catch(e){ console.error('Erro ao iniciar gravação:', e); alert('Erro ao iniciar gravação: '+e.message); isRecordingVideo=false; updateChip(); }
+}
+function stopVideoRecording(){
+  if(!isRecordingVideo || !mediaRecorder) return;
+  isRecordingVideo=false; stopKmUpdate();
+  try{ mediaRecorder.stop(); }catch{}
+  updateChip();
+}
+btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ btnVideoRecord.disabled=true; stopVideoRecording(); setTimeout(()=>{ btnVideoRecord.disabled=false; }, 500); } else { btnVideoRecord.disabled=true; try{ await startVideoRecording(); }catch(e){ console.error('Erro na gravação:', e); } btnVideoRecord.disabled=false; } });
+</script>
+
+<script>
+/* ===== Interações ===== */
+wrap.addEventListener('click', ()=>{ if(isRecordingVideo){ stopVideoRecording(); } else if(isAutoCapturing){ stopAutoCapture(); } else if(csvReady && camReady && gpsReady){ captureOnce(); } });
+btnSelectFolder.addEventListener('click', async ()=>{ await selectOutputFolder(); });
+
+btnFinalizePdf.addEventListener('click', async ()=>{
+  if(!pdfWriter){ alert('Nenhum PDF aberto. Selecione a pasta para iniciar um novo.'); return; }
+  btnFinalizePdf.disabled = true;
+  try{
+    await pdfWriter.finalize();
+    stPdf.textContent = 'PDF: FECHADO';
+    stPdf.className = 'st warn';
+    pdfWriter = null;
+    alert('PDF finalizado com sucesso. Você pode abrir um novo relatório selecionando a pasta novamente.');
+  }catch(e){
+    alert('Falha ao finalizar PDF: ' + e.message);
+    btnFinalizePdf.disabled = false;
+  }
+});
+</script>
+
+<script>
+/* ===== Opções do carimbo ===== */
+const optKm=document.getElementById('optKm'); const optTs=document.getElementById('optTs'); const optIds=document.getElementById('optIds'); const optGps=document.getElementById('optGps');
+function bindOverlayOpts(){
+  const ls = localStorage;
+  overlayOpts.showKM  = (ls.getItem('opt_km')  ?? '1')==='1';
+  overlayOpts.showTs  = (ls.getItem('opt_ts')  ?? '1')==='1';
+  overlayOpts.showIds = (ls.getItem('opt_ids') ?? '1')==='1';
+  overlayOpts.showGps = (ls.getItem('opt_gps') ?? '0')==='1';
+  optKm.checked=overlayOpts.showKM; optTs.checked=overlayOpts.showTs; optIds.checked=overlayOpts.showIds; optGps.checked=overlayOpts.showGps;
+
+  optKm.addEventListener('change', ()=>{ overlayOpts.showKM = optKm.checked; ls.setItem('opt_km', overlayOpts.showKM?'1':'0'); });
+  optTs.addEventListener('change', ()=>{ overlayOpts.showTs = optTs.checked; ls.setItem('opt_ts', overlayOpts.showTs?'1':'0'); });
+  optIds.addEventListener('change',()=>{ overlayOpts.showIds= optIds.checked;ls.setItem('opt_ids',overlayOpts.showIds?'1':'0'); });
+  optGps.addEventListener('change',()=>{ overlayOpts.showGps= optGps.checked;ls.setItem('opt_gps',overlayOpts.showGps?'1':'0'); });
+}
+</script>
+
+<script>
+/* ===== Boot ===== */
+function ready(){ return csvReady && camReady && gpsReady; }
+
+async function boot(){
+  applyTheme();
+  bindOverlayOpts();
+
+  // Persistência (Storage Manager) – opcional
+  try{
+    if (navigator.storage?.persist) {
+      const already = await navigator.storage.persisted();
+      if (!already) await navigator.storage.persist();
+      stPersist.textContent = 'Persistência: ' + ((await navigator.storage.persisted())?'OK':'Normal');
+      stPersist.className = 'st ' + ((await navigator.storage.persisted())?'ok':'warn');
+    }
+  }catch{}
+
+  // CSVs + câmeras
+  await Promise.all([loadCSVs(), enumerateCameras()]);
+  await startCamera(deviceIndex);
+  camReady = !!vid.videoWidth;
+  startGPS();
+  startKmUpdate();
+
+  // Ajuste de preenchimento salvo
+  const savedFit = localStorage.getItem('fitMode'); if(savedFit) fitModeSel.value = savedFit; updateCamLayout();
+
+  // Status loop
+  setInterval(updateStatusBar, 600);
+}
+</script>
+
+<script>
+document.getElementById('btnStart').addEventListener('click', ()=>{/* evita FOUC */});
+(function(){
+  const splash = document.getElementById('splash');
+  const btnStart = document.getElementById('btnStart');
+  const startNow = ()=>{ splash.classList.add('splash-fade'); setTimeout(()=>{ splash.remove(); boot(); }, 580); };
+  btnStart.addEventListener('click', startNow, {once:true});
+  setTimeout(()=>{ if(document.body.contains(splash)) startNow(); }, 2400);
+})();
+</script>
+
 </body>
 </html>
