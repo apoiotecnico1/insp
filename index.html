@@ -19,22 +19,13 @@
   body{
     margin:0; background:linear-gradient(180deg,#0b122b,#0a1024); color:var(--fg);
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans",sans-serif;
-    overflow:hidden; /* sem rolagem */
+    overflow:hidden;
   }
 
-  /* Canvas de app em tela cheia */
-  #app{
-    position:fixed; inset:0; display:grid; grid-template-rows:1fr; place-items:stretch;
-  }
-  #camWrap{
-    position:relative; width:100%; height:100%; overflow:hidden; background:#000;
-    isolation:isolate;
-  }
-  #vid{
-    position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000;
-  }
+  #app{ position:fixed; inset:0; display:grid; grid-template-rows:1fr; place-items:stretch; }
+  #camWrap{ position:relative; width:100%; height:100%; overflow:hidden; background:#000; isolation:isolate; }
+  #vid{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; }
 
-  /* HUD mínimo sobreposto */
   .hud{
     position:absolute; left:0; right:0; display:flex; justify-content:space-between;
     padding:10px; z-index:3; pointer-events:none;
@@ -48,14 +39,12 @@
     border:1px solid rgba(255,255,255,.14);
     border-radius:12px; padding:8px 12px; font-weight:900;
     box-shadow:var(--shadow);
+    cursor:pointer;
   }
   .chip b{ color:#dff5ff }
   .right{ margin-left:auto; display:flex; gap:8px }
 
-  /* Botões grandes (somente dois) */
-  .controls{
-    pointer-events:auto; display:flex; gap:12px; margin:0 auto;
-  }
+  .controls{ pointer-events:auto; display:flex; gap:12px; margin:0 auto; }
   .btn{
     height:var(--btnH); min-width:180px; padding:0 18px;
     border-radius:14px; border:1px solid var(--border);
@@ -69,7 +58,6 @@
   .btn.rec-on{ background:linear-gradient(180deg,#f2544b,#cc3e36); color:#fff; border-color:#b82e2a }
   .btn.primary{ background:linear-gradient(180deg,#2ff07f,#25d366); color:#062a1a; border-color:#1fb85b }
 
-  /* Modal inicial para escolher pasta (uma ação) */
   #folderGate{
     position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center;
     background:radial-gradient(1200px 600px at 50% -10%, #0c2a3f, transparent 65%), #060a12;
@@ -84,14 +72,11 @@
   .gateCard .btn{ width:100%; min-width:unset; height:56px; }
   .hint{ font-size:.9rem; color:#a7b7e0; margin-top:10px }
 
-  /* Feedback discreto (bolha) */
   #toast{
     position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
     background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,.6));
     border:1px solid rgba(255,255,255,.16); color:#eaf2ff; padding:10px 14px; border-radius:12px; display:none; z-index:9;
   }
-
-  /* Sem seleção acidental */
   *{ -webkit-tap-highlight-color: transparent }
 </style>
 </head>
@@ -107,6 +92,7 @@
       <div class="right">
         <div class="chip" id="gpsChip">📡 <b id="gpsTxt">—</b></div>
         <div class="chip">📷 <b id="countTxt">0</b></div>
+        <button class="chip" id="btnPdf">📄 <b>PDF</b></button>
       </div>
     </div>
 
@@ -137,6 +123,8 @@
   import MP4Muxer from "https://cdn.jsdelivr.net/npm/mp4-muxer@6.0.2/+esm";
   window.MP4Muxer = MP4Muxer;
 </script>
+<!-- PDF-lib (UMD) -->
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
 <script>
 /* ========= Estado ========= */
@@ -145,10 +133,17 @@ let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null;
 let sessionCount=0;
 
-let isAuto=false, autoTimer=null, AUTO_MS=700;
+let isAuto=false, AUTO_MS=1200; // Intervalo mais estável (ajuste se quiser)
 
+// REC (vídeo)
 let isRec=false, videoWritable=null, videoBytes=0, mediaRecorder=null, rafId=null, wc={encoder:null,muxer:null,vTrack:null};
-const VID_W=1920, VID_H=1080, VID_FPS=30, VID_BITRATE=5_000_000; // boa qualidade
+const VID_W=1920, VID_H=1080, VID_FPS=30, VID_BITRATE=5_000_000;
+
+// FOTO
+const MAX_DIM=1920;
+
+// Mutex para não capturar duas fotos ao mesmo tempo
+let isCapturingPhoto=false;
 
 /* ========= Refs ========= */
 const vid=document.getElementById('vid');
@@ -157,6 +152,7 @@ const gpsTxt=document.getElementById('gpsTxt');
 const countTxt=document.getElementById('countTxt');
 const btnAuto=document.getElementById('btnAuto');
 const btnRec=document.getElementById('btnRec');
+const btnPdf=document.getElementById('btnPdf');
 const folderGate=document.getElementById('folderGate');
 const btnPickFolder=document.getElementById('btnPickFolder');
 const toast=document.getElementById('toast');
@@ -168,6 +164,7 @@ function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,
 function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
 function fileStamp(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}-${String(d.getMinutes()).padStart(2,'0')}-${String(d.getSeconds()).padStart(2,'0')}`; }
+const safe = str => String(str||'').replace(/[^\w\-+. ]/g,'_');
 
 /* ========= Pasta ========= */
 async function pickFolder(){
@@ -277,25 +274,56 @@ function stampOverlay(ctx,w,h,kmStr,tsStr,gpsStr){
 
 /* ========= Captura de foto (JPG direto na pasta) ========= */
 const photoCan=document.createElement('canvas'), photoCtx=photoCan.getContext('2d',{alpha:false});
-const MAX_DIM=1920;
+
+// [PDF] Sessão de fotos
+const sessionShots = [];
+
 async function capturePhoto(){
-  if(!(rootDirHandle && camReady && gpsReady && lastPos)) return;
-  const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
-  const sc=(Math.max(vw,vh)>MAX_DIM)? (MAX_DIM/Math.max(vw,vh)) : 1;
-  const w=Math.round(vw*sc), h=Math.round(vh*sc);
-  photoCan.width=w; photoCan.height=h; photoCtx.drawImage(vid,0,0,w,h);
+  // Evita concorrência
+  if(isCapturingPhoto) return;
+  isCapturingPhoto = true;
 
-  const km=kmLive.textContent||'KM —';
-  const ts=new Date().toLocaleString();
-  const gps=`${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
-  stampOverlay(photoCtx,w,h,km,ts,gps);
+  let wr = null;
+  try{
+    if(!(rootDirHandle && camReady && gpsReady && lastPos)) return;
 
-  const blob=await new Promise(res=>photoCan.toBlob(res,'image/jpeg',0.9));
-  const name=`FOTO_${km.replace('KM ','').replace('+','_')}_${fileStamp(new Date())}.jpg`;
-  const fh=await rootDirHandle.getFileHandle(name,{create:true});
-  const wr=await fh.createWritable(); await wr.write(blob); await wr.close();
+    const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
+    const sc=(Math.max(vw,vh)>MAX_DIM)? (MAX_DIM/Math.max(vw,vh)) : 1;
+    const w=Math.round(vw*sc), h=Math.round(vh*sc);
 
-  sessionCount++; countTxt.textContent=String(sessionCount);
+    photoCan.width=w; photoCan.height=h;
+    photoCtx.drawImage(vid,0,0,w,h);
+
+    const km = kmLive.textContent||'KM —';
+    const ts = new Date().toLocaleString();
+    const gps=`${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
+
+    // Overlay
+    stampOverlay(photoCtx,w,h,km,ts,gps);
+
+    // toBlob pode retornar null em stress; checar
+    const blob = await new Promise(res=>photoCan.toBlob(res,'image/jpeg',0.9));
+    if(!blob || !blob.size){ showToast('Falha ao gerar JPEG'); return; }
+
+    const name=`FOTO_${safe(km.replace('KM ','').replace('+','_'))}_${fileStamp(new Date())}.jpg`;
+
+    // Escrita protegida (sempre fechar writer)
+    const fh = await rootDirHandle.getFileHandle(name,{create:true});
+    wr = await fh.createWritable();
+    await wr.write(blob);
+    await wr.close(); wr=null; // explicitamente nulado para não tentar fechar de novo
+
+    sessionCount++; countTxt.textContent=String(sessionCount);
+
+    // Registrar metadados da foto para PDF
+    sessionShots.push({ name, km, ts, gps });
+  }catch(e){
+    console.error('capturePhoto error:', e);
+    showToast('Erro ao salvar foto');
+  }finally{
+    try{ await wr?.close(); }catch{} // segurança
+    isCapturingPhoto = false;
+  }
 }
 
 /* ========= AUTO captura ========= */
@@ -303,20 +331,30 @@ function startAuto(){
   if(isAuto) return;
   if(!(rootDirHandle && camReady && gpsReady && csvReady)){ showToast('Aguarde Pasta/Câmera/GPS/CSV'); return; }
   isAuto=true; btnAuto.textContent='⏹ PARAR AUTO'; btnAuto.classList.add('auto-on'); btnAuto.classList.remove('primary');
-  autoTimer=setInterval(()=>{ capturePhoto().catch(()=>{}); }, AUTO_MS);
   showToast('Auto ON');
+
+  // Loop sequencial com await — nunca concorrente
+  (async function autoLoop(){
+    while(isAuto){
+      await capturePhoto();
+      await new Promise(r=>setTimeout(r, AUTO_MS));
+    }
+  })();
 }
-function stopAuto(){
+async function stopAuto(){
   if(!isAuto) return;
   isAuto=false; btnAuto.textContent='🎬 INICIAR AUTO'; btnAuto.classList.remove('auto-on'); btnAuto.classList.add('primary');
-  clearInterval(autoTimer); autoTimer=null; showToast('Auto OFF');
+  showToast('Auto OFF');
+
+  // Sugerir relatório final ao encerrar AUTO
+  if(sessionShots.length){
+    const go = confirm('Gerar Relatório FINAL agora?');
+    if(go) await generateReport(true);
+  }
 }
 btnAuto.addEventListener('click', ()=>{ if(isAuto) stopAuto(); else startAuto(); });
 
 /* ========= Gravação de vídeo MP4 ========= */
-/* Caminho preferencial:
-   1) MediaRecorder MP4 (se suportado)
-   2) WebCodecs + MP4Muxer (H.264 AnnexB, sem áudio) – compatível e leve */
 const recCan=document.createElement('canvas'), recCtx=recCan.getContext('2d');
 recCan.width=VID_W; recCan.height=VID_H;
 
@@ -346,7 +384,10 @@ async function startRecMediaRecorderMP4(){
   await openVideoFile('mp4');
   mediaRecorder=new MediaRecorder(stream,{mimeType:mime, videoBitsPerSecond:VID_BITRATE});
   mediaRecorder.ondataavailable=async e=>{ if(e.data?.size && videoWritable){ await videoWritable.write(e.data); videoBytes+=e.data.size; } };
-  mediaRecorder.onstop=async()=>{ on=false; if(rafId){ cancelAnimationFrame(rafId); rafId=null; } await closeVideoFile(); isRec=false; btnRec.textContent='⏺ INICIAR REC'; btnRec.classList.remove('rec-on'); showToast('MP4 salvo'); };
+  mediaRecorder.onstop=async()=>{
+    on=false; if(rafId){ cancelAnimationFrame(rafId); rafId=null; } await closeVideoFile();
+    isRec=false; btnRec.textContent='⏺ INICIAR REC'; btnRec.classList.remove('rec-on'); showToast('MP4 salvo');
+  };
   mediaRecorder.start(1000);
   isRec=true; btnRec.textContent='⏹ PARAR REC'; btnRec.classList.add('rec-on');
 }
@@ -378,7 +419,6 @@ async function startRecWebCodecsMP4(){
     stampOverlay(recCtx,VID_W,VID_H,km,ts,gps);
 
     const elapsed=performance.now()-t0; const tUS=Math.round(elapsed*1000);
-    // Capture canvas into VideoFrame for encoding
     const vf=new VideoFrame(recCan,{timestamp:tUS});
     const sec=Math.floor(elapsed/1000); const forceKey=(sec!==lastKey); if(forceKey) lastKey=sec;
     enc.encode(vf,{keyFrame:forceKey}); vf.close();
@@ -405,7 +445,6 @@ btnRec.addEventListener('click', async ()=>{
   if(!camReady){ showToast('Câmera indisponível'); return; }
 
   if(!isRec){
-    // tentar MediaRecorder MP4; se não, WebCodecs
     try{
       await startRecMediaRecorderMP4();
       activeStopper={ stop: async()=>{ try{ mediaRecorder?.stop(); }catch{} } };
@@ -419,6 +458,109 @@ btnRec.addEventListener('click', async ()=>{
   }else{
     try{ await activeStopper?.stop?.(); }catch{}
   }
+});
+
+/* ========= [PDF] Geração de relatório ========= */
+const A4 = { w: 595.28, h: 841.89 }; // pontos (72dpi) – A4 portrait
+const PDF_MARGIN = 28;
+const PDF_IMG_MAX_W_PT = A4.w - PDF_MARGIN*2;
+const PDF_IMG_MAX_H_PT = A4.h - PDF_MARGIN*2 - 90;
+
+async function getFileByName(fileName){
+  const fh = await rootDirHandle.getFileHandle(fileName, { create:false });
+  return fh.getFile();
+}
+async function downscaleJpegBytes(file, maxPx=1280, quality=0.72){
+  let bmp = null;
+  try { bmp = await createImageBitmap(file); } catch {}
+  let w,h,can=document.createElement('canvas'), ctx=can.getContext('2d',{alpha:false});
+  if(bmp){
+    w=bmp.width; h=bmp.height;
+  }else{
+    const img = await new Promise((res, rej) => {
+      const i = new Image(); i.onload = () => res(i); i.onerror = rej;
+      i.src = URL.createObjectURL(file);
+    });
+    w = img.naturalWidth; h = img.naturalHeight; bmp = img;
+  }
+  const scale = (Math.max(w,h) > maxPx) ? (maxPx / Math.max(w,h)) : 1;
+  const dw = Math.round(w*scale), dh = Math.round(h*scale);
+  can.width=dw; can.height=dh;
+  ctx.drawImage(bmp,0,0,dw,dh);
+  const blob = await new Promise(res => can.toBlob(res,'image/jpeg',quality));
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const ratio = dw / dh;
+  try{ if(bmp && 'close' in bmp) bmp.close(); }catch{}
+  try{ URL.revokeObjectURL(bmp?.src); }catch{}
+  return { bytes, ratio };
+}
+function drawLegend(page, font, fontBold, textColor, yBase, km, ts, gps, name){
+  const { width } = page.getSize();
+  const x = PDF_MARGIN;
+  let y = yBase;
+
+  page.drawText(km || 'KM —', { x, y, size:12, font: fontBold, color: textColor }); y -= 16;
+  page.drawText(`Data/Hora: ${ts}`, { x, y, size:10, font, color: textColor }); y -= 14;
+  page.drawText(`GPS: ${gps}`, { x, y, size:10, font, color: textColor }); y -= 14;
+  page.drawText(`Arquivo: ${name}`, { x, y, size:9, font, color: textColor });
+
+  const title = "Inspeção Rodoviária – Captura Direta";
+  const tw = fontBold.widthOfTextAtSize(title, 10);
+  page.drawText(title, { x: width - PDF_MARGIN - tw, y: A4.h - PDF_MARGIN - 12, size:10, font: fontBold, color: textColor });
+}
+async function generateReport(isFinal=false){
+  if(!rootDirHandle){ showToast('Selecione a pasta'); return; }
+  if(!sessionShots.length){ showToast('Sem fotos na sessão'); return; }
+
+  try{
+    showToast('Gerando PDF...');
+    const { PDFDocument, StandardFonts, rgb } = window.PDFLib;
+    const pdf = await PDFDocument.create();
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+    const textColor = rgb(0.13, 0.17, 0.28);
+
+    for(const shot of sessionShots){
+      const file = await getFileByName(shot.name);
+      const { bytes: jpgBytes, ratio } = await downscaleJpegBytes(file, 1280, 0.72);
+      const img = await pdf.embedJpg(jpgBytes);
+
+      const page = pdf.addPage([A4.w, A4.h]);
+
+      let imgWpt = PDF_IMG_MAX_W_PT;
+      let imgHpt = imgWpt / ratio;
+      if(imgHpt > PDF_IMG_MAX_H_PT){
+        imgHpt = PDF_IMG_MAX_H_PT;
+        imgWpt = imgHpt * ratio;
+      }
+      const x = PDF_MARGIN + (PDF_IMG_MAX_W_PT - imgWpt)/2;
+      const y = A4.h - PDF_MARGIN - 20 - imgHpt;
+
+      page.drawImage(img, { x, y, width: imgWpt, height: imgHpt });
+      const legendY = y - 14;
+      drawLegend(page, font, fontBold, textColor, legendY, shot.km, shot.ts, shot.gps, shot.name);
+    }
+
+    const stamp = fileStamp(new Date());
+    const tipo = isFinal ? 'FINAL' : 'PARCIAL';
+    const pdfName = `RELATORIO_${stamp}_${tipo}.pdf`;
+    const pdfBytes = await pdf.save({ useObjectStreams: false });
+
+    const fh = await rootDirHandle.getFileHandle(pdfName, { create:true });
+    const wr = await fh.createWritable();
+    await wr.write(pdfBytes);
+    await wr.close();
+
+    showToast(`Relatório ${tipo} salvo`);
+  }catch(e){
+    console.error(e);
+    showToast('Falha ao gerar PDF');
+  }
+}
+btnPdf.addEventListener('click', async ()=>{
+  if(!sessionShots.length){ showToast('Sem fotos na sessão'); return; }
+  const isFinal = confirm('Gerar RELATÓRIO FINAL?\nOK = FINAL  |  Cancelar = PARCIAL');
+  await generateReport(isFinal);
 });
 
 /* ========= Boot ========= */
