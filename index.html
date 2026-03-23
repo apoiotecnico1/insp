@@ -1,851 +1,433 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="original">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0b1020" />
-<title>Relatório Fotográfico – Mobile (Salva Fotos + Assistente de PDF)</title>
+<title>Inspeção Rodoviária – Captura Direta (Foto/MP4)</title>
 <style>
   :root{
-    --bg:#203e92; --bg2:#0b1224; --surface:#0f1731cc; --surface-strong:#1b368f;
-    --fg:#e8eeff; --muted:#a9b7df; --border:#1e284d; --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
-    --shadow: 0 10px 28px rgba(0,0,0,.38); --radius: 14px; --camH: 42vh;
-    --btnGradA:#0d1430; --btnGradB:#0a0f26; --btnBorder:#20305e;
-    --camGradA:#0b1230; --camGradB:#07102a; --camBorder:#213066;
-    --pdfA:#857b5d; --pdfB:#eab308; --pdfText:#231c00;
-  }
-  [data-theme="neutral"]{
-    --bg:#0d1117; --bg2:#0f141c; --surface:#0f1726ee; --surface-strong:#192238; --fg:#e6edf3; --muted:#a9b1bb; --border:#1f2a3b;
-    --btnGradA:#1f2a3b; --btnGradB:#162131; --btnBorder:#2a384d; --camGradA:#0c1322; --camGradB:#0a111d; --camBorder:#1a2638;
-    --pdfA:#f1d16a; --pdfB:#caa21d; --pdfText:#1d1600;
+    --bg:#0a1026; --fg:#eaf2ff; --muted:#b7c6ee;
+    --hudA:rgba(10,16,40,.82); --hudB:rgba(6,12,30,.78);
+    --ok:#22c55e; --warn:#eab308; --danger:#ef4444; --accent:#25D366;
+    --border:#1d2a58; --card:#0e173bcc;
+    --shadow: 0 14px 36px rgba(0,0,0,.45);
+    --btnH:64px;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; color:var(--fg); background:
-      radial-gradient(1200px 600px at 10% -10%, #16306a33, transparent 70%),
-      radial-gradient(1000px 600px at 120% 10%, #0b553355, transparent 70%),
-      var(--bg);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
-    padding:12px; line-height:1.35; overflow-x:hidden;
-  }
-  h1{margin:0 0 10px;text-align:center;font-size:1.28rem}
-  .card{background: linear-gradient(180deg, var(--surface), rgba(15,23,49,.7)); backdrop-filter:saturate(140%) blur(6px); border:1px solid var(--border); border-radius:var(--radius); padding:12px; margin:0 auto 12px; max-width:980px; box-shadow: var(--shadow)}
-  #statusBar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;max-width:980px;margin:0 auto 10px}
-  .st{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.28));border:1px solid rgba(255,255,255,.14);padding:6px 10px;border-radius:999px;font-size:.82rem;font-weight:800;color:#dfe7ff}
-  .ok{ color:#b1ffd1 } .warn{ color:#ffdfa8 } .bad{ color:#ffc1c1 }
-
-  details.controls>summary{cursor:pointer;list-style:none;outline:none;user-select:none;font-weight:900;color:#dfe7ff;display:flex;align-items:center;gap:8px}
-  details.controls>summary::before{ content:'⚙️'; display:inline-block; transform:translateY(1px) }
-  details.controls>summary::-webkit-details-marker{display:none}
-  details.controls[open]>summary{ color:#b6caff }
-  .ctrlGrid{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding-top:8px}
-  select,input[type=range],button.small{border-radius:12px;border:1px solid var(--border);background:#0c1431;color:#e7edff;font-weight:800;padding:9px 11px}
-  button.small{font-size:.9rem}
-
-  #camCard{position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 0px); transform: translateX(-50%); width: calc(100vw - 24px); max-width:980px; height: var(--camH); z-index: 100; padding: 0; margin: 12px auto; border-radius: var(--radius); background: linear-gradient(180deg, var(--camGradA), var(--camGradB)); border:1px solid var(--camBorder); box-shadow: 0 14px 36px rgba(0,0,0,.45), inset 0 0 0 1px #0d1b4e}
-  #wrap{ position: relative; height: 100%; border-radius: var(--radius); overflow: hidden }
-  #vid{ width: 100%; height: 100%; display: block; background:#000; object-fit: contain; object-position: center; touch-action: none; transform-origin: 50% 50%; border-radius: var(--radius) }
-  #can{display:none}
-  #camSpacer{ height: calc(var(--camH) + 24px + env(safe-area-inset-top, 0px)); max-width:980px; margin: 0 auto 8px }
-
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  button{flex:1 1 180px;padding:12px 14px;font-size:.98rem;border:0;border-radius:12px;cursor:pointer;background: linear-gradient(180deg, var(--btnGradA), var(--btnGradB)); color:var(--fg); font-weight:900; border:1px solid var(--btnBorder)}
-  button:disabled{opacity:.5;cursor:not-allowed}
-  #btnAutoCapture{ background: linear-gradient(180deg, #ff7b45, #e5612e); color:#1b0b02 }
-  #btnSelectFolder{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#072414 }
-  #btnClear{ background: linear-gradient(180deg, #ff6161, #ef4444); color:#fff }
-  @media (max-width:420px){ button{flex:1 1 140px;font-size:.95rem} }
-
-  #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:8px}
-  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
-  .thumb{border:1px solid #243053;border-radius:10px;overflow:hidden;background:#0a122a}
-  .thumb img{width:100%;display:block}
-  .meta{padding:6px 8px;font-size:.78rem;color:#c7d2fe}
-
-  #kmPlaque{text-align:center;padding:8px 12px;background: linear-gradient(180deg, #0d3b8e, #0a2e6d);border:2px solid #e6ecff;border-radius:12px;margin:0 auto 8px;max-width:980px;font-weight:900;font-size:1rem;color:#ffffff;box-shadow:0 6px 16px rgba(0,0,0,.28);text-shadow: 0 1px 0 rgba(0,0,0,.35)}
-  #kmPlaque span{ letter-spacing:.02em }
-
-  /* Diagnóstico */
-  #diag{ max-width:980px; margin:0 auto 12px; padding:10px 12px; border-radius:12px; border:1px dashed var(--warn); background:#201b03; color:#ffe9a6; font-size:.9rem; display:none }
-  #diag.bad{ border-color:var(--bad); background:#2a0e0e; color:#ffd3d3 }
-  #diag.ok{ border-color:var(--ok); background:#0e2217; color:#b7ffd1 }
-  #diag pre{ white-space:pre-wrap; word-break:break-word; margin:6px 0 0; color:#cfe7ff }
-
-  /* Splash simples */
-  #splash{ position:fixed; inset:0; background:#060a12cc; display:flex; align-items:center; justify-content:center; z-index:2000 }
-  .splash-inner{ text-align:center; color:#cfe7ff }
-  .splash-inner h2{ margin:0 0 6px }
-  .splash-inner p{ margin:4px 0 12px; opacity:.9 }
-
-  /* Overlay de Progresso/Feedback */
-  #progressOverlay{
-    position: fixed; inset:0; z-index: 2001;
-    display:none; align-items:center; justify-content:center;
-    background: rgba(5,10,20,.55); backdrop-filter: blur(4px) saturate(140%);
-  }
-  .progress-card{
-    min-width:260px; max-width:86vw; color:#e7f0ff;
-    background: linear-gradient(180deg, rgba(12,20,49,.9), rgba(8,14,36,.9));
-    border:1px solid var(--border); border-radius:16px; padding:14px 16px;
-    box-shadow: 0 12px 28px rgba(0,0,0,.45);
-    text-align:center; font-weight:800;
-  }
-  .progress-icon{ font-size:1.6rem; margin-bottom:6px }
-  .progress-msg{ font-size:1rem; }
-  .progress-sub{ font-size:.86rem; opacity:.85; margin-top:6px }
-  .progress-ok { color:#b1ffd1 }
-  .progress-warn { color:#ffdfa8 }
-  .progress-bad { color:#ffc1c1 }
-
-  /* Barra flutuante (discreta) */
-  .floatBar{
-    position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
-    width: min(980px, calc(100vw - 24px));
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
-    padding: 8px;
-    background: linear-gradient(180deg, rgba(12,20,49,.86), rgba(8,14,36,.86));
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow: 0 12px 28px rgba(0,0,0,.45);
-    z-index: 120; backdrop-filter: saturate(140%) blur(6px);
-    opacity:.32; transition: opacity .18s ease;
-  }
-  .floatBar:hover,
-  .floatBar:focus-within,
-  .floatBar.show{ opacity:.96 }
-
-  .floatBar button{ padding:14px 12px; font-size:1rem; }
-  #fbAuto{ background: linear-gradient(180deg, #ff7b45, #e5612e); color:#1b0b02 }
-  #fbReport{ background: linear-gradient(180deg, var(--pdfA), var(--pdfB)); color:var(--pdfText) }
-  #fbSelect{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#072414 }
-  #fbSwitch{ background: linear-gradient(180deg, #0d1430, #0a0f26); color:#e7edff }
-  #fbFs{ background: linear-gradient(180deg,#0d1430,#0a0f26); color:#d8e6ff }
-  .floatBar .label{ display:inline }
-  .btnIcon{ display:inline-flex; align-items:center; justify-content:center; gap:8px }
-
-  @media (max-width:900px){
-    .floatBar{ gap:6px; padding:6px }
-    .floatBar button{ padding:10px 8px; font-size:1.05rem }
-    .floatBar .label{ display:none }
-    .btnIcon{ width:46px; height:46px; border-radius:999px; padding:0; }
-    .desktopOnly{ display:none !important; }
+    margin:0; background:linear-gradient(180deg,#0b122b,#0a1024); color:var(--fg);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans",sans-serif;
+    overflow:hidden; /* sem rolagem */
   }
 
-  /* Assistente de PDF (wizard) */
-  #pdfWizard{
-    position: fixed; inset:0; z-index:2002; display:none;
-    align-items:center; justify-content:center;
-    background: rgba(6,10,18,.58); backdrop-filter: blur(4px);
+  /* Canvas de app em tela cheia */
+  #app{
+    position:fixed; inset:0; display:grid; grid-template-rows:1fr; place-items:stretch;
   }
-  .pdf-card{
-    width:min(980px,calc(100vw - 24px)); max-height:90vh; overflow:auto;
-    background: linear-gradient(180deg, rgba(15,23,49,.96), rgba(10,16,36,.96));
-    border:1px solid var(--border); border-radius:16px; padding:12px;
-    box-shadow: var(--shadow); color:#e7f0ff;
+  #camWrap{
+    position:relative; width:100%; height:100%; overflow:hidden; background:#000;
+    isolation:isolate;
   }
-  .pdf-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px }
-  .pdf-list{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px; margin-top:8px }
-  .pdf-item{ border:1px solid #233054; border-radius:12px; padding:10px; background:#0b122a; display:flex; flex-direction:column; gap:6px }
-  .pdf-item h4{ margin:0; font-size:.95rem }
-  .pdf-foot{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px }
-  .muted{ color:#a9b7df; font-size:.9rem }
-  .pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border:1px solid #233054; border-radius:999px; background:#0a132f; font-size:.85rem }
-  #pdfGo{ background: linear-gradient(180deg, var(--pdfA), var(--pdfB)); color:var(--pdfText); font-weight:900 }
-  #pdfClose{ background: linear-gradient(180deg, #101833, #0a1026) }
+  #vid{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000;
+  }
+
+  /* HUD mínimo sobreposto */
+  .hud{
+    position:absolute; left:0; right:0; display:flex; justify-content:space-between;
+    padding:10px; z-index:3; pointer-events:none;
+  }
+  #hudTop{ top:0 }
+  #hudBottom{ bottom:0; align-items:flex-end }
+  .chip{
+    pointer-events:auto;
+    display:inline-flex; align-items:center; gap:10px;
+    background:linear-gradient(180deg, var(--hudA), var(--hudB));
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:12px; padding:8px 12px; font-weight:900;
+    box-shadow:var(--shadow);
+  }
+  .chip b{ color:#dff5ff }
+  .right{ margin-left:auto; display:flex; gap:8px }
+
+  /* Botões grandes (somente dois) */
+  .controls{
+    pointer-events:auto; display:flex; gap:12px; margin:0 auto;
+  }
+  .btn{
+    height:var(--btnH); min-width:180px; padding:0 18px;
+    border-radius:14px; border:1px solid var(--border);
+    background:linear-gradient(180deg,#101a44,#0c1436);
+    color:var(--fg); font-weight:900; font-size:1.06rem; letter-spacing:.02em;
+    display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer;
+    box-shadow:var(--shadow);
+  }
+  .btn:active{ transform:translateY(1px) }
+  .btn.auto-on{ background:linear-gradient(180deg,#ff8f49,#e06a2d); color:#1b0b02; border-color:#c45722 }
+  .btn.rec-on{ background:linear-gradient(180deg,#f2544b,#cc3e36); color:#fff; border-color:#b82e2a }
+  .btn.primary{ background:linear-gradient(180deg,#2ff07f,#25d366); color:#062a1a; border-color:#1fb85b }
+
+  /* Modal inicial para escolher pasta (uma ação) */
+  #folderGate{
+    position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(1200px 600px at 50% -10%, #0c2a3f, transparent 65%), #060a12;
+  }
+  .gateCard{
+    background:linear-gradient(180deg, rgba(16,26,64,.9), rgba(14,22,52,.9));
+    border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:20px; width:min(92vw, 440px);
+    color:#cfe1ff; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.5);
+  }
+  .gateCard h2{ margin:0 0 10px }
+  .gateCard p{ margin:0 0 14px; opacity:.9 }
+  .gateCard .btn{ width:100%; min-width:unset; height:56px; }
+  .hint{ font-size:.9rem; color:#a7b7e0; margin-top:10px }
+
+  /* Feedback discreto (bolha) */
+  #toast{
+    position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
+    background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,.6));
+    border:1px solid rgba(255,255,255,.16); color:#eaf2ff; padding:10px 14px; border-radius:12px; display:none; z-index:9;
+  }
+
+  /* Sem seleção acidental */
+  *{ -webkit-tap-highlight-color: transparent }
 </style>
 </head>
 <body>
 
-<!-- Splash -->
-<div id="splash">
-  <div class="splash-inner">
-    <h2>RELATÓRIO FOTOGRÁFICO</h2>
-    <p>Toque em <b>Começar</b> e autorize a <b>câmera</b>. Depois selecione a <b>pasta raiz</b> para salvar as fotos e montar PDF.</p>
-    <div class="row" style="justify-content:center"><button id="btnStart">✅ Começar</button></div>
-    <p id="splashNote" style="font-size:.9rem;opacity:.8;margin-top:10px"></p>
-  </div>
-</div>
-
-<h1>📸 Relatório Fotográfico (Salva Fotos + Assistente PDF)</h1>
-
-<!-- Status -->
-<div id="statusBar" aria-live="polite">
-  <span id="stContext" class="st">Contexto: —</span>
-  <span id="stCam" class="st">Câmera: —</span>
-  <span id="stCams" class="st">Câmeras: —</span>
-  <span id="stGps" class="st">GPS: —</span>
-  <span id="stFotos" class="st">Fotos: 0</span>
-  <span id="stFolder" class="st">Pasta: —</span>
-  <span id="stPdf" class="st">PDF: —</span>
-</div>
-
-<div id="diag"></div>
-
-<!-- Layout da câmera -->
-<div id="camSpacer"></div>
-<div id="kmPlaque"><span id="kmTop">KM —</span></div>
-
-<div class="card">
-  <details class="controls">
-    <summary>Controles (toque para abrir)</summary>
-    <div class="ctrlGrid">
-      <label>🎨 Tema:
-        <select id="themeSel"><option value="original" selected>Original</option><option value="neutral">Neutro</option></select>
-      </label>
-
-      <label>🎥 Câmera:
-        <select id="cameraSel" title="Lista de câmeras"></select>
-      </label>
-      <button id="btnCycle" class="small" title="Trocar Câmera">Trocar</button>
-      <button id="btnFacing" class="small" title="Alternar frontal/traseira">Frente/Trás</button>
-
-      <button id="btnUltra" class="small" title="Ultra‑wide (0.5×)">0.5×</button>
-      <button id="btnWide"  class="small" title="Wide (1×)">1×</button>
-      <button id="btnTele"  class="small" title="Tele (2×+)">2×</button>
-
-      <label id="zoomWrap" style="display:none">🔍 Zoom:
-        <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" />
-        <span id="zoomVal" style="margin-left:6px">1.0×</span>
-      </label>
-
-      <label>🖼️ Preenchimento:
-        <select id="fitModeSel" title="Como a imagem ocupa o espaço do topo">
-          <option value="auto" selected>Auto (inteligente)</option>
-          <option value="contain">Sem corte</option>
-          <option value="cover">Cobrir (pode cortar)</option>
-        </select>
-      </label>
-
-      <fieldset style="border:1px solid var(--border); border-radius:10px; padding:8px 10px;">
-        <legend style="padding:0 6px; font-weight:900; color:#dfe7ff">Itens no carimbo</legend>
-        <label style="margin-right:10px"><input type="checkbox" id="optKm" checked> KM</label>
-        <label style="margin-right:10px"><input type="checkbox" id="optTs" checked> Data/Hora</label>
-        <label style="margin-right:10px"><input type="checkbox" id="optIds" checked> IDs próximos</label>
-        <label style="margin-right:10px"><input type="checkbox" id="optGps"> GPS (lat,lon)</label>
-      </fieldset>
-
-      <fieldset style="border:1px solid var(--border); border-radius:10px; padding:8px 10px;">
-        <legend style="padding:0 6px; font-weight:900; color:#dfe7ff">Captura</legend>
-        <label>⏱️ Intervalo (auto):
-          <select id="intervalSel" title="Intervalo da Captura Automática">
-            <option value="500">0,5 s</option>
-            <option value="750">0,75 s</option>
-            <option value="1000" selected>1,0 s</option>
-            <option value="1500">1,5 s</option>
-            <option value="2000">2,0 s</option>
-            <option value="2500">2,5 s</option>
-            <option value="3000">3,0 s</option>
-          </select>
-        </label>
-        <span class="muted">📁 Fotos sempre salvas na subpasta da sessão</span>
-      </fieldset>
-    </div>
-  </details>
-</div>
-
-<div class="card" id="camCard">
-  <div id="wrap">
+<div id="app">
+  <div id="camWrap">
     <video id="vid" autoplay playsinline muted></video>
-    <canvas id="can" width="1280" height="720"></canvas>
-  </div>
-</div>
 
-<!-- Linha antiga (desktop) -->
-<div class="card desktopOnly">
-  <div class="row">
-    <button id="btnSelectFolder">📁 Selecionar pasta raiz</button>
-    <button id="btnAutoCapture" disabled>🎬 Captura Auto</button>
-    <button id="btnOpenPdfWizard" >📄 Gerar PDF Relatório</button>
-    <button id="btnClear" disabled>🧹 Limpar Pré-visualizações</button>
-  </div>
-</div>
-
-<div class="card">
-  <h2 style="margin:0 0 6px;font-size:1rem">Prévia (última foto)</h2>
-  <img id="foto" alt="Prévia da foto capturada">
-</div>
-
-<div class="card">
-  <h2 style="margin:0 0 6px;font-size:1rem">Últimas 10 fotos</h2>
-  <div id="gal" class="gallery"></div>
-</div>
-
-<!-- Overlay de progresso genérico (parada/FS) -->
-<div id="progressOverlay" role="dialog" aria-live="assertive" aria-modal="true">
-  <div class="progress-card">
-    <div id="progIcon" class="progress-icon">⏳</div>
-    <div id="progMsg" class="progress-msg">Aguardando…</div>
-    <div id="progSub" class="progress-sub"></div>
-  </div>
-</div>
-
-<!-- Assistente de PDF -->
-<div id="pdfWizard" role="dialog" aria-modal="true">
-  <div class="pdf-card">
-    <div class="pdf-head">
-      <h3 style="margin:0">📄 Gerar PDF do Relatório</h3>
-      <button id="pdfClose">Fechar</button>
-    </div>
-    <div class="muted">Escolha uma subpasta de sessão <b>FOTOS_YYYY-MM-DD_HH-MM-SS</b> para montar o PDF.</div>
-
-    <div style="margin-top:10px;">
-      <div class="pill">Pastas recentes</div>
-      <div id="recentList" class="pdf-list" style="margin-top:8px"></div>
+    <!-- HUD topo: KM à esquerda, GPS à direita -->
+    <div class="hud" id="hudTop">
+      <div class="chip">🛣️ <b id="kmLive">KM —</b></div>
+      <div class="right">
+        <div class="chip" id="gpsChip">📡 <b id="gpsTxt">—</b></div>
+        <div class="chip">📷 <b id="countTxt">0</b></div>
+      </div>
     </div>
 
-    <div class="pdf-foot">
-      <button id="pdfPickFolder">📂 Localizar outra pasta…</button>
-      <span id="pdfSelInfo" class="muted">Nenhuma pasta selecionada.</span>
-      <button id="pdfGo" disabled>📄 Gerar PDF desta pasta</button>
+    <!-- HUD base: somente dois botões -->
+    <div class="hud" id="hudBottom" style="justify-content:center">
+      <div class="controls">
+        <button id="btnAuto" class="btn primary">🎬 INICIAR AUTO</button>
+        <button id="btnRec" class="btn">⏺ INICIAR REC</button>
+      </div>
     </div>
-
-    <div id="pdfProgress" class="muted" style="margin-top:8px; display:none;"></div>
   </div>
 </div>
 
-<!-- Barra flutuante (mobile) -->
-<div id="floatBar" class="floatBar" hidden>
-  <button id="fbSelect" class="btnIcon" title="Selecionar pasta raiz">📁 <span class="label">Pasta</span></button>
-  <button id="fbAuto" class="btnIcon" title="Iniciar/Parar captura">🎬 <span class="label">Captura</span></button>
-  <button id="fbReport" class="btnIcon" title="Gerar PDF Relatório">📄 <span class="label">Relatório</span></button>
-  <button id="fbSwitch" class="btnIcon" title="Trocar Câmera">🔄 <span class="label">Trocar</span></button>
-  <button id="fbFs" class="btnIcon" title="Tela cheia">⛶ <span class="label">Tela Cheia</span></button>
+<!-- Modal de pasta -->
+<div id="folderGate" aria-modal="true" role="dialog">
+  <div class="gateCard">
+    <h2>Selecionar Pasta de Saída</h2>
+    <p>As <b>fotos (JPG)</b> e os <b>vídeos (MP4)</b> serão gravados diretamente na pasta escolhida.</p>
+    <button id="btnPickFolder" class="btn primary">📁 Escolher pasta</button>
+    <div class="hint">Requisitos: Chrome/Edge em <b>HTTPS</b>. Mantenha o arquivo <code>SNVBR116SPRJ.csv</code> na mesma pasta do HTML.</div>
+  </div>
 </div>
+
+<div id="toast"></div>
+
+<!-- MP4 Muxer (para WebCodecs) -->
+<script type="module">
+  import MP4Muxer from "https://cdn.jsdelivr.net/npm/mp4-muxer@6.0.2/+esm";
+  window.MP4Muxer = MP4Muxer;
+</script>
 
 <script>
-/******************** Utils *********************/
-function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
-function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
+/* ========= Estado ========= */
+let rootDirHandle=null;
+let csvReady=false, camReady=false, gpsReady=false;
+let lastPos=null;
+let sessionCount=0;
+
+let isAuto=false, autoTimer=null, AUTO_MS=700;
+
+let isRec=false, videoWritable=null, videoBytes=0, mediaRecorder=null, rafId=null, wc={encoder:null,muxer:null,vTrack:null};
+const VID_W=1920, VID_H=1080, VID_FPS=30, VID_BITRATE=5_000_000; // boa qualidade
+
+/* ========= Refs ========= */
+const vid=document.getElementById('vid');
+const kmLive=document.getElementById('kmLive');
+const gpsTxt=document.getElementById('gpsTxt');
+const countTxt=document.getElementById('countTxt');
+const btnAuto=document.getElementById('btnAuto');
+const btnRec=document.getElementById('btnRec');
+const folderGate=document.getElementById('folderGate');
+const btnPickFolder=document.getElementById('btnPickFolder');
+const toast=document.getElementById('toast');
+
+/* ========= Util ========= */
+function showToast(msg,ms=1400){ toast.textContent=msg; toast.style.display='block'; clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.style.display='none',ms); }
 function fmtKm(v){ let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
+function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
-function isSecure(){ return window.isSecureContext || location.hostname==='localhost'; }
+function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
+function fileStamp(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}-${String(d.getMinutes()).padStart(2,'0')}-${String(d.getSeconds()).padStart(2,'0')}`; }
 
-/******************** Estado *********************/
-let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
-let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null;
-let photoCount=0; let previewBuffer=[];
-
-// câmera
-let currentStream=null, currentTrack=null, currentCap=null; let deviceList=[]; let deviceIndex=0; let videoAR=16/9; let digitalZoom=1; const DIGITAL_ZOOM_MIN=1; let DIGITAL_ZOOM_MAX=6; let pinchState=null; let lastTapTime=0; let facingMode='environment';
-
-// FS
-let rootDirHandle=null; let sessionDirHandle=null; let sessionName=null;
-
-// PDF Wizard
-let selectedReportDirHandle=null;
-
-// Intervalo de captura
-let captureIntervalMs = Number(localStorage.getItem('captureIntervalMs') || 1000);
-
-/******************** Referências *********************/
-const diagEl=document.getElementById('diag');
-const stContext=document.getElementById('stContext'); const stCam=document.getElementById('stCam'); const stCams=document.getElementById('stCams');
-const stGps=document.getElementById('stGps'); const stFotos=document.getElementById('stFotos'); const stFolder=document.getElementById('stFolder'); const stPdf=document.getElementById('stPdf');
-const themeSel=document.getElementById('themeSel'); const cameraSel=document.getElementById('cameraSel'); const btnCycle=document.getElementById('btnCycle'); const btnFacing=document.getElementById('btnFacing');
-const btnUltra=document.getElementById('btnUltra'); const btnWide=document.getElementById('btnWide'); const btnTele=document.getElementById('btnTele');
-const zoomWrap=document.getElementById('zoomWrap'); const zoomRange=document.getElementById('zoomRange'); const zoomVal=document.getElementById('zoomVal');
-const fitModeSel=document.getElementById('fitModeSel'); const kmTop=document.getElementById('kmTop');
-const btnSelectFolder=document.getElementById('btnSelectFolder'); const btnAutoCapture=document.getElementById('btnAutoCapture'); const btnClear=document.getElementById('btnClear');
-const wrap=document.getElementById('wrap'); const vid=document.getElementById('vid'); const can=document.getElementById('can'); const ctx=can.getContext('2d',{alpha:false}); const foto=document.getElementById('foto');
-const btnStart=document.getElementById('btnStart'); const splash=document.getElementById('splash'); const splashNote=document.getElementById('splashNote');
-const intervalSel=document.getElementById('intervalSel');
-
-// Barra flutuante
-const floatBar=document.getElementById('floatBar');
-const fbSelect=document.getElementById('fbSelect');
-const fbAuto=document.getElementById('fbAuto');
-const fbReport=document.getElementById('fbReport');
-const fbSwitch=document.getElementById('fbSwitch');
-const fbFs=document.getElementById('fbFs');
-let isFullscreen=false, uiHideTimer=null;
-
-// Overlay genérico
-const progressOverlay=document.getElementById('progressOverlay');
-const progIcon=document.getElementById('progIcon');
-const progMsg=document.getElementById('progMsg');
-const progSub=document.getElementById('progSub');
-
-// Wizard PDF
-const pdfWizard=document.getElementById('pdfWizard');
-const btnOpenPdfWizard=document.getElementById('btnOpenPdfWizard');
-const pdfClose=document.getElementById('pdfClose');
-const recentList=document.getElementById('recentList');
-const pdfPickFolder=document.getElementById('pdfPickFolder');
-const pdfSelInfo=document.getElementById('pdfSelInfo');
-const pdfGo=document.getElementById('pdfGo');
-const pdfProgress=document.getElementById('pdfProgress');
-
-/******************** UI helpers *********************/
-function diag(msg, level='warn'){ diagEl.style.display='block'; diagEl.className=''; if(level==='bad') diagEl.classList.add('bad'); else if(level==='ok') diagEl.classList.add('ok'); diagEl.innerHTML = msg; }
-function chip(el, txt, cls){ el.textContent = txt; el.className = 'st ' + (cls||''); }
-function updateStatus(){ chip(stCam,'Câmera: ' + (camReady?'OK':'Aguardando…'), camReady?'ok':'warn'); chip(stFotos,'Fotos: ' + photoCount, photoCount>0?'ok':''); chip(stPdf, 'PDF: —', ''); }
-function setAutoButtonRunning(running){
-  const txtDesk = running ? '⏹️ Parar' : '🎬 Captura Auto';
-  const bg  = running ? 'linear-gradient(180deg,#ff7b7b,#ef4444)' : 'linear-gradient(180deg,#ff7b45,#e5612e)';
-  if(btnAutoCapture){ btnAutoCapture.textContent=txtDesk; btnAutoCapture.style.background=bg; }
-  if(fbAuto){ fbAuto.textContent = running ? '⏹️' : '🎬'; fbAuto.style.background=bg; }
+/* ========= Pasta ========= */
+async function pickFolder(){
+  try{
+    rootDirHandle = await window.showDirectoryPicker({mode:'readwrite'});
+    folderGate.style.display='none';
+    showToast('Pasta OK');
+  }catch(e){ showToast('Seleção de pasta cancelada'); }
 }
-function showProgress(msg, sub='', icon='⏳', style=''){
-  progressOverlay.style.display='flex';
-  progIcon.textContent=icon; progIcon.className='progress-icon '+(style||'');
-  progMsg.textContent=msg||'Aguarde…'; progSub.textContent=sub||'';
-}
-function updateProgress(msg, sub='', icon){ if(icon) progIcon.textContent=icon; if(msg!=null) progMsg.textContent=msg; if(sub!=null) progSub.textContent=sub; }
-function hideProgress(){ progressOverlay.style.display='none'; progIcon.textContent='⏳'; progIcon.className='progress-icon'; progMsg.textContent=''; progSub.textContent=''; }
-function nudgeFloatBar(){ if(!floatBar) return; floatBar.classList.add('show'); if(uiHideTimer) clearTimeout(uiHideTimer); uiHideTimer = setTimeout(()=>floatBar.classList.remove('show'), 1300); }
-['pointerdown','pointermove','touchstart','mousemove','keydown'].forEach(evt=>window.addEventListener(evt, nudgeFloatBar, {passive:true}));
+btnPickFolder.addEventListener('click', pickFolder);
 
-/******************** Tema / Layout *********************/
-function applyTheme(val){ const mode=val||localStorage.getItem('theme')||'original'; document.documentElement.setAttribute('data-theme', mode); localStorage.setItem('theme', mode); themeSel.value=mode; }
-function computeAvailableW(){ const pad=24; return Math.min(window.innerWidth - pad, 980); }
-function computeMaxH(){ const reserve=220; const vv=visualViewport; const safeTop=vv? vv.offsetTop : 0; return Math.max(220,(vv?vv.height:window.innerHeight)-reserve-safeTop); }
-function applyFit(mode){ const w=computeAvailableW(); const idealH=Math.round(w/(videoAR|| (16/9))); const maxH=computeMaxH(); let objectFit='contain'; let targetH=idealH; if(mode==='contain'){objectFit='contain';targetH=Math.min(idealH,maxH);} else if(mode==='cover'){objectFit='cover';targetH=Math.min(idealH,maxH);} else { if(idealH<=maxH){objectFit='contain';targetH=idealH;} else {objectFit='cover';targetH=maxH;} } document.documentElement.style.setProperty('--camH', targetH+'px'); vid.style.objectFit=objectFit; }
-function updateCamLayout(){ const mode=localStorage.getItem('fitMode')||fitModeSel.value||'auto'; applyFit(mode); }
-fitModeSel.addEventListener('change',()=>{ localStorage.setItem('fitMode', fitModeSel.value); updateCamLayout(); });
-window.addEventListener('resize', updateCamLayout);
-if(window.visualViewport){ visualViewport.addEventListener('resize', updateCamLayout); visualViewport.addEventListener('scroll', updateCamLayout); }
-
-/******************** CSV (IDs + KM) *********************/
-const CELL=0.005; const idGrid=new Map(), kmGrid=new Map();
+/* ========= CSV KM ========= */
+let kmPoints=[], kmGrid=new Map();
+const CELL=0.005;
 function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
 function gridInsert(grid,p){ const k=cellKey(p.lat,p.lon); const a=grid.get(k); a?a.push(p):grid.set(k,[p]); }
-function gridCands(grid,lat,lon,minCount=60,maxR=5){ const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[]; for(let r=0;r<=maxR && out.length<minCount;r++){ for(let dy=-r;dy<=r;dy++){ const y=ky+dy; for(let dx=-r;dx<=r;dx++){ if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue; const a=grid.get(`${y},${kx+dx}`); if(a) out.push(...a); } } } return out.length?out:[]; }
-async function loadIDs(){ try{ const txt=await fetch('./Dados_Completos_Grupo_2_all.csv',{cache:'no-store'}).then(r=>r.text()); const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean); const head=lines[0].split(';').map(h=>h.toLowerCase()); const iId=head.findIndex(h=>h.includes('id') && !h.includes('lat') && !h.includes('long')); const iLat=head.findIndex(h=>h.includes('lat')); const iLon=head.findIndex(h=>h.includes('lon')); dataset=[]; for(let i=1;i<lines.length;i++){ const c=lines[i].split(';'); const id=String(c[iId]||'').trim(), lat=parsePt(c[iLat]), lon=parsePt(c[iLon]); if(!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue; if(lat===0 && lon===0) continue; if(Math.abs(lat)>90 || Math.abs(lon)>180) continue; dataset.push({id,lat,lon}); } idGrid.clear(); for(const p of dataset) gridInsert(idGrid,p); }catch(e){ dataset=[]; } }
-function pickTrio(c){ const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])}; if(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon)) return t1; const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])}; if(Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon)) return t2; return null; }
-async function loadKM(){ try{ const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text()); const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean); kmPoints=[]; let lastKeep=null; const MIN_STEP=5; for(let i=0;i<lines.length;i++){ const c=lines[i].split(';'); if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue; const t=pickTrio(c); if(!t) continue; if(!Number.isFinite(t.km)||!Number.isFinite(t.lat)||!Number.isFinite(t.lon)) continue; if(!lastKeep){ kmPoints.push(t); lastKeep=t; } else { const d=hav(lastKeep.lat,lastKeep.lon,t.lat,t.lon); if(d>=MIN_STEP){ kmPoints.push(t); lastKeep=t; } } } kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p); }catch(e){ kmPoints=[]; } }
-async function loadCSVs(){ await Promise.all([loadIDs(),loadKM()]); csvReady = dataset.length>0 && kmPoints.length>0; chip(stContext, 'Contexto: ' + (isSecure()? 'seguro/OK':'não seguro'), isSecure()? 'ok':'warn'); }
-function nearestN(lat,lon,n=5){ if(!dataset.length) return []; const cand=gridCands(idGrid,lat,lon,Math.max(60,n*20)); const arr=cand.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)})); arr.sort((a,b)=>a.d-b.d); return arr.slice(0,n); }
-function nearestKM(lat,lon){ if(!kmPoints.length) return null; const cand=gridCands(kmGrid,lat,lon,120); if(!cand.length) return null; let best=null,bd=Infinity; for(const p of cand){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best; }
-
-/******************** GPS *********************/
-function startGPS(){ if(!('geolocation' in navigator)){ gpsReady=false; chip(stGps,'GPS: não suportado','warn'); return; } navigator.geolocation.getCurrentPosition(p=>{ lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy}; gpsReady=true; chip(stGps, `GPS: OK (±${Math.round(p.coords.accuracy||0)} m)`, 'ok'); navigator.geolocation.watchPosition(pos=>{ lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy}; }, ()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000}); }, ()=>{ gpsReady=false; chip(stGps,'GPS: aguardando…','warn'); }, {enableHighAccuracy:true, timeout:12000}); }
-
-/******************** Câmera *********************/
-async function ensurePermission(){ try{ const t=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); t.getTracks().forEach(tr=>tr.stop()); return true; }catch(e){ diag('<b>Permissão de câmera negada/bloqueada.</b> Autorize a câmera e tente novamente.', 'bad'); return false; } }
-async function enumerateCameras(){ try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{} const devs=await navigator.mediaDevices.enumerateDevices(); deviceList=devs.filter(d=>d.kind==='videoinput'); cameraSel.innerHTML=''; deviceList.forEach((d,i)=>{ const o=document.createElement('option'); o.value=String(i); o.textContent= d.label || `Câmera ${i+1}`; cameraSel.appendChild(o); }); chip(stCams, `Câmeras: ${deviceList.length}`, deviceList.length?'ok':'warn'); if(!deviceList.length) diag('Nenhuma câmera encontrada. Verifique permissões e contexto seguro.', 'warn'); }
-async function startCameraByIndex(idx){
-  try{
-    if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
-    currentStream=currentTrack=currentCap=null; camReady=false; updateStatus();
-    const dev=deviceList[idx];
-    const constraints= dev? {video:{deviceId:{exact:dev.deviceId}}, audio:false} : {video:{facingMode:{ideal:facingMode||'environment'}}, audio:false};
-    const st=await navigator.mediaDevices.getUserMedia(constraints);
-    currentStream=st; vid.srcObject=st; await vid.play().catch(()=>{});
-    await new Promise(res=>{ if(vid.readyState>=2 && vid.videoWidth) return res(); vid.onloadedmetadata=()=>res(); setTimeout(res,1000); });
-    currentTrack=st.getVideoTracks()[0];
-    currentCap=currentTrack.getCapabilities? currentTrack.getCapabilities():null;
-    if(vid.videoWidth&&vid.videoHeight) videoAR=vid.videoWidth/vid.videoHeight;
-    updateCamLayout();
-    if(currentCap && currentCap.zoom){
-      zoomRange.min=currentCap.zoom.min??1; zoomRange.max=currentCap.zoom.max??1; zoomRange.step=currentCap.zoom.step??0.1;
-      let z=Number(localStorage.getItem('camZoom_'+(dev?.deviceId||''))|| currentCap.zoom.min || 1);
-      z=clamp(z,Number(zoomRange.min||1),Number(zoomRange.max||1));
-      await applyZoom(z,true); zoomWrap.style.display='';
-    } else { zoomWrap.style.display='none'; }
-    camReady=!!vid.videoWidth; deviceIndex=idx; cameraSel.value=String(deviceIndex); updateStatus();
-  }catch(e){ camReady=false; updateStatus(); diag('<b>Falha ao iniciar a câmera.</b> Tente alternar permissões/HTTPS/fechar outros apps.', 'bad'); }
-}
-async function applyZoom(val,noSave=false){
-  if(currentTrack && currentCap && currentCap.zoom){
-    const z=Number(val);
-    try{ await currentTrack.applyConstraints({advanced:[{zoom:z}]}); }catch{ try{ await currentTrack.applyConstraints({zoom:z}); }catch(e){} }
-    zoomRange.value=z; zoomVal.textContent=`${z.toFixed(1)}×`;
-    if(!noSave){ const dev=deviceList[deviceIndex]; if(dev) localStorage.setItem('camZoom_'+dev.deviceId,z); }
-  } else {
-    digitalZoom = clamp(Number(val), DIGITAL_ZOOM_MIN, DIGITAL_ZOOM_MAX);
-    vid.style.transform=`scale(${digitalZoom})`; zoomVal.textContent=`${digitalZoom.toFixed(1)}×`;
-  }
-}
-wrap.addEventListener('touchstart',(ev)=>{ if(ev.touches.length===2){ ev.preventDefault(); pinchState={ base:Math.hypot(ev.touches[0].clientX-ev.touches[1].clientX, ev.touches[0].clientY-ev.touches[1].clientY), start:(currentCap?.zoom? Number(zoomRange.value||1) : digitalZoom) }; } else if(ev.touches.length===1){ const now=Date.now(); if(now-lastTapTime<300){ if(currentCap?.zoom){ applyZoom(1); } else { digitalZoom=1; vid.style.transform=''; zoomVal.textContent='1.0×'; } pinchState=null; lastTapTime=0; return; } lastTapTime=now; } },{passive:false});
-wrap.addEventListener('touchmove',(ev)=>{ if(pinchState && ev.touches.length===2){ ev.preventDefault(); const dst=Math.hypot(ev.touches[0].clientX-ev.touches[1].clientX, ev.touches[0].clientY-ev.touches[1].clientY); const factor=dst/Math.max(1,pinchState.base); let target=pinchState.start*factor; if(currentCap?.zoom){ target=clamp(target, Number(zoomRange.min||1), Number(zoomRange.max||6)); applyZoom(target); } else { target=clamp(target, DIGITAL_ZOOM_MIN, DIGITAL_ZOOM_MAX); digitalZoom=target; vid.style.transform=`scale(${digitalZoom})`; zoomVal.textContent=`${digitalZoom.toFixed(1)}×`; } } },{passive:false});
-wrap.addEventListener('wheel',(ev)=>{ if(!ev.ctrlKey && !ev.metaKey) return; ev.preventDefault(); const delta=Math.sign(ev.deltaY)*-0.2; const base=currentCap?.zoom? Number(zoomRange.value||1) : digitalZoom; let target=base*(1+delta); if(currentCap?.zoom){ target=clamp(target, Number(zoomRange.min||1), Number(zoomRange.max||6)); applyZoom(target); } else { target=clamp(target, DIGITAL_ZOOM_MIN, DIGITAL_ZOOM_MAX); digitalZoom=target; vid.style.transform=`scale(${digitalZoom})`; zoomVal.textContent=`${digitalZoom.toFixed(1)}×`; } },{passive:false});
-cameraSel.addEventListener('change', async ()=>{ deviceIndex=Number(cameraSel.value||0); await startCameraByIndex(deviceIndex); });
-btnCycle?.addEventListener('click', async ()=>{ if(!deviceList.length){ await enumerateCameras(); } deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCameraByIndex(deviceIndex); });
-btnFacing?.addEventListener('click', async ()=>{ facingMode=(facingMode==='environment'?'user':'environment'); await startCameraByIndex(deviceIndex); });
-btnUltra?.addEventListener('click', async ()=>{ if(currentCap?.zoom){ await applyZoom(Number(zoomRange.min||1)); } else { await applyZoom(1); } });
-btnWide?.addEventListener('click', async ()=>{ if(currentCap?.zoom){ await applyZoom(Math.max(1, Number(zoomRange.min||1))); } else { await applyZoom(1); } });
-btnTele?.addEventListener('click', async ()=>{ if(currentCap?.zoom){ await applyZoom(Math.min(2, Number(zoomRange.max||2))); } else { await applyZoom(Math.min(2, DIGITAL_ZOOM_MAX)); } });
-zoomRange.addEventListener('input', ()=>applyZoom(zoomRange.value));
-
-/******************** KM ao vivo *********************/
-function updateKmDisplay(){ if(!lastPos) return; const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; kmTop.textContent=kmStr; }
-setInterval(()=>{ updateKmDisplay(); updateStatus(); }, 600);
-
-/******************** Carimbo / Desenho *********************/
-function stampOverlay(g,w,h,kmStr,ids,ts,gpsLine){
-  const bandH=Math.max(144,Math.round(h*0.16));
-  g.fillStyle='rgba(0,0,0,.62)'; g.fillRect(0,h-bandH,w,bandH);
-  if(optKm.checked && kmStr){ g.fillStyle='#b7ffcf'; g.textAlign='left'; g.font=`900 ${Math.round(h*0.055)}px system-ui`; g.shadowColor='rgba(34,197,94,.45)'; g.shadowBlur=16; g.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52)); g.shadowBlur=0; }
-  if(optTs.checked){ g.fillStyle='#fff'; g.textAlign='left'; g.font=`700 ${Math.round(h*0.032)}px system-ui`; g.fillText(ts,20,h-Math.round(bandH*0.22)); }
-  if(optGps.checked && gpsLine){ g.fillStyle='#d7e5ff'; g.textAlign='left'; g.font=`600 ${Math.round(h*0.028)}px system-ui`; g.fillText(gpsLine,20,h-Math.round(bandH*0.5)); }
-  if(optIds.checked && Array.isArray(ids)){ g.textAlign='right'; g.fillStyle='#d7e5ff'; g.font=`600 ${Math.round(h*0.028)}px system-ui`; ids.forEach((e,i)=>g.fillText(e.id,w-20,h-bandH+28+i*26)); }
-}
-function drawVideoInto(g, outW, outH){
-  const vw=vid.videoWidth||1280, vh=vid.videoHeight||720;
-  if(currentCap?.zoom){ g.drawImage(vid,0,0,outW,outH); }
-  else{ const dz=Math.max(1,digitalZoom||1); const srcW=Math.round(vw/dz), srcH=Math.round(vh/dz); const sx=Math.max(0,Math.floor((vw-srcW)/2)); const sy=Math.max(0,Math.floor((vh-srcH)/2)); g.drawImage(vid,sx,sy,srcW,srcH,0,0,outW,outH); }
-}
-
-/******************** Captura (sempre salva JPEG) *********************/
-function makeSessionFolderName(prefix='FOTOS'){ const d=new Date(),p=n=>String(n).padStart(2,'0'); return `${prefix}_${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`; }
-async function selectOutputFolder(){
-  if(!('showDirectoryPicker' in window)){ diag('Seu navegador não suporta seleção de pasta (File System Access API). Use Chrome/Edge no Android ou Desktop.', 'bad'); return; }
-  try{ rootDirHandle=await window.showDirectoryPicker({mode:'readwrite'}); chip(stFolder,'Pasta raiz: OK','ok'); }catch(e){ diag('Seleção de pasta cancelada/negada.', 'warn'); }
-}
-async function ensureSessionFolder(){
-  if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) throw new Error('Pasta raiz não selecionada'); }
-  if(!sessionDirHandle){
-    sessionName=makeSessionFolderName('FOTOS');
-    sessionDirHandle=await rootDirHandle.getDirectoryHandle(sessionName,{create:true});
-    chip(stFolder, 'Pasta: '+sessionName, 'ok');
-  }
-}
-function buildFilename(kmStr, ts){
-  const safeKm=(kmStr||'KM_—').replace('KM ','').replace('+','_').replace(/\s/g,'');
-  const t=new Date(ts);
-  const stamp=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}_${String(t.getHours()).padStart(2,'0')}-${String(t.getMinutes()).padStart(2,'0')}-${String(t.getSeconds()).padStart(2,'0')}`;
-  return `FOTO_${safeKm}_${stamp}.jpg`;
-}
-function frameLooksValid(g,w,h){
-  try{
-    if(!w||!h) return false;
-    const samples=36; let sum=0,count=0,varsum=0,last=null;
-    for(let i=0;i<samples;i++){
-      const x=Math.floor((i%samples)/Math.sqrt(samples)*(w-1));
-      const y=Math.floor((i/Math.sqrt(samples))*(h-1));
-      const d=g.getImageData(Math.max(0,x),Math.max(0,y),1,1).data;
-      const lum=0.2126*d[0]+0.7152*d[1]+0.0722*d[2];
-      sum+=lum; count++; if(last!=null){ const dd=lum-last; varsum+=dd*dd; } last=lum;
-    }
-    const avg=sum/Math.max(1,count), variance=varsum/Math.max(1,(count-1));
-    return (avg>8)&&(variance>5);
-  }catch(e){ return true; }
-}
-async function makeJpeg(canvas,q=0.85,retries=2){ for(let i=0;i<=retries;i++){ const b=await new Promise(res=>canvas.toBlob(res,'image/jpeg',q)); if(b && b.size>=1024) return b; await sleep(40);} return null; }
-
-function addPreview(url,meta){
-  previewBuffer.push({url,meta}); if(previewBuffer.length>10){ const r=previewBuffer.shift(); try{ URL.revokeObjectURL(r.url);}catch{} }
-  const gal=document.getElementById('gal'); gal.innerHTML=''; previewBuffer.forEach(p=>{ const d=document.createElement('div'); d.className='thumb'; const im=document.createElement('img'); im.src=p.url; const m=document.createElement('div'); m.className='meta'; m.textContent=p.meta; d.appendChild(im); d.appendChild(m); gal.appendChild(d); });
-  btnClear && (btnClear.disabled = previewBuffer.length===0);
-  updateStatus();
-}
-
-async function captureOnce(){
-  if(!(camReady)){ diag('Câmera não pronta. Autorize e inicie a câmera.', 'warn'); return; }
-  const vw=vid.videoWidth||1280, vh=vid.videoHeight||720;
-  const CAP_MAX_DIM=1600;
-  const scale=(Math.max(vw,vh)>CAP_MAX_DIM)? (CAP_MAX_DIM/Math.max(vw,vh)) : 1; const w=Math.round(vw*scale), h=Math.round(vh*scale);
-  if(!w||!h){ diag('Dimensões de vídeo inválidas.', 'bad'); return; }
-  can.width=w; can.height=h; const g=ctx; g.clearRect(0,0,w,h); drawVideoInto(g,w,h);
-
-  if(!frameLooksValid(g,w,h)){ await sleep(40); g.clearRect(0,0,w,h); drawVideoInto(g,w,h); if(!frameLooksValid(g,w,h)){ diag('Frame inválido (escuro/vazio). Foto descartada.', 'warn'); return; } }
-
-  const kmObj= lastPos? nearestKM(lastPos.lat,lastPos.lon) : null; const kmStr=kmObj? fmtKm(kmObj.km):'KM —';
-  const ids= lastPos? nearestN(lastPos.lat,lastPos.lon,5):[];
-  const ts=new Date().toLocaleString();
-  const gpsLine= (optGps.checked && lastPos)? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
-  stampOverlay(g,w,h, optKm.checked?kmStr:'', optIds.checked?ids:[], optTs.checked?ts:'', gpsLine);
-
-  const blobOrig=await makeJpeg(can,0.85,2); if(!blobOrig){ diag('Falha ao gerar JPEG (0B).', 'bad'); return; }
-  try{
-    await ensureSessionFolder();
-    const fname=buildFilename(kmStr, new Date());
-    const fh=await sessionDirHandle.getFileHandle(fname,{create:true});
-    const wri=await fh.createWritable(); await wri.write(blobOrig); await wri.close();
-    photoCount++;
-    const url=URL.createObjectURL(blobOrig); foto.src=url; addPreview(url, `${kmStr} • ${ts}`);
-  }catch(e){ diag('Erro ao salvar foto: '+(e?.message||e), 'bad'); }
-}
-
-/******************** Auto-captura *********************/
-async function startAutoCapture(){
-  if(isAutoCapturing) return;
-  if(!rootDirHandle){ await selectOutputFolder(); if(!rootDirHandle) return; }
-  await ensureSessionFolder();
-
-  // entra em tela cheia (gesto do usuário)
-  try{
-    const el=document.documentElement;
-    if(el.requestFullscreen) await el.requestFullscreen({navigationUI:'hide'});
-    isFullscreen=true;
-  }catch{}
-  isAutoCapturing=true;
-  setAutoButtonRunning(true);
-  if(autoCaptureInterval) clearInterval(autoCaptureInterval);
-  autoCaptureInterval=setInterval(()=>{ captureOnce().catch(()=>{}); }, captureIntervalMs);
-}
-async function stopAutoCapture(){
-  if(!isAutoCapturing){
-    chip(stPdf,'PDF: —',''); setAutoButtonRunning(false); return;
-  }
-  isAutoCapturing=false;
-  if(autoCaptureInterval){ clearInterval(autoCaptureInterval); autoCaptureInterval=null; }
-  setAutoButtonRunning(false);
-  showProgress('Parando captura…', 'As fotos já estão salvas na pasta da sessão.', 'ℹ️', 'progress-ok');
-  setTimeout(()=>hideProgress(), 900);
-}
-
-/******************** Intervalo selecionável *********************/
-if(intervalSel){
-  intervalSel.value = String(captureIntervalMs);
-  intervalSel.addEventListener('change', ()=>{
-    const v = Number(intervalSel.value||1000);
-    captureIntervalMs = Math.min(3000, Math.max(500, v));
-    localStorage.setItem('captureIntervalMs', String(captureIntervalMs));
-    if(isAutoCapturing){
-      if(autoCaptureInterval) clearInterval(autoCaptureInterval);
-      autoCaptureInterval = setInterval(()=>{ captureOnce().catch(()=>{}); }, captureIntervalMs);
-    }
-  });
-}
-
-/******************** Assistente de PDF (monta a partir de fotos) *********************/
-/* PDF simples (múltiplas páginas com JPEG reduzido adaptativamente) */
-function makeByteWriter(stream){ const enc=new TextEncoder(); let pos=0; return { async writeStr(s){const b=enc.encode(s); await stream.write(b); pos+=b.length;}, async writeBin(b){await stream.write(b); pos+=b.length;}, get pos(){return pos;} }; }
-function createPdfStreamWriter(stream){
-  const writer=makeByteWriter(stream); const offsets=[]; const pagesKids=[]; const PW=595,PH=842,M=24; let nextNum=3,closed=false;
-  async function writeObjWithNum(num,body){ offsets[num]=writer.pos; await writer.writeStr(`${num} 0 obj\n${body}\nendobj\n`);}
-  async function addObj(body){ const num=nextNum++; await writeObjWithNum(num,body); return num;}
-  async function addStream(dict,data){ const num=nextNum++; offsets[num]=writer.pos; const header=`${num} 0 obj\n${dict.replace('>>','')} /Length ${data.length} >>\nstream\n`; await writer.writeStr(header); await writer.writeBin(data); await writer.writeStr(`\nendstream\nendobj\n`); return num;}
-  function fitToCell(imgW,imgH){ let cellW=PW-2*M, cellH=PH-2*M; let dw=cellW, dh=Math.round(imgH*(cellW/imgW)); if(dh>cellH){ dh=cellH; dw=Math.round(imgW*(cellH/imgH)); } const tx=M+Math.round((cellW-dw)/2); const ty=M+Math.round((cellH-dh)/2); return {dw,dh,tx,ty}; }
-  return {
-    async init(){ await writer.writeStr('%PDF-1.4\n'); },
-    async addImagePage(blob,w,h){
-      let W=w,H=h;
-      if(!(W&&H)){
-        const u=URL.createObjectURL(blob);
-        const im=await new Promise((r,j)=>{ const t=new Image(); t.onload=()=>r(t); t.onerror=j; t.src=u; });
-        URL.revokeObjectURL(u); W=im.naturalWidth; H=im.naturalHeight;
+function gridCands(grid,lat,lon,minCount=120,maxR=5){
+  const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[];
+  for(let r=0;r<=maxR && out.length<minCount;r++){
+    for(let dy=-r;dy<=r;dy++){
+      for(let dx=-r;dx<=r;dx++){
+        if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue;
+        const a=grid.get(`${ky+dy},${kx+dx}`); if(a) out.push(...a);
       }
-      const imgBuf=new Uint8Array(await blob.arrayBuffer());
-      const imNum=await addStream(`<< /Type /XObject /Subtype /Image /Width ${W} /Height ${H} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, imgBuf);
-      const {dw,dh,tx,ty}=fitToCell(W,H);
-      const content=`q\n${dw} 0 0 ${dh} ${tx} ${PH-(ty+dh)} cm\n/Im0 Do\nQ\n`;
-      const contNum=await addStream('<< >>', new TextEncoder().encode(content));
-      const pageNum=await addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im0 ${imNum} 0 R >> >> /Contents ${contNum} 0 R >>`);
-      pagesKids.push(pageNum);
-    },
-    async finalize(){
-      if(closed) return; closed=true;
-      await writeObjWithNum(2,`<< /Type /Pages /Kids [ ${pagesKids.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pagesKids.length} >>`);
-      await writeObjWithNum(1,'<< /Type /Catalog /Pages 2 0 R >>');
-      const xrefStart=writer.pos; const count=Math.max(1,offsets.length-1)+1;
-      let xr=`xref\n0 ${count}\n0000000000 65535 f \n`; for(let i=1;i<count;i++){ const off=offsets[i]??0; const inUse=(offsets[i]!=null); xr+=`${String(off).padStart(10,'0')} 00000 ${inUse?'n':'f'} \n`; }
-      await writer.writeStr(xr); await writer.writeStr(`trailer\n<< /Size ${count} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`); await stream.close();
+    }
+  } return out;
+}
+async function loadKM(){
+  try{
+    const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
+    const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+    kmPoints=[];
+    for(const ln of lines){
+      const c=ln.split(';');
+      const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
+      const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])};
+      const t = (Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon))?t1:
+                (Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon))?t2:null;
+      if(t) kmPoints.push(t);
+    }
+    kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p);
+    csvReady = kmPoints.length>0;
+  }catch{ csvReady=false; }
+}
+function nearestKM(lat,lon){
+  if(!kmPoints.length) return null;
+  const c=gridCands(kmGrid,lat,lon,140); if(!c.length) return null;
+  let best=null,bd=Infinity; for(const p of c){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
+}
+
+/* ========= Câmera ========= */
+let currentStream=null, currentTrack=null, currentCap=null, videoAR=16/9;
+async function startCamera(){
+  try{
+    currentStream?.getTracks().forEach(t=>t.stop());
+    const st=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30}},
+      audio:false
+    });
+    vid.srcObject=st;
+    await new Promise(res=>{ if(vid.readyState>=1&&vid.videoWidth) res(); else vid.onloadedmetadata=()=>res(); });
+    currentStream=st; currentTrack=st.getVideoTracks()[0];
+    currentCap=currentTrack.getCapabilities?.()||null;
+    videoAR=(vid.videoWidth&&vid.videoHeight)? vid.videoWidth/vid.videoHeight : 16/9;
+    camReady=true;
+  }catch(e){ camReady=false; showToast('Falha na câmera'); }
+}
+
+/* ========= GPS ========= */
+function startGPS(){
+  if(!('geolocation' in navigator)){ gpsReady=false; gpsTxt.textContent='—'; return; }
+  navigator.geolocation.getCurrentPosition(p=>{
+    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    gpsReady=true;
+    gpsTxt.textContent = `±${Math.round(p.coords.accuracy||0)}m`;
+    navigator.geolocation.watchPosition(pos=>{
+      lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
+      gpsTxt.textContent = `±${Math.round(lastPos.acc||0)}m`;
+    },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
+  },()=>{ gpsReady=false; gpsTxt.textContent='—'; }, {enableHighAccuracy:true, timeout:12000});
+}
+setInterval(()=>{
+  if(lastPos){
+    const best=nearestKM(lastPos.lat,lastPos.lon);
+    kmLive.textContent = best? fmtKm(best.km): 'KM —';
+  }
+}, 600);
+
+/* ========= Carimbo (foto & vídeo) ========= */
+function stampOverlay(ctx,w,h,kmStr,tsStr,gpsStr){
+  const bandH=Math.max(100,Math.round(h*0.14));
+  ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
+  if(kmStr){
+    ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.05)}px system-ui`;
+    ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
+    ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.5)); ctx.shadowBlur=0;
+  }
+  if(tsStr){
+    ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.font=`700 ${Math.round(h*0.03)}px system-ui`;
+    ctx.fillText(tsStr,20,h-18);
+  }
+  if(gpsStr){
+    ctx.fillStyle='#cfe7ff'; ctx.textAlign='left'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
+    ctx.fillText(gpsStr,20,h-bandH+28);
+  }
+}
+
+/* ========= Captura de foto (JPG direto na pasta) ========= */
+const photoCan=document.createElement('canvas'), photoCtx=photoCan.getContext('2d',{alpha:false});
+const MAX_DIM=1920;
+async function capturePhoto(){
+  if(!(rootDirHandle && camReady && gpsReady && lastPos)) return;
+  const vw=vid.videoWidth||1920, vh=vid.videoHeight||1080;
+  const sc=(Math.max(vw,vh)>MAX_DIM)? (MAX_DIM/Math.max(vw,vh)) : 1;
+  const w=Math.round(vw*sc), h=Math.round(vh*sc);
+  photoCan.width=w; photoCan.height=h; photoCtx.drawImage(vid,0,0,w,h);
+
+  const km=kmLive.textContent||'KM —';
+  const ts=new Date().toLocaleString();
+  const gps=`${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`;
+  stampOverlay(photoCtx,w,h,km,ts,gps);
+
+  const blob=await new Promise(res=>photoCan.toBlob(res,'image/jpeg',0.9));
+  const name=`FOTO_${km.replace('KM ','').replace('+','_')}_${fileStamp(new Date())}.jpg`;
+  const fh=await rootDirHandle.getFileHandle(name,{create:true});
+  const wr=await fh.createWritable(); await wr.write(blob); await wr.close();
+
+  sessionCount++; countTxt.textContent=String(sessionCount);
+}
+
+/* ========= AUTO captura ========= */
+function startAuto(){
+  if(isAuto) return;
+  if(!(rootDirHandle && camReady && gpsReady && csvReady)){ showToast('Aguarde Pasta/Câmera/GPS/CSV'); return; }
+  isAuto=true; btnAuto.textContent='⏹ PARAR AUTO'; btnAuto.classList.add('auto-on'); btnAuto.classList.remove('primary');
+  autoTimer=setInterval(()=>{ capturePhoto().catch(()=>{}); }, AUTO_MS);
+  showToast('Auto ON');
+}
+function stopAuto(){
+  if(!isAuto) return;
+  isAuto=false; btnAuto.textContent='🎬 INICIAR AUTO'; btnAuto.classList.remove('auto-on'); btnAuto.classList.add('primary');
+  clearInterval(autoTimer); autoTimer=null; showToast('Auto OFF');
+}
+btnAuto.addEventListener('click', ()=>{ if(isAuto) stopAuto(); else startAuto(); });
+
+/* ========= Gravação de vídeo MP4 ========= */
+/* Caminho preferencial:
+   1) MediaRecorder MP4 (se suportado)
+   2) WebCodecs + MP4Muxer (H.264 AnnexB, sem áudio) – compatível e leve */
+const recCan=document.createElement('canvas'), recCtx=recCan.getContext('2d');
+recCan.width=VID_W; recCan.height=VID_H;
+
+async function openVideoFile(ext){
+  const name=`VIDEO_${fileStamp(new Date())}.${ext}`;
+  const fh=await rootDirHandle.getFileHandle(name,{create:true});
+  videoWritable=await fh.createWritable(); videoBytes=0;
+}
+async function closeVideoFile(){ if(videoWritable){ await videoWritable.close(); videoWritable=null; } }
+
+async function startRecMediaRecorderMP4(){
+  const stream=recCan.captureStream(VID_FPS);
+  // Desenho na canvas
+  let on=true;
+  (function draw(){
+    if(!on) return;
+    recCtx.drawImage(vid,0,0,VID_W,VID_H);
+    const km=kmLive.textContent||'KM —'; const ts=new Date().toLocaleString();
+    const gps= lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
+    stampOverlay(recCtx,VID_W,VID_H,km,ts,gps);
+    rafId=requestAnimationFrame(draw);
+  })();
+
+  const mime='video/mp4;codecs=h264';
+  if(!MediaRecorder.isTypeSupported?.(mime)) throw new Error('MP4_MR_UNSUPPORTED');
+
+  await openVideoFile('mp4');
+  mediaRecorder=new MediaRecorder(stream,{mimeType:mime, videoBitsPerSecond:VID_BITRATE});
+  mediaRecorder.ondataavailable=async e=>{ if(e.data?.size && videoWritable){ await videoWritable.write(e.data); videoBytes+=e.data.size; } };
+  mediaRecorder.onstop=async()=>{ on=false; if(rafId){ cancelAnimationFrame(rafId); rafId=null; } await closeVideoFile(); isRec=false; btnRec.textContent='⏺ INICIAR REC'; btnRec.classList.remove('rec-on'); showToast('MP4 salvo'); };
+  mediaRecorder.start(1000);
+  isRec=true; btnRec.textContent='⏹ PARAR REC'; btnRec.classList.add('rec-on');
+}
+
+async function startRecWebCodecsMP4(){
+  if(!(window.VideoEncoder && window.MP4Muxer)) throw new Error('WC_UNAVAILABLE');
+  await openVideoFile('mp4');
+
+  const muxer=new MP4Muxer.MP4Muxer({
+    target:"file", fastStart:"in-memory", firstTimestampBehavior:"offset",
+    onData:async (u8)=>{ if(videoWritable){ await videoWritable.write(u8); videoBytes+=u8.byteLength; } }
+  });
+  const vTrack=muxer.addTrack({codec:"avc1.42E01E", width:VID_W, height:VID_H, timescale:1e6});
+  const ok=await VideoEncoder.isConfigSupported({codec:"avc1.42E01E", width:VID_W, height:VID_H, bitrate:VID_BITRATE, framerate:VID_FPS, avc:{format:"annexb"}});
+  if(!ok.supported) throw new Error('H264_UNSUPPORTED');
+
+  const enc=new VideoEncoder({
+    output:(chunk)=>muxer.addSample(vTrack, chunk, {duration:Math.round(1e6/VID_FPS), dts:chunk.timestamp, pts:chunk.timestamp, keyframe:(chunk.type==='key')}),
+    error:(e)=>console.error('VideoEncoder',e)
+  });
+  enc.configure({codec:"avc1.42E01E", width:VID_W, height:VID_H, bitrate:VID_BITRATE, framerate:VID_FPS, avc:{format:"annexb"}});
+
+  let running=true; let t0=performance.now(), lastKey=-1;
+  (function draw(){
+    if(!running) return;
+    recCtx.drawImage(vid,0,0,VID_W,VID_H);
+    const km=kmLive.textContent||'KM —'; const ts=new Date().toLocaleString();
+    const gps= lastPos ? `${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)` : '';
+    stampOverlay(recCtx,VID_W,VID_H,km,ts,gps);
+
+    const elapsed=performance.now()-t0; const tUS=Math.round(elapsed*1000);
+    // Capture canvas into VideoFrame for encoding
+    const vf=new VideoFrame(recCan,{timestamp:tUS});
+    const sec=Math.floor(elapsed/1000); const forceKey=(sec!==lastKey); if(forceKey) lastKey=sec;
+    enc.encode(vf,{keyFrame:forceKey}); vf.close();
+
+    rafId=requestAnimationFrame(draw);
+  })();
+
+  isRec=true; btnRec.textContent='⏹ PARAR REC'; btnRec.classList.add('rec-on');
+
+  return {
+    async stop(){
+      try{ await enc.flush(); enc.close(); }catch{}
+      try{ muxer.finalize(); }catch{}
+      running=false; if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
+      await closeVideoFile();
+      isRec=false; btnRec.textContent='⏺ INICIAR REC'; btnRec.classList.remove('rec-on'); showToast('MP4 salvo');
     }
   };
 }
 
-const REPORT_MAX_DIM_START=1280, REPORT_MIN_DIM=640, REPORT_TARGET_BYTES=120*1024, REPORT_QUALITIES=[0.82,0.74,0.66,0.58,0.5];
-async function makeAdaptiveReducedJpeg(fromCanvas){
-  let targetDim=REPORT_MAX_DIM_START; let lastGood=null;
-  while(targetDim>=REPORT_MIN_DIM){
-    const scale=Math.min(1, targetDim/Math.max(fromCanvas.width,fromCanvas.height));
-    const w=Math.max(1, Math.round(fromCanvas.width*scale));
-    const h=Math.max(1, Math.round(fromCanvas.height*scale));
-    const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h; const tctx=tmp.getContext('2d'); tctx.drawImage(fromCanvas,0,0,w,h);
-    for(const q of REPORT_QUALITIES){
-      const b=await new Promise(res=>tmp.toBlob(res,'image/jpeg',q));
-      if(b && b.size>=1024){ if(b.size<=REPORT_TARGET_BYTES){ return {blob:b,w,h}; } lastGood={blob:b,w,h}; }
+let activeStopper=null;
+btnRec.addEventListener('click', async ()=>{
+  if(!rootDirHandle){ showToast('Selecione a pasta'); return; }
+  if(!camReady){ showToast('Câmera indisponível'); return; }
+
+  if(!isRec){
+    // tentar MediaRecorder MP4; se não, WebCodecs
+    try{
+      await startRecMediaRecorderMP4();
+      activeStopper={ stop: async()=>{ try{ mediaRecorder?.stop(); }catch{} } };
+    }catch(e){
+      try{
+        activeStopper = await startRecWebCodecsMP4();
+      }catch(err){
+        showToast('MP4 não suportado neste navegador');
+      }
     }
-    targetDim=Math.floor(targetDim*0.85);
-  }
-  if(lastGood) return lastGood;
-  const fb=await new Promise(res=>fromCanvas.toBlob(res,'image/jpeg',0.5));
-  return {blob:fb,w:fromCanvas.width,h:fromCanvas.height};
-}
-async function reduceFromBlob(imageBlob){
-  const url=URL.createObjectURL(imageBlob);
-  try{
-    const im=await new Promise((r,j)=>{ const t=new Image(); t.onload=()=>r(t); t.onerror=j; t.src=url; });
-    const cv=document.createElement('canvas'); cv.width=im.naturalWidth; cv.height=im.naturalHeight; const g=cv.getContext('2d'); g.drawImage(im,0,0);
-    const red=await makeAdaptiveReducedJpeg(cv); return red;
-  }finally{ URL.revokeObjectURL(url); }
-}
-
-/* Lista últimas 5 subpastas que começam com FOTOS_ (ordenadas pelo timestamp do nome) */
-function parseSessionDate(name){
-  // FOTOS_YYYY-MM-DD_HH-MM-SS
-  const m = /^FOTOS_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})$/.exec(name);
-  if(!m) return null;
-  const [_,y,mo,d,h,mi,s]=m; return new Date(`${y}-${mo}-${d}T${h}:${mi}:${s}Z`).getTime(); // ordenação base
-}
-async function listRecentSessions(){
-  recentList.innerHTML='';
-  if(!rootDirHandle){ recentList.innerHTML='<div class="muted">Selecione a pasta raiz primeiro.</div>'; return; }
-  const dirs=[];
-  for await (const [name,handle] of rootDirHandle.entries()){
-    if(handle.kind==='directory' && /^FOTOS_/.test(name)){
-      const ts=parseSessionDate(name);
-      dirs.push({name,handle,ts:ts||0});
-    }
-  }
-  dirs.sort((a,b)=>b.ts-a.ts);
-  const top=dirs.slice(0,5);
-  if(!top.length){ recentList.innerHTML='<div class="muted">Nenhuma pasta de sessão encontrada.</div>'; return; }
-  top.forEach(item=>{
-    const div=document.createElement('div'); div.className='pdf-item';
-    const h4=document.createElement('h4'); h4.textContent=item.name; div.appendChild(h4);
-    const small=document.createElement('div'); small.className='muted'; small.textContent='Sessão'; div.appendChild(small);
-    const btn=document.createElement('button'); btn.textContent='Selecionar esta pasta'; btn.addEventListener('click',()=> selectReportFolder(item.handle,item.name)); div.appendChild(btn);
-    recentList.appendChild(div);
-  });
-}
-function openPdfWizard(){
-  pdfWizard.style.display='flex'; pdfSelInfo.textContent='Nenhuma pasta selecionada.'; pdfGo.disabled=true; listRecentSessions().catch(()=>{});
-}
-function closePdfWizard(){ pdfWizard.style.display='none'; }
-
-/* Seleção de pasta (manual ou da lista) */
-async function pickFolderAny(){
-  try{
-    const handle=await window.showDirectoryPicker({mode:'readwrite'});
-    await selectReportFolder(handle, handle.name);
-  }catch{}
-}
-async function selectReportFolder(dirHandle, name){
-  selectedReportDirHandle=dirHandle;
-  pdfSelInfo.textContent=`Selecionada: ${name}`;
-  pdfGo.disabled=false;
-}
-
-/* Busca fotos e gera PDF (com volumes se necessário) */
-async function* iterateImages(dirHandle){
-  // inclui .jpg/.jpeg/.png
-  const exts=['.jpg','.jpeg','.png'];
-  const files=[];
-  for await (const [name,fh] of dirHandle.entries()){
-    if(fh.kind==='file' && exts.some(e=>name.toLowerCase().endsWith(e))){
-      const file=await fh.getFile();
-      files.push({name,fh,file});
-    }
-  }
-  // ordena por lastModified, depois por nome
-  files.sort((a,b)=> (a.file.lastModified - b.file.lastModified) || a.name.localeCompare(b.name));
-  for(const it of files){ yield it; }
-}
-
-function makePdfName(base, vol){ return `RELATORIO_${base}_v${String(vol).padStart(2,'0')}.pdf`; }
-const MAX_PAGES_PER_PDF=600;
-
-async function generatePdfFromFolder(dirHandle){
-  if(!dirHandle) return;
-  // monta índice das imagens
-  pdfProgress.style.display='block';
-  pdfProgress.textContent='Carregando lista de fotos…';
-  let count=0; for await (const _ of iterateImages(dirHandle)) count++;
-  if(count===0){ pdfProgress.textContent='Nenhuma imagem encontrada nesta pasta.'; return; }
-
-  const baseName=(dirHandle.name||'SESSAO').replace(/\s+/g,'_');
-  let vol=1, pageInVol=0, totalDone=0;
-  let pdfHandle=null, pdfStream=null, pdfWriter=null;
-
-  async function openVolume(){
-    const outName=makePdfName(baseName, vol);
-    pdfHandle=await dirHandle.getFileHandle(outName,{create:true});
-    pdfStream=await pdfHandle.createWritable();
-    pdfWriter=createPdfStreamWriter(pdfStream);
-    await pdfWriter.init();
-    pageInVol=0;
-  }
-  async function closeVolume(){
-    if(pdfWriter){
-      await pdfWriter.finalize();
-      pdfWriter=null; pdfStream=null; pdfHandle=null;
-    }
-  }
-
-  await openVolume();
-
-  let idx=0;
-  for await (const it of iterateImages(dirHandle)){
-    idx++;
-    // feedback
-    const pct=Math.round((idx/count)*100);
-    pdfProgress.textContent=`Processando ${idx}/${count} (${pct}%)… (${it.name})`;
-
-    // otimiza e adiciona a página
-    const reduced=await reduceFromBlob(it.file);
-    await pdfWriter.addImagePage(reduced.blob, reduced.w, reduced.h);
-    pageInVol++; totalDone++;
-
-    // rotação de volume
-    if(pageInVol>=MAX_PAGES_PER_PDF && idx<count){
-      await closeVolume(); vol++; await openVolume();
-      pdfProgress.textContent=`Iniciando volume v${String(vol).padStart(2,'0')}…`;
-    }
-  }
-  await closeVolume();
-  pdfProgress.textContent=`✅ PDF gerado. Total de fotos: ${totalDone}. Arquivo(s): RELATORIO_${baseName}_v01.pdf${vol>1?` … v${String(vol).padStart(2,'0')}.pdf`:''}`;
-}
-
-/******************** Eventos UI *********************/
-btnSelectFolder?.addEventListener('click', async ()=>{ await selectOutputFolder(); });
-fbSelect.addEventListener('click', async ()=>{ await selectOutputFolder(); });
-
-btnAutoCapture?.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
-fbAuto.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
-
-wrap.addEventListener('click', () => { if(isAutoCapturing){ stopAutoCapture(); } else { captureOnce(); } });
-
-btnOpenPdfWizard?.addEventListener('click', ()=>{
-  if(!rootDirHandle){ diag('Selecione a pasta raiz primeiro.', 'warn'); return; }
-  openPdfWizard();
-});
-fbReport.addEventListener('click', ()=>{
-  if(!rootDirHandle){ diag('Selecione a pasta raiz primeiro.', 'warn'); return; }
-  openPdfWizard();
-});
-pdfClose.addEventListener('click', closePdfWizard);
-pdfPickFolder.addEventListener('click', pickFolderAny);
-pdfGo.addEventListener('click', async ()=>{
-  if(!selectedReportDirHandle){ diag('Selecione uma pasta de sessão (FOTOS_...).', 'warn'); return; }
-  pdfProgress.style.display='block';
-  pdfProgress.textContent='Iniciando geração do PDF…';
-  try{
-    await generatePdfFromFolder(selectedReportDirHandle);
-  }catch(e){
-    pdfProgress.textContent='⚠️ Falha ao gerar PDF: '+(e?.message||e);
+  }else{
+    try{ await activeStopper?.stop?.(); }catch{}
   }
 });
 
-/******************** Fullscreen (opcional) *********************/
-fbFs?.addEventListener('click', async ()=>{
-  try{
-    if(!document.fullscreenElement){ await document.documentElement.requestFullscreen({navigationUI:'hide'}); isFullscreen=true; }
-    else { await document.exitFullscreen(); isFullscreen=false; }
-  }catch{}
-});
-
-/******************** Boot *********************/
-function chipContext(){ chip(stContext, 'Contexto: ' + (isSecure()? 'seguro/OK':'não seguro'), isSecure()? 'ok':'warn'); }
-applyTheme();
-chipContext();
-splashNote.textContent = isSecure()? 'Se a câmera não abrir, confira as permissões do navegador.' : 'Abra via HTTPS/localhost para compatibilidade total.';
-const backIdxPref=0;
-
-btnStart.addEventListener('click', async ()=>{
-  diagEl.innerHTML=''; diagEl.style.display='none';
-  const ok=await ensurePermission(); if(!ok) return;
-  await enumerateCameras();
-  let idx=0; const backIdx=deviceList.findIndex(d=>/back|rear|environment/i.test(d.label)); if(backIdx>=0) idx=backIdx; else idx=backIdxPref;
-  await startCameraByIndex(idx); camReady=!!vid.videoWidth;
-  if(btnAutoCapture) btnAutoCapture.disabled=!camReady;
-
-  floatBar.hidden=false;
+/* ========= Boot ========= */
+async function boot(){
+  await loadKM();
+  await startCamera();
   startGPS();
-  await loadCSVs();
-  updateCamLayout();
-  splash.remove();
-});
+}
+boot();
 </script>
 </body>
 </html>
