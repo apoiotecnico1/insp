@@ -1,228 +1,235 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="original">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ID GPS · IDs Próximos + Captura</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0b1020" />
+<title>Inspeção – IDs Próximos + KM + Captura Segura (Sem PDF)</title>
 <style>
   :root{
-    --brand:#5a64ff; --brand2:#00c2c9; --bg:#0b1020; --bg-2:#0f1630; --fg:#e6ebff; --muted:#a3b1d1; --border:#1e2647; --surface:#0f1630; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --btn:#22c55e; --focus:#82a0ff; --shadow:0 12px 28px rgba(2,6,23,.55); --radius:14px; --pill:#0c1f17;
-    --km-bg:#ffffff; --km-fg:#0b1020; --km-border:#1e3a8a; --km-band:#1e3a8a;
-    --info-bg:#0f1630; --info-border:#1e2647; --info-fg:#cdd7f5; --info-icon:#93c5fd; --info-accent:#60a5fa;
+    --bg:#203e92; --bg2:#0b1224; --surface:#0f1731cc; --surface-strong:#1b368f;
+    --fg:#e8eeff; --muted:#a9b7df; --border:#1e284d; --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
+    --shadow: 0 10px 28px rgba(0,0,0,.38); --radius: 14px; --camH: 42vh;
+    --btnGradA:#0d1430; --btnGradB:#0a0f26; --btnBorder:#20305e;
+    --camGradA:#0b1230; --camGradB:#07102a; --camBorder:#213066;
   }
-  *,*::before,*::after{box-sizing:border-box}
+  [data-theme="neutral"]{
+    --bg:#0d1117; --bg2:#0f141c; --surface:#0f1726ee; --surface-strong:#192238; --fg:#e6edf3; --muted:#a9b1bb; --border:#1f2a3b;
+    --btnGradA:#1f2a3b; --btnGradB:#162131; --btnBorder:#2a384d; --camGradA:#0c1322; --camGradB:#0a111d; --camBorder:#1a2638;
+  }
+  *{box-sizing:border-box}
   html,body{height:100%}
-  body{margin:0;background:radial-gradient(1200px 1200px at 20% -20%, #111b3f 0%, transparent 50%) no-repeat,linear-gradient(180deg, #0b1020 0%, #0a0e1b 100%);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;line-height:1.35;-webkit-font-smoothing:antialiased}
-  header{background:linear-gradient(90deg,var(--brand),var(--brand2));padding:16px 16px;box-shadow:var(--shadow)}
-  .brand{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px}
-  .dot-logo{width:12px;height:12px;border-radius:50%;background:#fff;opacity:.95}
-  .brand h1{margin:0;font-weight:1000;letter-spacing:.06em;color:#0b1020;font-size:clamp(1rem,1.9vw,1.15rem)}
+  body{
+    margin:0; color:var(--fg);
+    background:
+      radial-gradient(1200px 600px at 10% -10%, #16306a33, transparent 70%),
+      radial-gradient(1000px 600px at 120% 10%, #0b553355, transparent 70%),
+      var(--bg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+    padding:12px; line-height:1.35; overflow-x:hidden;
+  }
+  h1{margin:0 0 10px;text-align:center;font-size:1.28rem}
+  .card{background: linear-gradient(180deg, var(--surface), rgba(15,23,49,.7)); backdrop-filter:saturate(140%) blur(6px); border:1px solid var(--border); border-radius:var(--radius); padding:12px; margin:0 auto 12px; max-width:1100px; box-shadow: var(--shadow)}
+  #statusBar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;max-width:1100px;margin:0 auto 10px}
+  .st{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.28));border:1px solid rgba(255,255,255,.14);padding:6px 10px;border-radius:999px;font-size:.82rem;font-weight:800;color:#dfe7ff}
+  .ok{ color:#b1ffd1 } .warn{ color:#ffdfa8 } .bad{ color:#ffc1c1 }
 
-  #status{max-width:1100px;margin:14px auto 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:0 16px}
-  .chip,.badge{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--border);background:#0c1532;color:var(--muted);padding:10px 12px;border-radius:999px;font-weight:800;box-shadow:var(--shadow)}
-  .dot{width:10px;height:10px;border-radius:50%}
-  .ok .dot{background:var(--ok)}.ok{color:#bbf7d0}
-  .warn .dot{background:var(--warn)}.warn{color:#ffe7b0}
-  .bad .dot{background:var(--bad)}.bad{color:#fecaca}
-  .badge{color:#c7d2fe}
+  details.controls>summary{cursor:pointer;list-style:none;outline:none;user-select:none;font-weight:900;color:#dfe7ff;display:flex;align-items:center;gap:8px}
+  details.controls>summary::before{ content:'⚙️'; display:inline-block; transform:translateY(1px) }
+  details.controls>summary::-webkit-details-marker{display:none}
+  details.controls[open]>summary{ color:#b6caff }
+  .ctrlGrid{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding-top:8px}
+  select,input[type=range],button.small{border-radius:12px;border:1px solid var(--border);background:#0c1431;color:#e7edff;font-weight:800;padding:9px 11px}
+  button.small{font-size:.9rem}
 
-  main{max-width:1100px;margin:14px auto 28px;display:grid;gap:16px;padding:0 16px}
+  #camCard{position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 0px); transform: translateX(-50%); width: calc(100vw - 24px); max-width:1100px; height: var(--camH); z-index: 100; padding: 0; margin: 12px auto; border-radius: var(--radius); background: linear-gradient(180deg, var(--camGradA), var(--camGradB)); border:1px solid var(--camBorder); box-shadow: 0 14px 36px rgba(0,0,0,.45), inset 0 0 0 1px #0d1b4e}
+  #wrap{ position: relative; height: 100%; border-radius: var(--radius); overflow: hidden }
+  #vid{ width: 100%; height: 100%; display: block; background:#000; object-fit: contain; object-position: center; touch-action: none; transform-origin: 50% 50%; border-radius: var(--radius) }
+  #can{display:none}
+  #camSpacer{ height: calc(var(--camH) + 24px + env(safe-area-inset-top, 0px)); max-width:1100px; margin: 0 auto 8px }
+
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button{flex:1 1 180px;padding:12px 14px;font-size:.98rem;border:0;border-radius:12px;cursor:pointer;background: linear-gradient(180deg, var(--btnGradA), var(--btnGradB)); color:var(--fg); font-weight:900; border:1px solid var(--btnBorder)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .btnPick{ background: linear-gradient(180deg, #60a5fa, #3883e8); color:#06121f }
+  .btnCapture{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#072414 }
+  .btnCapture.stop{ background: linear-gradient(180deg, #f2544b, #cc3e36); color:#fff }
+  @media (max-width:420px){ button{flex:1 1 140px;font-size:.95rem} }
+
+  #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:8px}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+  .thumb{border:1px solid #243053;border-radius:10px;overflow:hidden;background:#0a122a}
+  .thumb img{width:100%;display:block}
+  .meta{padding:6px 8px;font-size:.78rem;color:#c7d2fe}
+
+  #kmPlaque{text-align:center;padding:8px 12px;background: linear-gradient(180deg, #0d3b8e, #0a2e6d);border:2px solid #e6ecff;border-radius:12px;margin:0 auto 8px;max-width:1100px;font-weight:900;font-size:1rem;color:#ffffff;box-shadow:0 6px 16px rgba(0,0,0,.28);text-shadow: 0 1px 0 rgba(0,0,0,.35)}
+  #kmPlaque span{ letter-spacing:.02em }
+
+  /* IDs UI */
+  main{max-width:1100px;margin:10px auto 28px;display:grid;gap:16px;padding:0}
   .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.35)}
-  .card h2{margin:0 0 12px 0;font-size:clamp(1.05rem,1.8vw,1.1rem);color:#e7ecff}
-  .actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-
-  button{padding:14px 18px;font-size:clamp(.95rem,1.6vw,1.02rem);font-weight:900;border:0;border-radius:12px;color:#0b1020;cursor:pointer;transition:transform .08s ease, filter .15s ease;box-shadow:0 6px 18px rgba(0,0,0,.4)}
-  button:active{transform:translateY(1px)}button:hover{filter:brightness(1.06)}button:disabled{opacity:.55;cursor:not-allowed;filter:none}
-  #btnSend{background:var(--btn)}
-  .btnPick{background:#60a5fa;color:#06121f}
-  .btnCapture{background:#22c55e}
-  .btnCapture.stop{background:#ef4444;color:#fff}
-  .opt{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:.95rem}
-  .opt input[type="checkbox"]{width:16px;height:16px;accent-color:var(--brand)}
-  .opt select, .opt input[type="number"], .opt input[type="text"]{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0a122a;color:#e6ebff;font-weight:800;cursor:pointer}
-  .opt input[type="number"]{ width:96px }
-  .opt input[type="text"]{ width:200px }
-
+  .col-4{grid-column:span 4}.col-8{grid-column:span 8}
+  @media (max-width:900px){.col-4,.col-8{grid-column:1/-1}}
   ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
-  li{line-height:1.3;font-family:ui-monospace,Consolas,Menlo,monospace;border:1px solid var(--border);border-radius:12px;padding:12px;background:#0b1433;font-size:1.03rem;color:#edf2ff;display:flex;justify-content:space-between;gap:12px;align-items:center;transition:box-shadow .15s ease,border-color .15s ease, background .15s ease}
-  li.nearest{border-color:var(--btn);box-shadow:0 0 0 3px rgba(22,163,74,.2) inset;background:linear-gradient(0deg, rgba(22,163,74,.12), rgba(22,163,74,.02))}
-  li.nearest .id-badge{display:inline-flex;align-items:center;gap:8px;background:#0c1f17;padding:4px 10px;border-radius:999px;outline:1px solid rgba(34,197,94,.3)}
-  li.nearest .id-badge .id-label{font-weight:1000;letter-spacing:.02em;color:#b6ffce;font-size:1.08rem}
-  li.nearest .id-badge .flag{padding:2px 8px;border-radius:999px;background:#22c55e;color:#05220f;font-weight:900;font-size:.72rem}
+  li{line-height:1.3;font-family:ui-monospace,Consolas,Menlo,monospace;border:1px solid var(--border);border-radius:12px;padding:12px;background:#0b1433;font-size:1.03rem;color:#edf2ff;display:flex;justify-content:space-between;gap:12px;align-items:center}
+  li.nearest{border-color:#22c55e;box-shadow:0 0 0 3px rgba(22,163,74,.2) inset;background:linear-gradient(0deg, rgba(22,163,74,.12), rgba(22,163,74,.02))}
   .id-label{font-weight:800}
   .dist{color:#9fb0d9;opacity:.85;font-size:.78rem;min-width:64px;text-align:right}
   .skeleton{height:48px;border-radius:12px;background:linear-gradient(90deg,#111a3a 25%,#0d1836 40%,#111a3a 60%);background-size:200% 100%;animation:shimmer 1.1s infinite}
   @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-  .col-4{grid-column:span 4}.col-8{grid-column:span 8}
-  @media (max-width:900px){.col-4,.col-8{grid-column:1/-1}}
-  button:focus-visible, select:focus-visible, input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 
-  /* KM placa */
-  .km-sign{margin-left:auto;display:inline-flex;align-items:stretch;gap:0;background:var(--km-bg);color:var(--km-fg);border:4px solid var(--km-border);border-radius:10px;box-shadow:0 10px 24px rgba(0,0,0,.35);overflow:hidden}
-  .km-band{background:var(--km-band);color:#eaf2ff;width:auto;min-width:18px;padding:6px 10px;display:flex;align-items:center;justify-content:center}
-  .km-body{padding:6px 14px 8px;display:flex;align-items:center;gap:10px;background:var(--km-bg)}
-  .km-body-col{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-  .km-row{display:flex;align-items:baseline;gap:10px}
-  .km-label{font-family:"Roboto Condensed","Arial Narrow","Segoe UI",Arial,sans-serif;font-weight:900;letter-spacing:.06em;font-size:clamp(1rem,1.6vw,1.1rem);opacity:.85}
-  .km-value{font-family:"Roboto Condensed","Arial Narrow","Segoe UI",Arial,sans-serif;font-weight:1000;letter-spacing:.02em;font-size:clamp(1.6rem,3.6vw,2.4rem);line-height:1;color:var(--km-fg);min-width:4ch;text-align:right}
-  .km-subnote{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;font-size:.62rem;line-height:1.1;color:#6f84b8;opacity:.85;text-align:right;max-width:22ch;white-space:normal}
-  @media (max-width:480px){.km-body{padding:6px 10px 8px}.km-value{font-size:clamp(1.5rem,6vw,2rem)}}
-
-  /* Vídeo invisível (preview técnico) */
-  #vid {
-    position: fixed; inset: 0; opacity: 0; pointer-events: none; /* não interfere no layout, mas funciona para captura */
-    width: 100%; height: 100%; object-fit: contain; background:#000;
-  }
-
-  /* Toast */
-  #toast{position:fixed; left:50%; bottom:14px; transform:translateX(-50%); background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,.6)); border:1px solid var(--border); color:var(--fg); padding:10px 14px; border-radius:12px; display:none; z-index:9}
+  /* Status/Diag/Toast */
+  #diag{ max-width:1100px; margin:0 auto 12px; padding:10px 12px; border-radius:12px; border:1px dashed var(--warn); background:#201b03; color:#ffe9a6; font-size:.9rem; display:none }
+  #diag.bad{ border-color:var(--bad); background:#2a0e0e; color:#ffd3d3 }
+  #diag.ok{ border-color:var(--ok); background:#0e2217; color:#b7ffd1 }
+  #diag pre{ white-space:pre-wrap; word-break:break-word; margin:6px 0 0; color:#cfe7ff }
+  #statusBar .chip{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:6px 10px;background:#0c1532;border:1px solid var(--border);font-weight:800}
+  #toast{position:fixed; left:50%; bottom:16px; transform:translateX(-50%); background:rgba(0,0,0,.72); border:1px solid rgba(255,255,255,.16); color:#eaf2ff; padding:8px 12px; border-radius:10px; display:none; z-index:9}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="brand">
-    <span class="dot-logo" aria-hidden="true"></span>
-    <h1>ID GPS</h1>
+<h1>📸 Inspeção – IDs Próximos + KM + Captura Segura</h1>
 
-    <!-- Placa KM -->
-    <div id="kmChip" class="km-sign" aria-live="polite">
-      <div class="km-band" aria-hidden="true"></div>
-      <div class="km-body">
-        <div class="km-row">
-          <span class="km-label">KM</span>
-          <span id="kmValue" class="km-value">—</span>
-        </div>
-        <div class="km-body-col" style="margin-left:auto">
-          <span class="km-subnote">Marco quilométrico mais próximo à sua posição.</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</header>
-
-<!-- Trigger do banner -->
-<div class="info-trigger-wrap">
-  <button id="infoOpen" class="info-trigger" title="Leia importante"><span aria-hidden="true">ℹ</span><span class="sr-only">Leia importante</span></button>
+<div id="statusBar" aria-live="polite">
+  <span id="stContext" class="st">Contexto: —</span>
+  <span id="stCam" class="st">Câmera: —</span>
+  <span id="stCams" class="st">Câmeras: —</span>
+  <span id="stGps" class="st">GPS: —</span>
+  <span class="st">🆔 <b id="nearestIdChip">—</b></span>
+  <span class="st">📷 <b id="okCnt">0</b> salvas</span>
+  <span class="st">⚠️ <b id="dropCnt">0</b> descartes</span>
+  <span id="stFolder" class="st">Pasta: —</span>
 </div>
 
-<!-- Painel do banner -->
-<div id="infoPanel" class="info-panel" role="dialog" aria-modal="false" aria-label="Informações importantes">
-  <div class="info-panel-inner container">
-    <div class="info-hero">
-      <span class="icon" aria-hidden="true">ℹ</span>
-      <h2 class="info-title">Informação importante</h2>
+<div id="diag"></div>
+
+<div id="camSpacer"></div>
+<div id="kmPlaque"><span id="kmTop">KM —</span></div>
+
+<div class="card">
+  <details class="controls">
+    <summary>Controles (toque para abrir)</summary>
+    <div class="ctrlGrid">
+      <label>🎨 Tema:
+        <select id="themeSel"><option value="original" selected>Original</option><option value="neutral">Neutro</option></select>
+      </label>
+
+      <label>🎥 Câmera:
+        <select id="cameraSel" title="Lista de câmeras"></select>
+      </label>
+      <button id="btnCycle" class="small" title="Trocar Câmera">Trocar</button>
+      <button id="btnFacing" class="small" title="Alternar frontal/traseira">Frente/Trás</button>
+
+      <button id="btnUltra" class="small" title="Ultra‑wide (0.5×)">0.5×</button>
+      <button id="btnWide"  class="small" title="Wide (1×)">1×</button>
+      <button id="btnTele"  class="small" title="Tele (2×+)">2×</button>
+
+      <label id="zoomWrap" style="display:none">🔍 Zoom:
+        <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" />
+        <span id="zoomVal" style="margin-left:6px">1.0×</span>
+      </label>
+
+      <label>🖼️ Preenchimento:
+        <select id="fitModeSel" title="Como a imagem ocupa o espaço do topo">
+          <option value="auto" selected>Auto (inteligente)</option>
+          <option value="contain">Sem corte</option>
+          <option value="cover">Cobrir (pode cortar)</option>
+        </select>
+      </label>
+
+      <fieldset style="border:1px solid var(--border); border-radius:10px; padding:8px 10px;">
+        <legend style="padding:0 6px; font-weight:900; color:#dfe7ff">Itens no carimbo</legend>
+        <label style="margin-right:10px"><input type="checkbox" id="optKm" checked> KM</label>
+        <label style="margin-right:10px"><input type="checkbox" id="optTs" checked> Data/Hora</label>
+        <label style="margin-right:10px"><input type="checkbox" id="optIds" checked> IDs (1º)</label>
+        <label style="margin-right:10px"><input type="checkbox" id="optGps"> GPS (lat,lon)</label>
+      </fieldset>
+
+      <label class="small">⏱ Intervalo
+        <input id="intervalMs" type="number" min="100" step="50" value="500"> ms
+        <select id="preset">
+          <option value="100">0,10 s</option>
+          <option value="200">0,20 s</option>
+          <option value="300">0,30 s</option>
+          <option value="500" selected>0,50 s</option>
+          <option value="700">0,70 s</option>
+          <option value="1000">1,0 s</option>
+          <option value="1500">1,5 s</option>
+        </select>
+      </label>
+
+      <label>🔖 Prefixo
+        <input id="prefix" type="text" placeholder="Ex.: BR116_SUL">
+      </label>
     </div>
-    <div class="info-text">
-      <span class="strong">Atenção:</span> esta ferramenta utiliza uma <span class="strong">lista interna previamente cadastrada</span> para indicar o <span class="strong">ID mais próximo</span> com base na posição GPS do seu dispositivo. Não há integração em tempo real com sistemas corporativos. Como a base é estática, <span class="strong">podem existir equipamentos já removidos</span> que ainda aparecem na listagem. Recurso de apoio à localização e inspeção.
-    </div>
-    <button id="infoClose" class="info-close" aria-label="Fechar">✕</button>
+  </details>
+</div>
+
+<div class="card" id="camCard">
+  <div id="wrap">
+    <video id="vid" autoplay playsinline muted></video>
+    <canvas id="can" width="1280" height="720"></canvas>
   </div>
 </div>
 
-<div id="status" role="region" aria-label="Status do sistema">
-  <div id="gpsChip" class="chip bad" aria-live="polite">
-    <span class="dot"></span><span id="gpsText">GPS: aguardando…</span>
+<div class="card">
+  <div class="row">
+    <button id="btnPick" class="btnPick">📁 Selecionar pasta</button>
+    <button id="btnCapture" class="btnCapture">▶ INICIAR CAPTURA</button>
+    <button id="btnSend">WhatsApp IDs mais próximos</button>
   </div>
-  <div class="chip">🆔 <b id="nearestIdChip">—</b></div>
-  <div class="chip">📷 <b id="okCnt">0</b> salvas</div>
-  <div class="chip">⚠️ <b id="dropCnt">0</b> descartes</div>
-  <div id="diag" class="badge" style="display:none" aria-live="polite">—</div>
+  <p class="muted" style="margin-top:6px;opacity:.85">Mínimo prático: <b>100 ms</b>. Se notar descartes, aumente o intervalo ou reduza a resolução.</p>
 </div>
 
-<main>
-  <div class="grid">
-    <section class="card col-4" aria-label="Ações">
-      <h2>Ações</h2>
-      <div class="actions" style="margin-bottom:8px">
-        <button id="btnSend" disabled>Enviar ID por WhatsApp</button>
-        <button id="btnPick" class="btnPick">📁 Escolher pasta</button>
-      </div>
-      <div class="actions" style="gap:16px;margin-bottom:10px">
-        <label class="opt" title="Quantidade de IDs a enviar (padrão 10)"><span style="opacity:.9">quantidade</span>
-          <select id="qty"><option value="1">1</option><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
-        </label>
-        <label class="opt" title="Adicionar links do Google Maps junto com os IDs"><input type="checkbox" id="chkMaps" /><span>incluir links de mapa</span></label>
-      </div>
-      <div class="actions" style="gap:16px;margin-bottom:10px">
-        <label class="opt"><span>Intervalo</span>
-          <input id="intervalMs" type="number" min="100" step="50" value="500">
-          <span>ms</span>
-          <select id="preset">
-            <option value="100">0,10 s</option>
-            <option value="200">0,20 s</option>
-            <option value="300">0,30 s</option>
-            <option value="500" selected>0,50 s</option>
-            <option value="700">0,70 s</option>
-            <option value="1000">1,0 s</option>
-            <option value="1500">1,5 s</option>
-          </select>
-        </label>
-      </div>
-      <div class="actions" style="gap:16px;margin-bottom:10px">
-        <label class="opt"><span>Prefixo</span>
-          <input id="prefix" type="text" placeholder="Ex.: BR116_SUL">
-        </label>
-      </div>
-      <div class="actions">
-        <button id="btnCapture" class="btnCapture">▶ INICIAR CAPTURA</button>
-      </div>
-      <p class="muted" style="margin-top:10px">Obs.: mínimo físico prático de <b>100 ms</b>. Se notar descartes, aumente o intervalo.</p>
-    </section>
+<div class="card">
+  <h2 style="margin:0 0 6px;font-size:1rem">Prévia (última foto)</h2>
+  <img id="foto" alt="Prévia da foto capturada">
+</div>
 
-    <section class="card col-8" aria-label="IDs mais próximos">
-      <h2>IDs próximos</h2>
-      <ul id="list" aria-live="polite">
-        <li class="skeleton"></li><li class="skeleton"></li><li class="skeleton"></li>
-        <li class="skeleton"></li><li class="skeleton"></li>
-      </ul>
-    </section>
-  </div>
-</main>
+<div class="card">
+  <h2 style="margin:0 0 6px;font-size:1rem">Últimas 10 fotos</h2>
+  <div id="gal" class="gallery"></div>
+</div>
 
-<!-- Vídeo técnico para captura (invisível na UI) -->
-<video id="vid" autoplay playsinline muted></video>
+<div class="card" style="max-width:1100px">
+  <h2 style="margin:0 0 6px;font-size:1rem">IDs próximos</h2>
+  <ul id="list" aria-live="polite">
+    <li class="skeleton"></li><li class="skeleton"></li><li class="skeleton"></li>
+    <li class="skeleton"></li><li class="skeleton"></li>
+  </ul>
+</div>
+
+<!-- Vídeo técnico para captura (fica no topo) -->
+<!-- (Já está visível no card do topo) -->
 
 <div id="toast"></div>
 
 <script>
 /* =================== CONFIG =================== */
-const MIN_INTERVAL_MS = 100;       // mínimo prático (0,1 s)
-const DEFAULT_INTERVAL_MS = 500;    // padrão agressivo porém estável
-const MAX_PIX = 1600;               // downscale para velocidade/estabilidade
-const JPEG_QUALITY = 0.88;          // qualidade leve (boas fotos)
+const MIN_INTERVAL_MS = 100;        // mínimo prático (0,1 s)
+const DEFAULT_INTERVAL_MS = 500;     // padrão agressivo porém estável
+const MAX_PIX = 1600;                // downscale para velocidade/estabilidade
+const JPEG_QUALITY = 0.88;           // qualidade leve (boas fotos)
+const MIN_JPEG_BYTES = 1024;         // proteção anti 0B
 /* ============================================== */
 
 /* =================== REFS ===================== */
 const vid = document.getElementById('vid');
-const toast = document.getElementById('toast');
+const can = document.getElementById('can');
+const ctx = can.getContext('2d',{alpha:false});
 
-const infoOpen=document.getElementById('infoOpen');
-const infoClose=document.getElementById('infoClose');
-const infoPanel=document.getElementById('infoPanel');
+const stContext=document.getElementById('stContext'); const stCam=document.getElementById('stCam'); const stCams=document.getElementById('stCams'); const stGps=document.getElementById('stGps'); const stFolder=document.getElementById('stFolder');
+const kmTop=document.getElementById('kmTop'); const okCnt=document.getElementById('okCnt'); const dropCnt=document.getElementById('dropCnt'); const nearestIdChip=document.getElementById('nearestIdChip');
+const themeSel=document.getElementById('themeSel'); const cameraSel=document.getElementById('cameraSel');
+const btnCycle=document.getElementById('btnCycle'); const btnFacing=document.getElementById('btnFacing'); const btnUltra=document.getElementById('btnUltra'); const btnWide=document.getElementById('btnWide'); const btnTele=document.getElementById('btnTele');
+const zoomWrap=document.getElementById('zoomWrap'); const zoomRange=document.getElementById('zoomRange'); const zoomVal=document.getElementById('zoomVal');
+const fitModeSel=document.getElementById('fitModeSel');
+const optKm=document.getElementById('optKm'); const optTs=document.getElementById('optTs'); const optIds=document.getElementById('optIds'); const optGps=document.getElementById('optGps');
 
-const gpsChip=document.getElementById('gpsChip');
-const gpsText=document.getElementById('gpsText');
-const diag=document.getElementById('diag');
-
-const btnSend=document.getElementById('btnSend');
-const chkMaps=document.getElementById('chkMaps');
-const qtySel=document.getElementById('qty');
-const listEl=document.getElementById('list');
-
-const kmValue=document.getElementById('kmValue');
-const okCnt=document.getElementById('okCnt');
-const dropCnt=document.getElementById('dropCnt');
-const nearestIdChip=document.getElementById('nearestIdChip');
-
-const btnPick=document.getElementById('btnPick');
-const btnCapture=document.getElementById('btnCapture');
-
-const intervalMsInput=document.getElementById('intervalMs');
-const presetSel=document.getElementById('preset');
-const prefixInput=document.getElementById('prefix');
+const btnPick=document.getElementById('btnPick'); const btnCapture=document.getElementById('btnCapture'); const btnSend=document.getElementById('btnSend');
+const intervalMsInput=document.getElementById('intervalMs'); const presetSel=document.getElementById('preset'); const prefixInput=document.getElementById('prefix');
+const listEl=document.getElementById('list'); const foto=document.getElementById('foto'); const toast=document.getElementById('toast'); const diagEl=document.getElementById('diag');
 /* ============================================== */
 
 /* =================== ESTADO ==================== */
@@ -232,21 +239,25 @@ let capturing=false;
 let successCount=0;
 let dropCount=0;
 
-let dataset=[];           // IDs (dados.csv / Dados_Completos_Grupo_2_all.csv)
-let lastPos=null;         // {lat, lon, acc, ...}
+let deviceList=[]; let deviceIndex=0; let currentStream=null; let currentTrack=null; let currentCap=null; let videoAR=16/9;
+let facingMode='environment'; let digitalZoom=1; const DIGITAL_ZOOM_MIN=1; let DIGITAL_ZOOM_MAX=6; let pinchState=null; let lastTapTime=0;
+
+let dataset=[];           // IDs
+let lastPos=null;         // {lat, lon, acc}
 let lastRender=0;
 
-let kmDataset=[];         // KM (SNVBR116SPRJ.csv) — aceita header OU legado
-let currentKMStr='KM —';  // "KM 123+456"
-let currentKMValue='—';   // para placa (numérico)
+let kmDataset=[];         // KM
+let currentKMStr='KM —';
+let currentKMValue='—';
 let currentNearestId='—';
 
-const can=document.createElement('canvas');
-const ctx=can.getContext('2d',{alpha:false});
+let previewBuffer=[];     // {url, meta}
 /* ============================================== */
 
 /* =================== UTIL ===================== */
 function toastMsg(m,ms=1300){ toast.textContent=m; toast.style.display='block'; clearTimeout(toast.t); toast.t=setTimeout(()=>toast.style.display='none',ms); }
+function diag(msg, level='warn'){ diagEl.style.display='block'; diagEl.className=''; if(level==='bad') diagEl.classList.add('bad'); else if(level==='ok') diagEl.classList.add('ok'); diagEl.innerHTML = msg; }
+function diagAppend(text){ if(!diagEl.innerHTML) diagEl.innerHTML=''; diagEl.style.display='block'; const pre=document.createElement('pre'); pre.textContent=String(text||''); diagEl.appendChild(pre); }
 function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
 function findColumnIndex(headers, candidates){ const map=headers.map(h=>normalizeStr(h)); for(const c of candidates){ const i=map.indexOf(c); if(i>=0) return i; } for(const c of candidates){ for(let i=0;i<map.length;i++){ if(map[i].includes(c)) return i; } } return -1; }
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d{1,}$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
@@ -259,90 +270,138 @@ function fmtKm(v){ if(!Number.isFinite(v)) return 'KM —'; let K=Math.floor(v),
 function stampNow(){ const d=new Date(); return `${d.getFullYear()}-${z2(d.getMonth()+1)}-${z2(d.getDate())}_${z2(d.getHours())}-${z2(d.getMinutes())}-${z2(d.getSeconds())}`; }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 function safe(s){ return String(s||'').replace(/[^\w\-+.]/g,'_'); }
-function clampInterval(){
-  let v = Number(intervalMsInput.value || DEFAULT_INTERVAL_MS);
-  if(!Number.isFinite(v) || v < MIN_INTERVAL_MS) v = MIN_INTERVAL_MS;
-  intervalMsInput.value = String(v);
-  const match = [...presetSel.options].find(o => Number(o.value) === v);
-  if(match) presetSel.value = String(v);
-  return v;
-}
+function isSecure(){ return window.isSecureContext || location.hostname==='localhost'; }
 /* ============================================== */
 
-/* =================== BANNER ==================== */
-function openInfo(){ infoPanel.classList.add('open'); }
-function closeInfo(){ infoPanel.classList.remove('open'); }
-infoOpen.addEventListener('click', openInfo);
-infoClose.addEventListener('click', closeInfo);
-window.addEventListener('keydown',(e)=>{ if(e.key==='Escape' && infoPanel.classList.contains('open')) closeInfo(); });
-window.addEventListener('click',(e)=>{ if(!infoPanel.classList.contains('open')) return; const inner=infoPanel.querySelector('.info-panel-inner'); if(inner && !inner.contains(e.target) && e.target!==infoOpen){ closeInfo(); }}, true);
-if(!sessionStorage.getItem('bannerShown')){ openInfo(); sessionStorage.setItem('bannerShown','1'); }
+/* =================== THEME/LAYOUT ============== */
+function applyTheme(val){ const mode=val||localStorage.getItem('theme')||'original'; document.documentElement.setAttribute('data-theme', mode); localStorage.setItem('theme', mode); themeSel.value=mode; }
+function computeAvailableW(){ const pad=24; return Math.min(window.innerWidth - pad, 1100); }
+function computeMaxH(){ const reserve=160; const vv=visualViewport; const safeTop=vv? vv.offsetTop : 0; return Math.max(220,(vv?vv.height:window.innerHeight)-reserve-safeTop); }
+function applyFit(mode){ const w=computeAvailableW(); const idealH=Math.round(w/(videoAR||(16/9))); const maxH=computeMaxH(); let objectFit='contain'; let targetH=idealH; if(mode==='contain'){objectFit='contain';targetH=Math.min(idealH,maxH);} else if(mode==='cover'){objectFit='cover';targetH=Math.min(idealH,maxH);} else { if(idealH<=maxH){objectFit='contain';targetH=idealH;} else {objectFit='cover';targetH=maxH;} } document.documentElement.style.setProperty('--camH', targetH+'px'); vid.style.objectFit=objectFit; }
+function updateCamLayout(){ const mode=localStorage.getItem('fitMode')||fitModeSel.value||'auto'; applyFit(mode); }
+fitModeSel.addEventListener('change',()=>{ localStorage.setItem('fitMode', fitModeSel.value); updateCamLayout(); });
+window.addEventListener('resize', updateCamLayout);
+if(window.visualViewport){ visualViewport.addEventListener('resize', updateCamLayout); visualViewport.addEventListener('scroll', updateCamLayout); }
+applyTheme();
+fitModeSel.value = localStorage.getItem('fitMode') || 'auto';
 /* ============================================== */
 
 /* =================== CAMERA =================== */
-async function startCamera(){
-  const st = await navigator.mediaDevices.getUserMedia({
-    video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30} },
-    audio:false
-  });
-  vid.srcObject = st;
-  await new Promise(res => { if(vid.readyState>=1 && vid.videoWidth) res(); else vid.onloadedmetadata = res; });
+function lensHint(label=''){ const s=String(label).toLowerCase(); if(/tele|zoom\s?lens|50mm|70mm|3x|5x/.test(s)) return 'tele'; if(/ultra|wide\s?angle|0\.5x|0,5x|ultra\-wide|superwide|grande|wide \(ultra\)/.test(s)) return 'ultra'; if(/wide|1x|principal|main|back|rear|environment/.test(s)) return 'wide'; return ''; }
+async function enumerateCameras(){
+  try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{}
+  const devs=await navigator.mediaDevices.enumerateDevices(); deviceList=devs.filter(d=>d.kind==='videoinput');
+  cameraSel.innerHTML='';
+  deviceList.forEach((d,i)=>{ const o=document.createElement('option'); const tag=lensHint(d.label); o.value=String(i); o.textContent= d.label? `${d.label}${tag?` (${tag})`:''}` : `Câmera ${i+1}${tag?` (${tag})`:''}`; cameraSel.appendChild(o); });
+  stCams.textContent = `Câmeras: ${deviceList.length}`;
 }
-/* ============================================== */
+async function startCameraByIndex(idx){
+  try{
+    if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
+    currentStream=currentTrack=currentCap=null;
+    const dev=deviceList[idx];
+    const constraints= dev? {video:{deviceId:{exact:dev.deviceId}}, audio:false} : {video:{facingMode:{ideal:facingMode||'environment'}}, audio:false};
+    const st=await navigator.mediaDevices.getUserMedia(constraints);
+    currentStream=st; vid.srcObject=st;
+    await vid.play().catch(()=>{});
+    await new Promise(res=>{ if(vid.readyState>=2 && vid.videoWidth) return res(); vid.onloadedmetadata=()=>res(); setTimeout(res,1000); });
+    currentTrack=st.getVideoTracks()[0];
+    currentCap=currentTrack.getCapabilities? currentTrack.getCapabilities():null;
+    if(vid.videoWidth&&vid.videoHeight) videoAR=vid.videoWidth/vid.videoHeight;
+    updateCamLayout();
+
+    if(currentCap && currentCap.zoom){
+      zoomRange.min=currentCap.zoom.min??1; zoomRange.max=currentCap.zoom.max??1; zoomRange.step=currentCap.zoom.step??0.1;
+      DIGITAL_ZOOM_MAX=Number(zoomRange.max)||6;
+      const z = Math.max(Number(zoomRange.min||1), 1);
+      await applyZoom(z, true);
+      zoomWrap.style.display='';
+    }else{
+      DIGITAL_ZOOM_MAX=6; zoomWrap.style.display='none'; vid.style.transform=`scale(${digitalZoom})`;
+    }
+    stCam.textContent = 'Câmera: OK';
+    stCam.classList.add('ok');
+    cameraSel.value=String(idx);
+  }catch(e){
+    stCam.textContent='Câmera: erro'; stCam.classList.add('bad');
+    diag('<b>Falha ao iniciar a câmera.</b> Verifique permissões/HTTPS/feche outros apps.', 'bad'); diagAppend((e.name||'')+': '+(e.message||e));
+  }
+}
+async function applyZoom(val,noSave=false){
+  if(currentTrack && currentCap && currentCap.zoom){
+    const z=Number(val);
+    try{ await currentTrack.applyConstraints({advanced:[{zoom:z}]}); }catch{ try{ await currentTrack.applyConstraints({zoom:z}); }catch(e){} }
+    zoomRange.value=z; zoomVal.textContent=`${z.toFixed(1)}×`;
+  }else{
+    digitalZoom = Math.max(1, Number(val)||1);
+    vid.style.transform=`scale(${digitalZoom})`;
+    zoomVal.textContent=`${digitalZoom.toFixed(1)}×`;
+  }
+}
+function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+function dist(t){ const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.hypot(dx,dy); }
+const wrap=document.getElementById('wrap');
+wrap.addEventListener('touchstart',(ev)=>{ if(ev.touches.length===2){ ev.preventDefault(); pinchState={ base:dist(ev.touches), start:(currentCap?.zoom? Number(zoomRange.value||1) : digitalZoom) }; } else if(ev.touches.length===1){ const now=Date.now(); if(now-lastTapTime<300){ if(currentCap?.zoom){ applyZoom(1); } else { digitalZoom=1; vid.style.transform=''; zoomVal.textContent='1.0×'; } pinchState=null; lastTapTime=0; return; } lastTapTime=now; } },{passive:false});
+wrap.addEventListener('touchmove',(ev)=>{ if(pinchState && ev.touches.length===2){ ev.preventDefault(); const factor=dist(ev.touches)/Math.max(1,pinchState.base); let target=pinchState.start*factor; if(currentCap?.zoom){ target=clamp(target, Number(zoomRange.min||1), Number(zoomRange.max||6)); applyZoom(target); } else { target=clamp(target, 1, DIGITAL_ZOOM_MAX); digitalZoom=target; vid.style.transform=`scale(${digitalZoom})`; zoomVal.textContent=`${digitalZoom.toFixed(1)}×`; } } },{passive:false});
+wrap.addEventListener('wheel',(ev)=>{ if(!ev.ctrlKey && !ev.metaKey) return; ev.preventDefault(); const delta=Math.sign(ev.deltaY)*-0.2; const base=currentCap?.zoom? Number(zoomRange.value||1) : digitalZoom; let target=base*(1+delta); if(currentCap?.zoom){ target=clamp(target, Number(zoomRange.min||1), Number(zoomRange.max||6)); applyZoom(target); } else { target=clamp(target, 1, DIGITAL_ZOOM_MAX); digitalZoom=target; vid.style.transform=`scale(${digitalZoom})`; zoomVal.textContent=`${digitalZoom.toFixed(1)}×`; } },{passive:false});
+
+cameraSel.addEventListener('change', async ()=>{ deviceIndex=Number(cameraSel.value||0); await startCameraByIndex(deviceIndex); });
+btnCycle.addEventListener('click', async ()=>{ if(!deviceList.length){ await enumerateCameras(); } deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCameraByIndex(deviceIndex); });
+btnFacing.addEventListener('click', async ()=>{ facingMode = (facingMode==='environment'?'user':'environment'); await startCameraByIndex(deviceIndex); });
+btnUltra.addEventListener('click', async ()=>{ if(currentCap?.zoom){ await applyZoom(Number(zoomRange.min||1)); } else { await applyZoom(1); } });
+btnWide.addEventListener('click', async ()=>{ if(currentCap?.zoom){ await applyZoom(Math.max(1, Number(zoomRange.min||1))); } else { await applyZoom(1); } });
+btnTele.addEventListener('click', async ()=>{ if(currentCap?.zoom){ await applyZoom(Math.min(2, Number(zoomRange.max||2))); } else { await applyZoom(Math.min(2, DIGITAL_ZOOM_MAX)); } });
+zoomRange.addEventListener('input', ()=>applyZoom(zoomRange.value));
+
+async function ensurePermission(){ try{ const t=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); t.getTracks().forEach(tr=>tr.stop()); return true; }catch(e){ diag('<b>Permissão de câmera negada/bloqueada.</b> Autorize a câmera e tente novamente.', 'bad'); diagAppend(e.message||e); return false; } }
+function updateContext(){ stContext.textContent = 'Contexto: ' + (isSecure() ? 'seguro/OK' : 'não seguro'); }
 
 /* =================== GPS ====================== */
 const ACC_GREEN=10, ACC_YELLOW=25;
 function updateGpsChip(){
-  if(!lastPos || lastPos.acc==null){ gpsChip.className='chip bad'; gpsText.textContent='GPS: buscando…'; return; }
+  if(!lastPos || lastPos.acc==null){ stGps.textContent='GPS: buscando…'; stGps.className='st'; stGps.classList.add('warn'); return; }
   const a=Math.round(lastPos.acc);
-  if(a<=ACC_GREEN){ gpsChip.className='chip ok'; gpsText.textContent=`GPS: OK (${fmtAcc(a)})`; }
-  else if(a<=ACC_YELLOW){ gpsChip.className='chip warn'; gpsText.textContent=`GPS: ajustando (${fmtAcc(a)})`; }
-  else { gpsChip.className='chip bad'; gpsText.textContent=`GPS: fraco (${fmtAcc(a)})`; }
+  if(a<=ACC_GREEN){ stGps.textContent=`GPS: OK (${fmtAcc(a)})`; stGps.className='st ok'; }
+  else if(a<=ACC_YELLOW){ stGps.textContent=`GPS: ajustando (${fmtAcc(a)})`; stGps.className='st warn'; }
+  else { stGps.textContent=`GPS: fraco (${fmtAcc(a)})`; stGps.className='st bad'; }
 }
 function startGPS(){
-  if(!('geolocation' in navigator)){ diag.style.display='inline-flex'; diag.textContent='❌ Sem geolocalização'; return; }
+  if(!('geolocation' in navigator)){ stGps.textContent='GPS: não suportado'; stGps.classList.add('bad'); return; }
   navigator.geolocation.getCurrentPosition(
     pos=>{
       lastPos={ lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy, ts:Date.now() };
-      updateGpsChip(); updateButtons(); renderIDs(true); updateKMChip(true); updateNearestIdChip();
+      updateGpsChip(); renderIDs(true); updateKMChip(true); updateNearestIdChip();
       navigator.geolocation.watchPosition(p=>{
         lastPos={ lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy, ts:Date.now() };
-        updateGpsChip(); updateButtons(); renderIDs(); updateKMChip(); updateNearestIdChip();
+        updateGpsChip(); renderIDs(); updateKMChip(); updateNearestIdChip();
       },()=>{}, {enableHighAccuracy:true, maximumAge:0, timeout:15000});
     },
-    ()=>{ diag.style.display='inline-flex'; diag.textContent='❗ Permita o GPS para listar IDs próximos e KM'; },
+    ()=>{ stGps.textContent='GPS: permissões necessárias'; stGps.classList.add('warn'); },
     {enableHighAccuracy:true, maximumAge:0, timeout:10000}
   );
 }
-/* ============================================== */
 
 /* =================== DATASETS ================= */
-function updateButtons(){ const baseOk=dataset.length>0, posOk=!!lastPos; btnSend.disabled=!(baseOk && posOk); }
-
+function updateButtons(){ const baseOk=dataset.length>0, posOk=!!lastPos; btnSend.disabled=!(baseOk && posOk); stFolder.textContent = 'Pasta: ' + (dirHandle?'OK':'—'); }
 async function loadIDs(){
   try{
     let resp = await fetch('dados.csv?v='+Date.now(), {cache:'no-store'});
     if(!resp.ok){ resp = await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now(), {cache:'no-store'}); }
-    if(!resp.ok){ diag.style.display='inline-flex'; diag.textContent='❌ CSV de IDs não encontrado'; return; }
-
+    if(!resp.ok){ diag('❌ CSV de IDs não encontrado', 'warn'); return; }
     let text = await resp.text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-    const lines = text.split(/\r?\n/).filter(l=>l.trim()!==''); if(lines.length<2){ diag.style.display='inline-flex'; diag.textContent='❌ CSV de IDs vazio'; return; }
+    const lines = text.split(/\r?\n/).filter(l=>l.trim()!==''); if(lines.length<2){ diag('❌ CSV de IDs vazio', 'warn'); return; }
     const head = lines.shift().split(';');
     const iId = findColumnIndex(head,['id do nox','idnox','id']);
     const iLat= findColumnIndex(head,['latitude','lat']);
     const iLon= findColumnIndex(head,['longitude','lon','long']);
-    if(iId<0||iLat<0||iLon<0){ diag.style.display='inline-flex'; diag.textContent='❌ Cabeçalho inválido em IDs (ID/Lat/Lon)'; return; }
-
+    if(iId<0||iLat<0||iLon<0){ diag('❌ Cabeçalho inválido (ID/Lat/Lon)', 'warn'); return; }
     dataset = lines.map(l=>{
       const r=l.split(';');
       return { id:String(r[iId]||'').trim(), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) };
     }).filter(p=>p.id && Number.isFinite(p.lat)&&Number.isFinite(p.lon));
-
-    if(!dataset.length){ diag.style.display='inline-flex'; diag.textContent='❌ Sem pontos válidos no CSV de IDs'; return; }
+    if(!dataset.length){ diag('❌ Sem pontos válidos no CSV de IDs', 'warn'); return; }
     renderIDs(true); updateButtons(); updateNearestIdChip();
-  }catch(e){
-    diag.style.display='inline-flex'; diag.textContent='❌ Erro ao carregar CSV de IDs';
-  }
+  }catch(e){ diag('❌ Erro ao carregar CSV de IDs', 'warn'); }
 }
 function nearestN(lat,lon,n=10){
   if(!dataset.length) return [];
@@ -357,40 +416,15 @@ function nearestID(lat,lon){
 function renderIDs(force=false){
   const now=performance.now(); if(!force && now-lastRender<150) return; lastRender=now;
   listEl.innerHTML=''; if(!lastPos || !dataset.length) return;
-  const qty = Number(qtySel.value || 10);
-  const items = nearestN(lastPos.lat, lastPos.lon, qty);
+  const qty = 10;
+  const items = nearestN(lastPos.lat,lastPos.lon,qty);
   if(!items.length){ listEl.innerHTML='<li>—</li>'; return; }
-
   const frag=document.createDocumentFragment();
   items.forEach((o,idx)=>{
-    const li=document.createElement('li');
-
-    const left = document.createElement('span');
-    const idSpan = document.createElement('span');
-    idSpan.className='id-label';
-    idSpan.textContent=o.id;
-
-    if(idx===0){
-      li.classList.add('nearest');
-      const pill = document.createElement('span');
-      pill.className='id-badge';
-      const flag = document.createElement('span');
-      flag.className='flag';
-      flag.textContent='PRÓXIMO';
-      pill.appendChild(idSpan);
-      pill.appendChild(flag);
-      left.appendChild(pill);
-    }else{
-      left.appendChild(idSpan);
-    }
-
-    const right = document.createElement('span');
-    right.className='dist';
-    right.textContent = fmtDistMeters(o.d);
-
-    li.appendChild(left);
-    li.appendChild(right);
-    frag.appendChild(li);
+    const li=document.createElement('li'); if(idx===0) li.classList.add('nearest');
+    const left = document.createElement('span'); const idSpan = document.createElement('span'); idSpan.className='id-label'; idSpan.textContent=o.id; left.appendChild(idSpan);
+    const right = document.createElement('span'); right.className='dist'; right.textContent = fmtDistMeters(o.d);
+    li.appendChild(left); li.appendChild(right); frag.appendChild(li);
   });
   listEl.appendChild(frag);
 }
@@ -405,7 +439,7 @@ function updateNearestIdChip(){
 async function loadKM(){
   try{
     let resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
-    if(!resp.ok){ console.warn('KM CSV não encontrado (SNVBR116SPRJ.csv)'); return; }
+    if(!resp.ok){ diag('⚠️ KM (SNVBR116SPRJ.csv) não encontrado. KM ao vivo indisponível.', 'warn'); return; }
     let text = await resp.text();
     if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
     const lines = text.split(/\r?\n/).filter(l=>l.trim()!=='');
@@ -431,7 +465,7 @@ async function loadKM(){
         if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)) kmDataset.push({km,lat,lon});
       }
     }else{
-      // Fallback igual ao app inicial: colunas [0,1,2] e [7,8,9]
+      // Fallback: colunas [0,1,2] e [7,8,9]
       for(const ln of lines){
         const c=ln.split(';');
         const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
@@ -441,7 +475,7 @@ async function loadKM(){
       }
     }
   }catch(e){
-    console.warn('Erro ao carregar SNVBR116SPRJ.csv', e);
+    diag('Erro ao carregar SNVBR116SPRJ.csv', 'warn');
   }
 }
 function nearestKM(lat,lon){
@@ -459,50 +493,152 @@ function updateKMChip(force=false){
   if(!force && now-kmThrottle<400) return; // ~2.5 fps
   kmThrottle=now;
 
-  if(!lastPos){ kmValue.textContent='—'; currentKMStr='KM —'; currentKMValue='—'; return; }
-  if(!kmDataset.length){ kmValue.textContent='…'; currentKMStr='KM —'; currentKMValue='…'; return; }
+  if(!lastPos){ kmTop.textContent='KM —'; currentKMStr='KM —'; currentKMValue='—'; return; }
+  if(!kmDataset.length){ kmTop.textContent='…'; currentKMStr='KM —'; currentKMValue='…'; return; }
 
   const n=nearestKM(lastPos.lat,lastPos.lon);
-  if(!n){ kmValue.textContent='—'; currentKMStr='KM —'; currentKMValue='—'; return; }
+  if(!n){ kmTop.textContent='—'; currentKMStr='KM —'; currentKMValue='—'; return; }
 
-  // Para a placa (numérico com vírgula)
-  const kmNumStr=(Math.round(n.km*100)/100).toFixed(2).replace('.',',');
-  kmValue.textContent=kmNumStr;
-
-  // Para overlay/arquivo (KM K+mmm)
   currentKMStr = fmtKm(n.km);
-  currentKMValue = kmNumStr;
+  kmTop.textContent = currentKMStr;
 }
-/* ============================================== */
 
 /* =============== WhatsApp IDs ================= */
 btnSend.addEventListener('click', ()=>{
   if(!lastPos) return;
-  const qty = Number(qtySel.value || 10);
+  const qty = 10;
   const items = nearestN(lastPos.lat,lastPos.lon,qty); if(!items.length) return;
-
   let tx=`${nowBR()}\nGPS agora: Lat ${lastPos.lat.toFixed(6)}, Lon ${lastPos.lon.toFixed(6)} · Precisão ${fmtAcc(lastPos.acc)}\n`;
   items.forEach(o=> tx+=`ID: ${o.id}\n`);
-
-  if(chkMaps.checked){
-    tx+='\nLinks de mapa:\n';
-    items.forEach(o=> tx+=`ID: ${o.id} → https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`);
-  }
   window.open('https://wa.me/?text='+encodeURIComponent(tx),'_blank');
 });
-qtySel.addEventListener('change', ()=> renderIDs(true));
-/* ============================================== */
 
-/* =================== CAPTURA ================== */
-async function camInit(){ try{ await startCamera(); }catch{ toastMsg('Falha na câmera'); } }
+/* =================== SALVAR/CAPTURA =========== */
+function addPreview(url,meta){
+  previewBuffer.push({url,meta});
+  if(previewBuffer.length>10){
+    const r=previewBuffer.shift();
+    try{ URL.revokeObjectURL(r.url);}catch{}
+  }
+  // render
+  const gal=document.getElementById('gal'); gal.innerHTML='';
+  previewBuffer.forEach(p=>{
+    const d=document.createElement('div'); d.className='thumb';
+    const im=document.createElement('img'); im.src=p.url;
+    const m=document.createElement('div'); m.className='meta'; m.textContent=p.meta;
+    d.appendChild(im); d.appendChild(m); gal.appendChild(d);
+  });
+}
+function drawVideoInto(g, outW, outH){
+  const vw=vid.videoWidth||1280, vh=vid.videoHeight||720;
+  if(currentCap?.zoom){
+    g.drawImage(vid,0,0,outW,outH);
+  } else {
+    const dz=Math.max(1,digitalZoom||1);
+    const srcW=Math.round(vw/dz), srcH=Math.round(vh/dz);
+    const sx=Math.max(0,Math.floor((vw-srcW)/2)); const sy=Math.max(0,Math.floor((vh-srcH)/2));
+    g.drawImage(vid,sx,sy,srcW,srcH,0,0,outW,outH);
+  }
+}
+function drawOverlay(g,w,h){
+  const bandH=Math.max(60, Math.round(h*0.12));
+  g.fillStyle='rgba(0,0,0,.56)'; g.fillRect(0,h-bandH,w,bandH);
 
+  if(optKm.checked){
+    g.fillStyle='#b7ffcf'; g.textAlign='left'; g.font=`900 ${Math.round(h*0.045)}px system-ui`;
+    g.fillText(currentKMStr||'KM —', 12, h-bandH+Math.round(bandH*0.58));
+  }
+
+  const ts = `${z2(new Date().getHours())}:${z2(new Date().getMinutes())}:${z2(new Date().getSeconds())}`;
+  if(optIds.checked){
+    g.fillStyle='#eaf2ff'; g.textAlign='left'; g.font=`700 ${Math.round(h*0.03)}px system-ui`;
+    g.fillText(`ID: ${currentNearestId||'—'} • ${ts}`, 12, h-16);
+  }else if(optTs.checked){
+    g.fillStyle='#eaf2ff'; g.textAlign='left'; g.font=`700 ${Math.round(h*0.03)}px system-ui`;
+    g.fillText(ts, 12, h-16);
+  }
+
+  if(optGps.checked && lastPos){
+    g.fillStyle='#cfe7ff'; g.textAlign='left'; g.font=`600 ${Math.round(h*0.028)}px system-ui`;
+    g.fillText(`${lastPos.lat?.toFixed(6)}, ${lastPos.lon?.toFixed(6)}  ±${Math.round(lastPos.acc||0)}m`, 12, h-bandH+24);
+  }
+}
+async function tryMakeJpegBlob(canvas,q=JPEG_QUALITY){
+  // duas tentativas
+  let b=await new Promise(res=>canvas.toBlob(res,'image/jpeg',q));
+  if(b && b.size>=MIN_JPEG_BYTES) return b;
+  await sleep(40);
+  b=await new Promise(res=>canvas.toBlob(res,'image/jpeg',q));
+  if(b && b.size>=MIN_JPEG_BYTES) return b;
+  return null;
+}
+function buildFilename(){
+  const kmPart = safe((currentKMStr||'KM').replace('KM ','').replace('+','_'));
+  const idPart = safe(currentNearestId||'ID');
+  return `FOTO_KM_${kmPart}_ID_${idPart}_${stampNow()}.jpg`;
+}
+async function capturePhoto(){
+  if(capturing) return;
+  capturing=true;
+  let writer=null;
+
+  try{
+    const vw=vid.videoWidth, vh=vid.videoHeight;
+    if(!vw||!vh){ dropCount++; dropCnt.textContent=dropCount; return; }
+
+    // Atualiza KM/ID imediatos antes de registrar
+    updateKMChip();
+    updateNearestIdChip();
+
+    const scale=Math.min(1, MAX_PIX/Math.max(vw,vh));
+    const w=Math.round(vw*scale), h=Math.round(vh*scale);
+    can.width=w; can.height=h;
+    ctx.clearRect(0,0,w,h);
+    drawVideoInto(ctx,w,h);
+    drawOverlay(ctx,w,h);
+
+    const blob=await tryMakeJpegBlob(can, JPEG_QUALITY);
+    if(!blob){ dropCount++; dropCnt.textContent=dropCount; return; }
+
+    const name = buildFilename();
+    const fh = await dirHandle.getFileHandle(name,{create:true});
+    writer = await fh.createWritable();
+    await writer.write(blob);
+    await writer.close(); writer=null;
+
+    successCount++; okCnt.textContent=successCount;
+    const url=URL.createObjectURL(blob); foto.src=url; addPreview(url, `${currentKMStr} • ${nowBR()}`);
+  }catch(e){
+    console.error('capturePhoto error:', e);
+    dropCount++; dropCnt.textContent=dropCount;
+  }finally{
+    try{ await writer?.close(); }catch{}
+    capturing=false;
+  }
+}
+function clampInterval(){
+  let v = Number(intervalMsInput.value || DEFAULT_INTERVAL_MS);
+  if(!Number.isFinite(v) || v < MIN_INTERVAL_MS) v = MIN_INTERVAL_MS;
+  intervalMsInput.value = String(v);
+  const match = [...presetSel.options].find(o => Number(o.value) === v);
+  if(match) presetSel.value = String(v);
+  return v;
+}
+async function loop(){
+  while(running){
+    await capturePhoto();
+    await sleep(clampInterval());
+  }
+}
+
+/* =================== BOTÕES =================== */
 btnPick.addEventListener('click', async ()=>{
   try{
-    dirHandle = await showDirectoryPicker({mode:'readwrite'});
+    dirHandle = await window.showDirectoryPicker({mode:"readwrite"});
+    stFolder.textContent = 'Pasta: OK';
     toastMsg('Pasta selecionada');
   }catch{ toastMsg('Seleção de pasta cancelada'); }
 });
-
 presetSel.addEventListener('change', ()=>{
   const v=Math.max(MIN_INTERVAL_MS, Number(presetSel.value)||DEFAULT_INTERVAL_MS);
   intervalMsInput.value=String(v);
@@ -513,86 +649,6 @@ intervalMsInput.addEventListener('change', ()=>{
   const match=[...presetSel.options].find(o=>Number(o.value)===v);
   if(match) presetSel.value=String(v);
 });
-
-function drawOverlay(w,h){
-  // faixa
-  const bandH=Math.max(60, Math.round(h*0.12));
-  ctx.fillStyle='rgba(0,0,0,.56)'; ctx.fillRect(0,h-bandH,w,bandH);
-
-  // KM forte
-  ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.045)}px system-ui`;
-  ctx.fillText(currentKMStr||'KM —', 12, h-bandH+Math.round(bandH*0.58));
-
-  // Linha com ID + hora
-  ctx.fillStyle='#eaf2ff'; ctx.font=`700 ${Math.round(h*0.03)}px system-ui`;
-  const ts = `${z2(new Date().getHours())}:${z2(new Date().getMinutes())}:${z2(new Date().getSeconds())}`;
-  ctx.fillText(`ID: ${currentNearestId||'—'} • ${ts}`, 12, h-16);
-
-  // GPS discreto
-  if(lastPos){
-    ctx.fillStyle='#cfe7ff'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
-    ctx.fillText(`${lastPos.lat?.toFixed(6)}, ${lastPos.lon?.toFixed(6)}  ±${Math.round(lastPos.acc||0)}m`, 12, h-bandH+24);
-  }
-}
-
-async function tryMakeJpegBlob(){
-  let blob = await new Promise(r=>can.toBlob(r,'image/jpeg',JPEG_QUALITY));
-  if(blob && blob.size>=1000) return blob;
-  await sleep(40);
-  blob = await new Promise(r=>can.toBlob(r,'image/jpeg',JPEG_QUALITY));
-  if(blob && blob.size>=1000) return blob;
-  return null;
-}
-
-async function capturePhoto(){
-  if(capturing) return;
-  capturing=true;
-  let writer=null;
-
-  try{
-    const vw=vid.videoWidth, vh=vid.videoHeight;
-    if(!vw||!vh){ dropCount++; dropCnt.textContent=dropCount; return; }
-
-    // Atualiza KM/ID antes de gravar (se disponível)
-    updateKMChip();
-    updateNearestIdChip();
-
-    const scale=Math.min(1, MAX_PIX/Math.max(vw,vh));
-    const w=Math.round(vw*scale), h=Math.round(vh*scale);
-    can.width=w; can.height=h;
-    ctx.drawImage(vid,0,0,w,h);
-
-    drawOverlay(w,h);
-
-    const blob = await tryMakeJpegBlob();
-    if(!blob){ dropCount++; dropCnt.textContent=dropCount; return; }
-
-    const prefix = safe(prefixInput.value);
-    const kmPart = safe((currentKMStr||'KM').replace('KM ','').replace('+','_'));
-    const idPart = safe(currentNearestId||'ID');
-    const name = (prefix? `${prefix}_`:'') + `FOTO_KM_${kmPart}_ID_${idPart}_${stampNow()}.jpg`;
-
-    const fh = await dirHandle.getFileHandle(name,{create:true});
-    writer = await fh.createWritable();
-    await writer.write(blob);
-    await writer.close(); writer=null;
-
-    successCount++; okCnt.textContent=successCount;
-  }catch(e){
-    console.error('capturePhoto error:',e);
-    dropCount++; dropCnt.textContent=dropCount;
-  }finally{
-    try{ await writer?.close(); }catch{}
-    capturing=false;
-  }
-}
-
-async function loop(){
-  while(running){
-    await capturePhoto();
-    await sleep(clampInterval());
-  }
-}
 
 btnCapture.addEventListener('click', async ()=>{
   if(!dirHandle){ toastMsg('Selecione a pasta'); return; }
@@ -606,24 +662,31 @@ btnCapture.addEventListener('click', async ()=>{
     btnCapture.textContent='▶ INICIAR CAPTURA'; btnCapture.classList.remove('stop');
   }
 });
-/* ============================================== */
 
 /* =================== BOOT ===================== */
-function initInfoOnce(){
-  // já controlado por sessionStorage mais acima
+function updateContextAndStatus(){
+  updateContext();
+  stCam.textContent = 'Câmera: ' + (vid.videoWidth?'OK':'—');
 }
-function updateKMUI(){
-  // mostra também versão "KM 123+456" na placa se quiser (aqui mantemos numérico)
-  kmValue.title = currentKMStr; // dica ao passar o mouse
+async function boot(){
+  try{
+    const ok = await ensurePermission(); if(!ok) return;
+    await enumerateCameras();
+    // Preferência: traseira, se houver
+    let idx=0; const backIdx=deviceList.findIndex(d=>/back|rear|environment/i.test(d.label));
+    if(backIdx>=0) idx=backIdx;
+    await startCameraByIndex(idx);
+    startGPS();
+    await loadKM();
+    await loadIDs();
+    updateContextAndStatus();
+    updateButtons();
+  }catch(e){
+    diag('Falha na inicialização', 'bad'); diagAppend(e.message||e);
+  }
 }
-setInterval(()=>{ updateKMUI(); }, 800);
-
-(async function boot(){
-  await camInit();
-  loadIDs();
-  loadKM();
-  startGPS();
-})();
+boot();
+setInterval(()=>{ updateKMChip(); }, 600);
 </script>
 
 </body>
