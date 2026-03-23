@@ -4,25 +4,48 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0b7a39" />
-<title>Inspeção – Fotos TURBO + PDF (todas as fotos) + Vídeo HQ com KM</title>
+<title>Inspeção – Fotos TURBO + PDF (completo) + Vídeo HQ com KM</title>
 <style>
   :root{
     --green:#0b7a39; --green2:#085e2c; --fg:#eaf2ff; --border:#e6f0ea;
-    --glass: rgba(0,0,0,.55);
-    --btn:#22c55e; --btn2:#35eb85; --bad:#ef4444; --muted:#a8b7d6;
+    --glass: rgba(15,18,27,.70);
+    --btn:#22c55e; --btn2:#35eb85; --bad:#ef4444; --muted:#9fb0c7;
+    --ink:#0a1b2e; --inkOn:#062a1a;
   }
   html,body{
-    margin:0;height:100%;background:#000;overflow:hidden;
+    margin:0;height:100%;background:#0b0f16;overflow:hidden;
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial
   }
-  /* Vídeo base para visualização e para mix (somente no modo Vídeo) */
+
+  /* ===== Top App Bar ===== */
+  header#appbar{
+    position:fixed; top:0; left:0; right:0; z-index:6;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:linear-gradient(180deg,#0c1220, #0b111d);
+    border-bottom:1px solid rgba(255,255,255,.08);
+    padding:env(safe-area-inset-top) 14px 10px 14px;
+  }
+  .title{
+    display:flex; align-items:center; gap:10px; color:#eaf2ff; font-weight:900;
+    letter-spacing:.3px;
+  }
+  .title .badge{ font-size:.8rem; color:#9fb0c7; font-weight:700 }
+  .segmented{
+    display:inline-flex; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+    border-radius:12px; overflow:hidden;
+  }
+  .segmented button{
+    background:transparent; color:#eaf2ff; border:0; padding:8px 12px; font-weight:900; cursor:pointer;
+  }
+  .segmented button.active{ background:#1d2a3d; color:#35eb85 }
+
+  /* Vídeo base + mix canvas (modo Vídeo) */
   #cam { position:fixed; inset:0; width:100%; height:100%; object-fit:contain; background:#000; z-index:0; display:none; }
-  /* Canvas de mix para modo Vídeo (gravação) */
   #mix { position:fixed; inset:0; width:100%; height:100%; z-index:1; display:none; }
 
-  /* Placa KM (feedback visual para operador) */
+  /* Placa KM para operador (overlay) */
   #kmBox{
-    position:fixed; top:14px; left:50%; transform:translateX(-50%);
+    position:fixed; top:62px; left:50%; transform:translateX(-50%);
     background:linear-gradient(180deg,var(--green),var(--green2)); color:#fff;
     padding:14px 24px; border-radius:18px; border:6px solid var(--border);
     font-size:clamp(28px,8vw,120px); font-weight:1000; text-shadow:0 1px 0 rgba(0,0,0,.45);
@@ -30,131 +53,168 @@
     z-index:3; user-select:none; letter-spacing:.5px
   }
 
-  /* Barra inferior */
-  #bar{
-    position:fixed; left:50%; transform:translateX(-50%);
-    bottom:calc(10px + env(safe-area-inset-bottom)); z-index:4;
-    display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center;
-    background:var(--glass); border:1px solid rgba(255,255,255,.12);
-    padding:8px; border-radius:14px; backdrop-filter: blur(8px);
-    box-shadow:0 8px 24px rgba(0,0,0,.45); max-width:min(100vw - 16px, 1200px);
+  /* ===== Bottom Panel “estilo app” ===== */
+  .bottom{
+    position:fixed; left:0; right:0; bottom:0; z-index:5;
+    padding:0 12px calc(env(safe-area-inset-bottom) + 80px);
   }
-  .control{
-    height:52px; min-width:160px;
-    padding:0 16px; border-radius:12px; border:1px solid rgba(255,255,255,.18);
-    font-weight:1000; font-size:1rem; cursor:pointer; line-height:1;
-    display:inline-flex; align-items:center; justify-content:center; gap:10px;
-    user-select:none; outline:none;
-    transition:transform .06s ease, filter .12s ease, opacity .12s ease;
-    color:#062a1a; background:linear-gradient(180deg,#35eb85,#22c55e);
+  .panel{
+    background:var(--glass); border:1px solid rgba(255,255,255,.10);
+    border-radius:18px; backdrop-filter: blur(10px);
+    box-shadow:0 12px 36px rgba(0,0,0,.6);
+    padding:10px;
   }
-  .control:active{ transform:translateY(1px) }
-  .control.stop{ background:linear-gradient(180deg,#f2544b,#cc3e36); color:#fff; }
+  .row{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center; }
   .chip{
-    height:52px; padding:0 12px; border-radius:12px;
-    border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.45); color:#eaf2ff;
-    display:inline-flex; align-items:center; gap:8px; font-weight:900
+    height:46px; padding:0 12px; border-radius:12px;
+    border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);
+    color:#eaf2ff; display:inline-flex; align-items:center; gap:10px; font-weight:900;
   }
   .chip select, .chip input[type="checkbox"]{
-    height:34px; border-radius:8px; border:1px solid rgba(255,255,255,.18);
+    height:32px; border-radius:8px; border:1px solid rgba(255,255,255,.18);
     background:#0d1731; color:#eaf2ff; padding:0 8px; font-weight:900; outline:none;
   }
-  .muted{color:#cbd5e1; font-size:.9rem}
+
+  /* ===== FAB central (INICIAR/PARAR) ===== */
+  .fabWrap{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(14px + env(safe-area-inset-bottom)); z-index:6 }
+  #btnStartStop{
+    height:58px; min-width:240px;
+    padding:0 20px; border-radius:999px; border:2px solid #0caa52;
+    background:linear-gradient(180deg,#35eb85,#22c55e); color:var(--inkOn); font-weight:1000; font-size:1.02rem; cursor:pointer;
+    box-shadow:0 10px 24px rgba(0,0,0,.55);
+    display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  }
+  #btnStartStop.stop{ background:linear-gradient(180deg,#f2544b,#cc3e36); color:#fff; border-color:#e85d56 }
 
   /* Estado */
   #state{
-    position:fixed; bottom:calc(78px + env(safe-area-inset-bottom));
-    left:50%; transform:translateX(-50%);
-    background:rgba(0,0,0,.6); color:#fff; padding:6px 14px; border-radius:10px;
-    font-size:.92rem; z-index:3
+    position:fixed; bottom:calc(96px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    background:#0f172a; border:1px solid rgba(255,255,255,.10); color:#dbe7ff; padding:6px 12px; border-radius:10px;
+    font-size:.92rem; z-index:4; box-shadow:0 6px 20px rgba(0,0,0,.45);
   }
 
   /* Overlay inicial */
   #startOverlay{
     position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column;
-    background:linear-gradient(180deg, rgba(0,0,0,.82), rgba(0,0,0,.78)); color:var(--fg); gap:10px; padding:22px; text-align:center; z-index:5
+    background:linear-gradient(180deg, rgba(0,0,0,.86), rgba(0,0,0,.82)); color:#dfe8ff; gap:14px; padding:22px; text-align:center; z-index:8
   }
   #startOverlay h2{margin:0 0 6px; font-size:1.14rem}
-  #btnStart{
-    margin-top:10px; min-width:260px; height:56px; padding:0 18px; border-radius:14px; border:2px solid #0caa52;
-    background:linear-gradient(180deg,#35eb85,#22c55e); color:#062a1a; font-weight:1000; font-size:1.02rem; cursor:pointer
+  .btn{
+    height:46px; min-width:220px; padding:0 16px; border-radius:12px; border:2px solid #0caa52;
+    background:linear-gradient(180deg,#35eb85,#22c55e); color:var(--inkOn); font-weight:1000; font-size:.98rem; cursor:pointer
   }
-  #btnStart:active{ transform:translateY(1px) }
+  .btn.secondary{
+    border-color:rgba(255,255,255,.25);
+    background:rgba(255,255,255,.08); color:#eaf2ff;
+  }
 
   /* Toast */
   #toast{
     position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); transform:translateX(-50%); display:none;
-    background:rgba(0,0,0,.78); color:#fff; border:1px solid rgba(255,255,255,.18);
-    padding:8px 12px; border-radius:10px; font-size:.95rem; z-index:6
+    background:rgba(0,0,0,.85); color:#fff; border:1px solid rgba(255,255,255,.18);
+    padding:8px 12px; border-radius:10px; font-size:.95rem; z-index:10
   }
 
   @media (max-width:760px){
-    .control{min-width:140px; font-size:.95rem}
     .chip{font-size:.95rem}
+    #btnStartStop{min-width:200px}
   }
 </style>
 </head>
 <body>
 
-<!-- Vídeo base e canvas de mix (usados no modo Vídeo) -->
+<!-- Top App Bar -->
+<header id="appbar" role="banner" aria-label="Barra do aplicativo">
+  <div class="title">
+    <span>🛣️ Inspeção Rodoviária</span>
+    <span class="badge" id="badgeInfo">Pronto</span>
+  </div>
+  <div class="segmented" role="tablist" aria-label="Modo">
+    <button id="tabPhoto" role="tab" aria-selected="true" class="active">📸 Fotos</button>
+    <button id="tabVideo" role="tab" aria-selected="false">🎥 Vídeo</button>
+  </div>
+</header>
+
+<!-- Vídeo base e canvas de mix (modo Vídeo) -->
 <video id="cam" autoplay playsinline muted></video>
 <canvas id="mix"></canvas>
 
+<!-- Placa KM (feedback visual) -->
 <div id="kmBox">KM —</div>
-<div id="state">Escolha o modo e toque em “INICIAR”</div>
 
-<!-- Barra -->
-<div id="bar" role="toolbar" aria-label="Controles">
-  <div class="chip" title="Modo de operação">
-    🧭 Modo
-    <select id="mode">
-      <option value="photo" selected>Fotos TURBO</option>
-      <option value="video">Vídeo HQ</option>
-    </select>
+<!-- Estado -->
+<div id="state">Selecione a pasta e toque em INICIAR</div>
+
+<!-- Painel inferior (controles) -->
+<div class="bottom">
+  <div class="panel">
+    <!-- Linha 1: controles do modo atual -->
+    <div class="row" id="rowPhoto" aria-label="Controles de Fotos" role="group">
+      <div class="chip">📄 Relatório: <b>Todas as fotos</b></div>
+      <button id="btnPDF" class="btn secondary" title="Gerar PDF com TODAS as fotos" disabled>📄 PDF (todas as fotos)</button>
+    </div>
+
+    <div class="row" id="rowVideo" aria-label="Controles de Vídeo" role="group" style="display:none">
+      <div class="chip">🎞️ Qualidade
+        <select id="quality">
+          <option value="1080p_30_10">1080p / 30 fps / 10 Mbps</option>
+          <option value="1080p_30_8" selected>1080p / 30 fps / 8 Mbps</option>
+          <option value="720p_30_5">720p / 30 fps / 5 Mbps</option>
+          <option value="1440p_30_16">1440p / 30 fps / 16 Mbps</option>
+        </select>
+      </div>
+      <div class="chip">⏱️ Segmento
+        <select id="segDur">
+          <option value="5" selected>5 min</option>
+          <option value="10">10 min</option>
+          <option value="15">15 min</option>
+        </select>
+      </div>
+      <div class="chip">🔊 Áudio
+        <label style="display:inline-flex;align-items:center;gap:6px;">
+          <input id="useAudio" type="checkbox"> microfone
+        </label>
+      </div>
+    </div>
+
+    <!-- Linha 2: seletor de pasta (sempre no início da sessão) -->
+    <div class="row" style="margin-top:6px;">
+      <button id="btnPick" class="btn">🗂️ Selecionar pasta de salvamento</button>
+    </div>
   </div>
+</div>
 
-  <div id="chipVideo" class="chip" title="Qualidade e segmento do vídeo" style="display:none">
-    🎞️ Qualidade
-    <select id="quality">
-      <option value="1080p_30_10">1080p / 30 fps / 10 Mbps</option>
-      <option value="1080p_30_8" selected>1080p / 30 fps / 8 Mbps</option>
-      <option value="720p_30_5">720p / 30 fps / 5 Mbps</option>
-      <option value="1440p_30_16">1440p / 30 fps / 16 Mbps (se suportar)</option>
-    </select>
-    ⏱️ Segmento
-    <select id="segDur">
-      <option value="5" selected>5 min</option>
-      <option value="10">10 min</option>
-      <option value="15">15 min</option>
-    </select>
-    🔊 Áudio <label style="display:inline-flex;align-items:center;gap:6px;"><input id="useAudio" type="checkbox"> mic</label>
-  </div>
-
-  <button id="btnStartStop" class="control" aria-pressed="false">▶ INICIAR</button>
-  <button id="btnPDF" class="control" title="Gerar relatório PDF com TODAS as fotos" disabled>📄 PDF (todas as fotos)</button>
+<!-- FAB central -->
+<div class="fabWrap">
+  <button id="btnStartStop" class="btn">▶ INICIAR</button>
 </div>
 
 <!-- Overlay inicial -->
 <div id="startOverlay">
-  <h2>Inspeção – Fotos TURBO + Relatório Completo + Vídeo HQ com KM</h2>
-  <p class="muted">Em 1 clique: escolhe/recupera a pasta, liga Câmera + GPS e inicia no modo selecionado.</p>
-  <button id="btnStart">▶ INICIAR</button>
+  <h2>Inspeção – Fotos TURBO + PDF (completo) + Vídeo HQ com KM</h2>
+  <p class="muted">Sempre selecione a <b>Pasta de salvamento</b> antes de iniciar a sessão.</p>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center">
+    <button id="btnPickStart" class="btn">🗂️ Selecionar pasta</button>
+    <button id="btnStart" class="btn">▶ INICIAR</button>
+  </div>
   <p class="muted">Requisitos: <b>HTTPS</b>, permitir <b>Câmera</b> e <b>Localização</b>, e escolher a <b>Pasta</b>.</p>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
-/* ================= CONFIG GERAL ================= */
-const CSV_PATH = './SNVBR116SPRJ.csv'; // km;lat;lon (separador ;)
-const REPORT_MAX_PAGES = 600;         // limite por volume de PDF
-/* --------------- Fotos TURBO ------------------- */
-const TARGET_MIN_MS = 100;            // alvo (100 ms)
-const START_MAX_DIM = 1600;           // dimensão inicial
-const START_JPEG_Q = 0.88;            // qualidade inicial
-const MIN_DIM = 960;                  // mínimo de dimensão
-const MIN_JPEG_Q = 0.78;              // mínima qualidade
-/* --------------- Vídeo HQ ---------------------- */
+/* ================= CONFIG ================= */
+const CSV_PATH = './SNVBR116SPRJ.csv'; // km;lat;lon
+const REPORT_MAX_PAGES = 600;         // divide em volumes se necessário
+
+/* Fotos TURBO */
+const TARGET_MIN_MS = 100;
+const START_MAX_DIM = 1600;
+const START_JPEG_Q = 0.88;
+const MIN_DIM = 960;
+const MIN_JPEG_Q = 0.78;
+
+/* Vídeo */
 const PREFERRED_MIME_TYPES = [
   'video/webm;codecs=vp9',
   'video/webm;codecs=vp8',
@@ -165,23 +225,29 @@ const PREFERRED_MIME_TYPES = [
 
 /* ================= REFS/STATE ============== */
 const cam = document.getElementById('cam');
-const mix = document.getElementById('mix');
-const gx = mix.getContext('2d', {alpha:false});
-
+const mix = document.getElementById('mix'); const gx = mix.getContext('2d', {alpha:false});
 const kmBox = document.getElementById('kmBox');
 const stateEl = document.getElementById('state');
 const startOverlay = document.getElementById('startOverlay');
+const btnPickStart = document.getElementById('btnPickStart');
 const btnStartOverlay = document.getElementById('btnStart');
+
+const btnPick = document.getElementById('btnPick');
 const btnStartStop = document.getElementById('btnStartStop');
 const btnPDF = document.getElementById('btnPDF');
 const toast = document.getElementById('toast');
+const badgeInfo = document.getElementById('badgeInfo');
 
-const modeSel = document.getElementById('mode');
-const chipVideo = document.getElementById('chipVideo');
+const tabPhoto = document.getElementById('tabPhoto');
+const tabVideo = document.getElementById('tabVideo');
+const rowPhoto = document.getElementById('rowPhoto');
+const rowVideo = document.getElementById('rowVideo');
+
 const qualitySel = document.getElementById('quality');
 const segDurSel = document.getElementById('segDur');
 const useAudioChk = document.getElementById('useAudio');
 
+let mode = 'photo'; // 'photo' | 'video'
 let dirHandle = null;
 let running = false;
 
@@ -192,38 +258,25 @@ let currentKMStr = 'KM —';
 /* Sessão Fotos */
 let sessionStart = null;
 let sessionEnd = null;
-let sessionPhotos = [];   // nomes dos arquivos salvos (fotos)
-
+let sessionPhotos = [];
 let maxDim = START_MAX_DIM;
 let jpegQ = START_JPEG_Q;
 let encAvgMs = null;
 const ENC_ALPHA = 0.25;
-const can = document.createElement('canvas');
-const ctx = can.getContext('2d', {alpha:false});
+const can = document.createElement('canvas'); const ctx = can.getContext('2d', {alpha:false});
 
 /* Sessão Vídeo */
-let cameraStream = null;
-let micStream = null;
-let canvasStream = null;
-let mediaRecorder = null;
-let writable = null;
-let segmentTimer = null;
-let drawRAF = 0;
-let segmentIndex = 0;
-let segmentStartKM = 'KM_—';
+let cameraStream = null, micStream = null, canvasStream = null, mediaRecorder = null, writable = null, segmentTimer = null, drawRAF = 0, segmentIndex = 0;
 
-/* ========== UI/UTILS ========== */
-function showToast(msg, ms=1400){
-  toast.textContent=msg; toast.style.display='block';
-  clearTimeout(showToast._t); showToast._t=setTimeout(()=>toast.style.display='none',ms);
-}
+/* ================= UI/UTILS ================= */
+function showToast(msg, ms=1400){ toast.textContent=msg; toast.style.display='block'; clearTimeout(showToast._t); showToast._t=setTimeout(()=>toast.style.display='none',ms); }
 const z2 = v => String(v).padStart(2,'0');
 function stampNow(){ const d=new Date(); return `${d.getFullYear()}-${z2(d.getMonth()+1)}-${z2(d.getDate())}_${z2(d.getHours())}-${z2(d.getMinutes())}-${z2(d.getSeconds())}`; }
 function fmtKm(v){ if(!Number.isFinite(v)) return 'KM —'; let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
 
-/* ===== KM tempo real ===== */
+/* KM tempo real */
 async function loadKM(){
   try{
     const txt=await fetch(CSV_PATH,{cache:'no-store'}).then(r=>r.text());
@@ -244,7 +297,7 @@ function updateKM(){
 }
 setInterval(updateKM, 700);
 
-/* ===== GPS ===== */
+/* GPS */
 function startGPS(){
   return new Promise((resolve)=>{
     if(!('geolocation' in navigator)){ resolve(); return; }
@@ -258,13 +311,27 @@ function startGPS(){
   });
 }
 
-/* ======== FOTO – overlay ======== */
+/* ======= PASTA (sempre pedir no início) ======= */
+async function pickFolder(){
+  try{
+    if('storage' in navigator && navigator.storage && navigator.storage.persist) {
+      try{ await navigator.storage.persist(); }catch{}
+    }
+    dirHandle = await window.showDirectoryPicker({mode:'readwrite'});
+    showToast('Pasta selecionada');
+    badgeInfo.textContent = 'Pasta OK';
+  }catch{
+    dirHandle = null;
+    showToast('É necessário escolher a pasta');
+    badgeInfo.textContent = 'Sem pasta';
+    throw new Error('no-folder');
+  }
+}
+
+/* ======= FOTOS – Overlay e TURBO ======= */
 function drawPhotoOverlay(g,w,h){
   const bandH=Math.max(110, Math.round(h*0.15));
-  // faixa inferior
   g.fillStyle='rgba(0,0,0,.60)'; g.fillRect(0,h-bandH,w,bandH);
-
-  // KM placa no topo
   const plateH = Math.max(90, Math.round(h*0.10));
   const plateW = Math.min(w*0.78, Math.round(w*0.90));
   const px = Math.round((w - plateW)/2), py = Math.round(16);
@@ -276,8 +343,6 @@ function drawPhotoOverlay(g,w,h){
   const fs = Math.round(plateH*0.55);
   g.fillStyle='#fff'; g.font=`900 ${fs}px system-ui`; g.textAlign='center'; g.textBaseline='middle';
   g.fillText(currentKMStr, Math.round(w/2), Math.round(py + plateH/2));
-
-  // Rodapé: hora + GPS
   const d=new Date();
   const ts=`${z2(d.getDate())}/${z2(d.getMonth()+1)}/${d.getFullYear()} ${z2(d.getHours())}:${z2(d.getMinutes())}:${z2(d.getSeconds())}`;
   g.textAlign='left'; g.fillStyle='#fff'; g.font=`700 ${Math.round(h*0.028)}px system-ui`;
@@ -287,8 +352,6 @@ function drawPhotoOverlay(g,w,h){
     g.fillText(`${lastPos.lat?.toFixed(6)}, ${lastPos.lon?.toFixed(6)}  ±${Math.round(lastPos.acc||0)}m`, 16, h-bandH+28);
   }
 }
-
-/* ======== FOTO – TURBO loop ======== */
 async function safeWriteFile(fh, payload){
   const w=await fh.createWritable();
   if(payload instanceof Blob){ await w.write(await payload.arrayBuffer()); }
@@ -314,20 +377,14 @@ async function startCameraPhoto(){
     video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:30,max:30}},
     audio:false
   });
-  cam.srcObject=s; // só para exibir; usamos drawImage do <video>
-  await new Promise(r=>{ if(cam.readyState>=1&&cam.videoWidth) r(); else cam.onloadedmetadata=r; });
-  cam.style.display = 'block';
+  cam.srcObject=s; await new Promise(r=>{ if(cam.readyState>=1&&cam.videoWidth) r(); else cam.onloadedmetadata=r; });
+  cam.style.display='block'; mix.style.display='none';
 }
 async function captureOnce(){
-  const vw=cam.videoWidth, vh=cam.videoHeight;
-  if(!vw||!vh) return;
-  const sc=Math.min(1, maxDim/Math.max(vw,vh));
-  const w=Math.round(vw*sc), h=Math.round(vh*sc);
-  can.width=w; can.height=h;
-  ctx.clearRect(0,0,w,h);
-  ctx.drawImage(cam,0,0,w,h);
-  drawPhotoOverlay(ctx,w,h);
-
+  const vw=cam.videoWidth, vh=cam.videoHeight; if(!vw||!vh) return;
+  const sc=Math.min(1, maxDim/Math.max(vw,vh)); const w=Math.round(vw*sc), h=Math.round(vh*sc);
+  can.width=w; can.height=h; ctx.clearRect(0,0,w,h);
+  ctx.drawImage(cam,0,0,w,h); drawPhotoOverlay(ctx,w,h);
   let blob=await new Promise(res=> can.toBlob(res,'image/jpeg',jpegQ));
   if(!blob || !blob.size){
     const dataURL = can.toDataURL('image/jpeg', Math.max(0.75, jpegQ-0.05));
@@ -344,35 +401,30 @@ async function captureOnce(){
 }
 async function photoLoop(){
   encAvgMs = null; maxDim = START_MAX_DIM; jpegQ = START_JPEG_Q;
-  while(running && modeSel.value==='photo'){
+  while(running && mode==='photo'){
     const t0=performance.now();
     await captureOnce();
     const encMs = performance.now() - t0;
     adaptIfNeeded(encMs);
-    stateEl.textContent = `FOTOS • ${sessionPhotos.length} • ~${Math.round(1000/Math.max(encAvgMs||TARGET_MIN_MS,1))} fps • ${Math.round(encAvgMs||0)} ms/foto • ${maxDim}px • Q=${jpegQ.toFixed(2)}`;
-    // alvo 100ms: delay considera tempo de encode
+    const fps = Math.round(1000/Math.max(encAvgMs||TARGET_MIN_MS,1));
+    stateEl.textContent = `FOTOS • ${sessionPhotos.length} • ~${fps} fps • ${Math.round(encAvgMs||0)} ms/foto • ${maxDim}px • Q=${jpegQ.toFixed(2)}`;
     const delay = Math.max(0, TARGET_MIN_MS - (encAvgMs||TARGET_MIN_MS));
     await new Promise(r=>setTimeout(r, delay));
   }
 }
 
-/* ======== PDF (todas as fotos) ======== */
+/* ======= PDF RÁPIDO (todas as fotos) – pipeline otimizado ======= */
 function makeByteWriter(stream){ const enc=new TextEncoder(); let pos=0; return {
   async writeStr(s){const b=enc.encode(s); await stream.write(b); pos+=b.length;},
   async writeBin(b){await stream.write(b); pos+=b.length;}, get pos(){return pos;}
 };}
 function createPdfStreamWriter(stream){
-  const writer=makeByteWriter(stream); const offsets=[]; const pagesKids=[];
-  const PW=595,PH=842,M=24; let nextNum=3,closed=false;
-
+  const writer=makeByteWriter(stream); const offsets=[]; const pagesKids=[]; const PW=595,PH=842,M=24; let nextNum=3,closed=false;
   async function writeObjWithNum(num,body){ offsets[num]=writer.pos; await writer.writeStr(`${num} 0 obj\n${body}\nendobj\n`); }
   async function addObj(body){ const num=nextNum++; await writeObjWithNum(num,body); return num; }
   async function addStream(dict,data){ const num=nextNum++; offsets[num]=writer.pos;
-    const header=`${num} 0 obj\n${dict.replace('>>','')} /Length ${data.length} >>\nstream\n`;
-    await writer.writeStr(header); await writer.writeBin(data); await writer.writeStr(`\nendstream\nendobj\n`); return num; }
-  function fitToCell(imgW,imgH){ let cellW=PW-2*M, cellH=PH-2*M; let dw=cellW, dh=Math.round(imgH*(cellW/imgW));
-    if(dh>cellH){ dh=cellH; dw=Math.round(imgW*(cellH/imgH)); } const tx=M+Math.round((cellW-dw)/2); const ty=M+Math.round((cellH-dh)/2); return {dw,dh,tx,ty}; }
-
+    const header=`${num} 0 obj\n${dict.replace('>>','')} /Length ${data.length} >>\nstream\n`; await writer.writeStr(header); await writer.writeBin(data); await writer.writeStr(`\nendstream\nendobj\n`); return num; }
+  function fitToCell(imgW,imgH){ let cw=PW-2*M, ch=PH-2*M; let dw=cw, dh=Math.round(imgH*(cw/imgW)); if(dh>ch){ dh=ch; dw=Math.round(imgW*(ch/imgH)); } const tx=M+Math.round((cw-dw)/2), ty=M+Math.round((ch-dh)/2); return {dw,dh,tx,ty}; }
   return {
     async init(){ await writer.writeStr('%PDF-1.4\n'); },
     async addImagePage(imgBytes,W,H){
@@ -396,42 +448,44 @@ function createPdfStreamWriter(stream){
     }
   };
 }
-async function composeCoverImage(bytesW=1240, bytesH=1754){
-  const W=bytesW, H=bytesH; const c=document.createElement('canvas'); c.width=W; c.height=H;
-  const g=c.getContext('2d',{alpha:false});
-  const grd=g.createLinearGradient(0,0,0,H);
-  grd.addColorStop(0,'#0b122b'); grd.addColorStop(1,'#0a1024'); g.fillStyle=grd; g.fillRect(0,0,W,H);
-  g.fillStyle='#eaf2ff'; g.font='900 48px system-ui'; g.textAlign='center';
-  g.fillText('RELATÓRIO DE INSPEÇÃO – FOTOS (COMPLETO)', W/2, 120);
-  g.font='700 28px system-ui'; g.textAlign='left';
-  const y0=200, lh=40;
-  g.fillText(`Início: ${sessionStart? new Date(sessionStart).toLocaleString():'—'}`, 80, y0+lh*0);
-  g.fillText(`Término: ${sessionEnd? new Date(sessionEnd).toLocaleString():'—'}`, 80, y0+lh*1);
-  g.fillText(`Fotos: ${sessionPhotos.length}`, 80, y0+lh*2);
-  g.fillText(`KM atual (último): ${currentKMStr}`, 80, y0+lh*3);
-  g.font='600 22px system-ui'; g.fillStyle='#cfe7ff';
-  g.fillText('Observação: imagens carimbadas com KM, data/hora e GPS.', 80, y0+lh*5);
-  const b=await new Promise(r=>c.toBlob(r,'image/jpeg',0.82));
-  const u8=new Uint8Array(await b.arrayBuffer());
-  return {bytes:u8,w:W,h:H};
+
+/* downscale rápido com createImageBitmap + OffscreenCanvas, concorrência limitada */
+async function downscaleBytes(file, maxPx=1280, quality=0.72){
+  const blob = file; // já é Blob
+  let bmp; try{ bmp = await createImageBitmap(blob); }catch{ // fallback
+    const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(blob); });
+    const W=img.naturalWidth, H=img.naturalHeight; const sc=Math.min(1, maxPx/Math.max(W,H));
+    const w=Math.round(W*sc), h=Math.round(H*sc);
+    const c=document.createElement('canvas'); c.width=w; c.height=h; const g=c.getContext('2d',{alpha:false}); g.drawImage(img,0,0,w,h);
+    const b=await new Promise(r=>c.toBlob(r,'image/jpeg',quality)); URL.revokeObjectURL(img.src);
+    const u8=new Uint8Array(await b.arrayBuffer()); return {bytes:u8, w, h};
+  }
+  const W=bmp.width, H=bmp.height; const sc=Math.min(1, maxPx/Math.max(W,H)); const w=Math.round(W*sc), h=Math.round(H*sc);
+  let bytes;
+  if('OffscreenCanvas' in window){
+    const oc=new OffscreenCanvas(w,h); const gc=oc.getContext('2d',{alpha:false}); gc.drawImage(bmp,0,0,w,h);
+    const b=await oc.convertToBlob({type:'image/jpeg', quality}); bytes=new Uint8Array(await b.arrayBuffer());
+  }else{
+    const c=document.createElement('canvas'); c.width=w; c.height=h; const g=c.getContext('2d',{alpha:false}); g.drawImage(bmp,0,0,w,h);
+    const b=await new Promise(r=>c.toBlob(r,'image/jpeg',quality)); bytes=new Uint8Array(await b.arrayBuffer());
+  }
+  bmp.close?.();
+  return {bytes, w, h};
 }
-async function downscaleForPDF(file, maxPx=1280, quality=0.72){
-  const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
-  const W=img.naturalWidth, H=img.naturalHeight;
-  const sc=Math.min(1, maxPx/Math.max(W,H)); const w=Math.round(W*sc), h=Math.round(H*sc);
-  const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h; const g=tmp.getContext('2d',{alpha:false}); g.drawImage(img,0,0,w,h);
-  const b=await new Promise(r=>tmp.toBlob(r,'image/jpeg',quality)); const u8=new Uint8Array(await b.arrayBuffer()); URL.revokeObjectURL(img.src);
-  return {bytes:u8,w,h};
-}
+
+/* Constrói PDF completo com todas as fotos – paralelo controlado */
 async function generatePDF_ALL(){
   if(!dirHandle){ showToast('Selecione a pasta'); return; }
   if(!sessionPhotos.length){ showToast('Sem fotos nesta sessão'); return; }
-  if(running && modeSel.value==='photo'){ showToast('Pare a captura antes de gerar o PDF'); return; }
+  if(running && mode==='photo'){ showToast('Pare a captura antes de gerar o PDF'); return; }
 
   btnPDF.disabled=true; btnPDF.textContent='Gerando…';
+  badgeInfo.textContent='PDF…';
   try{
     sessionEnd = new Date();
     const base = `RELATORIO_${(sessionStart||new Date()).toISOString().replace(/[:.]/g,'-')}`;
+    const stepInfo = (done,total)=>{ stateEl.textContent = `PDF: ${done}/${total} imagens processadas…`; };
+
     let vol=1, pages=0, pdf=null, pdfHandle=null, stream=null;
 
     async function openVol(){
@@ -439,30 +493,62 @@ async function generatePDF_ALL(){
       pdfHandle = await dirHandle.getFileHandle(name,{create:true});
       stream = await pdfHandle.createWritable();
       pdf = createPdfStreamWriter(stream); await pdf.init(); pages=0;
-      const cover = await composeCoverImage();
+      // Capa leve
+      const cover = await (async ()=>{ // capa simplificada
+        const W=1240,H=1754; const c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d',{alpha:false});
+        const grd=g.createLinearGradient(0,0,0,H); grd.addColorStop(0,'#0b122b'); grd.addColorStop(1,'#0a1024'); g.fillStyle=grd; g.fillRect(0,0,W,H);
+        g.fillStyle='#eaf2ff'; g.font='900 48px system-ui'; g.textAlign='center'; g.fillText('RELATÓRIO DE INSPEÇÃO – FOTOS (COMPLETO)', W/2, 120);
+        g.font='700 28px system-ui'; g.textAlign='left';
+        const y0=200, lh=40;
+        g.fillText(`Início: ${sessionStart? new Date(sessionStart).toLocaleString():'—'}`, 80, y0+lh*0);
+        g.fillText(`Término: ${sessionEnd? new Date(sessionEnd).toLocaleString():'—'}`, 80, y0+lh*1);
+        g.fillText(`Fotos: ${sessionPhotos.length}`, 80, y0+lh*2);
+        g.fillText(`KM (último): ${currentKMStr}`, 80, y0+lh*3);
+        g.font='600 22px system-ui'; g.fillStyle='#cfe7ff';
+        g.fillText('Observação: imagens carimbadas com KM, data/hora e GPS.', 80, y0+lh*5);
+        const b=await new Promise(r=>c.toBlob(r,'image/jpeg',0.82)); const u8=new Uint8Array(await b.arrayBuffer());
+        return {bytes:u8,w:W,h:H};
+      })();
       await pdf.addImagePage(cover.bytes, cover.w, cover.h); pages++;
     }
     async function closeVol(){ if(pdf){ await pdf.finalize(); pdf=null; } }
 
     await openVol();
-    for(const fname of sessionPhotos){
-      const fh = await dirHandle.getFileHandle(fname,{create:false});
-      const file = await fh.getFile();
-      const {bytes,w,h} = await downscaleForPDF(file,1280,0.72);
-      await pdf.addImagePage(bytes,w,h);
-      pages++;
-      if(pages>=REPORT_MAX_PAGES){ await closeVol(); vol++; await openVol(); }
+
+    // Processamento paralelo com limite de concorrência
+    const files = sessionPhotos.slice(); // nomes
+    let done = 0, idx = 0;
+    const CONC = Math.min(4, navigator.hardwareConcurrency||2);
+
+    async function worker(){
+      while(true){
+        let myIdx; if(idx>=files.length) break; myIdx = idx++;
+        const fname = files[myIdx];
+        try{
+          const fh = await dirHandle.getFileHandle(fname,{create:false});
+          const file = await fh.getFile();
+          const {bytes,w,h} = await downscaleBytes(file, 1280, 0.72);
+          await pdf.addImagePage(bytes,w,h);
+          pages++; done++; stepInfo(done, files.length);
+          if(pages>=REPORT_MAX_PAGES){ await closeVol(); vol++; await openVol(); }
+        }catch(e){ console.error('PDF img', fname, e); done++; stepInfo(done, files.length); }
+      }
     }
+    const workers = Array.from({length:CONC}, worker);
+    await Promise.all(workers);
+
     await closeVol();
     showToast('Relatório PDF (completo) gerado');
+    badgeInfo.textContent='PDF pronto';
   }catch(e){
     console.error(e); showToast('Falha ao gerar PDF');
+    badgeInfo.textContent='Erro PDF';
   }finally{
     btnPDF.textContent='📄 PDF (todas as fotos)'; btnPDF.disabled=false;
   }
 }
 
-/* ======== VÍDEO – helpers ======== */
+/* ======= VÍDEO – HQ com KM ======= */
 function getQualityPreset(){
   const v = qualitySel.value || '1080p_30_8';
   const [hp, fps, mbps] = v.split('_');
@@ -475,18 +561,12 @@ function pickMimeType(){
   for(const mt of PREFERRED_MIME_TYPES){ if(MediaRecorder.isTypeSupported(mt)) return mt; }
   return '';
 }
-function getSegmentMs(){
-  const mins = Math.max(5, Number(segDurSel.value)||5);
-  return mins * 60 * 1000;
-}
+function getSegmentMs(){ const mins = Math.max(5, Number(segDurSel.value)||5); return mins * 60 * 1000; }
 function resizeCanvasToPreset(){
   const {width, height} = getQualityPreset();
   mix.width = width; mix.height = height;
-  mix.style.display = 'block';
-  cam.style.display = 'block';
+  mix.style.display='block'; cam.style.display='block';
 }
-
-/* ======== VÍDEO – desenho do quadro (KM + rodapé) ======== */
 function drawVideoFrame(){
   if(!(cam.videoWidth && cam.videoHeight)) { drawRAF = requestAnimationFrame(drawVideoFrame); return; }
   const W = mix.width, H = mix.height;
@@ -498,7 +578,6 @@ function drawVideoFrame(){
   const dx = Math.round((W-dw)/2), dy = Math.round((H-dh)/2);
   gx.drawImage(cam, dx, dy, dw, dh);
 
-  // KM placa no topo
   const plateH = Math.max(90, Math.round(H*0.10));
   const plateW = Math.min(W*0.78, Math.round(W*0.90));
   const px = Math.round((W - plateW)/2), py = Math.round(16);
@@ -511,7 +590,6 @@ function drawVideoFrame(){
   gx.fillStyle='#fff'; gx.font=`900 ${fs}px system-ui`; gx.textAlign='center'; gx.textBaseline='middle';
   gx.fillText(currentKMStr, Math.round(W/2), Math.round(py + plateH/2));
 
-  // Rodapé
   const bandH=Math.max(110, Math.round(H*0.15));
   gx.fillStyle='rgba(0,0,0,.60)'; gx.fillRect(0,H-bandH,W,bandH);
   const d=new Date();
@@ -522,193 +600,124 @@ function drawVideoFrame(){
     gx.fillStyle='#cfe7ff'; gx.font=`600 ${Math.round(H*0.026)}px system-ui`;
     gx.fillText(`${lastPos.lat?.toFixed(6)}, ${lastPos.lon?.toFixed(6)}  ±${Math.round(lastPos.acc||0)}m`, 16, H-bandH+28);
   }
-
   drawRAF = requestAnimationFrame(drawVideoFrame);
 }
 
-/* ======== VÍDEO – pipeline ======== */
 async function startCameraAndMic(){
   const {width, height, fps} = getQualityPreset();
   const constraints = { video:{ facingMode:{ideal:'environment'}, width:{ideal:width}, height:{ideal:height}, frameRate:{ideal:fps, max:fps} }, audio:false };
   cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-  cam.srcObject = cameraStream;
-  await new Promise(r=>{ if(cam.readyState>=1&&cam.videoWidth) r(); else cam.onloadedmetadata=r; });
-
-  if(useAudioChk.checked){
-    try{ micStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false}); }
-    catch(e){ showToast('Sem acesso ao microfone (prosseguindo sem áudio)'); micStream=null; }
-  }else micStream=null;
+  cam.srcObject = cameraStream; await new Promise(r=>{ if(cam.readyState>=1&&cam.videoWidth) r(); else cam.onloadedmetadata=r; });
+  if(useAudioChk.checked){ try{ micStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false}); }catch(e){ showToast('Sem microfone (prosseguindo sem áudio)'); micStream=null; } }
+  else micStream=null;
 }
 async function openSegmentFile(){
-  segmentStartKM = (currentKMStr||'KM —').replace('KM ','').replace(/\s+/g,'').replace('+','+');
+  const kmPart = (currentKMStr||'KM —').replace('KM ','').replace(/\s+/g,'').replace('+','+');
   const baseStart = (sessionStart||new Date()).toISOString().replace(/[:.]/g,'-');
-  const name = `VIDEO_${baseStart}_KM_${segmentStartKM}_seg${String(++segmentIndex).padStart(2,'0')}.webm`;
-  try{
-    const fh = await dirHandle.getFileHandle(name, {create:true});
-    writable = await fh.createWritable();
-    return true;
-  }catch(e){
-    console.error(e); showToast('Falha ao abrir arquivo de vídeo'); return false;
-  }
+  const name = `VIDEO_${baseStart}_KM_${kmPart}_seg${String(++segmentIndex).padStart(2,'0')}.webm`;
+  try{ const fh = await dirHandle.getFileHandle(name, {create:true}); writable = await fh.createWritable(); return true; }
+  catch(e){ console.error(e); showToast('Falha ao abrir arquivo de vídeo'); return false; }
 }
 async function closeSegmentFile(){ try{ if(writable){ await writable.close(); writable=null; } }catch(e){ console.error(e); } }
-
-function pickMimeType(){
-  for(const mt of PREFERRED_MIME_TYPES){ if(MediaRecorder.isTypeSupported(mt)) return mt; }
-  return '';
-}
 async function startRecorder(){
   const {fps, videoBitsPerSecond} = getQualityPreset();
   canvasStream = mix.captureStream(fps || 30);
   const combined = new MediaStream();
   canvasStream.getVideoTracks().forEach(t=> combined.addTrack(t));
   if(micStream){ micStream.getAudioTracks().forEach(t=> combined.addTrack(t)); }
-
   const mimeType = pickMimeType();
-  const opts = { mimeType, videoBitsPerSecond };
-  if(micStream) opts.audioBitsPerSecond = 128e3;
-
-  try{ mediaRecorder = new MediaRecorder(combined, opts); }
-  catch(e){ console.warn('MediaRecorder opts falharam, tentando default', e); mediaRecorder = new MediaRecorder(combined); }
-
-  mediaRecorder.ondataavailable = async (ev)=>{
-    if(!ev.data || !ev.data.size) return;
-    try{ if(writable){ await writable.write(await ev.data.arrayBuffer()); } }
-    catch(err){ console.error('write chunk', err); showToast('Falha ao gravar bloco (ver espaço/perm.)', 2000); }
-  };
-  mediaRecorder.onstart = ()=>{ stateEl.textContent = `Gravando (seg ${segmentIndex}) • ${qualitySel.value} • ${mediaRecorder.mimeType||'auto'}`; };
+  const opts = { mimeType, videoBitsPerSecond }; if(micStream) opts.audioBitsPerSecond = 128e3;
+  try{ mediaRecorder = new MediaRecorder(combined, opts); }catch(e){ mediaRecorder = new MediaRecorder(combined); }
+  mediaRecorder.ondataavailable = async (ev)=>{ if(!ev.data || !ev.data.size) return; try{ if(writable){ await writable.write(await ev.data.arrayBuffer()); } }catch(err){ console.error('write chunk', err); showToast('Falha ao gravar bloco (ver espaço/perm.)', 2000); } };
+  mediaRecorder.onstart = ()=>{ stateEl.textContent = `🎥 Gravando (seg ${segmentIndex}) • ${qualitySel.value}`; };
   mediaRecorder.onstop = async ()=>{ await closeSegmentFile(); stateEl.textContent = `Segmento ${segmentIndex} finalizado`; };
-
-  mediaRecorder.start(2000); // chunk a cada 2s
+  mediaRecorder.start(2000);
 }
 async function stopRecorder(){
   try{ if(mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); } }catch(e){ console.error(e); }
-  mediaRecorder = null;
-  if(canvasStream){ canvasStream.getTracks().forEach(t=>t.stop()); canvasStream=null; }
+  mediaRecorder = null; if(canvasStream){ canvasStream.getTracks().forEach(t=>t.stop()); canvasStream=null; }
   await closeSegmentFile();
 }
-
-function startSegmentTimer(){
-  clearTimeout(segmentTimer);
-  segmentTimer = setTimeout(async ()=>{
-    await stopRecorder();
-    if(running && modeSel.value==='video'){
-      if(await openSegmentFile()){ await startRecorder(); startSegmentTimer(); }
-    }
-  }, getSegmentMs());
-}
+function startSegmentTimer(){ clearTimeout(segmentTimer); segmentTimer = setTimeout(async ()=>{ await stopRecorder(); if(running && mode==='video'){ if(await openSegmentFile()){ await startRecorder(); startSegmentTimer(); } } }, getSegmentMs()); }
 function stopSegmentTimer(){ clearTimeout(segmentTimer); }
 
-/* ======== Persistência do Handle (IndexedDB) ======== */
-const DB_NAME='insp_persist'; const DB_STORE='fs_handles'; const DB_KEY='dirHandle';
-function idbOpen(){ return new Promise((res,rej)=>{ const rq=indexedDB.open(DB_NAME,1); rq.onupgradeneeded=()=>{ rq.result.createObjectStore(DB_STORE); }; rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); }); }
-function idbSet(key, val){ return idbOpen().then(db=>new Promise((res,rej)=>{ const tx=db.transaction(DB_STORE,'readwrite'); tx.objectStore(DB_STORE).put(val,key); tx.oncomplete=()=>{db.close(); res(true)}; tx.onerror=()=>{db.close(); rej(tx.error)} })); }
-function idbGet(key){ return idbOpen().then(db=>new Promise((res,rej)=>{ const tx=db.transaction(DB_STORE,'readonly'); const rq=tx.objectStore(DB_STORE).get(key); rq.onsuccess=()=>{ const v=rq.result; db.close(); res(v); }; rq.onerror=()=>{ db.close(); rej(rq.error) } })); }
-async function ensureDirPermission(handle){ if(!handle) return false; if (await handle.queryPermission({mode:'readwrite'}) === 'granted') return true; if (await handle.requestPermission({mode:'readwrite'}) === 'granted') return true; return false; }
-async function restoreFolderIfPossible(){
-  try{ const saved = await idbGet(DB_KEY); if(saved){ const ok = await ensureDirPermission(saved); if(ok){ dirHandle = saved; showToast('Pasta OK • restaurada', 1200); return true; } } }catch(e){}
-  return false;
-}
-async function pickFolder(){
-  try{
-    if('storage' in navigator && navigator.storage && navigator.storage.persist) { try{ await navigator.storage.persist(); }catch{} }
-    dirHandle = await window.showDirectoryPicker({mode:'readwrite'});
-    try{ await idbSet(DB_KEY, dirHandle); }catch{}
-    showToast('Pasta OK',900);
-  }catch{ showToast('É necessário escolher a pasta'); throw new Error('no-folder'); }
-}
-
-/* ======== Fluxos: start/stop por modo ======== */
+/* ======= Fluxos (start/stop) ======= */
 async function startPhotoMode(){
-  await startCameraPhoto();
-  cam.style.display='block';
-  mix.style.display='none';
+  if(!dirHandle) throw new Error('no-folder');
+  await startCameraPhoto(); await startGPS(); await loadKM();
   // Wake Lock
   if('wakeLock' in navigator){ try{ await navigator.wakeLock.request('screen'); }catch{} }
   running = true; sessionStart = new Date();
-  btnStartStop.setAttribute('aria-pressed','true'); btnStartStop.classList.add('stop'); btnStartStop.textContent = '⏹ PARAR';
+  btnStartStop.classList.add('stop'); btnStartStop.textContent = '⏹ PARAR';
+  badgeInfo.textContent = 'Fotos';
   photoLoop();
 }
 async function stopPhotoMode(){
-  running=false;
-  btnStartStop.setAttribute('aria-pressed','false'); btnStartStop.classList.remove('stop'); btnStartStop.textContent = '▶ INICIAR';
-  stateEl.textContent='PARADO';
-  btnPDF.disabled = sessionPhotos.length === 0;
+  running=false; btnStartStop.classList.remove('stop'); btnStartStop.textContent = '▶ INICIAR';
+  stateEl.textContent='PARADO'; btnPDF.disabled = sessionPhotos.length === 0; badgeInfo.textContent='Pronto';
 }
-
 async function startVideoMode(){
-  await startCameraAndMic();
-  resizeCanvasToPreset();
-  cancelAnimationFrame(drawRAF); drawVideoFrame();
-
-  // Wake Lock
+  if(!dirHandle) throw new Error('no-folder');
+  await startCameraAndMic(); await startGPS(); await loadKM();
+  resizeCanvasToPreset(); cancelAnimationFrame(drawRAF); drawVideoFrame();
   if('wakeLock' in navigator){ try{ await navigator.wakeLock.request('screen'); }catch{} }
-
-  sessionStart = new Date(); running = true; segmentIndex = 0;
+  sessionStart = new Date(); running = true; segmentIndex=0;
   if(!(await openSegmentFile())) throw new Error('no-writable');
   await startRecorder(); startSegmentTimer();
-
-  btnStartStop.setAttribute('aria-pressed','true'); btnStartStop.classList.add('stop'); btnStartStop.textContent = '⏹ PARAR';
+  btnStartStop.classList.add('stop'); btnStartStop.textContent = '⏹ PARAR';
+  badgeInfo.textContent = 'Vídeo';
 }
 async function stopVideoMode(){
-  running=false;
-  btnStartStop.setAttribute('aria-pressed','false'); btnStartStop.classList.remove('stop'); btnStartStop.textContent = '▶ INICIAR';
-  stateEl.textContent='PARADO';
-  stopSegmentTimer(); await stopRecorder(); cancelAnimationFrame(drawRAF);
+  running=false; btnStartStop.classList.remove('stop'); btnStartStop.textContent = '▶ INICIAR';
+  stateEl.textContent='PARADO'; stopSegmentTimer(); await stopRecorder(); cancelAnimationFrame(drawRAF); badgeInfo.textContent='Pronto';
 }
 
-/* ======== Inicialização e Controles ======== */
-modeSel.addEventListener('change', ()=>{
-  const m=modeSel.value;
-  chipVideo.style.display = (m==='video') ? 'inline-flex' : 'none';
-  if(m==='photo'){ btnPDF.style.display='inline-flex'; }
-  else{ btnPDF.style.display='inline-flex'; } // PDF permanece visível (só funciona para fotos)
-});
+/* ======= Tabs Modo ======= */
+function setMode(newMode){
+  mode = newMode;
+  const photo = (mode==='photo');
+  tabPhoto.classList.toggle('active', photo); tabPhoto.setAttribute('aria-selected', String(photo));
+  tabVideo.classList.toggle('active', !photo); tabVideo.setAttribute('aria-selected', String(!photo));
+  rowPhoto.style.display = photo ? 'flex' : 'none';
+  rowVideo.style.display = photo ? 'none' : 'flex';
+  btnPDF.style.display = 'inline-flex';
+  stateEl.textContent = photo ? 'Modo FOTOS: selecione a pasta e INICIAR' : 'Modo VÍDEO: selecione a pasta e INICIAR';
+}
+tabPhoto.addEventListener('click', ()=>{ if(running) return; setMode('photo'); });
+tabVideo.addEventListener('click', ()=>{ if(running) return; setMode('video'); });
+
+/* ======= Ações ======= */
+btnPickStart.addEventListener('click', async ()=>{ try{ await pickFolder(); }catch{} });
+btnPick.addEventListener('click', async ()=>{ try{ await pickFolder(); }catch{} });
 
 btnStartOverlay.addEventListener('click', async ()=>{
   try{
-    let restored = await restoreFolderIfPossible();
-    if(!restored) await pickFolder();
-    await startGPS();
-    await loadKM();
+    if(!dirHandle) await pickFolder(); // sempre pede no início
     startOverlay.style.display='none';
-    if(modeSel.value==='photo'){ await startPhotoMode(); }
-    else{ await startVideoMode(); }
+    if(mode==='photo') await startPhotoMode(); else await startVideoMode();
   }catch(e){ console.error(e); showToast('Falha ao iniciar'); }
 });
 
 btnStartStop.addEventListener('click', async ()=>{
   try{
-    if(!dirHandle){
-      try{ await pickFolder(); }catch{ return; }
-    }
-    await startGPS(); await loadKM();
     if(!running){
-      if(modeSel.value==='photo'){ await startPhotoMode(); }
-      else{ await startVideoMode(); }
+      if(!dirHandle){ await pickFolder(); } // exige selecionar pasta
+      if(mode==='photo') await startPhotoMode(); else await startVideoMode();
     }else{
-      if(modeSel.value==='photo'){ await stopPhotoMode(); }
-      else{ await stopVideoMode(); }
+      if(mode==='photo') await stopPhotoMode(); else await stopVideoMode();
     }
-  }catch(e){ console.error(e); showToast('Erro no fluxo'); }
+  }catch(e){ console.error(e); showToast('Erro ao alternar'); }
 });
 
 btnPDF.addEventListener('click', generatePDF_ALL);
 
-/* Ajustes dinâmicos do vídeo */
-qualitySel.addEventListener('change', ()=>{
-  if(!running && modeSel.value==='video'){ resizeCanvasToPreset(); }
-});
-segDurSel.addEventListener('change', ()=>{
-  if(running && modeSel.value==='video'){ stopSegmentTimer(); startSegmentTimer(); }
-});
-useAudioChk.addEventListener('change', ()=>{
-  showToast('Áudio será aplicado no próximo início/segmento', 1600);
-});
+/* Ajustes em vídeo */
+qualitySel.addEventListener('change', ()=>{ if(!running && mode==='video') resizeCanvasToPreset(); });
+segDurSel.addEventListener('change', ()=>{ if(running && mode==='video'){ stopSegmentTimer(); startSegmentTimer(); } });
+useAudioChk.addEventListener('change', ()=>{ showToast('Áudio muda no próximo início/segmento', 1400); });
 
-/* Atualiza KM periodicamente */
-setInterval(updateKM, 700);
-
+/* Início: modo padrão e texto */
+setMode('photo');
 </script>
 </body>
 </html>
