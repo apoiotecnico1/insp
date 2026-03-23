@@ -1,186 +1,137 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="original">
+<html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Relatório Fotográfico – Iluminação (Batch Seguro)</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inspeção Rodoviária – Seguro</title>
 
 <style>
-body{
-  margin:0;
-  font-family:system-ui,Segoe UI,Roboto,Arial;
-  background:#0b1020;
-  color:#e8eeff;
-}
+body{margin:0;background:#000;color:#fff;font-family:system-ui}
+video{width:100vw;height:55vh;object-fit:cover}
 button{
-  padding:12px;
-  border-radius:12px;
+  font-size:1.2rem;
+  font-weight:900;
+  padding:14px;
+  border-radius:14px;
   border:none;
+}
+#panel{display:flex;gap:8px;padding:10px}
+#km{
+  position:absolute;
+  bottom:10px;left:10px;
+  background:rgba(0,0,0,.7);
+  padding:10px 14px;
+  border-radius:10px;
+  font-size:1.4rem;
   font-weight:900;
 }
-#cam{
-  width:100%;
-  max-height:45vh;
-  background:black;
-}
-#gallery{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
-  gap:6px;
-}
-.thumb{border:1px solid #333}
+.thumb img{width:100%}
 </style>
 </head>
 
 <body>
 
-<h2 style="text-align:center">📸 Relatório Fotográfico – Seguro</h2>
-
-<video id="cam" autoplay playsinline muted></video>
+<video id="vid" autoplay playsinline muted></video>
 <canvas id="can" style="display:none"></canvas>
+<div id="km">KM —</div>
 
-<div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px">
-  <button id="btnCap">📷 Foto</button>
-  <button id="btnAuto">🎬 Auto</button>
-  <button id="btnClear">🧹 Limpar Sessão</button>
+<div id="panel">
+<button id="btn">📷 FOTO</button>
+<button id="btnAuto">AUTO</button>
 </div>
 
-<div id="status" style="padding:10px;font-weight:700">Fotos: 0 | Relatórios: 0</div>
-
-<div id="gallery"></div>
-
 <script>
-/* ================= CONFIGURAÇÃO CRÍTICA ================= */
-const AUTO_BATCH_SIZE = 50;
-
-let photos = [];
-let reportCount = 1;
-let isAuto = false;
-let autoTimer = null;
+/* ================= CONFIG VEICULAR ================= */
+const AUTO_BATCH = 50;
+let captureLock = false;
+let lastCaptureTs = 0;
+let batch = [];
+let reportIndex = 1;
 
 /* ================= CAMERA ================= */
-const video = document.getElementById('cam');
-const canvas = document.getElementById('can');
-const ctx = canvas.getContext('2d');
+const vid = document.getElementById('vid');
+const can = document.getElementById('can');
+const ctx = can.getContext('2d');
+navigator.mediaDevices.getUserMedia({
+  video:{facingMode:'environment'},
+  audio:false
+}).then(s=>vid.srcObject=s);
 
-navigator.mediaDevices.getUserMedia({ video:{facingMode:'environment'}, audio:false })
-.then(stream => video.srcObject = stream);
+/* ================= GPS + KM ================= */
+let lastPos=null;
+navigator.geolocation.watchPosition(p=>{
+  lastPos = {
+    lat:p.coords.latitude,
+    lon:p.coords.longitude,
+    acc:p.coords.accuracy
+  };
+  const km = Math.floor(Math.random()*300); // substitua pelo CSV real
+  document.getElementById('km').textContent =
+    `KM ${km}+${String(Math.floor(Math.random()*1000)).padStart(3,'0')}`;
+},{},{enableHighAccuracy:true});
 
-/* ================= INDEXEDDB ================= */
-let db;
-indexedDB.open('SAFE_PHOTOS_DB',1).onupgradeneeded = e=>{
-  db = e.target.result;
-  db.createObjectStore('photos',{keyPath:'id'});
-};
-indexedDB.open('SAFE_PHOTOS_DB',1).onsuccess = e=> db = e.target.result;
-
-function savePhotoDB(photo){
-  const tx = db.transaction('photos','readwrite');
-  tx.objectStore('photos').put(photo);
-}
-
-/* ================= CAPTURA ================= */
+/* ================= CAPTURA SEGURA ================= */
 async function capture(){
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  ctx.drawImage(video,0,0);
+  const now = Date.now();
 
-  const url = canvas.toDataURL('image/jpeg',0.9);
-  const id = Date.now()+'_'+Math.random();
+  if(captureLock) return;
+  if(now - lastCaptureTs < 700) return; // debounce real
 
-  const rec = { id, url, ts:new Date().toLocaleString() };
+  captureLock = true;
+  lastCaptureTs = now;
 
-  savePhotoDB(rec);
-  photos.push(rec);
+  can.width = vid.videoWidth;
+  can.height = vid.videoHeight;
 
-  addThumb(url);
-  updateStatus();
+  ctx.drawImage(vid,0,0);
 
-  if(photos.length >= AUTO_BATCH_SIZE){
-    setTimeout(generateAutoReport,200);
+  /* Overlay KM */
+  ctx.fillStyle='rgba(0,0,0,.65)';
+  ctx.fillRect(0,can.height-80,can.width,80);
+  ctx.fillStyle='#b7ffcf';
+  ctx.font='bold 48px system-ui';
+  ctx.fillText(
+    document.getElementById('km').textContent,
+    20,can.height-25
+  );
+
+  const data = can.toDataURL('image/jpeg',0.85);
+  batch.push(data);
+
+  if(batch.length>=AUTO_BATCH){
+    generateReport();
   }
+
+  setTimeout(()=>captureLock=false,300);
 }
 
-/* ================= UI ================= */
-function addThumb(url){
-  const d = document.createElement('div');
-  d.className='thumb';
-  const i = document.createElement('img');
-  i.src=url;
-  i.style.width='100%';
-  d.appendChild(i);
-  gallery.appendChild(d);
-}
-
-function updateStatus(){
-  status.textContent = `Fotos: ${photos.length} | Relatórios: ${reportCount-1}`;
-}
-
-/* ================= RELATÓRIO AUTOMÁTICO ================= */
-async function generateAutoReport(){
-  isAuto = false;
-  clearInterval(autoTimer);
-
-  const imgs = [...photos];
-  photos.length = 0;
-
-  const blob = new Blob(
-    imgs.map(p=>atob(p.url.split(',')[1])),
-    {type:'application/pdf'}
-  ); // PDF simplificado seguro
-
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `RELATORIO_${reportCount}.pdf`;
+/* ================= RELATÓRIO ================= */
+function generateReport(){
+  const blob = new Blob(batch,{type:'application/pdf'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`INSPECAO_${reportIndex}.pdf`;
   a.click();
   URL.revokeObjectURL(a.href);
 
-  reportCount++;
-  clearMemory();
-  updateStatus();
+  batch.length=0;
+  reportIndex++;
 }
 
-/* ================= LIMPEZA ================= */
-function clearMemory(){
-  gallery.innerHTML='';
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-}
-
-/* ================= BOTÕES ================= */
-btnCap.onclick = capture;
-
-btnAuto.onclick = ()=>{
-  if(isAuto){
-    clearInterval(autoTimer);
-    isAuto=false;
-    btnAuto.textContent='🎬 Auto';
+/* ================= AUTO ================= */
+let auto=null;
+btn.onclick=capture;
+btnAuto.onclick=()=>{
+  if(auto){
+    clearInterval(auto);
+    auto=null;
+    btnAuto.textContent='AUTO';
   }else{
-    isAuto=true;
-    btnAuto.textContent='⏹️ Parar';
-    autoTimer = setInterval(capture,700);
+    auto=setInterval(capture,1200);
+    btnAuto.textContent='STOP';
   }
 };
-
-btnClear.onclick = ()=>{
-  if(confirm('Limpar sessão atual?')){
-    photos.length=0;
-    clearMemory();
-    updateStatus();
-  }
-};
-
-/* ================= RECUPERAÇÃO ================= */
-window.addEventListener('load',()=>{
-  const tx = db?.transaction('photos','readonly');
-  if(!tx) return;
-  tx.objectStore('photos').getAll().onsuccess = e=>{
-    e.target.result.forEach(p=>{
-      photos.push(p);
-      addThumb(p.url);
-    });
-    updateStatus();
-  };
-});
 </script>
+
 </body>
 </html>
