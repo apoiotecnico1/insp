@@ -1,803 +1,236 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="original">
+<html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<meta name="theme-color" content="#0b7a39" />
-<title>Inspeção – KM + ID + Captura Segura + Relatório</title>
+<meta charset="utf-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b7a39">
+<title>Inspeção Rodovia – Modo Painel</title>
+
 <style>
-  :root{
-    --bg:#203e92; --bg2:#0b1224; --surface:#0f1731cc; --surface-strong:#1b368f;
-    --fg:#e8eeff; --muted:#a9b7df; --border:#1e284d; --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
-    --shadow: 0 10px 28px rgba(0,0,0,.38); --radius: 14px; --camH: 42vh;
-    --btnGradA:#0d1430; --btnGradB:#0a0f26; --btnBorder:#20305e;
-    --camGradA:#0b1230; --camGradB:#07102a; --camBorder:#213066;
-  }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
-  html,body{height:100%}
-  body{
-    margin:0; color:var(--fg);
-    background:
-      radial-gradient(1200px 600px at 10% -10%, #16306a33, transparent 70%),
-      radial-gradient(1000px 600px at 120% 10%, #0b553355, transparent 70%),
-      var(--bg);
-    font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans","Helvetica Neue",sans-serif;
-    padding:12px; line-height:1.35; overflow-x:hidden;
-  }
-  h1{margin:0 0 10px;text-align:center;font-size:1.18rem}
+html,body{
+  margin:0; height:100%; background:#000; overflow:hidden;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+}
+video{
+  position:fixed; inset:0;
+  width:100%; height:100%;
+  object-fit:contain; background:#000;
+}
 
-  /* Status */
-  #statusBar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;max-width:1100px;margin:0 auto 10px}
-  .st{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.28));border:1px solid rgba(255,255,255,.14);padding:6px 10px;border-radius:999px;font-size:.82rem;font-weight:800;color:#dfe7ff}
-  .ok{ color:#b1ffd1 } .warn{ color:#ffdfa8 } .bad{ color:#ffc1c1 }
+/* Placa KM */
+#kmBox{
+  position:fixed; top:14px; left:50%;
+  transform:translateX(-50%);
+  background:linear-gradient(180deg,#0b7a39,#085e2c);
+  color:#fff;
+  padding:10px 18px;
+  border-radius:14px;
+  border:4px solid #e6f0ea;
+  font-size:1.25rem;
+  font-weight:900;
+  text-shadow:0 1px 0 rgba(0,0,0,.4);
+}
 
-  /* Cards */
-  .card{background: linear-gradient(180deg, var(--surface), rgba(15,23,49,.7)); backdrop-filter:saturate(140%) blur(6px);
-        border:1px solid var(--border); border-radius:var(--radius); padding:12px; margin:0 auto 12px; max-width:1100px; box-shadow: var(--shadow)}
+/* ID */
+#idBox{
+  position:fixed; top:72px; left:50%;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,.55);
+  color:#eafff5;
+  padding:6px 14px;
+  border-radius:12px;
+  font-size:1rem;
+  font-weight:800;
+}
 
-  /* KM placa */
-  #kmPlaque{text-align:center;padding:8px 12px;background: linear-gradient(180deg, #0d3b8e, #0a2e6d);
-            border:2px solid #e6ecff;border-radius:12px;margin:0 auto 8px;max-width:1100px;font-weight:900;font-size:1rem;color:#ffffff;
-            box-shadow:0 6px 16px rgba(0,0,0,.28);text-shadow: 0 1px 0 rgba(0,0,0,.35)}
-  #kmPlaque span{ letter-spacing:.02em }
-
-  /* Controles */
-  details.controls>summary{cursor:pointer;list-style:none;outline:none;user-select:none;font-weight:900;color:#dfe7ff;display:flex;align-items:center;gap:8px}
-  details.controls>summary::before{ content:'⚙️'; display:inline-block; transform:translateY(1px) }
-  details.controls>summary::-webkit-details-marker{display:none}
-  details.controls[open]>summary{ color:#b6caff }
-  .ctrlGrid{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding-top:8px}
-  select,input[type=range],button.small{border-radius:12px;border:1px solid var(--border);background:#0c1431;color:#e7edff;font-weight:800;padding:9px 11px}
-  button.small{font-size:.9rem}
-
-  /* Câmera */
-  #camCard{position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 0px); transform: translateX(-50%);
-           width: calc(100vw - 24px); max-width:1100px; height: var(--camH); z-index: 100; padding: 0; margin: 12px auto;
-           border-radius: var(--radius); background: linear-gradient(180deg, var(--camGradA), var(--camGradB));
-           border:1px solid var(--camBorder); box-shadow: 0 14px 36px rgba(0,0,0,.45), inset 0 0 0 1px #0d1b4e}
-  #wrap{ position: relative; height: 100%; border-radius: var(--radius); overflow: hidden }
-  #vid{ width: 100%; height: 100%; display: block; background:#000; object-fit: contain; object-position: center; touch-action: none; transform-origin: 50% 50%; border-radius: var(--radius) }
-  #can{ display:none }
-  #camSpacer{ height: calc(var(--camH) + 24px + env(safe-area-inset-top, 0px)); max-width:1100px; margin: 0 auto 8px }
-
-  /* Botões principais */
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  button{flex:1 1 180px;padding:12px 14px;font-size:.98rem;border:0;border-radius:12px;cursor:pointer;background: linear-gradient(180deg, var(--btnGradA), var(--btnGradB)); color:var(--fg); font-weight:900; border:1px solid var(--btnBorder)}
-  button:disabled{opacity:.5;cursor:not-allowed}
-  .btnPick{ background: linear-gradient(180deg, #60a5fa, #3883e8); color:#06121f }
-  .btnCapture{ background: linear-gradient(180deg, #35eb85, #22c55e); color:#072414 }
-  .btnCapture.stop{ background: linear-gradient(180deg, #f2544b, #cc3e36); color:#fff }
-  .btnReport{ background: linear-gradient(180deg, #eab308, #c99708); color:#231c00 }
-  .btnLog{ background: linear-gradient(180deg, #9ae6b4, #22c55e); color:#062a1a }
-
-  #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:8px}
-  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
-  .thumb{border:1px solid #243053;border-radius:10px;overflow:hidden;background:#0a122a}
-  .thumb img{width:100%;display:block}
-  .meta{padding:6px 8px;font-size:.78rem;color:#c7d2fe}
-
-  /* IDs */
-  main{max-width:1100px;margin:10px auto 28px;display:grid;gap:16px;padding:0}
-  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-  .col-4{grid-column:span 4}.col-8{grid-column:span 8}
-  @media (max-width:900px){.col-4,.col-8{grid-column:1/-1}}
-  ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
-  li{line-height:1.3;font-family:ui-monospace,Consolas,Menlo,monospace;border:1px solid var(--border);border-radius:12px;padding:12px;background:#0b1433;font-size:1.03rem;color:#edf2ff;display:flex;justify-content:space-between;gap:12px;align-items:center}
-  li.nearest{border-color:#22c55e;box-shadow:0 0 0 3px rgba(22,163,74,.2) inset;background:linear-gradient(0deg, rgba(22,163,74,.12), rgba(22,163,74,.02))}
-  .id-label{font-weight:800}
-  .dist{color:#9fb0d9;opacity:.85;font-size:.78rem;min-width:64px;text-align:right}
-  .skeleton{height:48px;border-radius:12px;background:linear-gradient(90deg,#111a3a 25%,#0d1836 40%,#111a3a 60%);background-size:200% 100%;animation:shimmer 1.1s infinite}
-  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-
-  /* Toast / Diag */
-  #diag{ max-width:1100px; margin:0 auto 12px; padding:10px 12px; border-radius:12px; border:1px dashed var(--warn); background:#201b03; color:#ffe9a6; font-size:.9rem; display:none }
-  #diag.bad{ border-color:var(--bad); background:#2a0e0e; color:#ffd3d3 }
-  #diag.ok{ border-color:var(--ok); background:#0e2217; color:#b7ffd1 }
-  #diag pre{ white-space:pre-wrap; word-break:break-word; margin:6px 0 0; color:#cfe7ff }
-  #toast{position:fixed; left:50%; bottom:16px; transform:translateX(-50%); background:rgba(0,0,0,.72); border:1px solid rgba(255,255,255,.16); color:#eaf2ff; padding:8px 12px; border-radius:10px; display:none; z-index:9}
+/* Estado */
+#state{
+  position:fixed; bottom:14px; left:50%;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,.6);
+  color:#fff;
+  padding:6px 14px;
+  border-radius:10px;
+  font-size:.85rem;
+  opacity:.9;
+}
 </style>
 </head>
 <body>
 
-<h1>📸 Inspeção – KM + ID + Captura Segura</h1>
+<video id="vid" autoplay playsinline muted></video>
 
-<div id="statusBar" aria-live="polite">
-  <span id="stContext" class="st">Contexto: —</span>
-  <span id="stCam" class="st">Câmera: —</span>
-  <span id="stGps" class="st">GPS: —</span>
-  <span class="st">🆔 <b id="nearestIdChip">—</b></span>
-  <span class="st">📷 <b id="okCnt">0</b> salvas</span>
-  <span class="st">⚠️ <b id="dropCnt">0</b> descartes</span>
-  <span id="stFolder" class="st">Pasta: —</span>
-</div>
-
-<div id="diag"></div>
-
-<div id="camSpacer"></div>
-<div id="kmPlaque"><span id="kmTop">KM —</span></div>
-
-<div class="card">
-  <details class="controls">
-    <summary>Controles (toque para abrir)</summary>
-    <div class="ctrlGrid">
-      <label>🎨 Tema:
-        <select id="themeSel"><option value="original" selected>Original</option><option value="neutral">Neutro</option></select>
-      </label>
-
-      <label>🎥 Câmera:
-        <select id="cameraSel" title="Lista de câmeras"></select>
-      </label>
-      <button id="btnCycle" class="small" title="Trocar Câmera">Trocar</button>
-      <button id="btnFacing" class="small" title="Alternar frontal/traseira">Frente/Trás</button>
-
-      <label id="zoomWrap" style="display:none">🔍 Zoom:
-        <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" />
-        <span id="zoomVal" style="margin-left:6px">1.0×</span>
-      </label>
-
-      <label>🖼️ Preenchimento:
-        <select id="fitModeSel" title="Como a imagem ocupa o espaço do topo">
-          <option value="auto" selected>Auto (inteligente)</option>
-          <option value="contain">Sem corte</option>
-          <option value="cover">Cobrir (pode cortar)</option>
-        </select>
-      </label>
-
-      <fieldset style="border:1px solid var(--border); border-radius:10px; padding:8px 10px;">
-        <legend style="padding:0 6px; font-weight:900; color:#dfe7ff">Carimbo</legend>
-        <label style="margin-right:10px"><input type="checkbox" id="optKm" checked> KM</label>
-        <label style="margin-right:10px"><input type="checkbox" id="optTs" checked> Data/Hora</label>
-        <label style="margin-right:10px"><input type="checkbox" id="optIds" checked> ID (mais próximo)</label>
-        <label style="margin-right:10px"><input type="checkbox" id="optGps"> GPS (lat,lon)</label>
-      </fieldset>
-
-      <label class="small">⏱ Intervalo
-        <input id="intervalMs" type="number" min="100" step="50" value="500"> ms
-        <select id="preset">
-          <option value="100">0,10 s</option>
-          <option value="200">0,20 s</option>
-          <option value="300">0,30 s</option>
-          <option value="500" selected>0,50 s</option>
-          <option value="700">0,70 s</option>
-          <option value="1000">1,0 s</option>
-          <option value="1500">1,5 s</option>
-        </select>
-      </label>
-
-      <label>🔖 Prefixo
-        <input id="prefix" type="text" placeholder="Ex.: BR116_SUL">
-      </label>
-    </div>
-  </details>
-</div>
-
-<div class="card" id="camCard">
-  <div id="wrap">
-    <video id="vid" autoplay playsinline muted></video>
-    <canvas id="can" width="1280" height="720"></canvas>
-  </div>
-</div>
-
-<div class="card">
-  <div class="row">
-    <button id="btnPick" class="btnPick">📁 Selecionar pasta</button>
-    <button id="btnCapture" class="btnCapture">▶ INICIAR CAPTURA</button>
-    <button id="btnReport" class="btnReport" disabled>📄 Gerar Relatório (PDF)</button>
-    <button id="btnLog" class="btnLog" disabled>🧾 Salvar Log (CSV)</button>
-  </div>
-  <p class="muted" style="margin-top:6px;opacity:.85">Recomendado: <b>0,5 s</b>. Se aquecer ou descartar, aumente o intervalo ou reduza a resolução.</p>
-</div>
-
-<div class="card">
-  <h2 style="margin:0 0 6px;font-size:1rem">Prévia (última foto)</h2>
-  <img id="foto" alt="Prévia da foto capturada">
-</div>
-
-<div class="card">
-  <h2 style="margin:0 0 6px;font-size:1rem">Últimas 10 fotos</h2>
-  <div id="gal" class="gallery"></div>
-</div>
-
-<div class="card" style="max-width:1100px">
-  <h2 style="margin:0 0 6px;font-size:1rem">IDs próximos</h2>
-  <ul id="list" aria-live="polite">
-    <li class="skeleton"></li><li class="skeleton"></li><li class="skeleton"></li>
-    <li class="skeleton"></li><li class="skeleton"></li>
-  </ul>
-  <div class="row" style="margin-top:8px">
-    <button id="btnSend">WhatsApp IDs mais próximos</button>
-  </div>
-</div>
-
-<div id="toast"></div>
+<div id="kmBox">KM —</div>
+<div id="idBox">ID —</div>
+<div id="state">INICIANDO…</div>
 
 <script>
-/* ============ CONFIG ============ */
-const MIN_INTERVAL_MS = 100;      // mínimo prático (0,1 s)
-const DEFAULT_INTERVAL_MS = 500;  // recomendado para rodovia
-const MAX_PIX = 1600;             // downscale p/ estabilidade
-const JPEG_QUALITY = 0.88;        // leve e bom
-const MIN_JPEG_BYTES = 1024;      // proteção anti 0B
-const REPORT_MAX_PAGES = 600;     // páginas por volume (PDF)
-/* ================================ */
+/* ================= CONFIG ================= */
+const INTERVAL_MS = 500;      // 0,5 s fixo
+const MAX_DIM = 1600;
+const JPEG_Q = 0.88;
+/* ========================================== */
 
-/* ============ REFS ============ */
-const vid=document.getElementById('vid');
-const can=document.getElementById('can');
-const ctx=can.getContext('2d',{alpha:false});
-const themeSel=document.getElementById('themeSel');
-const cameraSel=document.getElementById('cameraSel');
-const btnCycle=document.getElementById('btnCycle');
-const btnFacing=document.getElementById('btnFacing');
-const zoomWrap=document.getElementById('zoomWrap');
-const zoomRange=document.getElementById('zoomRange');
-const zoomVal=document.getElementById('zoomVal');
-const fitModeSel=document.getElementById('fitModeSel');
-const stContext=document.getElementById('stContext');
-const stCam=document.getElementById('stCam');
-const stGps=document.getElementById('stGps');
-const stFolder=document.getElementById('stFolder');
-const kmTop=document.getElementById('kmTop');
-const nearestIdChip=document.getElementById('nearestIdChip');
-const okCnt=document.getElementById('okCnt');
-const dropCnt=document.getElementById('dropCnt');
-const btnPick=document.getElementById('btnPick');
-const btnCapture=document.getElementById('btnCapture');
-const btnReport=document.getElementById('btnReport');
-const btnLog=document.getElementById('btnLog');
-const btnSend=document.getElementById('btnSend');
-const intervalMsInput=document.getElementById('intervalMs');
-const presetSel=document.getElementById('preset');
-const prefixInput=document.getElementById('prefix');
-const listEl=document.getElementById('list');
-const foto=document.getElementById('foto');
-const toast=document.getElementById('toast');
-const diagEl=document.getElementById('diag');
-/* ============================== */
+const vid = document.getElementById('vid');
+const kmBox = document.getElementById('kmBox');
+const idBox = document.getElementById('idBox');
+const state = document.getElementById('state');
 
-/* ============ ESTADO ============ */
 let dirHandle=null;
-let running=false, capturing=false;
-let successCount=0, dropCount=0;
+let lastPos=null;
+let running=true;
+let busy=false;
 
-let deviceList=[], deviceIndex=0;
-let currentStream=null, currentTrack=null, currentCap=null, videoAR=16/9;
-let facingMode='environment', digitalZoom=1, DIGITAL_ZOOM_MAX=6, pinchState=null, lastTapTime=0;
+/* ================= GPS ================= */
+navigator.geolocation.watchPosition(p=>{
+  lastPos = {
+    lat:p.coords.latitude,
+    lon:p.coords.longitude,
+    acc:p.coords.accuracy
+  };
+},{},{enableHighAccuracy:true,maximumAge:500});
 
-let idsDataset=[];   // {id, lat, lon}
-let lastPos=null;    // {lat, lon, acc}
-let kmDataset=[];    // {km, lat, lon}
-let currentKMStr='KM —', currentNearestId='—';
-let lastRender=0;
-
-let previewBuffer=[]; // {url, meta}
-let logRows=[['arquivo','timestamp','lat','lon','precisao_m','km_str','km_num','id_mais_proximo','dist_id_m']]; // cabeçalho
-/* ================================= */
-
-/* ============ UTIL ============ */
-function toastMsg(m,ms=1300){ toast.textContent=m; toast.style.display='block'; clearTimeout(toast.t); toast.t=setTimeout(()=>toast.style.display='none',ms); }
-function diag(msg, level='warn'){ diagEl.style.display='block'; diagEl.className=''; if(level==='bad') diagEl.classList.add('bad'); else if(level==='ok') diagEl.classList.add('ok'); diagEl.innerHTML=msg; }
-function diagAppend(text){ if(!diagEl.innerHTML) diagEl.innerHTML=''; diagEl.style.display='block'; const pre=document.createElement('pre'); pre.textContent=String(text||''); diagEl.appendChild(pre); }
-function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
-function findColumnIndex(headers, candidates){ const map=headers.map(h=>normalizeStr(h)); for(const c of candidates){ const i=map.indexOf(c); if(i>=0) return i; } for(const c of candidates){ for(let i=0;i<map.length;i++){ if(map[i].includes(c)) return i; } } return -1; }
-function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d{1,}$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
-function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
-const z2=v=>String(v).padStart(2,'0');
-function nowBR(){ return new Date().toLocaleString('pt-BR'); }
-function fmtAcc(a){ return (a==null||!Number.isFinite(a))?'—':('±'+Math.round(a)+' m'); }
-function fmtDistMeters(m){ if(!(Number.isFinite(m))) return '—'; return Math.round(m) + ' m'; }
-function fmtKm(v){ if(!Number.isFinite(v)) return 'KM —'; let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
-function stampNow(){ const d=new Date(); return `${d.getFullYear()}-${z2(d.getMonth()+1)}-${z2(d.getDate())}_${z2(d.getHours())}-${z2(d.getMinutes())}-${z2(d.getSeconds())}`; }
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-function safe(s){ return String(s||'').replace(/[^\w\-+.]/g,'_'); }
-function isSecure(){ return window.isSecureContext || location.hostname==='localhost'; }
-function clampInterval(){
-  let v = Number(intervalMsInput.value || DEFAULT_INTERVAL_MS);
-  if(!Number.isFinite(v) || v < MIN_INTERVAL_MS) v = MIN_INTERVAL_MS;
-  intervalMsInput.value = String(v);
-  const match = [...presetSel.options].find(o => Number(o.value) === v);
-  if(match) presetSel.value = String(v);
-  return v;
+/* ================= KM CSV ================= */
+let kmPoints=[];
+function parsePt(v){
+  if(v==null) return NaN;
+  const s=String(v).trim();
+  return /,\d+$/.test(s)?Number(s.replace(/\./g,'').replace(',','.')):Number(s);
 }
-/* ============================ */
-
-/* ======== THEME/LAYOUT ======== */
-function applyTheme(val){ const mode=val||localStorage.getItem('theme')||'original'; document.documentElement.setAttribute('data-theme', mode); localStorage.setItem('theme', mode); themeSel.value=mode; }
-function computeAvailableW(){ const pad=24; return Math.min(window.innerWidth - pad, 1100); }
-function computeMaxH(){ const reserve=160; const vv=visualViewport; const safeTop=vv? vv.offsetTop : 0; return Math.max(220,(vv?vv.height:window.innerHeight)-reserve-safeTop); }
-function applyFit(mode){ const w=computeAvailableW(); const idealH=Math.round(w/(videoAR||(16/9))); const maxH=computeMaxH(); let objectFit='contain'; let targetH=idealH; if(mode==='contain'){objectFit='contain';targetH=Math.min(idealH,maxH);} else if(mode==='cover'){objectFit='cover';targetH=Math.min(idealH,maxH);} else { if(idealH<=maxH){objectFit='contain';targetH=idealH;} else {objectFit='cover';targetH=maxH;} } document.documentElement.style.setProperty('--camH', targetH+'px'); vid.style.objectFit=objectFit; }
-function updateCamLayout(){ const mode=localStorage.getItem('fitMode')||fitModeSel.value||'auto'; applyFit(mode); }
-fitModeSel.addEventListener('change',()=>{ localStorage.setItem('fitMode', fitModeSel.value); updateCamLayout(); });
-window.addEventListener('resize', updateCamLayout);
-if(window.visualViewport){ visualViewport.addEventListener('resize', updateCamLayout); visualViewport.addEventListener('scroll', updateCamLayout); }
-applyTheme();
-fitModeSel.value = localStorage.getItem('fitMode') || 'auto';
-/* ============================ */
-
-/* ============ CÂMERA ============ */
-function lensHint(label=''){ const s=String(label).toLowerCase(); if(/tele|zoom\s?lens|50mm|70mm|3x|5x/.test(s)) return 'tele';
-  if(/ultra|wide\s?angle|0\.5x|0,5x|ultra\-wide|superwide|grande|wide \(ultra\)/.test(s)) return 'ultra';
-  if(/wide|1x|principal|main|back|rear|environment/.test(s)) return 'wide'; return ''; }
-async function enumerateCameras(){
-  try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{}
-  const devs=await navigator.mediaDevices.enumerateDevices(); deviceList=devs.filter(d=>d.kind==='videoinput');
-  cameraSel.innerHTML=''; deviceList.forEach((d,i)=>{ const o=document.createElement('option'); const tag=lensHint(d.label);
-    o.value=String(i); o.textContent= d.label? `${d.label}${tag?` (${tag})`:''}` : `Câmera ${i+1}${tag?` (${tag})`:''}`; cameraSel.appendChild(o); });
+function hav(a,b,c,d){
+  const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;
+  const u=Math.sin(x/2)**2+
+          Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
-async function startCameraByIndex(idx){
-  try{
-    if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
-    currentStream=currentTrack=currentCap=null;
-    const dev=deviceList[idx];
-    const constraints= dev? {video:{deviceId:{exact:dev.deviceId}}, audio:false} : {video:{facingMode:{ideal:facingMode||'environment'}}, audio:false};
-    const st=await navigator.mediaDevices.getUserMedia(constraints);
-    currentStream=st; vid.srcObject=st; await vid.play().catch(()=>{});
-    await new Promise(res=>{ if(vid.readyState>=2 && vid.videoWidth) return res(); vid.onloadedmetadata=()=>res(); setTimeout(res,1000); });
-    currentTrack=st.getVideoTracks()[0]; currentCap=currentTrack.getCapabilities? currentTrack.getCapabilities():null;
-    if(vid.videoWidth&&vid.videoHeight) videoAR=vid.videoWidth/vid.videoHeight;
-    updateCamLayout();
-    if(currentCap && currentCap.zoom){
-      zoomRange.min=currentCap.zoom.min??1; zoomRange.max=currentCap.zoom.max??1; zoomRange.step=currentCap.zoom.step??0.1;
-      DIGITAL_ZOOM_MAX=Number(zoomRange.max)||6; const z=Math.max(Number(zoomRange.min||1),1); await applyZoom(z,true); zoomWrap.style.display='';
-    }else{ DIGITAL_ZOOM_MAX=6; zoomWrap.style.display='none'; vid.style.transform=`scale(${digitalZoom})`; }
-    stCam.textContent = 'Câmera: OK'; stCam.className='st ok';
-    cameraSel.value=String(idx);
-  }catch(e){
-    stCam.textContent='Câmera: erro'; stCam.className='st bad';
-    diag('<b>Falha ao iniciar a câmera.</b> Verifique permissões/HTTPS/feche outros apps.', 'bad'); diagAppend((e.name||'')+': '+(e.message||e));
-  }
-}
-async function applyZoom(val){ if(currentTrack && currentCap && currentCap.zoom){ const z=Number(val);
-  try{ await currentTrack.applyConstraints({advanced:[{zoom:z}]}); }catch{ try{ await currentTrack.applyConstraints({zoom:z}); }catch(e){} }
-  zoomRange.value=z; zoomVal.textContent=`${z.toFixed(1)}×`;
-} else { digitalZoom = Math.max(1, Number(val)||1); vid.style.transform=`scale(${digitalZoom})`; zoomVal.textContent=`${digitalZoom.toFixed(1)}×`; } }
-function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
-function dist(t){ const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.hypot(dx,dy); }
-const wrap=document.getElementById('wrap'); let lastTapTime=0, pinchState=null;
-wrap.addEventListener('touchstart',(ev)=>{ if(ev.touches.length===2){ ev.preventDefault(); pinchState={ base:dist(ev.touches), start:(currentCap?.zoom? Number(zoomRange.value||1) : digitalZoom) }; }
-  else if(ev.touches.length===1){ const now=Date.now(); if(now-lastTapTime<300){ if(currentCap?.zoom){ applyZoom(1); } else { digitalZoom=1; vid.style.transform=''; zoomVal.textContent='1.0×'; } pinchState=null; lastTapTime=0; return; } lastTapTime=now; } },{passive:false});
-wrap.addEventListener('touchmove',(ev)=>{ if(pinchState && ev.touches.length===2){ ev.preventDefault(); const factor=dist(ev.touches)/Math.max(1,pinchState.base); let target=pinchState.start*factor;
-  if(currentCap?.zoom){ target=clamp(target, Number(zoomRange.min||1), Number(zoomRange.max||6)); applyZoom(target); }
-  else { target=clamp(target, 1, DIGITAL_ZOOM_MAX); digitalZoom=target; vid.style.transform=`scale(${digitalZoom})`; zoomVal.textContent=`${digitalZoom.toFixed(1)}×`; } } },{passive:false});
-wrap.addEventListener('wheel',(ev)=>{ if(!ev.ctrlKey && !ev.metaKey) return; ev.preventDefault(); const delta=Math.sign(ev.deltaY)*-0.2; const base=currentCap?.zoom? Number(zoomRange.value||1) : digitalZoom; let target=base*(1+delta);
-  if(currentCap?.zoom){ target=clamp(target, Number(zoomRange.min||1), Number(zoomRange.max||6)); applyZoom(target); }
-  else { target=clamp(target, 1, DIGITAL_ZOOM_MAX); digitalZoom=target; vid.style.transform=`scale(${digitalZoom})`; zoomVal.textContent=`${digitalZoom.toFixed(1)}×`; } },{passive:false});
-cameraSel.addEventListener('change', async ()=>{ deviceIndex=Number(cameraSel.value||0); await startCameraByIndex(deviceIndex); });
-btnCycle.addEventListener('click', async ()=>{ if(!deviceList.length){ await enumerateCameras(); } deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCameraByIndex(deviceIndex); });
-btnFacing.addEventListener('click', async ()=>{ facingMode = (facingMode==='environment'?'user':'environment'); await startCameraByIndex(deviceIndex); });
-
-async function ensurePermission(){ try{ const t=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); t.getTracks().forEach(tr=>tr.stop()); return true; }catch(e){ diag('<b>Permissão de câmera negada/bloqueada.</b> Autorize a câmera e tente novamente.', 'bad'); diagAppend(e.message||e); return false; } }
-function updateContext(){ stContext.textContent = 'Contexto: ' + (isSecure() ? 'seguro/OK' : 'não seguro'); }
-/* ================================= */
-
-/* ============ GPS / KM / IDs ============ */
-const ACC_GREEN=10, ACC_YELLOW=25;
-function updateGpsChip(){
-  if(!lastPos || lastPos.acc==null){ stGps.textContent='GPS: buscando…'; stGps.className='st warn'; return; }
-  const a=Math.round(lastPos.acc);
-  if(a<=ACC_GREEN){ stGps.textContent=`GPS: OK (${fmtAcc(a)})`; stGps.className='st ok'; }
-  else if(a<=ACC_YELLOW){ stGps.textContent=`GPS: ajustando (${fmtAcc(a)})`; stGps.className='st warn'; }
-  else { stGps.textContent=`GPS: fraco (${fmtAcc(a)})`; stGps.className='st bad'; }
-}
-function startGPS(){
-  if(!('geolocation' in navigator)){ stGps.textContent='GPS: não suportado'; stGps.className='st bad'; return; }
-  navigator.geolocation.getCurrentPosition(
-    pos=>{
-      lastPos={ lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy, ts:Date.now() };
-      updateGpsChip(); renderIDs(true); updateKMChip(true); updateNearestIdChip();
-      navigator.geolocation.watchPosition(p=>{
-        lastPos={ lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy, ts:Date.now() };
-        updateGpsChip(); renderIDs(); updateKMChip(); updateNearestIdChip();
-      },()=>{}, {enableHighAccuracy:true, maximumAge:0, timeout:15000});
-    },
-    ()=>{ stGps.textContent='GPS: permissões necessárias'; stGps.className='st warn'; },
-    {enableHighAccuracy:true, maximumAge:0, timeout:10000}
-  );
-}
-
-function nearestN(lat,lon,n=10){
-  if(!idsDataset.length) return [];
-  const arr = idsDataset.map(p=>({id:p.id, lat:p.lat, lon:p.lon, d:hav(lat,lon,p.lat,p.lon)}));
-  arr.sort((a,b)=>a.d-b.d);
-  return arr.slice(0, Math.min(n, arr.length));
-}
-function nearestID(lat,lon){
-  const n = nearestN(lat,lon,1);
-  return n.length?n[0]:null;
-}
-function renderIDs(force=false){
-  const now=performance.now(); if(!force && now-lastRender<150) return; lastRender=now;
-  listEl.innerHTML=''; if(!lastPos || !idsDataset.length) return;
-  const items = nearestN(lastPos.lat,lastPos.lon,10);
-  if(!items.length){ listEl.innerHTML='<li>—</li>'; return; }
-  const frag=document.createDocumentFragment();
-  items.forEach((o,idx)=>{
-    const li=document.createElement('li'); if(idx===0) li.classList.add('nearest');
-    const left = document.createElement('span'); const idSpan = document.createElement('span'); idSpan.className='id-label'; idSpan.textContent=o.id; left.appendChild(idSpan);
-    const right = document.createElement('span'); right.className='dist'; right.textContent = fmtDistMeters(o.d);
-    li.appendChild(left); li.appendChild(right); frag.appendChild(li);
-  });
-  listEl.appendChild(frag);
-}
-function updateNearestIdChip(){
-  if(!lastPos || !idsDataset.length){ currentNearestId='—'; nearestIdChip.textContent='—'; return; }
-  const n = nearestID(lastPos.lat, lastPos.lon);
-  currentNearestId = n ? n.id : '—';
-  nearestIdChip.textContent = currentNearestId;
-}
-
-async function loadIDs(){
-  try{
-    let resp = await fetch('dados.csv?v='+Date.now(), {cache:'no-store'});
-    if(!resp.ok){ resp = await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now(), {cache:'no-store'}); }
-    if(!resp.ok){ diag('⚠️ CSV de IDs não encontrado', 'warn'); return; }
-    let text = await resp.text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-    const lines = text.split(/\r?\n/).filter(l=>l.trim()!==''); if(lines.length<2){ diag('⚠️ CSV de IDs vazio', 'warn'); return; }
-    const head = lines.shift().split(';');
-    const iId = findColumnIndex(head,['id do nox','idnox','id']);
-    const iLat= findColumnIndex(head,['latitude','lat']);
-    const iLon= findColumnIndex(head,['longitude','lon','long']);
-    if(iId<0||iLat<0||iLon<0){ diag('⚠️ Cabeçalho inválido (IDs: id/lat/lon)', 'warn'); return; }
-    idsDataset = lines.map(l=>{
-      const r=l.split(';');
-      return { id:String(r[iId]||'').trim(), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) };
-    }).filter(p=>p.id && Number.isFinite(p.lat)&&Number.isFinite(p.lon));
-  }catch(e){ diag('⚠️ Erro ao carregar CSV de IDs', 'warn'); }
+function fmtKm(v){
+  let K=Math.floor(v), m=Math.round((v-K)*1000);
+  if(m>=1000){m-=1000;K++}
+  return `KM ${K}+${String(m).padStart(3,'0')}`;
 }
 
 async function loadKM(){
-  try{
-    let resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
-    if(!resp.ok){ diag('⚠️ KM (SNVBR116SPRJ.csv) não encontrado. KM ao vivo indisponível.', 'warn'); return; }
-    let text = await resp.text();
-    if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-    const lines = text.split(/\r?\n/).filter(l=>l.trim()!=='');
-    if(lines.length<1) return;
-
-    // tenta cabeçalho
-    let startIdx=0, useHeader=false; let iKm=-1, iLat=-1, iLon=-1;
-    const maybeHead = lines[0].split(';');
-    if(maybeHead.some(cell=>isNaN(parsePt(cell)))){ useHeader=true; startIdx=1;
-      iKm  = findColumnIndex(maybeHead,['km']);
-      iLat = findColumnIndex(maybeHead,['lat','latitude']);
-      iLon = findColumnIndex(maybeHead,['lon','long','longitude']);
-    }
-    kmDataset.length=0;
-
-    if(useHeader && iKm>=0 && iLat>=0 && iLon>=0){
-      for(let k=startIdx;k<lines.length;k++){
-        const r=lines[k].split(';');
-        const km=parsePt(r[iKm]), lat=parsePt(r[iLat]), lon=parsePt(r[iLon]);
-        if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)) kmDataset.push({km,lat,lon});
-      }
-    }else{
-      for(const ln of lines){
-        const c=ln.split(';');
-        const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
-        const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])};
-        if(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon)) kmDataset.push(t1);
-        if(Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon)) kmDataset.push(t2);
-      }
-    }
-  }catch(e){
-    diag('⚠️ Erro ao carregar SNVBR116SPRJ.csv', 'warn');
-  }
-}
-function nearestKM(lat,lon){
-  if(!kmDataset.length || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  let best=null, bd=Infinity;
-  for(const p of kmDataset){
-    const d=hav(lat,lon,p.lat,p.lon);
-    if(d<bd){ bd=d; best=p; }
-  }
-  return best ? {km:best.km, d:bd} : null;
-}
-let kmThrottle=0;
-function updateKMChip(force=false){
-  const now=performance.now(); if(!force && now-kmThrottle<400) return; kmThrottle=now;
-  if(!lastPos){ kmTop.textContent='KM —'; currentKMStr='KM —'; return; }
-  if(!kmDataset.length){ kmTop.textContent='…'; currentKMStr='KM —'; return; }
-  const n=nearestKM(lastPos.lat,lastPos.lon);
-  currentKMStr = n? fmtKm(n.km) : 'KM —';
-  kmTop.textContent = currentKMStr;
-}
-/* ============================================= */
-
-/* ============ WhatsApp IDs ============ */
-btnSend.addEventListener('click', ()=>{
-  if(!lastPos) return;
-  const items = nearestN(lastPos.lat,lastPos.lon,10); if(!items.length) return;
-  let tx=`${nowBR()}\nGPS agora: Lat ${lastPos.lat.toFixed(6)}, Lon ${lastPos.lon.toFixed(6)} · Precisão ${fmtAcc(lastPos.acc)}\n`;
-  items.forEach(o=> tx+=`ID: ${o.id} · Dist: ${fmtDistMeters(o.d)}\n`);
-  window.open('https://wa.me/?text='+encodeURIComponent(tx),'_blank');
-});
-/* ===================================== */
-
-/* ============ CAPTURA/GRAVAÇÃO ============ */
-function addPreview(url,meta){
-  previewBuffer.push({url,meta});
-  if(previewBuffer.length>10){
-    const r=previewBuffer.shift(); try{ URL.revokeObjectURL(r.url);}catch{}
-  }
-  const gal=document.getElementById('gal'); gal.innerHTML='';
-  previewBuffer.forEach(p=>{
-    const d=document.createElement('div'); d.className='thumb';
-    const im=document.createElement('img'); im.src=p.url;
-    const m=document.createElement('div'); m.className='meta'; m.textContent=p.meta;
-    d.appendChild(im); d.appendChild(m); gal.appendChild(d);
+  const txt = await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
+  txt.split(/\r?\n/).forEach(l=>{
+    const c=l.split(';');
+    const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
+    if(isFinite(t1.km)&&isFinite(t1.lat)) kmPoints.push(t1);
   });
 }
-function drawVideoInto(g, outW, outH){
-  const vw=vid.videoWidth||1280, vh=vid.videoHeight||720;
-  if(currentCap?.zoom){ g.drawImage(vid,0,0,outW,outH);
-  } else { const dz=Math.max(1,digitalZoom||1); const srcW=Math.round(vw/dz), srcH=Math.round(vh/dz);
-    const sx=Math.max(0,Math.floor((vw-srcW)/2)), sy=Math.max(0,Math.floor((vh-srcH)/2));
-    g.drawImage(vid,sx,sy,srcW,srcH,0,0,outW,outH); }
-}
-function drawOverlay(g,w,h){
-  const bandH=Math.max(60, Math.round(h*0.12));
-  g.fillStyle='rgba(0,0,0,.56)'; g.fillRect(0,h-bandH,w,bandH);
-  if(optKm.checked){ g.fillStyle='#b7ffcf'; g.textAlign='left'; g.font=`900 ${Math.round(h*0.045)}px system-ui`; g.fillText(currentKMStr||'KM —', 12, h-bandH+Math.round(bandH*0.58)); }
-  const ts = `${z2(new Date().getHours())}:${z2(new Date().getMinutes())}:${z2(new Date().getSeconds())}`;
-  if(optIds.checked){
-    g.fillStyle='#eaf2ff'; g.textAlign='left'; g.font=`700 ${Math.round(h*0.03)}px system-ui`;
-    g.fillText(`ID: ${currentNearestId||'—'} • ${ts}`, 12, h-16);
-  }else if(optTs.checked){
-    g.fillStyle='#eaf2ff'; g.textAlign='left'; g.font=`700 ${Math.round(h*0.03)}px system-ui`; g.fillText(ts, 12, h-16);
+function nearestKM(){
+  if(!lastPos||!kmPoints.length) return null;
+  let b=null,d=1e20;
+  for(const p of kmPoints){
+    const h=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
+    if(h<d){d=h;b=p}
   }
-  if(optGps.checked && lastPos){
-    g.fillStyle='#cfe7ff'; g.textAlign='left'; g.font=`600 ${Math.round(h*0.028)}px system-ui`;
-    g.fillText(`${lastPos.lat?.toFixed(6)}, ${lastPos.lon?.toFixed(6)}  ±${Math.round(lastPos.acc||0)}m`, 12, h-bandH+24);
-  }
-}
-async function tryMakeJpegBlob(canvas,q=JPEG_QUALITY){
-  let b=await new Promise(res=>canvas.toBlob(res,'image/jpeg',q));
-  if(b && b.size>=MIN_JPEG_BYTES) return b;
-  await sleep(40);
-  b=await new Promise(res=>canvas.toBlob(res,'image/jpeg',q));
-  if(b && b.size>=MIN_JPEG_BYTES) return b;
-  return null;
-}
-function buildFilename(){
-  const kmPart = safe((currentKMStr||'KM').replace('KM ','').replace('+','_'));
-  const idPart = safe(currentNearestId||'ID');
-  const prefix = safe(prefixInput.value||'');
-  return (prefix? `${prefix}_`:'') + `FOTO_KM_${kmPart}_ID_${idPart}_${stampNow()}.jpg`;
+  return b;
 }
 
-async function safeWriteFile(fh, payload){
-  const w=await fh.createWritable();
-  if(payload instanceof Blob){ const u8=new Uint8Array(await payload.arrayBuffer()); await w.write(u8); }
-  else if(payload instanceof Uint8Array){ await w.write(payload); }
-  else { await w.write(payload); }
-  await w.close();
-  // Conferência
-  const f=await fh.getFile(); if(!f || f.size===0) throw new Error('zero-bytes');
+/* ================= ID CSV ================= */
+let ids=[];
+async function loadIDs(){
+  let f=await fetch('./dados.csv',{cache:'no-store'});
+  if(!f.ok) f=await fetch('./Dados_Completos_Grupo_2_all.csv',{cache:'no-store'});
+  const txt=await f.text();
+  const lines=txt.split(/\r?\n/).filter(Boolean);
+  const head=lines.shift().split(';').map(h=>h.toLowerCase());
+  const iId=head.findIndex(h=>h.includes('id'));
+  const iLat=head.findIndex(h=>h.includes('lat'));
+  const iLon=head.findIndex(h=>h.includes('lon'));
+  lines.forEach(l=>{
+    const c=l.split(';');
+    const id=c[iId]; const lat=parsePt(c[iLat]); const lon=parsePt(c[iLon]);
+    if(id && isFinite(lat)) ids.push({id,lat,lon});
+  });
+}
+function nearestID(){
+  if(!lastPos||!ids.length) return null;
+  let b=null,d=1e20;
+  for(const p of ids){
+    const h=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
+    if(h<d){d=h;b=p}
+  }
+  return b;
 }
 
-async function capturePhoto(){
-  if(capturing) return;
-  capturing = true;
-  let writer=null;
+/* ================= CAMERA ================= */
+async function startCamera(){
+  const s=await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:'environment',width:1920,height:1080},
+    audio:false
+  });
+  vid.srcObject=s;
+  await new Promise(r=>vid.onloadedmetadata=r);
+}
+
+/* ================= FOTO ================= */
+const can=document.createElement('canvas');
+const ctx=can.getContext('2d',{alpha:false});
+
+async function capture(){
+  if(busy||!running||!dirHandle||!lastPos) return;
+  busy=true;
   try{
-    if(!(dirHandle && vid.videoWidth)) return;
-
-    // Atualiza KM/ID imediatamente antes de registrar
-    updateKMChip(); updateNearestIdChip();
-
-    const vw=vid.videoWidth, vh=vid.videoHeight;
-    const scale=Math.min(1, MAX_PIX/Math.max(vw,vh));
-    const w=Math.round(vw*scale), h=Math.round(vh*scale);
+    const vw=vid.videoWidth,vh=vid.videoHeight;
+    const sc=Math.min(1,MAX_DIM/Math.max(vw,vh));
+    const w=vw*sc,h=vh*sc;
     can.width=w; can.height=h;
-    ctx.clearRect(0,0,w,h);
-    drawVideoInto(ctx,w,h);
-    drawOverlay(ctx,w,h);
+    ctx.drawImage(vid,0,0,w,h);
 
-    const blob=await tryMakeJpegBlob(can);
-    if(!blob){ dropCount++; dropCnt.textContent=dropCount; return; }
+    const kmN=nearestKM();
+    const kmStr=kmN?fmtKm(kmN.km):'KM —';
+    const idN=nearestID();
+    const idStr=idN?idN.id:'—';
 
-    const name = buildFilename();
-    const fh = await dirHandle.getFileHandle(name,{create:true});
-    try{
-      await safeWriteFile(fh, blob);
-    }catch(err1){
-      // Fallback dataURL -> U8
-      const dataURL = can.toDataURL('image/jpeg', Math.max(0.7, JPEG_QUALITY-0.1));
-      const b64=dataURL.split(',')[1]; const bin=atob(b64); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
-      await safeWriteFile(fh, u8);
-    }
+    // overlay simples
+    ctx.fillStyle='rgba(0,0,0,.6)';
+    ctx.fillRect(0,h-90,w,90);
+    ctx.fillStyle='#b7ffcf';
+    ctx.font='bold 36px system-ui';
+    ctx.fillText(kmStr,20,h-40);
+    ctx.fillStyle='#fff';
+    ctx.font='bold 22px system-ui';
+    ctx.fillText(
+      `${idStr} | ${new Date().toLocaleString()}`,
+      20,h-12
+    );
 
-    successCount++; okCnt.textContent=successCount;
-    const url=URL.createObjectURL(blob); foto.src=url; addPreview(url, `${currentKMStr} • ${nowBR()}`);
+    const blob=await new Promise(r=>can.toBlob(r,'image/jpeg',JPEG_Q));
+    if(!blob||!blob.size) return;
 
-    // Log
-    const idObj = nearestID(lastPos?.lat||NaN,lastPos?.lon||NaN);
-    const distId = idObj? Math.round(idObj.d) : '';
-    const kmNum = (currentKMStr.startsWith('KM ') ? currentKMStr.slice(3).replace('+','.') : '');
-    logRows.push([name, new Date().toISOString(), lastPos?.lat||'', lastPos?.lon||'', Math.round(lastPos?.acc||0)||'', currentKMStr, kmNum, currentNearestId, distId]);
+    const name=`FOTO_${kmStr.replace(' ','').replace('+','_')}_${Date.now()}.jpg`;
+    const fh=await dirHandle.getFileHandle(name,{create:true});
+    const wri=await fh.createWritable();
+    await wri.write(blob);
+    await wri.close();
 
-    btnReport.disabled=false; btnLog.disabled=false;
-  }catch(e){
-    console.error('capturePhoto error:', e);
-    dropCount++; dropCnt.textContent=dropCount;
-  }finally{
-    try{ await writer?.close(); }catch{}
-    capturing=false;
-  }
+  }finally{ busy=false; }
 }
-async function loop(){
-  while(running){
-    await capturePhoto();
-    await sleep(clampInterval());
-  }
-}
-/* =========================================== */
 
-/* ============ RELATÓRIO (PDF) ============ */
-/* Writer mínimo de PDF 1.4 com JPEG embutido */
-function makeByteWriter(stream){ const enc=new TextEncoder(); let pos=0; return { async writeStr(s){const b=enc.encode(s); await stream.write(b); pos+=b.length;}, async writeBin(b){await stream.write(b); pos+=b.length;}, get pos(){return pos;} }; }
-function createPdfStreamWriter(stream){
-  const writer=makeByteWriter(stream); const offsets=[]; const pagesKids=[]; const PW=595,PH=842,M=24; let nextNum=3,closed=false;
-  async function writeObjWithNum(num,body){ offsets[num]=writer.pos; await writer.writeStr(`${num} 0 obj\n${body}\nendobj\n`); }
-  async function addObj(body){ const num=nextNum++; await writeObjWithNum(num,body); return num; }
-  async function addStream(dict,data){ const num=nextNum++; offsets[num]=writer.pos; const header=`${num} 0 obj\n${dict.replace('>>','')} /Length ${data.length} >>\nstream\n`; await writer.writeStr(header); await writer.writeBin(data); await writer.writeStr(`\nendstream\nendobj\n`); return num; }
-  function fitToCell(imgW,imgH){ let cellW=PW-2*M, cellH=PH-2*M; let dw=cellW, dh=Math.round(imgH*(cellW/imgW)); if(dh>cellH){ dh=cellH; dw=Math.round(imgW*(cellH/imgH)); } const tx=M+Math.round((cellW-dw)/2); const ty=M+Math.round((cellH-dh)/2); return {dw,dh,tx,ty}; }
-  return {
-    async init(){ await writer.writeStr('%PDF-1.4\n'); },
-    async addImagePage(imgBytes,W,H){
-      const imNum=await addStream(`<< /Type /XObject /Subtype /Image /Width ${W} /Height ${H} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, imgBytes);
-      const {dw,dh,tx,ty}=fitToCell(W,H);
-      const content=`q\n${dw} 0 0 ${dh} ${tx} ${PH-(ty+dh)} cm\n/Im0 Do\nQ\n`;
-      const contNum=await addStream('<< >>', new TextEncoder().encode(content));
-      const pageNum=await addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im0 ${imNum} 0 R >> >> /Contents ${contNum} 0 R >>`);
-      pagesKids.push(pageNum);
-    },
-    async finalize(){
-      if(closed) return; closed=true;
-      await writeObjWithNum(2,`<< /Type /Pages /Kids [ ${pagesKids.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pagesKids.length} >>`);
-      await writeObjWithNum(1,'<< /Type /Catalog /Pages 2 0 R >>');
-      const xrefStart=writer.pos; const count=Math.max(1,offsets.length-1)+1;
-      let xr=`xref\n0 ${count}\n0000000000 65535 f \n`;
-      for(let i=1;i<count;i++){ const off=offsets[i]??0; const inUse=(offsets[i]!=null); xr+=`${String(off).padStart(10,'0')} 00000 ${inUse?'n':'f'} \n`; }
-      await writer.writeStr(xr);
-      await writer.writeStr(`trailer\n<< /Size ${count} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`);
-      await stream.close();
-    }
-  };
-}
-async function downscaleForPDF(file, maxPx=1280, quality=0.72){
-  const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
-  const W=img.naturalWidth, H=img.naturalHeight;
-  const sc = Math.min(1, maxPx/Math.max(W,H));
-  const w = Math.round(W*sc), h = Math.round(H*sc);
-  const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
-  const g=tmp.getContext('2d',{alpha:false}); g.drawImage(img,0,0,w,h);
-  const b=await new Promise(r=>tmp.toBlob(r,'image/jpeg',quality));
-  const u8=new Uint8Array(await b.arrayBuffer());
-  URL.revokeObjectURL(img.src);
-  return {bytes:u8,w,h};
-}
-async function generateReport(){
-  if(!dirHandle){ toastMsg('Selecione a pasta'); return; }
-  if(logRows.length<=1){ toastMsg('Sem fotos nesta sessão'); return; }
-  btnReport.disabled=true;
-  try{
-    const baseName = `RELATORIO_${new Date().toISOString().replace(/[:.]/g,'-')}`;
-    let pageInVol=0, vol=1, pdf=null, pdfHandle=null, writer=null;
+/* ================= LOOP ================= */
+setInterval(capture,INTERVAL_MS);
 
-    async function openVol(){
-      const name = `${baseName}_v${String(vol).padStart(2,'0')}.pdf`;
-      pdfHandle = await dirHandle.getFileHandle(name,{create:true});
-      writer = await pdfHandle.createWritable();
-      pdf=createPdfStreamWriter(writer);
-      await pdf.init();
-      pageInVol=0;
-    }
-    async function closeVol(){
-      if(pdf){ await pdf.finalize(); pdf=null; }
-    }
-
-    await openVol();
-    // Percorre a lista de arquivos salvos (a partir do log)
-    for(let i=1;i<logRows.length;i++){
-      const fname = logRows[i][0];
-      const fh = await dirHandle.getFileHandle(fname,{create:false});
-      const file = await fh.getFile();
-      const {bytes,w,h} = await downscaleForPDF(file, 1280, 0.72);
-      await pdf.addImagePage(bytes,w,h);
-      pageInVol++;
-      if(pageInVol>=REPORT_MAX_PAGES){ await closeVol(); vol++; await openVol(); }
-    }
-    await closeVol();
-    toastMsg('Relatório gerado');
-  }catch(e){
-    console.error(e); toastMsg('Falha ao gerar relatório');
-  }finally{
-    btnReport.disabled=false;
-  }
-}
-/* ================================= */
-
-/* ============ LOG CSV ============ */
-async function saveLogCSV(){
-  if(!dirHandle){ toastMsg('Selecione a pasta'); return; }
-  if(logRows.length<=1){ toastMsg('Sem dados de sessão'); return; }
-  try{
-    const name = `LOG_${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
-    const fh = await dirHandle.getFileHandle(name,{create:true});
-    const w = await fh.createWritable();
-    const enc = new TextEncoder();
-    const lines = logRows.map(r=>r.map(v=>String(v).replace(/;/g,',')).join(';')).join('\n');
-    await w.write(enc.encode(lines));
-    await w.close();
-    toastMsg('Log CSV salvo');
-  }catch(e){
-    console.error(e); toastMsg('Falha ao salvar log');
-  }
-}
-/* ================================= */
-
-/* ============ BOTÕES PRINCIPAIS ============ */
-btnPick.addEventListener('click', async ()=>{
-  try{
-    dirHandle = await window.showDirectoryPicker({mode:"readwrite"});
-    stFolder.textContent = 'Pasta: OK';
-    toastMsg('Pasta selecionada');
-  }catch{ toastMsg('Seleção de pasta cancelada'); }
-});
-presetSel.addEventListener('change', ()=>{
-  const v=Math.max(MIN_INTERVAL_MS, Number(presetSel.value)||DEFAULT_INTERVAL_MS);
-  intervalMsInput.value=String(v);
-});
-intervalMsInput.addEventListener('change', ()=>{
-  const v=Math.max(MIN_INTERVAL_MS, Number(intervalMsInput.value)||DEFAULT_INTERVAL_MS);
-  intervalMsInput.value=String(Math.floor(v));
-  const match=[...presetSel.options].find(o=>Number(o.value)===v);
-  if(match) presetSel.value=String(v);
-});
-
-btnCapture.addEventListener('click', async ()=>{
-  if(!dirHandle){ toastMsg('Selecione a pasta'); return; }
-  running = !running;
-  if(running){
-    const v=clampInterval(); intervalMsInput.value=String(v);
-    const match=[...presetSel.options].find(o=>Number(o.value)===v); if(match) presetSel.value=String(v);
-    btnCapture.textContent='⏹ FINALIZAR'; btnCapture.classList.add('stop');
-    loop();
-  }else{
-    btnCapture.textContent='▶ INICIAR CAPTURA'; btnCapture.classList.remove('stop');
+/* ================= PAUSE (toque longo) ================= */
+let t0=0;
+document.addEventListener('touchstart',()=>t0=Date.now());
+document.addEventListener('touchend',()=>{
+  if(Date.now()-t0>2000){
+    running=!running;
+    state.textContent=running?'CAPTURANDO':'PAUSADO';
   }
 });
-btnReport.addEventListener('click', generateReport);
-btnLog.addEventListener('click', saveLogCSV);
-/* =========================================== */
 
-/* ============ BOOT ============ */
-function updateContextAndStatus(){
-  stContext.textContent = 'Contexto: ' + (isSecure()? 'seguro/OK':'não seguro');
-  stCam.textContent = 'Câmera: ' + (vid.videoWidth?'OK':'—');
-}
-async function boot(){
-  try{
-    const ok = await ensurePermission(); if(!ok) return;
-    await enumerateCameras();
-    // Preferir traseira
-    let idx=0; const backIdx=deviceList.findIndex(d=>/back|rear|environment/i.test(d.label)); if(backIdx>=0) idx=backIdx;
-    await startCameraByIndex(idx);
-    updateContextAndStatus();
-    stFolder.textContent = 'Pasta: ' + (dirHandle?'OK':'—');
-    startGPS();
-    await loadKM();
-    await loadIDs();
-  }catch(e){
-    diag('Falha na inicialização', 'bad'); diagAppend(e.message||e);
-  }
-}
-boot();
-setInterval(()=>{ updateKMChip(); }, 600);
-// Habilita ao menos Log/Relatório quando houver 1 foto
-const obs = new MutationObserver(()=>{ if(successCount>0){ btnReport.disabled=false; btnLog.disabled=false; }});
-obs.observe(okCnt,{childList:true});
+/* ================= BOOT ================= */
+(async ()=>{
+  state.textContent='AUTORIZAÇÕES…';
+  dirHandle=await showDirectoryPicker({mode:'readwrite'});
+  await loadKM();
+  await loadIDs();
+  await startCamera();
+  state.textContent='CAPTURANDO';
+})();
 </script>
 </body>
 </html>
