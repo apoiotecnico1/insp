@@ -3,29 +3,53 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inspeção Rodoviária – Seguro</title>
+<title>Inspeção Rodoviária – KM Seguro</title>
 
 <style>
-body{margin:0;background:#000;color:#fff;font-family:system-ui}
-video{width:100vw;height:55vh;object-fit:cover}
-button{
-  font-size:1.2rem;
-  font-weight:900;
-  padding:14px;
-  border-radius:14px;
-  border:none;
+body{
+  margin:0;
+  background:#000;
+  color:#fff;
+  font-family:system-ui,Segoe UI,Arial;
 }
-#panel{display:flex;gap:8px;padding:10px}
-#km{
+
+video{
+  width:100vw;
+  height:55vh;
+  object-fit:cover;
+}
+
+#kmBox{
   position:absolute;
-  bottom:10px;left:10px;
+  bottom:12px;
+  left:12px;
   background:rgba(0,0,0,.7);
-  padding:10px 14px;
+  border:2px solid #b7ffcf;
+  color:#b7ffcf;
+  padding:10px 16px;
   border-radius:10px;
   font-size:1.4rem;
   font-weight:900;
 }
-.thumb img{width:100%}
+
+#controls{
+  display:flex;
+  gap:10px;
+  padding:10px;
+}
+
+button{
+  flex:1;
+  padding:14px;
+  font-size:1.1rem;
+  font-weight:900;
+  border-radius:14px;
+  border:none;
+}
+
+#btnFoto{background:#22c55e;color:#042}
+#btnRel{background:#facc15;color:#221}
+#status{padding:10px;font-weight:700}
 </style>
 </head>
 
@@ -33,105 +57,102 @@ button{
 
 <video id="vid" autoplay playsinline muted></video>
 <canvas id="can" style="display:none"></canvas>
-<div id="km">KM —</div>
 
-<div id="panel">
-<button id="btn">📷 FOTO</button>
-<button id="btnAuto">AUTO</button>
+<div id="kmBox">KM —</div>
+
+<div id="controls">
+  <button id="btnFoto">📷 FOTO</button>
+  <button id="btnRel">📄 GERAR RELATÓRIO</button>
 </div>
 
-<script>
-/* ================= CONFIG VEICULAR ================= */
-const AUTO_BATCH = 50;
-let captureLock = false;
-let lastCaptureTs = 0;
-let batch = [];
-let reportIndex = 1;
+<div id="status">Fotos na sessão: 0</div>
 
-/* ================= CAMERA ================= */
-const vid = document.getElementById('vid');
-const can = document.getElementById('can');
-const ctx = can.getContext('2d');
+<script>
+/* ========= CONFIGURAÇÃO ========= */
+const MAX_FOTOS_LOTE = 50;
+
+/* ========= ESTADO ========= */
+let fotos = [];
+let lock = false;
+let ultimoClique = 0;
+let kmAtual = 'KM —';
+
+/* ========= CAMERA ========= */
+const video = document.getElementById('vid');
+const canvas = document.getElementById('can');
+const ctx = canvas.getContext('2d');
+
 navigator.mediaDevices.getUserMedia({
   video:{facingMode:'environment'},
   audio:false
-}).then(s=>vid.srcObject=s);
+}).then(stream => video.srcObject = stream);
 
-/* ================= GPS + KM ================= */
-let lastPos=null;
-navigator.geolocation.watchPosition(p=>{
-  lastPos = {
-    lat:p.coords.latitude,
-    lon:p.coords.longitude,
-    acc:p.coords.accuracy
-  };
-  const km = Math.floor(Math.random()*300); // substitua pelo CSV real
-  document.getElementById('km').textContent =
-    `KM ${km}+${String(Math.floor(Math.random()*1000)).padStart(3,'0')}`;
-},{},{enableHighAccuracy:true});
+/* ========= GPS + KM (SIMPLIFICADO) ========= */
+/* Aqui já está pronto para ligar no seu CSV real */
+navigator.geolocation.watchPosition(pos=>{
+  // Simulação de KM (substituir pelo nearestKM depois)
+  const km = 120;
+  const m  = Math.floor(Math.random()*1000);
+  kmAtual = `KM ${km}+${String(m).padStart(3,'0')}`;
+  document.getElementById('kmBox').textContent = kmAtual;
+},{
+}, {enableHighAccuracy:true});
 
-/* ================= CAPTURA SEGURA ================= */
-async function capture(){
-  const now = Date.now();
+/* ========= CAPTURA SEGURA ========= */
+function capturar(){
+  const agora = Date.now();
+  if(lock || agora - ultimoClique < 800) return;
 
-  if(captureLock) return;
-  if(now - lastCaptureTs < 700) return; // debounce real
+  lock = true;
+  ultimoClique = agora;
 
-  captureLock = true;
-  lastCaptureTs = now;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
 
-  can.width = vid.videoWidth;
-  can.height = vid.videoHeight;
+  ctx.drawImage(video,0,0);
 
-  ctx.drawImage(vid,0,0);
-
-  /* Overlay KM */
+  // Overlay KM NA FOTO
   ctx.fillStyle='rgba(0,0,0,.65)';
-  ctx.fillRect(0,can.height-80,can.width,80);
+  ctx.fillRect(0, canvas.height-90, canvas.width, 90);
+
   ctx.fillStyle='#b7ffcf';
-  ctx.font='bold 48px system-ui';
-  ctx.fillText(
-    document.getElementById('km').textContent,
-    20,can.height-25
-  );
+  ctx.font='bold 52px system-ui';
+  ctx.fillText(kmAtual, 24, canvas.height-28);
 
-  const data = can.toDataURL('image/jpeg',0.85);
-  batch.push(data);
+  const img = canvas.toDataURL('image/jpeg',0.9);
+  fotos.push(img);
 
-  if(batch.length>=AUTO_BATCH){
-    generateReport();
+  document.getElementById('status').textContent =
+    `Fotos na sessão: ${fotos.length}`;
+
+  // Geração automática a cada 50
+  if(fotos.length >= MAX_FOTOS_LOTE){
+    gerarRelatorio();
   }
 
-  setTimeout(()=>captureLock=false,300);
+  setTimeout(()=>lock=false,300);
 }
 
-/* ================= RELATÓRIO ================= */
-function generateReport(){
-  const blob = new Blob(batch,{type:'application/pdf'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`INSPECAO_${reportIndex}.pdf`;
+/* ========= RELATÓRIO SIMPLES ========= */
+function gerarRelatorio(){
+  if(!fotos.length) return;
+
+  const blob = new Blob(fotos,{type:'application/pdf'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `RELATORIO_INSPECAO_${Date.now()}.pdf`;
   a.click();
   URL.revokeObjectURL(a.href);
 
-  batch.length=0;
-  reportIndex++;
+  fotos.length = 0;
+  document.getElementById('status').textContent = 'Fotos na sessão: 0';
 }
 
-/* ================= AUTO ================= */
-let auto=null;
-btn.onclick=capture;
-btnAuto.onclick=()=>{
-  if(auto){
-    clearInterval(auto);
-    auto=null;
-    btnAuto.textContent='AUTO';
-  }else{
-    auto=setInterval(capture,1200);
-    btnAuto.textContent='STOP';
-  }
-};
+/* ========= BOTÕES ========= */
+btnFoto.onclick = capturar;
+btnRel.onclick = gerarRelatorio;
 </script>
 
 </body>
 </html>
+``
