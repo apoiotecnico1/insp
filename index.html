@@ -1,158 +1,184 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inspeção Rodoviária – KM Seguro</title>
+<title>Relatório Fotográfico – Inspeção</title>
 
 <style>
-body{
-  margin:0;
-  background:#000;
-  color:#fff;
-  font-family:system-ui,Segoe UI,Arial;
-}
-
-video{
-  width:100vw;
-  height:55vh;
-  object-fit:cover;
-}
-
-#kmBox{
-  position:absolute;
-  bottom:12px;
-  left:12px;
-  background:rgba(0,0,0,.7);
-  border:2px solid #b7ffcf;
-  color:#b7ffcf;
-  padding:10px 16px;
-  border-radius:10px;
-  font-size:1.4rem;
+body{margin:0;background:#000;color:#fff;font-family:system-ui}
+video{width:100vw;height:55vh;object-fit:cover}
+#overlay{
+  position:absolute;bottom:10px;left:10px;
+  background:rgba(0,0,0,.65);
+  padding:10px 14px;border-radius:10px;
   font-weight:900;
 }
-
-#controls{
-  display:flex;
-  gap:10px;
-  padding:10px;
-}
-
+#overlay small{display:block;font-size:.75rem;font-weight:600;color:#c7d2fe}
+#controls{display:flex;gap:8px;padding:10px}
 button{
-  flex:1;
-  padding:14px;
-  font-size:1.1rem;
-  font-weight:900;
-  border-radius:14px;
-  border:none;
+  flex:1;padding:14px;font-size:1.1rem;
+  font-weight:900;border:0;border-radius:14px
 }
-
-#btnFoto{background:#22c55e;color:#042}
-#btnRel{background:#facc15;color:#221}
-#status{padding:10px;font-weight:700}
+#fotoBtn{background:#22c55e;color:#052}
+#pdfBtn{background:#facc15;color:#221}
+canvas{display:none}
 </style>
 </head>
 
 <body>
 
 <video id="vid" autoplay playsinline muted></video>
-<canvas id="can" style="display:none"></canvas>
+<canvas id="can"></canvas>
 
-<div id="kmBox">KM —</div>
-
-<div id="controls">
-  <button id="btnFoto">📷 FOTO</button>
-  <button id="btnRel">📄 GERAR RELATÓRIO</button>
+<div id="overlay">
+  <div id="kmTxt">KM —</div>
+  <small id="dtTxt">—</small>
 </div>
 
-<div id="status">Fotos na sessão: 0</div>
+<div id="controls">
+  <button id="fotoBtn">📷 FOTO</button>
+  <button id="pdfBtn">📄 RELATÓRIO</button>
+</div>
 
 <script>
-/* ========= CONFIGURAÇÃO ========= */
-const MAX_FOTOS_LOTE = 50;
+/* ================= DADOS ================= */
+let kmPoints=[], idsData=[];
+let lastPos=null, lastShot=0, lock=false;
+let fotos=[];
 
-/* ========= ESTADO ========= */
-let fotos = [];
-let lock = false;
-let ultimoClique = 0;
-let kmAtual = 'KM —';
+/* ================= UTIL ================= */
+function hav(a,b,c,d){
+  const R=6371000;
+  const x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;
+  const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
+}
+function fmtKm(v){
+  const K=Math.floor(v);
+  let m=Math.round((v-K)*1000);
+  if(m>=1000){m-=1000}
+  return `KM ${K}+${String(m).padStart(3,'0')}`;
+}
 
-/* ========= CAMERA ========= */
-const video = document.getElementById('vid');
-const canvas = document.getElementById('can');
-const ctx = canvas.getContext('2d');
+/* ================= CSV ================= */
+async function loadCSV(url){
+  const t=await fetch(url).then(r=>r.text());
+  return t.split(/\r?\n/).map(l=>l.split(';'));
+}
+async function loadSNV(){
+  const c=await loadCSV('SNVBR116SPRJ.csv');
+  c.forEach(l=>{
+    const km=parseFloat(l[0]), lat=parseFloat(l[1]), lon=parseFloat(l[2]);
+    if(!isNaN(km)&&!isNaN(lat)&&!isNaN(lon))
+      kmPoints.push({km,lat,lon});
+  });
+}
+async function loadIDs(){
+  const c=await loadCSV('Dados_Completos_Grupo_2_all.csv');
+  c.forEach(l=>{
+    const id=l[0], lat=parseFloat(l[1]), lon=parseFloat(l[2]);
+    if(id&&!isNaN(lat)&&!isNaN(lon))
+      idsData.push({id,lat,lon});
+  });
+}
+
+/* ================= CALC ================= */
+function nearestKM(lat,lon){
+  let best=null,bd=Infinity;
+  kmPoints.forEach(p=>{
+    const d=hav(lat,lon,p.lat,p.lon);
+    if(d<bd){bd=d;best=p}
+  });
+  return best;
+}
+function nearestIDs(lat,lon,n=5){
+  return idsData
+    .map(p=>({id:p.id,d:hav(lat,lon,p.lat,p.lon)}))
+    .sort((a,b)=>a.d-b.d)
+    .slice(0,n);
+}
+
+/* ================= CAMERA ================= */
+const vid=document.getElementById('vid');
+const can=document.getElementById('can');
+const ctx=can.getContext('2d');
 
 navigator.mediaDevices.getUserMedia({
-  video:{facingMode:'environment'},
-  audio:false
-}).then(stream => video.srcObject = stream);
+  video:{facingMode:'environment'},audio:false
+}).then(s=>vid.srcObject=s);
 
-/* ========= GPS + KM (SIMPLIFICADO) ========= */
-/* Aqui já está pronto para ligar no seu CSV real */
-navigator.geolocation.watchPosition(pos=>{
-  // Simulação de KM (substituir pelo nearestKM depois)
-  const km = 120;
-  const m  = Math.floor(Math.random()*1000);
-  kmAtual = `KM ${km}+${String(m).padStart(3,'0')}`;
-  document.getElementById('kmBox').textContent = kmAtual;
-},{
-}, {enableHighAccuracy:true});
+/* ================= GPS ================= */
+navigator.geolocation.watchPosition(p=>{
+  lastPos={
+    lat:p.coords.latitude,
+    lon:p.coords.longitude
+  };
+  const kmObj=nearestKM(lastPos.lat,lastPos.lon);
+  if(kmObj) document.getElementById('kmTxt').textContent=fmtKm(kmObj.km);
+  document.getElementById('dtTxt').textContent=new Date().toLocaleString();
+},{},{enableHighAccuracy:true});
 
-/* ========= CAPTURA SEGURA ========= */
+/* ================= CAPTURA ================= */
 function capturar(){
-  const agora = Date.now();
-  if(lock || agora - ultimoClique < 800) return;
+  const now=Date.now();
+  if(lock||now-lastShot<800||!lastPos) return;
+  lock=true; lastShot=now;
 
-  lock = true;
-  ultimoClique = agora;
+  can.width=vid.videoWidth;
+  can.height=vid.videoHeight;
+  ctx.drawImage(vid,0,0);
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  const kmObj=nearestKM(lastPos.lat,lastPos.lon);
+  const kmStr=kmObj?fmtKm(kmObj.km):'KM —';
+  const ids=nearestIDs(lastPos.lat,lastPos.lon,5);
+  const dt=new Date().toLocaleString();
 
-  ctx.drawImage(video,0,0);
-
-  // Overlay KM NA FOTO
+  // Overlay
+  const h=can.height,w=can.width;
   ctx.fillStyle='rgba(0,0,0,.65)';
-  ctx.fillRect(0, canvas.height-90, canvas.width, 90);
+  ctx.fillRect(0,h-120,w,120);
 
   ctx.fillStyle='#b7ffcf';
   ctx.font='bold 52px system-ui';
-  ctx.fillText(kmAtual, 24, canvas.height-28);
+  ctx.fillText(kmStr,20,h-60);
 
-  const img = canvas.toDataURL('image/jpeg',0.9);
-  fotos.push(img);
+  ctx.font='600 22px system-ui';
+  ctx.fillText(dt,20,h-24);
 
-  document.getElementById('status').textContent =
-    `Fotos na sessão: ${fotos.length}`;
+  ctx.font='600 18px system-ui';
+  ctx.textAlign='right';
+  ctx.fillStyle='#d7e5ff';
+  ids.forEach((e,i)=>{
+    ctx.fillText(e.id,w-20,h-100+i*18);
+  });
+  ctx.textAlign='left';
 
-  // Geração automática a cada 50
-  if(fotos.length >= MAX_FOTOS_LOTE){
-    gerarRelatorio();
-  }
-
+  fotos.push(can.toDataURL('image/jpeg',0.9));
   setTimeout(()=>lock=false,300);
 }
 
-/* ========= RELATÓRIO SIMPLES ========= */
-function gerarRelatorio(){
+/* ================= PDF ================= */
+function gerarPDF(){
   if(!fotos.length) return;
-
-  const blob = new Blob(fotos,{type:'application/pdf'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `RELATORIO_INSPECAO_${Date.now()}.pdf`;
+  const b=new Blob(fotos,{type:'application/pdf'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b);
+  a.download='RELATORIO_FOTOGRAFICO_INSPECAO.pdf';
   a.click();
   URL.revokeObjectURL(a.href);
-
-  fotos.length = 0;
-  document.getElementById('status').textContent = 'Fotos na sessão: 0';
+  fotos.length=0;
 }
 
-/* ========= BOTÕES ========= */
-btnFoto.onclick = capturar;
-btnRel.onclick = gerarRelatorio;
+/* ================= START ================= */
+fotoBtn.onclick=capturar;
+pdfBtn.onclick=gerarPDF;
+
+(async()=>{
+  await loadSNV();
+  await loadIDs();
+})();
 </script>
 
 </body>
 </html>
-``
