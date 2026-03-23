@@ -1,128 +1,140 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#0b7a39">
-<title>Inspeção – Modo Painel (KM + ID + Captura 0,5s)</title>
+<meta charset="utf-8" />
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#0b7a39" />
+<title>Inspeção – Painel (KM + 5 IDs opcionais)</title>
 <style>
-  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial}
-  video{position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
-  /* Placa KM (verde) */
+  html,body{
+    margin:0; height:100%; background:#000; overflow:hidden;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial
+  }
+  video{
+    position:fixed; inset:0; width:100%; height:100%; object-fit:contain; background:#000;
+  }
+  /* Placa KM verde */
   #kmBox{
     position:fixed; top:14px; left:50%; transform:translateX(-50%);
-    background:linear-gradient(180deg,#0b7a39,#085e2c); color:#fff;
-    padding:10px 18px; border-radius:14px; border:4px solid #e6f0ea;
+    background:linear-gradient(180deg,#0b7a39,#085e2c);
+    color:#fff; padding:10px 18px; border-radius:14px; border:4px solid #e6f0ea;
     font-size:1.25rem; font-weight:1000; text-shadow:0 1px 0 rgba(0,0,0,.4);
-    box-shadow:0 10px 22px rgba(0,0,0,.45), inset 0 0 0 2px rgba(255,255,255,.6);
+    box-shadow:0 10px 22px rgba(0,0,0,.45), inset 0 0 0 2px rgba(255,255,255,.6)
   }
-  /* ID chip */
-  #idBox{
-    position:fixed; top:78px; left:50%; transform:translateX(-50%);
-    background:rgba(0,0,0,.55); color:#eafff5; padding:6px 14px; border-radius:12px;
-    font-size:1rem; font-weight:900; box-shadow:0 8px 18px rgba(0,0,0,.35)
-  }
-  /* Estado (discreto) */
+  /* Estado discreto */
   #state{
     position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
     background:rgba(0,0,0,.6); color:#fff; padding:6px 14px; border-radius:10px;
     font-size:.9rem; letter-spacing:.02em
   }
-  /* Overlay de início (tela única) */
+  /* Overlay inicial */
   #startOverlay{
     position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column;
-    background:linear-gradient(180deg, rgba(0,0,0,.82), rgba(0,0,0,.78)); color:#eaf2ff; text-align:center; gap:10px;
-    padding:22px;
+    background:linear-gradient(180deg, rgba(0,0,0,.82), rgba(0,0,0,.78));
+    color:#eaf2ff; gap:10px; padding:22px; text-align:center
   }
   #startOverlay h2{margin:0 0 6px; font-size:1.14rem}
-  #startOverlay p{margin:0; opacity:.9}
-  #startOverlay .tapHint{margin-top:10px; background:#0b7a39; color:#03150b; font-weight:900; padding:10px 14px; border-radius:12px; border:2px solid #0caa52}
+  #startOverlay p{margin:0; opacity:.92}
+  #btnStart{
+    margin-top:10px; min-width:220px; height:56px; padding:0 18px; border-radius:14px; border:2px solid #0caa52;
+    background:linear-gradient(180deg,#35eb85,#22c55e); color:#062a1a; font-weight:1000; font-size:1.02rem; cursor:pointer
+  }
+  #btnStart:active{ transform:translateY(1px) }
   /* Toast */
-  #toast{position:fixed; left:50%; bottom:16px; transform:translateX(-50%); display:none;
-         background:rgba(0,0,0,.75); color:#fff; border:1px solid rgba(255,255,255,.18);
-         padding:8px 12px; border-radius:10px; font-size:.92rem}
+  #toast{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%); display:none;
+    background:rgba(0,0,0,.75); color:#fff; border:1px solid rgba(255,255,255,.18);
+    padding:8px 12px; border-radius:10px; font-size:.92rem
+  }
 </style>
 </head>
 <body>
 
 <video id="vid" autoplay playsinline muted></video>
 <div id="kmBox">KM —</div>
-<div id="idBox">ID —</div>
-<div id="state">TOQUE PARA INICIAR</div>
+<div id="state">Toque em “INICIAR”</div>
 
-<!-- Overlay de início: toda a tela é o "gesto" necessário -->
+<!-- Tela inicial (um único botão) -->
 <div id="startOverlay">
   <h2>Inspeção – Modo Painel</h2>
-  <p>Coloque o celular no painel. Este modo tira <b>1 foto a cada 0,5s</b> com <b>KM + ID + data/hora + GPS</b>.</p>
-  <p>Requisitos: <b>HTTPS</b>, autorizar <b>Câmera</b>, <b>Localização</b> e escolher a <b>Pasta</b> de saída.</p>
-  <div class="tapHint">👉 Toque em qualquer lugar para iniciar</div>
-  <p style="opacity:.75">Dica: toque longo (2s) para Pausar/Retomar.</p>
+  <p>Captura <b>1 foto a cada 0,5 s</b>, com <b>KM</b> e, se disponível, os <b>5 IDs mais próximos</b> (opcional), além de <b>data/hora</b> e <b>GPS</b>.</p>
+  <p>Requisitos: <b>HTTPS</b>, autorizar <b>Câmera</b>, <b>Localização</b> e escolher a <b>Pasta</b>.</p>
+  <button id="btnStart">▶ INICIAR</button>
+  <p style="opacity:.75">Dica: toque longo (2s) para Pausar/Retomar durante a inspeção.</p>
 </div>
 
 <div id="toast"></div>
 
 <script>
-/* ================== CONFIG ================== */
+/* ============== CONFIG ============== */
 const INTERVAL_MS = 500;      // 0,5 s por foto
-const MAX_DIM = 1600;         // downscale para estabilidade/desempenho
-const JPEG_Q = 0.88;          // qualidade leve/boa
-const MIN_JPEG_BYTES = 1024;  // proteção anti 0 KB
-/* ============================================ */
+const MAX_DIM = 1600;         // downscale p/ estabilidade
+const JPEG_Q  = 0.88;         // qualidade leve e boa
+const MIN_JPEG_BYTES = 1024;  // anti 0 KB
+/* =================================== */
 
-/* ================== REFS/ESTADO ============= */
+/* ============== REFS/STATE ============== */
 const vid = document.getElementById('vid');
 const kmBox = document.getElementById('kmBox');
-const idBox = document.getElementById('idBox');
 const stateEl = document.getElementById('state');
 const startOverlay = document.getElementById('startOverlay');
+const btnStart = document.getElementById('btnStart');
 const toast = document.getElementById('toast');
 
-let dirHandle = null;
-let running = false;
-let busy = false;
-let lastPos = null;
+let dirHandle=null;
+let running=false;
+let busy=false;
+let lastPos=null;
 
-let kmPoints = [];    // {km,lat,lon}
-let ids = [];         // {id,lat,lon}
-let currentKMStr = 'KM —';
-let currentIDStr = '—';
+let kmPoints=[];   // {km,lat,lon}
+let ids=[];        // {id,lat,lon} [opcional]
+let currentKMStr='KM —';
+let currentTop5 = []; // [{id, d}, ...] (opcional)
 
-const can = document.createElement('canvas');
-const ctx = can.getContext('2d',{alpha:false});
+const can=document.createElement('canvas');
+const ctx=can.getContext('2d',{alpha:false});
 
-/* ================== UTILS ==================== */
-function showToast(msg, ms=1200){ toast.textContent = msg; toast.style.display='block'; clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.style.display='none',ms); }
+/* ============== UTILS ============== */
+function showToast(msg, ms=1200){ toast.textContent=msg; toast.style.display='block'; clearTimeout(showToast.t); showToast.t=setTimeout(()=>toast.style.display='none',ms); }
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
 function fmtKm(v){ if(!Number.isFinite(v)) return 'KM —'; let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
 function safe(s){ return String(s||'').replace(/[^\w\-+.]/g,'_'); }
-const z2 = v => String(v).padStart(2,'0');
+const z2=v=>String(v).padStart(2,'0');
 function stamp(){ const d=new Date(); return `${d.getFullYear()}-${z2(d.getMonth()+1)}-${z2(d.getDate())}_${z2(d.getHours())}-${z2(d.getMinutes())}-${z2(d.getSeconds())}`; }
 
-/* ================== PERMISSÕES (gesto) ======= */
-async function pickFolder(){ try{ dirHandle = await window.showDirectoryPicker({mode:'readwrite'}); showToast('Pasta OK'); }catch{ showToast('Precisa escolher a pasta'); throw new Error('no-folder'); } }
+/* ============== PERMISSÕES/INÍCIO ============== */
+async function pickFolder(){
+  try{
+    dirHandle = await window.showDirectoryPicker({mode:'readwrite'});
+  }catch{
+    showToast('É necessário escolher a pasta');
+    throw new Error('no-folder');
+  }
+}
 async function startCamera(){
   const s = await navigator.mediaDevices.getUserMedia({
     video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30}},
     audio:false
   });
-  vid.srcObject = s;
+  vid.srcObject=s;
   await new Promise(r=>{ if(vid.readyState>=1&&vid.videoWidth) r(); else vid.onloadedmetadata=r; });
 }
 function startGPS(){
   return new Promise((resolve)=>{
     if(!('geolocation' in navigator)) return resolve();
     navigator.geolocation.getCurrentPosition(p=>{
-      lastPos={ lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy };
+      lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
       resolve();
       navigator.geolocation.watchPosition(pp=>{
-        lastPos={ lat:pp.coords.latitude, lon:pp.coords.longitude, acc:pp.coords.accuracy };
-      }, ()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
-    }, ()=>resolve(), {enableHighAccuracy:true, timeout:10000});
+        lastPos={lat:pp.coords.latitude, lon:pp.coords.longitude, acc:pp.coords.accuracy};
+      },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
+    },()=>resolve(), {enableHighAccuracy:true, timeout:10000});
   });
 }
 
-/* ================== CSVs ===================== */
+/* ============== CSVs ============== */
 async function loadKM(){
   try{
     const txt = await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
@@ -131,68 +143,84 @@ async function loadKM(){
       const c=l.split(';'); const km=parsePt(c[0]), lat=parsePt(c[1]), lon=parsePt(c[2]);
       if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)) kmPoints.push({km,lat,lon});
     });
-  }catch{ /* segue sem KM */ }
+  }catch{/* sem KM, segue */}
 }
 async function loadIDs(){
   try{
-    let f = await fetch('./dados.csv',{cache:'no-store'});
-    if(!f.ok) f = await fetch('./Dados_Completos_Grupo_2_all.csv',{cache:'no-store'});
-    const txt = await f.text();
-    const lines = txt.split(/\r?\n/).filter(Boolean);
-    const head = lines.shift().split(';').map(h=>h.toLowerCase());
+    let f=await fetch('./dados.csv',{cache:'no-store'});
+    if(!f.ok) f=await fetch('./Dados_Completos_Grupo_2_all.csv',{cache:'no-store'});
+    const txt=await f.text();
+    const lines=txt.split(/\r?\n/).filter(Boolean);
+    const head=lines.shift().split(';').map(h=>h.toLowerCase());
     const iId = head.findIndex(h=>h.includes('id'));
-    const iLat = head.findIndex(h=>h.includes('lat'));
-    const iLon = head.findIndex(h=>h.includes('lon'));
+    const iLat= head.findIndex(h=>h.includes('lat'));
+    const iLon= head.findIndex(h=>h.includes('lon'));
     ids.length=0;
     lines.forEach(l=>{
       const c=l.split(';'); const id=String(c[iId]||'').trim(); const lat=parsePt(c[iLat]), lon=parsePt(c[iLon]);
       if(id && Number.isFinite(lat) && Number.isFinite(lon)) ids.push({id,lat,lon});
     });
-  }catch{ /* segue sem IDs */ }
+  }catch{/* IDs opcionais */}
 }
 
-/* ================== KM/ID ao vivo =========== */
-function updateKMID(){
+/* ============== KM + TOP5 (tempo real) ============== */
+function updateKMandTop5(){
   // KM
   if(lastPos && kmPoints.length){
     let b=null, bd=Infinity;
     for(const p of kmPoints){ const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon); if(d<bd){bd=d;b=p;} }
-    currentKMStr = b? fmtKm(b.km): 'KM —';
-  }else currentKMStr = 'KM —';
-  kmBox.textContent = currentKMStr;
+    currentKMStr = b? fmtKm(b.km) : 'KM —';
+  }else currentKMStr='KM —';
+  kmBox.textContent=currentKMStr;
 
-  // ID
+  // Top 5 IDs (opcional)
   if(lastPos && ids.length){
-    let b=null, bd=Infinity;
-    for(const p of ids){ const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon); if(d<bd){bd=d;b=p;} }
-    currentIDStr = b? String(b.id): '—';
-  }else currentIDStr = '—';
-  idBox.textContent = `ID ${currentIDStr}`;
+    const arr = ids.map(p=>({id:p.id, d:hav(lastPos.lat,lastPos.lon,p.lat,p.lon)}));
+    arr.sort((a,b)=>a.d-b.d);
+    currentTop5 = arr.slice(0, Math.min(5, arr.length));
+  }else{
+    currentTop5 = [];
+  }
 }
-setInterval(updateKMID, 500);
+setInterval(updateKMandTop5, 500);
 
-/* ================== CARIMBO ================== */
+/* ============== CARIMBO GRANDE (KM + 5 IDs) ============== */
 function drawOverlay(g,w,h){
-  const bandH=Math.max(60, Math.round(h*0.12));
-  g.fillStyle='rgba(0,0,0,.56)'; g.fillRect(0,h-bandH,w,bandH);
+  const bandH = Math.max(120, Math.round(h*0.16));
+  g.fillStyle='rgba(0,0,0,.60)'; g.fillRect(0,h-bandH,w,bandH);
 
-  // KM (grande)
-  g.fillStyle='#b7ffcf'; g.textAlign='left'; g.font=`900 ${Math.round(h*0.045)}px system-ui`;
-  g.fillText(currentKMStr, 12, h-bandH+Math.round(bandH*0.58));
+  // KM grande (esquerda)
+  g.fillStyle='#b7ffcf'; g.textAlign='left'; g.font=`900 ${Math.round(h*0.055)}px system-ui`;
+  g.fillText(currentKMStr, 18, h-bandH+Math.round(bandH*0.58));
 
-  // ID + Hora
-  g.fillStyle='#eaf2ff'; g.textAlign='left'; g.font=`700 ${Math.round(h*0.03)}px system-ui`;
-  const ts=`${z2(new Date().getHours())}:${z2(new Date().getMinutes())}:${z2(new Date().getSeconds())}`;
-  g.fillText(`ID: ${currentIDStr} • ${ts}`, 12, h-16);
+  // IDs (direita), opcionais
+  if(currentTop5.length){
+    g.textAlign='right';
+    g.fillStyle='#eaf2ff';
+    const fs = Math.round(h*0.034); // tamanho bom e legível
+    g.font = `800 ${fs}px system-ui`;
+    const baseY = h-bandH+fs+6;
+    currentTop5.forEach((e,i)=>{
+      g.fillText(`${i+1}) ${e.id}`, w-18, baseY + i*(fs+6));
+    });
+  }
 
-  // GPS (se disponível)
+  // Hora + GPS
+  const ts = `${z2(new Date().getHours())}:${z2(new Date().getMinutes())}:${z2(new Date().getSeconds())}`;
+  g.textAlign='left';
+  g.fillStyle='#fff';
+  g.font = `700 ${Math.round(h*0.028)}px system-ui`;
+  g.fillText(ts, 18, h-14);
+
   if(lastPos){
-    g.fillStyle='#cfe7ff'; g.textAlign='left'; g.font=`600 ${Math.round(h*0.028)}px system-ui`;
-    g.fillText(`${lastPos.lat?.toFixed(6)}, ${lastPos.lon?.toFixed(6)}  ±${Math.round(lastPos.acc||0)}m`, 12, h-bandH+24);
+    g.fillStyle='#cfe7ff';
+    g.font = `600 ${Math.round(h*0.026)}px system-ui`;
+    g.fillText(`${lastPos.lat?.toFixed(6)}, ${lastPos.lon?.toFixed(6)}  ±${Math.round(lastPos.acc||0)}m`,
+               18, h-bandH+28);
   }
 }
 
-/* ================== CAPTURA ================== */
+/* ============== CAPTURA/GRAVAÇÃO (à prova de 0 KB) ============== */
 async function tryMakeJpegBlob(canvas,q=JPEG_Q){
   let b=await new Promise(res=>canvas.toBlob(res,'image/jpeg',q));
   if(b && b.size>=MIN_JPEG_BYTES) return b;
@@ -212,7 +240,7 @@ async function safeWriteFile(fh, payload){
 }
 async function captureOnce(){
   if(busy || !running || !dirHandle) return;
-  busy = true;
+  busy=true;
   try{
     const vw=vid.videoWidth, vh=vid.videoHeight;
     if(!vw||!vh) return;
@@ -220,29 +248,29 @@ async function captureOnce(){
     const w=Math.round(vw*sc), h=Math.round(vh*sc);
     can.width=w; can.height=h;
     ctx.clearRect(0,0,w,h);
-    ctx.drawImage(vid,0,0,w,h);
-    drawOverlay(ctx,w,h);
+    ctx.drawImage(vid,0,0,w,h);          // frame
+    drawOverlay(ctx,w,h);                 // carimbo
 
+    // gera JPEG (2 tentativas) ou dataURL fallback
     let blob = await tryMakeJpegBlob(can, JPEG_Q);
     if(!blob){
-      // fallback dataURL->u8
       const dataURL = can.toDataURL('image/jpeg', Math.max(0.7, JPEG_Q-0.1));
-      const b64=dataURL.split(',')[1]; const bin=atob(b64); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+      const b64=dataURL.split(',')[1]; const bin=atob(b64);
+      const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
       blob = new Blob([u8], {type:'image/jpeg'});
     }
     if(!blob || !blob.size) return;
 
     const kmPart = safe((currentKMStr||'KM').replace('KM ','').replace('+','_'));
-    const idPart = safe(currentIDStr||'ID');
-    const name = `FOTO_KM_${kmPart}_ID_${idPart}_${stamp()}.jpg`;
-
+    const name = `FOTO_KM_${kmPart}_${stamp()}.jpg`;
     const fh = await dirHandle.getFileHandle(name,{create:true});
     try{
       await safeWriteFile(fh, blob);
     }catch(e){
-      // 2ª tentativa com dataURL cru
+      // 2ª via: dataURL puro
       const dataURL = can.toDataURL('image/jpeg', Math.max(0.7, JPEG_Q-0.1));
-      const b64=dataURL.split(',')[1]; const bin=atob(b64); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+      const b64=dataURL.split(',')[1]; const bin=atob(b64);
+      const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
       await safeWriteFile(fh, u8);
     }
   }catch(e){
@@ -253,32 +281,31 @@ async function captureOnce(){
 }
 setInterval(captureOnce, INTERVAL_MS);
 
-/* ========== CONTROLES INVISÍVEIS ============ */
-// Toque longo (2s) para Pausar/Retomar
+/* ============== CONTROLES INVISÍVEIS (pausa/retoma) ============== */
 let tStart=0;
 document.addEventListener('touchstart', ()=> tStart=Date.now(), {passive:true});
 document.addEventListener('touchend', ()=>{
-  if(Date.now()-tStart>2000){
+  if(Date.now()-tStart>2000){ // 2s
     running = !running;
     stateEl.textContent = running ? 'CAPTURANDO (toque longo para pausar)' : 'PAUSADO (toque longo para retomar)';
     showToast(running?'Captura retomada':'Captura pausada', 900);
   }
-}, {passive:true});
+},{passive:true});
 
-// 1º Toque para iniciar (precisa gesto do usuário)
+/* ============== BOOT COM BOTÃO ÚNICO ============== */
 async function startAll(){
   try{
-    stateEl.textContent='INICIANDO…';
-    await pickFolder();        // precisa de gesto
-    await startCamera();       // gesto ajuda em permissões
-    await startGPS();          // idem
+    stateEl.textContent='Inicializando…';
+    await pickFolder();           // gesto do usuário
+    await startCamera();          // gesto ajuda nas permissões
+    await startGPS();
     await Promise.all([loadKM(), loadIDs()]);
     startOverlay.style.display='none';
-    running = true;
-    stateEl.textContent = 'CAPTURANDO (toque longo para pausar)';
+    running=true;
+    stateEl.textContent='CAPTURANDO (toque longo para pausar)';
     showToast('OK – Capturando a cada 0,5 s', 1400);
 
-    // Wake Lock (se disponível) – mantém a tela ligada
+    // Evita apagar a tela (quando suportado)
     if('wakeLock' in navigator){
       try{ await navigator.wakeLock.request('screen'); }catch{}
     }
@@ -287,7 +314,7 @@ async function startAll(){
     showToast('Não foi possível iniciar');
   }
 }
-startOverlay.addEventListener('click', startAll);
+btnStart.addEventListener('click', startAll);
 </script>
 </body>
 </html>
