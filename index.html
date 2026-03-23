@@ -5,34 +5,58 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0b7a39" />
-<title>Inspeção – Painel (KM + 5 IDs opcionais)</title>
+<title>Inspeção – KM + 5 IDs (opcional) + PDF + WhatsApp</title>
 <style>
-  html,body{
-    margin:0; height:100%; background:#000; overflow:hidden;
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial
+  :root{
+    --green:#0b7a39; --green2:#085e2c; --fg:#eaf2ff; --border:#e6f0ea;
+    --btn:#22c55e; --btn2:#35eb85; --bad:#ef4444; --muted:#a8b7d6;
   }
-  video{
-    position:fixed; inset:0; width:100%; height:100%; object-fit:contain; background:#000;
-  }
-  /* Placa KM verde */
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial}
+  video{position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+
+  /* KM placa */
   #kmBox{
     position:fixed; top:14px; left:50%; transform:translateX(-50%);
-    background:linear-gradient(180deg,#0b7a39,#085e2c);
-    color:#fff; padding:10px 18px; border-radius:14px; border:4px solid #e6f0ea;
+    background:linear-gradient(180deg,var(--green),var(--green2)); color:#fff;
+    padding:10px 18px; border-radius:14px; border:4px solid var(--border);
     font-size:1.25rem; font-weight:1000; text-shadow:0 1px 0 rgba(0,0,0,.4);
-    box-shadow:0 10px 22px rgba(0,0,0,.45), inset 0 0 0 2px rgba(255,255,255,.6)
+    box-shadow:0 10px 22px rgba(0,0,0,.45), inset 0 0 0 2px rgba(255,255,255,.6);
+    z-index:3;
   }
+
+  /* Barra inferior (botões) */
+  #bar{
+    position:fixed; bottom:10px; left:50%; transform:translateX(-50%);
+    display:flex; gap:10px; align-items:center; z-index:3;
+    background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.12);
+    padding:8px; border-radius:14px; backdrop-filter: blur(6px);
+  }
+  .btn{
+    height:54px; min-width:160px; padding:0 18px; border-radius:12px; border:1px solid rgba(255,255,255,.18);
+    font-weight:1000; font-size:1rem; cursor:pointer; color:#062a1a;
+    background:linear-gradient(180deg,var(--btn2),var(--btn));
+  }
+  .btn.stop{ background:linear-gradient(180deg,#f2544b,#cc3e36); color:#fff }
+  .chip{display:inline-flex; align-items:center; gap:8px; color:#fff; background:rgba(0,0,0,.45);
+        border:1px solid rgba(255,255,255,.14); padding:8px 10px; border-radius:12px; font-weight:800}
+  .chip input{width:88px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.18);
+              background:#0d1731;color:#eaf2ff;padding:0 8px;font-weight:900}
+  .chip select{height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.18);
+               background:#0d1731;color:#eaf2ff;padding:0 8px;font-weight:900}
+  .icon{width:20px;height:20px;display:inline-block}
+
   /* Estado discreto */
   #state{
-    position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
+    position:fixed; bottom:78px; left:50%; transform:translateX(-50%);
     background:rgba(0,0,0,.6); color:#fff; padding:6px 14px; border-radius:10px;
-    font-size:.9rem; letter-spacing:.02em
+    font-size:.9rem; letter-spacing:.02em; z-index:2
   }
+
   /* Overlay inicial */
   #startOverlay{
     position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column;
-    background:linear-gradient(180deg, rgba(0,0,0,.82), rgba(0,0,0,.78));
-    color:#eaf2ff; gap:10px; padding:22px; text-align:center
+    background:linear-gradient(180deg, rgba(0,0,0,.82), rgba(0,0,0,.78)); color:var(--fg); gap:10px; padding:22px; text-align:center; z-index:4
   }
   #startOverlay h2{margin:0 0 6px; font-size:1.14rem}
   #startOverlay p{margin:0; opacity:.92}
@@ -41,37 +65,79 @@
     background:linear-gradient(180deg,#35eb85,#22c55e); color:#062a1a; font-weight:1000; font-size:1.02rem; cursor:pointer
   }
   #btnStart:active{ transform:translateY(1px) }
+
   /* Toast */
   #toast{
     position:fixed; left:50%; bottom:16px; transform:translateX(-50%); display:none;
     background:rgba(0,0,0,.75); color:#fff; border:1px solid rgba(255,255,255,.18);
-    padding:8px 12px; border-radius:10px; font-size:.92rem
+    padding:8px 12px; border-radius:10px; font-size:.92rem; z-index:5
+  }
+
+  @media (max-width:480px){
+    .btn{min-width:140px;font-size:.95rem}
+    .chip input{width:76px}
   }
 </style>
 </head>
 <body>
 
 <video id="vid" autoplay playsinline muted></video>
+
 <div id="kmBox">KM —</div>
+
 <div id="state">Toque em “INICIAR”</div>
 
-<!-- Tela inicial (um único botão) -->
-<div id="startOverlay">
-  <h2>Inspeção – Modo Painel</h2>
-  <p>Captura <b>1 foto a cada 0,5 s</b>, com <b>KM</b> e, se disponível, os <b>5 IDs mais próximos</b> (opcional), além de <b>data/hora</b> e <b>GPS</b>.</p>
-  <p>Requisitos: <b>HTTPS</b>, autorizar <b>Câmera</b>, <b>Localização</b> e escolher a <b>Pasta</b>.</p>
-  <button id="btnStart">▶ INICIAR</button>
-  <p style="opacity:.75">Dica: toque longo (2s) para Pausar/Retomar durante a inspeção.</p>
+<!-- Barra inferior -->
+<div id="bar" role="toolbar" aria-label="Controles">
+  <button id="btnStartStop" class="btn">▶ INICIAR</button>
+
+  <div class="chip">
+    ⏱ Intervalo:
+    <input id="intervalMs" type="number" min="100" step="50" value="500" aria-label="Intervalo em milissegundos">
+    <select id="preset" aria-label="Presets de intervalo">
+      <option value="100">0,10 s</option>
+      <option value="200">0,20 s</option>
+      <option value="300">0,30 s</option>
+      <option value="500" selected>0,50 s</option>
+      <option value="700">0,70 s</option>
+      <option value="1000">1,0 s</option>
+      <option value="1500">1,5 s</option>
+    </select>
+  </div>
+
+  <button id="btnPDF" class="chip" title="Gerar relatório PDF">
+    📄 <span>PDF</span>
+  </button>
+
+  <button id="btnWhats" class="chip" title="Enviar pelo WhatsApp">
+    <!-- Ícone WhatsApp (SVG) -->
+    <svg class="icon" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <path fill="#25D366" d="M27.8 4.2A15.9 15.9 0 0 0 16 0C7.2 0 0 7.2 0 16c0 2.8.7 5.5 2 7.9L0 32l8.3-2.2A15.9 15.9 0 0 0 16 32c8.8 0 16-7.2 16-16 0-4.3-1.7-8.3-4.2-11.8z"/>
+      <path fill="#fff" d="M25.6 22.9c-.4 1-2.3 1.9-3.2 2-0.9.1-1.9.3-6.4-1.3-5.4-1.9-8.9-7.7-9.2-8.1-.3-.4-2.2-2.9-2.2-5.5s1.4-3.9 2-4.4c.5-.5 1.2-.7 1.6-.7.4 0 .8 0 1.2.1.4.1.9-.1 1.4 1.1.5 1.2 1.7 4 1.8 4.3.1.3.1.6 0 .8-.1.3-.2.5-.4.8l-.6.9c-.2.3-.5.6-.2 1.2.3.5 1.4 2.4 3.1 3.8 2.1 1.9 3.8 2.5 4.3 2.8.5.2 1 .2 1.4-.1.4-.3 1.9-2.3 2.4-3.1.5-.8 1-0.7 1.6-.5.6.2 3.8 1.8 4.4 2.1.6.3 1 0 1.2.2.2.1.2 1.1-.2 2.1z"/>
+    </svg>
+    <span>WhatsApp</span>
+  </button>
 </div>
 
-<div id="toast"></div>
+<!-- Overlay inicial (um único botão) -->
+<div id="startOverlay">
+  <h2>Inspeção – Modo Painel</h2>
+  <p>Captura <b>1 foto a cada 0,5 s</b> (ajustável), carimba <b>KM</b> e, se disponível, os <b>5 IDs mais próximos</b>, além de <b>data/hora</b> e <b>GPS</b>.</p>
+  <p>Requisitos: <b>HTTPS</b>, autorizar <b>Câmera</b> e <b>Localização</b>, e escolher a <b>Pasta</b>.</p>
+  <button id="btnStart">▶ INICIAR</button>
+  <p style="opacity:.75">Dica: toque longo (2s) na tela para pausar/retomar durante a viagem.</p>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ============== CONFIG ============== */
-const INTERVAL_MS = 500;      // 0,5 s por foto
-const MAX_DIM = 1600;         // downscale p/ estabilidade
-const JPEG_Q  = 0.88;         // qualidade leve e boa
-const MIN_JPEG_BYTES = 1024;  // anti 0 KB
+const MIN_INTERVAL_MS = 100;
+const DEFAULT_INTERVAL_MS = 500;
+const MAX_DIM = 1600;
+const JPEG_Q = 0.88;
+const MIN_JPEG_BYTES = 1024;
+const REPORT_MAX_PAGES = 600;
 /* =================================== */
 
 /* ============== REFS/STATE ============== */
@@ -79,7 +145,12 @@ const vid = document.getElementById('vid');
 const kmBox = document.getElementById('kmBox');
 const stateEl = document.getElementById('state');
 const startOverlay = document.getElementById('startOverlay');
-const btnStart = document.getElementById('btnStart');
+const btnStartOverlay = document.getElementById('btnStart');
+const btnStartStop = document.getElementById('btnStartStop');
+const btnPDF = document.getElementById('btnPDF');
+const btnWhats = document.getElementById('btnWhats');
+const intervalMsInput = document.getElementById('intervalMs');
+const presetSel = document.getElementById('preset');
 const toast = document.getElementById('toast');
 
 let dirHandle=null;
@@ -87,10 +158,14 @@ let running=false;
 let busy=false;
 let lastPos=null;
 
-let kmPoints=[];   // {km,lat,lon}
-let ids=[];        // {id,lat,lon} [opcional]
+let kmPoints=[];           // {km,lat,lon}
+let ids=[];                // {id,lat,lon} (opcional)
 let currentKMStr='KM —';
-let currentTop5 = []; // [{id, d}, ...] (opcional)
+let currentTop5=[];        // [{id,d},...]
+
+let sessionStart = null;
+let sessionPhotos = [];    // nomes dos arquivos salvos (ordem de captura)
+let reportFiles = [];      // nomes dos PDFs gerados nesta sessão
 
 const can=document.createElement('canvas');
 const ctx=can.getContext('2d',{alpha:false});
@@ -100,22 +175,27 @@ function showToast(msg, ms=1200){ toast.textContent=msg; toast.style.display='bl
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
 function fmtKm(v){ if(!Number.isFinite(v)) return 'KM —'; let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
-function safe(s){ return String(s||'').replace(/[^\w\-+.]/g,'_'); }
-const z2=v=>String(v).padStart(2,'0');
-function stamp(){ const d=new Date(); return `${d.getFullYear()}-${z2(d.getMonth()+1)}-${z2(d.getDate())}_${z2(d.getHours())}-${z2(d.getMinutes())}-${z2(d.getSeconds())}`; }
+const z2 = v => String(v).padStart(2,'0');
+function stampNow(){ const d=new Date(); return `${d.getFullYear()}-${z2(d.getMonth()+1)}-${z2(d.getDate())}_${z2(d.getHours())}-${z2(d.getMinutes())}-${z2(d.getSeconds())}`; }
+function clampInterval(){
+  let v = Number(intervalMsInput.value || DEFAULT_INTERVAL_MS);
+  if(!Number.isFinite(v) || v < MIN_INTERVAL_MS) v = MIN_INTERVAL_MS;
+  intervalMsInput.value = String(v);
+  const match=[...presetSel.options].find(o=>Number(o.value)===v);
+  if(match) presetSel.value=String(v);
+  return v;
+}
 
 /* ============== PERMISSÕES/INÍCIO ============== */
 async function pickFolder(){
   try{
     dirHandle = await window.showDirectoryPicker({mode:'readwrite'});
-  }catch{
-    showToast('É necessário escolher a pasta');
-    throw new Error('no-folder');
-  }
+    showToast('Pasta OK',900);
+  }catch{ showToast('É necessário escolher a pasta'); throw new Error('no-folder'); }
 }
 async function startCamera(){
-  const s = await navigator.mediaDevices.getUserMedia({
-    video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30}},
+  const s=await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:30,max:30}},
     audio:false
   });
   vid.srcObject=s;
@@ -123,7 +203,7 @@ async function startCamera(){
 }
 function startGPS(){
   return new Promise((resolve)=>{
-    if(!('geolocation' in navigator)) return resolve();
+    if(!('geolocation' in navigator)){ resolve(); return; }
     navigator.geolocation.getCurrentPosition(p=>{
       lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
       resolve();
@@ -137,13 +217,15 @@ function startGPS(){
 /* ============== CSVs ============== */
 async function loadKM(){
   try{
-    const txt = await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
+    const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
     kmPoints.length=0;
     txt.split(/\r?\n/).forEach(l=>{
-      const c=l.split(';'); const km=parsePt(c[0]), lat=parsePt(c[1]), lon=parsePt(c[2]);
+      const c=l.split(';');
+      // Formato legado (0,1,2)
+      const km=parsePt(c[0]), lat=parsePt(c[1]), lon=parsePt(c[2]);
       if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)) kmPoints.push({km,lat,lon});
     });
-  }catch{/* sem KM, segue */}
+  }catch{}
 }
 async function loadIDs(){
   try{
@@ -152,75 +234,66 @@ async function loadIDs(){
     const txt=await f.text();
     const lines=txt.split(/\r?\n/).filter(Boolean);
     const head=lines.shift().split(';').map(h=>h.toLowerCase());
-    const iId = head.findIndex(h=>h.includes('id'));
-    const iLat= head.findIndex(h=>h.includes('lat'));
-    const iLon= head.findIndex(h=>h.includes('lon'));
+    const iId=head.findIndex(h=>h.includes('id'));
+    const iLat=head.findIndex(h=>h.includes('lat'));
+    const iLon=head.findIndex(h=>h.includes('lon'));
     ids.length=0;
     lines.forEach(l=>{
       const c=l.split(';'); const id=String(c[iId]||'').trim(); const lat=parsePt(c[iLat]), lon=parsePt(c[iLon]);
-      if(id && Number.isFinite(lat) && Number.isFinite(lon)) ids.push({id,lat,lon});
+      if(id && Number.isFinite(lat)&&Number.isFinite(lon)) ids.push({id,lat,lon});
     });
   }catch{/* IDs opcionais */}
 }
 
-/* ============== KM + TOP5 (tempo real) ============== */
+/* ============== KM + TOP5 ============== */
 function updateKMandTop5(){
   // KM
   if(lastPos && kmPoints.length){
     let b=null, bd=Infinity;
     for(const p of kmPoints){ const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon); if(d<bd){bd=d;b=p;} }
-    currentKMStr = b? fmtKm(b.km) : 'KM —';
+    currentKMStr = b? fmtKm(b.km):'KM —';
   }else currentKMStr='KM —';
   kmBox.textContent=currentKMStr;
 
-  // Top 5 IDs (opcional)
+  // IDs (opcional)
   if(lastPos && ids.length){
     const arr = ids.map(p=>({id:p.id, d:hav(lastPos.lat,lastPos.lon,p.lat,p.lon)}));
     arr.sort((a,b)=>a.d-b.d);
-    currentTop5 = arr.slice(0, Math.min(5, arr.length));
-  }else{
-    currentTop5 = [];
-  }
+    currentTop5 = arr.slice(0, Math.min(5,arr.length));
+  }else currentTop5 = [];
 }
 setInterval(updateKMandTop5, 500);
 
-/* ============== CARIMBO GRANDE (KM + 5 IDs) ============== */
+/* ============== CARIMBO (KM + 5 IDs) ============== */
 function drawOverlay(g,w,h){
-  const bandH = Math.max(120, Math.round(h*0.16));
+  const bandH=Math.max(120, Math.round(h*0.16));
   g.fillStyle='rgba(0,0,0,.60)'; g.fillRect(0,h-bandH,w,bandH);
 
-  // KM grande (esquerda)
+  // KM grande (esq.)
   g.fillStyle='#b7ffcf'; g.textAlign='left'; g.font=`900 ${Math.round(h*0.055)}px system-ui`;
   g.fillText(currentKMStr, 18, h-bandH+Math.round(bandH*0.58));
 
-  // IDs (direita), opcionais
+  // IDs (dir.), se houver
   if(currentTop5.length){
-    g.textAlign='right';
-    g.fillStyle='#eaf2ff';
-    const fs = Math.round(h*0.034); // tamanho bom e legível
-    g.font = `800 ${fs}px system-ui`;
-    const baseY = h-bandH+fs+6;
-    currentTop5.forEach((e,i)=>{
-      g.fillText(`${i+1}) ${e.id}`, w-18, baseY + i*(fs+6));
-    });
+    g.textAlign='right'; g.fillStyle='#eaf2ff';
+    const fs=Math.round(h*0.034); g.font=`800 ${fs}px system-ui`;
+    const baseY=h-bandH+fs+6;
+    currentTop5.forEach((e,i)=> g.fillText(`${i+1}) ${e.id}`, w-18, baseY + i*(fs+6)));
   }
 
   // Hora + GPS
-  const ts = `${z2(new Date().getHours())}:${z2(new Date().getMinutes())}:${z2(new Date().getSeconds())}`;
-  g.textAlign='left';
-  g.fillStyle='#fff';
-  g.font = `700 ${Math.round(h*0.028)}px system-ui`;
+  const ts=`${z2(new Date().getHours())}:${z2(new Date().getMinutes())}:${z2(new Date().getSeconds())}`;
+  g.textAlign='left'; g.fillStyle='#fff'; g.font=`700 ${Math.round(h*0.028)}px system-ui`;
   g.fillText(ts, 18, h-14);
 
   if(lastPos){
-    g.fillStyle='#cfe7ff';
-    g.font = `600 ${Math.round(h*0.026)}px system-ui`;
+    g.fillStyle='#cfe7ff'; g.font=`600 ${Math.round(h*0.026)}px system-ui`;
     g.fillText(`${lastPos.lat?.toFixed(6)}, ${lastPos.lon?.toFixed(6)}  ±${Math.round(lastPos.acc||0)}m`,
                18, h-bandH+28);
   }
 }
 
-/* ============== CAPTURA/GRAVAÇÃO (à prova de 0 KB) ============== */
+/* ============== CAPTURA SEGURA ============== */
 async function tryMakeJpegBlob(canvas,q=JPEG_Q){
   let b=await new Promise(res=>canvas.toBlob(res,'image/jpeg',q));
   if(b && b.size>=MIN_JPEG_BYTES) return b;
@@ -231,9 +304,8 @@ async function tryMakeJpegBlob(canvas,q=JPEG_Q){
 }
 async function safeWriteFile(fh, payload){
   const w=await fh.createWritable();
-  if(payload instanceof Blob){
-    const u8=new Uint8Array(await payload.arrayBuffer()); await w.write(u8);
-  }else if(payload instanceof Uint8Array){ await w.write(payload); }
+  if(payload instanceof Blob){ const u8=new Uint8Array(await payload.arrayBuffer()); await w.write(u8); }
+  else if(payload instanceof Uint8Array){ await w.write(payload); }
   else { await w.write(payload); }
   await w.close();
   const f=await fh.getFile(); if(!f || f.size===0) throw new Error('zero-bytes');
@@ -248,73 +320,211 @@ async function captureOnce(){
     const w=Math.round(vw*sc), h=Math.round(vh*sc);
     can.width=w; can.height=h;
     ctx.clearRect(0,0,w,h);
-    ctx.drawImage(vid,0,0,w,h);          // frame
-    drawOverlay(ctx,w,h);                 // carimbo
+    ctx.drawImage(vid,0,0,w,h);              // frame
+    drawOverlay(ctx,w,h);                     // carimbo
 
-    // gera JPEG (2 tentativas) ou dataURL fallback
-    let blob = await tryMakeJpegBlob(can, JPEG_Q);
+    // Gera JPEG (2 tentativas) ou fallback dataURL
+    let blob=await tryMakeJpegBlob(can, JPEG_Q);
     if(!blob){
-      const dataURL = can.toDataURL('image/jpeg', Math.max(0.7, JPEG_Q-0.1));
+      const dataURL=can.toDataURL('image/jpeg', Math.max(0.7, JPEG_Q-0.1));
       const b64=dataURL.split(',')[1]; const bin=atob(b64);
       const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
-      blob = new Blob([u8], {type:'image/jpeg'});
+      blob=new Blob([u8], {type:'image/jpeg'});
     }
     if(!blob || !blob.size) return;
 
-    const kmPart = safe((currentKMStr||'KM').replace('KM ','').replace('+','_'));
-    const name = `FOTO_KM_${kmPart}_${stamp()}.jpg`;
-    const fh = await dirHandle.getFileHandle(name,{create:true});
-    try{
-      await safeWriteFile(fh, blob);
-    }catch(e){
-      // 2ª via: dataURL puro
-      const dataURL = can.toDataURL('image/jpeg', Math.max(0.7, JPEG_Q-0.1));
+    const kmPart = (currentKMStr||'KM').replace('KM ','').replace('+','_').replace(/[^\w\-+.]/g,'_');
+    const name = `FOTO_KM_${kmPart}_${stampNow()}.jpg`;
+
+    const fh=await dirHandle.getFileHandle(name,{create:true});
+    try{ await safeWriteFile(fh, blob); }
+    catch(e){
+      // 2ª via: dataURL
+      const dataURL=can.toDataURL('image/jpeg', Math.max(0.7, JPEG_Q-0.1));
       const b64=dataURL.split(',')[1]; const bin=atob(b64);
       const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
-      await safeWriteFile(fh, u8);
+      await safeWriteFile(fh,u8);
     }
-  }catch(e){
-    console.error('captureOnce', e);
-  }finally{
-    busy=false;
+
+    sessionPhotos.push(name);
+  }catch(e){ console.error('captureOnce', e); }
+  finally{ busy=false; }
+}
+async function loop(){
+  while(running){
+    await captureOnce();
+    await new Promise(r=>setTimeout(r, clampInterval()));
   }
 }
-setInterval(captureOnce, INTERVAL_MS);
 
-/* ============== CONTROLES INVISÍVEIS (pausa/retoma) ============== */
-let tStart=0;
-document.addEventListener('touchstart', ()=> tStart=Date.now(), {passive:true});
-document.addEventListener('touchend', ()=>{
-  if(Date.now()-tStart>2000){ // 2s
-    running = !running;
-    stateEl.textContent = running ? 'CAPTURANDO (toque longo para pausar)' : 'PAUSADO (toque longo para retomar)';
-    showToast(running?'Captura retomada':'Captura pausada', 900);
-  }
-},{passive:true});
+/* ============== RELATÓRIO (PDF) ============== */
+/* Writer PDF mínimo (JPEG embutido) */
+function makeByteWriter(stream){ const enc=new TextEncoder(); let pos=0; return {
+  async writeStr(s){const b=enc.encode(s); await stream.write(b); pos+=b.length;},
+  async writeBin(b){await stream.write(b); pos+=b.length;}, get pos(){return pos;}
+};}
+function createPdfStreamWriter(stream){
+  const writer=makeByteWriter(stream); const offsets=[]; const pagesKids=[];
+  const PW=595,PH=842,M=24; let nextNum=3,closed=false;
 
-/* ============== BOOT COM BOTÃO ÚNICO ============== */
-async function startAll(){
+  async function writeObjWithNum(num,body){ offsets[num]=writer.pos; await writer.writeStr(`${num} 0 obj\n${body}\nendobj\n`); }
+  async function addObj(body){ const num=nextNum++; await writeObjWithNum(num,body); return num; }
+  async function addStream(dict,data){ const num=nextNum++; offsets[num]=writer.pos;
+    const header=`${num} 0 obj\n${dict.replace('>>','')} /Length ${data.length} >>\nstream\n`;
+    await writer.writeStr(header); await writer.writeBin(data); await writer.writeStr(`\nendstream\nendobj\n`); return num; }
+  function fitToCell(imgW,imgH){ let cellW=PW-2*M, cellH=PH-2*M; let dw=cellW, dh=Math.round(imgH*(cellW/imgW));
+    if(dh>cellH){ dh=cellH; dw=Math.round(imgW*(cellH/imgH)); } const tx=M+Math.round((cellW-dw)/2); const ty=M+Math.round((cellH-dh)/2); return {dw,dh,tx,ty}; }
+
+  return {
+    async init(){ await writer.writeStr('%PDF-1.4\n'); },
+    async addImagePage(imgBytes,W,H){
+      const imNum=await addStream(`<< /Type /XObject /Subtype /Image /Width ${W} /Height ${H} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, imgBytes);
+      const {dw,dh,tx,ty}=fitToCell(W,H);
+      const content=`q\n${dw} 0 0 ${dh} ${tx} ${PH-(ty+dh)} cm\n/Im0 Do\nQ\n`;
+      const contNum=await addStream('<< >>', new TextEncoder().encode(content));
+      const pageNum=await addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im0 ${imNum} 0 R >> >> /Contents ${contNum} 0 R >>`);
+      pagesKids.push(pageNum);
+    },
+    async finalize(){
+      if(closed) return; closed=true;
+      await writeObjWithNum(2,`<< /Type /Pages /Kids [ ${pagesKids.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pagesKids.length} >>`);
+      await writeObjWithNum(1,'<< /Type /Catalog /Pages 2 0 R >>');
+      const xrefStart=writer.pos; const count=Math.max(1,offsets.length-1)+1;
+      let xr=`xref\n0 ${count}\n0000000000 65535 f \n`;
+      for(let i=1;i<count;i++){ const off=offsets[i]??0; const inUse=(offsets[i]!=null); xr+=`${String(off).padStart(10,'0')} 00000 ${inUse?'n':'f'} \n`; }
+      await writer.writeStr(xr);
+      await writer.writeStr(`trailer\n<< /Size ${count} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`);
+      await stream.close();
+    }
+  };
+}
+async function downscaleForPDF(file, maxPx=1280, quality=0.72){
+  const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
+  const W=img.naturalWidth, H=img.naturalHeight;
+  const sc=Math.min(1, maxPx/Math.max(W,H)); const w=Math.round(W*sc), h=Math.round(H*sc);
+  const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h; const g=tmp.getContext('2d',{alpha:false}); g.drawImage(img,0,0,w,h);
+  const b=await new Promise(r=>tmp.toBlob(r,'image/jpeg',quality)); const u8=new Uint8Array(await b.arrayBuffer()); URL.revokeObjectURL(img.src);
+  return {bytes:u8,w,h};
+}
+async function generatePDF(){
+  if(!dirHandle){ showToast('Selecione a pasta'); return; }
+  if(!sessionPhotos.length){ showToast('Sem fotos nesta sessão'); return; }
+  btnPDF.disabled=true;
   try{
-    stateEl.textContent='Inicializando…';
-    await pickFolder();           // gesto do usuário
-    await startCamera();          // gesto ajuda nas permissões
+    const base = `RELATORIO_${(sessionStart||new Date()).toISOString().replace(/[:.]/g,'-')}`;
+    let vol=1, pages=0, pdf=null, pdfHandle=null, stream=null;
+
+    async function openVol(){
+      const name = `${base}_v${String(vol).padStart(2,'0')}.pdf`;
+      reportFiles.push(name);
+      pdfHandle = await dirHandle.getFileHandle(name,{create:true});
+      stream = await pdfHandle.createWritable();
+      pdf = createPdfStreamWriter(stream); await pdf.init(); pages=0;
+    }
+    async function closeVol(){ if(pdf){ await pdf.finalize(); pdf=null; } }
+
+    await openVol();
+    for(const fname of sessionPhotos){
+      const fh = await dirHandle.getFileHandle(fname,{create:false});
+      const file = await fh.getFile();
+      const {bytes,w,h} = await downscaleForPDF(file,1280,0.72);
+      await pdf.addImagePage(bytes,w,h);
+      pages++;
+      if(pages>=REPORT_MAX_PAGES){ await closeVol(); vol++; await openVol(); }
+    }
+    await closeVol();
+    showToast('Relatório PDF gerado');
+  }catch(e){
+    console.error(e); showToast('Falha ao gerar PDF');
+  }finally{
+    btnPDF.disabled=false;
+  }
+}
+
+/* ============== WHATSAPP ============== */
+function sendWhats(){
+  // Não é possível anexar arquivo automaticamente via web.
+  // Abrimos a conversa com o texto pronto (você anexa o PDF salvo).
+  const files = reportFiles.length ? reportFiles.join(', ') : '(gere o PDF primeiro)';
+  const msg = [
+    `Relatório de Inspeção`,
+    `Início: ${sessionStart? new Date(sessionStart).toLocaleString() : '-'}`,
+    `Fotos: ${sessionPhotos.length}`,
+    `PDF(s): ${files}`,
+    `Obs.: anexe o(s) PDF(s) salvo(s) na pasta selecionada.`
+  ].join('\n');
+  const url = 'https://wa.me/?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank');
+}
+
+/* ============== CONTROLES ============== */
+presetSel.addEventListener('change', ()=>{
+  const v=Math.max(MIN_INTERVAL_MS, Number(presetSel.value)||DEFAULT_INTERVAL_MS);
+  intervalMsInput.value = String(v);
+});
+intervalMsInput.addEventListener('change', ()=>{
+  clampInterval();
+});
+
+btnStartOverlay.addEventListener('click', async ()=>{
+  try{
+    await pickFolder();
+    await startCamera();
     await startGPS();
     await Promise.all([loadKM(), loadIDs()]);
     startOverlay.style.display='none';
-    running=true;
-    stateEl.textContent='CAPTURANDO (toque longo para pausar)';
-    showToast('OK – Capturando a cada 0,5 s', 1400);
-
-    // Evita apagar a tela (quando suportado)
-    if('wakeLock' in navigator){
-      try{ await navigator.wakeLock.request('screen'); }catch{}
-    }
+    sessionStart = new Date();
+    stateEl.textContent='Pronto. Toque em INICIAR.';
+    // Wake Lock (mantém a tela)
+    if('wakeLock' in navigator){ try{ await navigator.wakeLock.request('screen'); }catch{} }
   }catch(e){
-    console.error(e);
-    showToast('Não foi possível iniciar');
+    console.error(e); showToast('Falha ao iniciar');
   }
-}
-btnStart.addEventListener('click', startAll);
+});
+
+btnStartStop.addEventListener('click', async ()=>{
+  if(!dirHandle){ showToast('Selecione a pasta (INICIAR na tela)'); return; }
+  running = !running;
+  if(running){
+    btnStartStop.textContent = '⏹ PARAR';
+    btnStartStop.classList.add('stop');
+    stateEl.textContent = 'CAPTURANDO (toque longo para pausar)';
+    clampInterval();
+    loop();
+  }else{
+    btnStartStop.textContent = '▶ INICIAR';
+    btnStartStop.classList.remove('stop');
+    stateEl.textContent = 'PARADO';
+  }
+});
+
+btnPDF.addEventListener('click', generatePDF);
+btnWhats.addEventListener('click', sendWhats);
+
+/* Toque longo (pausa/retoma) */
+let tStart=0;
+document.addEventListener('touchstart', ()=> tStart=Date.now(), {passive:true});
+document.addEventListener('touchend', ()=>{
+  if(Date.now()-tStart>2000){
+    if(!dirHandle) return;
+    running = !running;
+    if(running){
+      btnStartStop.textContent = '⏹ PARAR';
+      btnStartStop.classList.add('stop');
+      stateEl.textContent = 'CAPTURANDO (toque longo para pausar)';
+      clampInterval();
+      loop();
+    }else{
+      btnStartStop.textContent = '▶ INICIAR';
+      btnStartStop.classList.remove('stop');
+      stateEl.textContent = 'PAUSADO (toque longo para retomar)';
+    }
+    showToast(running?'Captura retomada':'Captura pausada',900);
+  }
+},{passive:true});
+
+/* Atualiza KM/Top5 periodicamente */
+setInterval(updateKMandTop5, 500);
 </script>
 </body>
 </html>
