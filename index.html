@@ -1,723 +1,152 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<meta name="theme-color" content="#0b7a39" />
-<title>Inspeção – Fotos TURBO + PDF (completo) + Vídeo HQ com KM</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bancada de Manutenção – Luminárias</title>
+
 <style>
-  :root{
-    --green:#0b7a39; --green2:#085e2c; --fg:#eaf2ff; --border:#e6f0ea;
-    --glass: rgba(15,18,27,.70);
-    --btn:#22c55e; --btn2:#35eb85; --bad:#ef4444; --muted:#9fb0c7;
-    --ink:#0a1b2e; --inkOn:#062a1a;
-  }
-  html,body{
-    margin:0;height:100%;background:#0b0f16;overflow:hidden;
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial
-  }
+:root{
+  --primary:#0b7a39;
+  --secondary:#085e2c;
+  --bg:#0b0f16;
+  --card:rgba(255,255,255,.06);
+  --border:rgba(255,255,255,.12);
+  --ok:#22c55e;
+  --bad:#ef4444;
+}
+body{
+  margin:0;background:var(--bg);color:#eaf2ff;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+}
+header{
+  position:fixed;top:0;left:0;right:0;
+  background:#0c1220;border-bottom:1px solid var(--border);
+  padding:14px;text-align:center;font-weight:900;
+}
+main{padding:70px 14px 110px;}
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;padding:14px;margin-bottom:14px;
+}
+label{display:block;font-weight:800;margin:8px 0 4px;}
+input,select,textarea{
+  width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);
+  background:#0d1731;color:#fff;font-weight:700;
+}
+textarea{resize:vertical;min-height:80px}
+.checks label{display:flex;gap:8px;font-weight:700;margin-bottom:6px}
 
-  /* ===== Top App Bar ===== */
-  header#appbar{
-    position:fixed; top:0; left:0; right:0; z-index:6;
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    background:linear-gradient(180deg,#0c1220, #0b111d);
-    border-bottom:1px solid rgba(255,255,255,.08);
-    padding:env(safe-area-inset-top) 14px 10px 14px;
-  }
-  .title{
-    display:flex; align-items:center; gap:10px; color:#eaf2ff; font-weight:900;
-    letter-spacing:.3px;
-  }
-  .title .badge{ font-size:.8rem; color:#9fb0c7; font-weight:700 }
-  .segmented{
-    display:inline-flex; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
-    border-radius:12px; overflow:hidden;
-  }
-  .segmented button{
-    background:transparent; color:#eaf2ff; border:0; padding:8px 12px; font-weight:900; cursor:pointer;
-  }
-  .segmented button.active{ background:#1d2a3d; color:#35eb85 }
+.tabs{
+  display:flex;gap:8px;margin-bottom:12px;
+}
+.tabs button{
+  flex:1;border-radius:12px;padding:10px;font-weight:900;
+  border:1px solid var(--border);background:#111827;color:#eaf2ff;
+}
+.tabs button.active{background:var(--primary)}
 
-  /* Vídeo base + mix canvas (modo Vídeo) */
-  #cam { position:fixed; inset:0; width:100%; height:100%; object-fit:contain; background:#000; z-index:0; display:none; }
-  #mix { position:fixed; inset:0; width:100%; height:100%; z-index:1; display:none; }
+.fab{
+  position:fixed;right:16px;bottom:16px;
+  background:linear-gradient(180deg,#35eb85,#22c55e);
+  border-radius:999px;padding:16px 22px;
+  font-weight:900;color:#042f1e;border:0;
+}
 
-  /* Placa KM para operador (overlay) */
-  #kmBox{
-    position:fixed; top:62px; left:50%; transform:translateX(-50%);
-    background:linear-gradient(180deg,var(--green),var(--green2)); color:#fff;
-    padding:14px 24px; border-radius:18px; border:6px solid var(--border);
-    font-size:clamp(28px,8vw,120px); font-weight:1000; text-shadow:0 1px 0 rgba(0,0,0,.45);
-    box-shadow:0 14px 28px rgba(0,0,0,.5), inset 0 0 0 3px rgba(255,255,255,.5);
-    z-index:3; user-select:none; letter-spacing:.5px
-  }
-
-  /* ===== Bottom Panel “estilo app” ===== */
-  .bottom{
-    position:fixed; left:0; right:0; bottom:0; z-index:5;
-    padding:0 12px calc(env(safe-area-inset-bottom) + 80px);
-  }
-  .panel{
-    background:var(--glass); border:1px solid rgba(255,255,255,.10);
-    border-radius:18px; backdrop-filter: blur(10px);
-    box-shadow:0 12px 36px rgba(0,0,0,.6);
-    padding:10px;
-  }
-  .row{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center; }
-  .chip{
-    height:46px; padding:0 12px; border-radius:12px;
-    border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);
-    color:#eaf2ff; display:inline-flex; align-items:center; gap:10px; font-weight:900;
-  }
-  .chip select, .chip input[type="checkbox"]{
-    height:32px; border-radius:8px; border:1px solid rgba(255,255,255,.18);
-    background:#0d1731; color:#eaf2ff; padding:0 8px; font-weight:900; outline:none;
-  }
-
-  /* ===== FAB central (INICIAR/PARAR) ===== */
-  .fabWrap{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(14px + env(safe-area-inset-bottom)); z-index:6 }
-  #btnStartStop{
-    height:58px; min-width:240px;
-    padding:0 20px; border-radius:999px; border:2px solid #0caa52;
-    background:linear-gradient(180deg,#35eb85,#22c55e); color:var(--inkOn); font-weight:1000; font-size:1.02rem; cursor:pointer;
-    box-shadow:0 10px 24px rgba(0,0,0,.55);
-    display:inline-flex; align-items:center; justify-content:center; gap:10px;
-  }
-  #btnStartStop.stop{ background:linear-gradient(180deg,#f2544b,#cc3e36); color:#fff; border-color:#e85d56 }
-
-  /* Estado */
-  #state{
-    position:fixed; bottom:calc(96px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
-    background:#0f172a; border:1px solid rgba(255,255,255,.10); color:#dbe7ff; padding:6px 12px; border-radius:10px;
-    font-size:.92rem; z-index:4; box-shadow:0 6px 20px rgba(0,0,0,.45);
-  }
-
-  /* Overlay inicial */
-  #startOverlay{
-    position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column;
-    background:linear-gradient(180deg, rgba(0,0,0,.86), rgba(0,0,0,.82)); color:#dfe8ff; gap:14px; padding:22px; text-align:center; z-index:8
-  }
-  #startOverlay h2{margin:0 0 6px; font-size:1.14rem}
-  .btn{
-    height:46px; min-width:220px; padding:0 16px; border-radius:12px; border:2px solid #0caa52;
-    background:linear-gradient(180deg,#35eb85,#22c55e); color:var(--inkOn); font-weight:1000; font-size:.98rem; cursor:pointer
-  }
-  .btn.secondary{
-    border-color:rgba(255,255,255,.25);
-    background:rgba(255,255,255,.08); color:#eaf2ff;
-  }
-
-  /* Toast */
-  #toast{
-    position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); transform:translateX(-50%); display:none;
-    background:rgba(0,0,0,.85); color:#fff; border:1px solid rgba(255,255,255,.18);
-    padding:8px 12px; border-radius:10px; font-size:.95rem; z-index:10
-  }
-
-  @media (max-width:760px){
-    .chip{font-size:.95rem}
-    #btnStartStop{min-width:200px}
-  }
+.photo{
+  width:100%;border-radius:12px;border:1px solid var(--border);margin-top:8px;
+}
 </style>
 </head>
+
 <body>
+<header>🔧 Bancada de Manutenção – Luminárias</header>
 
-<!-- Top App Bar -->
-<header id="appbar" role="banner" aria-label="Barra do aplicativo">
-  <div class="title">
-    <span>🛣️ Inspeção Rodoviária</span>
-    <span class="badge" id="badgeInfo">Pronto</span>
+<main>
+  <div class="tabs">
+    <button class="active" onclick="showTab('entrada')">ENTRADA</button>
+    <button onclick="showTab('servico')">SERVIÇO</button>
+    <button onclick="showTab('saida')">SAÍDA</button>
   </div>
-  <div class="segmented" role="tablist" aria-label="Modo">
-    <button id="tabPhoto" role="tab" aria-selected="true" class="active">📸 Fotos</button>
-    <button id="tabVideo" role="tab" aria-selected="false">🎥 Vídeo</button>
-  </div>
-</header>
 
-<!-- Vídeo base e canvas de mix (modo Vídeo) -->
-<video id="cam" autoplay playsinline muted></video>
-<canvas id="mix"></canvas>
+  <!-- ENTRADA -->
+  <section id="entrada" class="tab">
+    <div class="card">
+      <label>Ordem de Serviço (OS)</label>
+      <input id="os">
 
-<!-- Placa KM (feedback visual) -->
-<div id="kmBox">KM —</div>
+      <label>Patrimônio / Código</label>
+      <input id="patrimonio">
 
-<!-- Estado -->
-<div id="state">Selecione a pasta e toque em INICIAR</div>
+      <label>Tipo de luminária</label>
+      <select id="tipo">
+        <option>LED pública</option>
+        <option>Vapor metálico</option>
+        <option>Vapor de sódio</option>
+        <option>Refletor</option>
+        <option>Outro</option>
+      </select>
 
-<!-- Painel inferior (controles) -->
-<div class="bottom">
-  <div class="panel">
-    <!-- Linha 1: controles do modo atual -->
-    <div class="row" id="rowPhoto" aria-label="Controles de Fotos" role="group">
-      <div class="chip">📄 Relatório: <b>Todas as fotos</b></div>
-      <button id="btnPDF" class="btn secondary" title="Gerar PDF com TODAS as fotos" disabled>📄 PDF (todas as fotos)</button>
-    </div>
-
-    <div class="row" id="rowVideo" aria-label="Controles de Vídeo" role="group" style="display:none">
-      <div class="chip">🎞️ Qualidade
-        <select id="quality">
-          <option value="1080p_30_10">1080p / 30 fps / 10 Mbps</option>
-          <option value="1080p_30_8" selected>1080p / 30 fps / 8 Mbps</option>
-          <option value="720p_30_5">720p / 30 fps / 5 Mbps</option>
-          <option value="1440p_30_16">1440p / 30 fps / 16 Mbps</option>
-        </select>
+      <label>Defeitos encontrados</label>
+      <div class="checks">
+        <label><input type="checkbox"> Não liga</label>
+        <label><input type="checkbox"> Driver queimado</label>
+        <label><input type="checkbox"> LED danificado</label>
+        <label><input type="checkbox"> Fiação rompida</label>
+        <label><input type="checkbox"> Vidro / lente danificada</label>
       </div>
-      <div class="chip">⏱️ Segmento
-        <select id="segDur">
-          <option value="5" selected>5 min</option>
-          <option value="10">10 min</option>
-          <option value="15">15 min</option>
-        </select>
-      </div>
-      <div class="chip">🔊 Áudio
-        <label style="display:inline-flex;align-items:center;gap:6px;">
-          <input id="useAudio" type="checkbox"> microfone
-        </label>
-      </div>
+
+      <label>Observações iniciais</label>
+      <textarea id="obsEntrada"></textarea>
     </div>
+  </section>
 
-    <!-- Linha 2: seletor de pasta (sempre no início da sessão) -->
-    <div class="row" style="margin-top:6px;">
-      <button id="btnPick" class="btn">🗂️ Selecionar pasta de salvamento</button>
+  <!-- SERVIÇO -->
+  <section id="servico" class="tab" style="display:none">
+    <div class="card">
+      <label>Serviço executado</label>
+      <textarea id="servicoExec"></textarea>
+
+      <label>Componentes substituídos</label>
+      <textarea id="componentes"></textarea>
     </div>
-  </div>
-</div>
+  </section>
 
-<!-- FAB central -->
-<div class="fabWrap">
-  <button id="btnStartStop" class="btn">▶ INICIAR</button>
-</div>
+  <!-- SAÍDA -->
+  <section id="saida" class="tab" style="display:none">
+    <div class="card">
+      <label>Testes realizados</label>
+      <div class="checks">
+        <label><input type="checkbox"> Ligação em bancada</label>
+        <label><input type="checkbox"> Medição elétrica</label>
+        <label><input type="checkbox"> Teste térmico</label>
+      </div>
 
-<!-- Overlay inicial -->
-<div id="startOverlay">
-  <h2>Inspeção – Fotos TURBO + PDF (completo) + Vídeo HQ com KM</h2>
-  <p class="muted">Sempre selecione a <b>Pasta de salvamento</b> antes de iniciar a sessão.</p>
-  <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center">
-    <button id="btnPickStart" class="btn">🗂️ Selecionar pasta</button>
-    <button id="btnStart" class="btn">▶ INICIAR</button>
-  </div>
-  <p class="muted">Requisitos: <b>HTTPS</b>, permitir <b>Câmera</b> e <b>Localização</b>, e escolher a <b>Pasta</b>.</p>
-</div>
+      <label>Status final</label>
+      <select id="status">
+        <option value="OK">✅ APROVADA</option>
+        <option value="NOK">❌ REPROVADA</option>
+      </select>
 
-<div id="toast" role="status" aria-live="polite"></div>
+      <label>Observações finais</label>
+      <textarea id="obsFinal"></textarea>
+    </div>
+  </section>
+</main>
+
+<button class="fab" onclick="gerarPDF()">📄 GERAR PDF</button>
 
 <script>
-/* ================= CONFIG ================= */
-const CSV_PATH = './SNVBR116SPRJ.csv'; // km;lat;lon
-const REPORT_MAX_PAGES = 600;         // divide em volumes se necessário
-
-/* Fotos TURBO */
-const TARGET_MIN_MS = 100;
-const START_MAX_DIM = 1600;
-const START_JPEG_Q = 0.88;
-const MIN_DIM = 960;
-const MIN_JPEG_Q = 0.78;
-
-/* Vídeo */
-const PREFERRED_MIME_TYPES = [
-  'video/webm;codecs=vp9',
-  'video/webm;codecs=vp8',
-  'video/webm',
-  'video/mp4;codecs=h264',
-  'video/mp4'
-];
-
-/* ================= REFS/STATE ============== */
-const cam = document.getElementById('cam');
-const mix = document.getElementById('mix'); const gx = mix.getContext('2d', {alpha:false});
-const kmBox = document.getElementById('kmBox');
-const stateEl = document.getElementById('state');
-const startOverlay = document.getElementById('startOverlay');
-const btnPickStart = document.getElementById('btnPickStart');
-const btnStartOverlay = document.getElementById('btnStart');
-
-const btnPick = document.getElementById('btnPick');
-const btnStartStop = document.getElementById('btnStartStop');
-const btnPDF = document.getElementById('btnPDF');
-const toast = document.getElementById('toast');
-const badgeInfo = document.getElementById('badgeInfo');
-
-const tabPhoto = document.getElementById('tabPhoto');
-const tabVideo = document.getElementById('tabVideo');
-const rowPhoto = document.getElementById('rowPhoto');
-const rowVideo = document.getElementById('rowVideo');
-
-const qualitySel = document.getElementById('quality');
-const segDurSel = document.getElementById('segDur');
-const useAudioChk = document.getElementById('useAudio');
-
-let mode = 'photo'; // 'photo' | 'video'
-let dirHandle = null;
-let running = false;
-
-let kmPoints = [];     // {km,lat,lon}
-let lastPos = null;    // {lat,lon,acc}
-let currentKMStr = 'KM —';
-
-/* Sessão Fotos */
-let sessionStart = null;
-let sessionEnd = null;
-let sessionPhotos = [];
-let maxDim = START_MAX_DIM;
-let jpegQ = START_JPEG_Q;
-let encAvgMs = null;
-const ENC_ALPHA = 0.25;
-const can = document.createElement('canvas'); const ctx = can.getContext('2d', {alpha:false});
-
-/* Sessão Vídeo */
-let cameraStream = null, micStream = null, canvasStream = null, mediaRecorder = null, writable = null, segmentTimer = null, drawRAF = 0, segmentIndex = 0;
-
-/* ================= UI/UTILS ================= */
-function showToast(msg, ms=1400){ toast.textContent=msg; toast.style.display='block'; clearTimeout(showToast._t); showToast._t=setTimeout(()=>toast.style.display='none',ms); }
-const z2 = v => String(v).padStart(2,'0');
-function stampNow(){ const d=new Date(); return `${d.getFullYear()}-${z2(d.getMonth()+1)}-${z2(d.getDate())}_${z2(d.getHours())}-${z2(d.getMinutes())}-${z2(d.getSeconds())}`; }
-function fmtKm(v){ if(!Number.isFinite(v)) return 'KM —'; let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
-function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
-function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
-
-/* KM tempo real */
-async function loadKM(){
-  try{
-    const txt=await fetch(CSV_PATH,{cache:'no-store'}).then(r=>r.text());
-    kmPoints.length=0;
-    txt.split(/\r?\n/).forEach(l=>{
-      const c=l.split(';'); const km=parsePt(c[0]), lat=parsePt(c[1]), lon=parsePt(c[2]);
-      if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)) kmPoints.push({km,lat,lon});
-    });
-  }catch(e){ console.warn('KM CSV',e); }
-}
-function updateKM(){
-  if(lastPos && kmPoints.length){
-    let b=null, bd=Infinity;
-    for(const p of kmPoints){ const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon); if(d<bd){bd=d;b=p;} }
-    currentKMStr = b? fmtKm(b.km):'KM —';
-  }else currentKMStr='KM —';
-  kmBox.textContent=currentKMStr;
-}
-setInterval(updateKM, 700);
-
-/* GPS */
-function startGPS(){
-  return new Promise((resolve)=>{
-    if(!('geolocation' in navigator)){ resolve(); return; }
-    navigator.geolocation.getCurrentPosition(p=>{
-      lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
-      resolve();
-      navigator.geolocation.watchPosition(pp=>{
-        lastPos={lat:pp.coords.latitude, lon:pp.coords.longitude, acc:pp.coords.accuracy};
-      },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
-    },()=>resolve(), {enableHighAccuracy:true, timeout:10000});
-  });
+function showTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.style.display='none');
+  document.getElementById(id).style.display='block';
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
 }
 
-/* ======= PASTA (sempre pedir no início) ======= */
-async function pickFolder(){
-  try{
-    if('storage' in navigator && navigator.storage && navigator.storage.persist) {
-      try{ await navigator.storage.persist(); }catch{}
-    }
-    dirHandle = await window.showDirectoryPicker({mode:'readwrite'});
-    showToast('Pasta selecionada');
-    badgeInfo.textContent = 'Pasta OK';
-  }catch{
-    dirHandle = null;
-    showToast('É necessário escolher a pasta');
-    badgeInfo.textContent = 'Sem pasta';
-    throw new Error('no-folder');
-  }
+function gerarPDF(){
+  alert('✅ PDF gerado (implementar motor PDF semelhante ao sistema anterior)');
 }
-
-/* ======= FOTOS – Overlay e TURBO ======= */
-function drawPhotoOverlay(g,w,h){
-  const bandH=Math.max(110, Math.round(h*0.15));
-  g.fillStyle='rgba(0,0,0,.60)'; g.fillRect(0,h-bandH,w,bandH);
-  const plateH = Math.max(90, Math.round(h*0.10));
-  const plateW = Math.min(w*0.78, Math.round(w*0.90));
-  const px = Math.round((w - plateW)/2), py = Math.round(16);
-  g.fillStyle = '#e6f0ea'; g.fillRect(px-6, py-6, plateW+12, plateH+12);
-  const gr = g.createLinearGradient(0,py,0,py+plateH);
-  gr.addColorStop(0,'#0b7a39'); gr.addColorStop(1,'#085e2c');
-  g.fillStyle = gr; g.fillRect(px, py, plateW, plateH);
-  g.strokeStyle='rgba(255,255,255,.6)'; g.lineWidth=3; g.strokeRect(px+3,py+3,plateW-6,plateH-6);
-  const fs = Math.round(plateH*0.55);
-  g.fillStyle='#fff'; g.font=`900 ${fs}px system-ui`; g.textAlign='center'; g.textBaseline='middle';
-  g.fillText(currentKMStr, Math.round(w/2), Math.round(py + plateH/2));
-  const d=new Date();
-  const ts=`${z2(d.getDate())}/${z2(d.getMonth()+1)}/${d.getFullYear()} ${z2(d.getHours())}:${z2(d.getMinutes())}:${z2(d.getSeconds())}`;
-  g.textAlign='left'; g.fillStyle='#fff'; g.font=`700 ${Math.round(h*0.028)}px system-ui`;
-  g.fillText(ts, 16, h-14);
-  if(lastPos){
-    g.fillStyle='#cfe7ff'; g.font=`600 ${Math.round(h*0.026)}px system-ui`;
-    g.fillText(`${lastPos.lat?.toFixed(6)}, ${lastPos.lon?.toFixed(6)}  ±${Math.round(lastPos.acc||0)}m`, 16, h-bandH+28);
-  }
-}
-async function safeWriteFile(fh, payload){
-  const w=await fh.createWritable();
-  if(payload instanceof Blob){ await w.write(await payload.arrayBuffer()); }
-  else if(payload instanceof Uint8Array){ await w.write(payload); }
-  else { await w.write(payload); }
-  await w.close();
-  const f=await fh.getFile(); if(!f || f.size===0) throw new Error('zero-bytes');
-}
-function adaptIfNeeded(lastEncMs){
-  encAvgMs = encAvgMs==null ? lastEncMs : (ENC_ALPHA*lastEncMs + (1-ENC_ALPHA)*encAvgMs);
-  const target = TARGET_MIN_MS;
-  if(encAvgMs > target*0.9){
-    if(jpegQ > MIN_JPEG_Q){ jpegQ = Math.max(MIN_JPEG_Q, jpegQ - 0.02); return; }
-    if(maxDim > MIN_DIM){ maxDim = Math.max(MIN_DIM, Math.round(maxDim*0.9)); return; }
-  }
-  if(encAvgMs < target*0.55){
-    if(maxDim < START_MAX_DIM){ maxDim = Math.min(START_MAX_DIM, Math.round(maxDim*1.05)); return; }
-    if(jpegQ < START_JPEG_Q){ jpegQ = Math.min(START_JPEG_Q, jpegQ + 0.01); }
-  }
-}
-async function startCameraPhoto(){
-  const s=await navigator.mediaDevices.getUserMedia({
-    video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:30,max:30}},
-    audio:false
-  });
-  cam.srcObject=s; await new Promise(r=>{ if(cam.readyState>=1&&cam.videoWidth) r(); else cam.onloadedmetadata=r; });
-  cam.style.display='block'; mix.style.display='none';
-}
-async function captureOnce(){
-  const vw=cam.videoWidth, vh=cam.videoHeight; if(!vw||!vh) return;
-  const sc=Math.min(1, maxDim/Math.max(vw,vh)); const w=Math.round(vw*sc), h=Math.round(vh*sc);
-  can.width=w; can.height=h; ctx.clearRect(0,0,w,h);
-  ctx.drawImage(cam,0,0,w,h); drawPhotoOverlay(ctx,w,h);
-  let blob=await new Promise(res=> can.toBlob(res,'image/jpeg',jpegQ));
-  if(!blob || !blob.size){
-    const dataURL = can.toDataURL('image/jpeg', Math.max(0.75, jpegQ-0.05));
-    const b64=dataURL.split(',')[1]; const bin=atob(b64);
-    const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
-    blob=new Blob([u8], {type:'image/jpeg'});
-  }
-  const kmPart = (currentKMStr||'KM').replace('KM ','').replace('+','_').replace(/[^\w\-+.]/g,'_');
-  const name = `FOTO_KM_${kmPart}_${stampNow()}.jpg`;
-  const fh=await dirHandle.getFileHandle(name,{create:true});
-  await safeWriteFile(fh, blob);
-  sessionPhotos.push(name);
-  btnPDF.disabled = false;
-}
-async function photoLoop(){
-  encAvgMs = null; maxDim = START_MAX_DIM; jpegQ = START_JPEG_Q;
-  while(running && mode==='photo'){
-    const t0=performance.now();
-    await captureOnce();
-    const encMs = performance.now() - t0;
-    adaptIfNeeded(encMs);
-    const fps = Math.round(1000/Math.max(encAvgMs||TARGET_MIN_MS,1));
-    stateEl.textContent = `FOTOS • ${sessionPhotos.length} • ~${fps} fps • ${Math.round(encAvgMs||0)} ms/foto • ${maxDim}px • Q=${jpegQ.toFixed(2)}`;
-    const delay = Math.max(0, TARGET_MIN_MS - (encAvgMs||TARGET_MIN_MS));
-    await new Promise(r=>setTimeout(r, delay));
-  }
-}
-
-/* ======= PDF RÁPIDO (todas as fotos) – pipeline otimizado ======= */
-function makeByteWriter(stream){ const enc=new TextEncoder(); let pos=0; return {
-  async writeStr(s){const b=enc.encode(s); await stream.write(b); pos+=b.length;},
-  async writeBin(b){await stream.write(b); pos+=b.length;}, get pos(){return pos;}
-};}
-function createPdfStreamWriter(stream){
-  const writer=makeByteWriter(stream); const offsets=[]; const pagesKids=[]; const PW=595,PH=842,M=24; let nextNum=3,closed=false;
-  async function writeObjWithNum(num,body){ offsets[num]=writer.pos; await writer.writeStr(`${num} 0 obj\n${body}\nendobj\n`); }
-  async function addObj(body){ const num=nextNum++; await writeObjWithNum(num,body); return num; }
-  async function addStream(dict,data){ const num=nextNum++; offsets[num]=writer.pos;
-    const header=`${num} 0 obj\n${dict.replace('>>','')} /Length ${data.length} >>\nstream\n`; await writer.writeStr(header); await writer.writeBin(data); await writer.writeStr(`\nendstream\nendobj\n`); return num; }
-  function fitToCell(imgW,imgH){ let cw=PW-2*M, ch=PH-2*M; let dw=cw, dh=Math.round(imgH*(cw/imgW)); if(dh>ch){ dh=ch; dw=Math.round(imgW*(ch/imgH)); } const tx=M+Math.round((cw-dw)/2), ty=M+Math.round((ch-dh)/2); return {dw,dh,tx,ty}; }
-  return {
-    async init(){ await writer.writeStr('%PDF-1.4\n'); },
-    async addImagePage(imgBytes,W,H){
-      const imNum=await addStream(`<< /Type /XObject /Subtype /Image /Width ${W} /Height ${H} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, imgBytes);
-      const {dw,dh,tx,ty}=fitToCell(W,H);
-      const content=`q\n${dw} 0 0 ${dh} ${tx} ${PH-(ty+dh)} cm\n/Im0 Do\nQ\n`;
-      const contNum=await addStream('<< >>', new TextEncoder().encode(content));
-      const pageNum=await addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im0 ${imNum} 0 R >> >> /Contents ${contNum} 0 R >>`);
-      pagesKids.push(pageNum);
-    },
-    async finalize(){
-      if(closed) return; closed=true;
-      await writeObjWithNum(2,`<< /Type /Pages /Kids [ ${pagesKids.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pagesKids.length} >>`);
-      await writeObjWithNum(1,'<< /Type /Catalog /Pages 2 0 R >>');
-      const xrefStart=writer.pos; const count=Math.max(1,offsets.length-1)+1;
-      let xr=`xref\n0 ${count}\n0000000000 65535 f \n`;
-      for(let i=1;i<count;i++){ const off=offsets[i]??0; const inUse=(offsets[i]!=null); xr+=`${String(off).padStart(10,'0')} 00000 ${inUse?'n':'f'} \n`; }
-      await writer.writeStr(xr);
-      await writer.writeStr(`trailer\n<< /Size ${count} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`);
-      await stream.close();
-    }
-  };
-}
-
-/* downscale rápido com createImageBitmap + OffscreenCanvas, concorrência limitada */
-async function downscaleBytes(file, maxPx=1280, quality=0.72){
-  const blob = file; // já é Blob
-  let bmp; try{ bmp = await createImageBitmap(blob); }catch{ // fallback
-    const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(blob); });
-    const W=img.naturalWidth, H=img.naturalHeight; const sc=Math.min(1, maxPx/Math.max(W,H));
-    const w=Math.round(W*sc), h=Math.round(H*sc);
-    const c=document.createElement('canvas'); c.width=w; c.height=h; const g=c.getContext('2d',{alpha:false}); g.drawImage(img,0,0,w,h);
-    const b=await new Promise(r=>c.toBlob(r,'image/jpeg',quality)); URL.revokeObjectURL(img.src);
-    const u8=new Uint8Array(await b.arrayBuffer()); return {bytes:u8, w, h};
-  }
-  const W=bmp.width, H=bmp.height; const sc=Math.min(1, maxPx/Math.max(W,H)); const w=Math.round(W*sc), h=Math.round(H*sc);
-  let bytes;
-  if('OffscreenCanvas' in window){
-    const oc=new OffscreenCanvas(w,h); const gc=oc.getContext('2d',{alpha:false}); gc.drawImage(bmp,0,0,w,h);
-    const b=await oc.convertToBlob({type:'image/jpeg', quality}); bytes=new Uint8Array(await b.arrayBuffer());
-  }else{
-    const c=document.createElement('canvas'); c.width=w; c.height=h; const g=c.getContext('2d',{alpha:false}); g.drawImage(bmp,0,0,w,h);
-    const b=await new Promise(r=>c.toBlob(r,'image/jpeg',quality)); bytes=new Uint8Array(await b.arrayBuffer());
-  }
-  bmp.close?.();
-  return {bytes, w, h};
-}
-
-/* Constrói PDF completo com todas as fotos – paralelo controlado */
-async function generatePDF_ALL(){
-  if(!dirHandle){ showToast('Selecione a pasta'); return; }
-  if(!sessionPhotos.length){ showToast('Sem fotos nesta sessão'); return; }
-  if(running && mode==='photo'){ showToast('Pare a captura antes de gerar o PDF'); return; }
-
-  btnPDF.disabled=true; btnPDF.textContent='Gerando…';
-  badgeInfo.textContent='PDF…';
-  try{
-    sessionEnd = new Date();
-    const base = `RELATORIO_${(sessionStart||new Date()).toISOString().replace(/[:.]/g,'-')}`;
-    const stepInfo = (done,total)=>{ stateEl.textContent = `PDF: ${done}/${total} imagens processadas…`; };
-
-    let vol=1, pages=0, pdf=null, pdfHandle=null, stream=null;
-
-    async function openVol(){
-      const name = `${base}_v${String(vol).padStart(2,'0')}.pdf`;
-      pdfHandle = await dirHandle.getFileHandle(name,{create:true});
-      stream = await pdfHandle.createWritable();
-      pdf = createPdfStreamWriter(stream); await pdf.init(); pages=0;
-      // Capa leve
-      const cover = await (async ()=>{ // capa simplificada
-        const W=1240,H=1754; const c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d',{alpha:false});
-        const grd=g.createLinearGradient(0,0,0,H); grd.addColorStop(0,'#0b122b'); grd.addColorStop(1,'#0a1024'); g.fillStyle=grd; g.fillRect(0,0,W,H);
-        g.fillStyle='#eaf2ff'; g.font='900 48px system-ui'; g.textAlign='center'; g.fillText('RELATÓRIO DE INSPEÇÃO – FOTOS (COMPLETO)', W/2, 120);
-        g.font='700 28px system-ui'; g.textAlign='left';
-        const y0=200, lh=40;
-        g.fillText(`Início: ${sessionStart? new Date(sessionStart).toLocaleString():'—'}`, 80, y0+lh*0);
-        g.fillText(`Término: ${sessionEnd? new Date(sessionEnd).toLocaleString():'—'}`, 80, y0+lh*1);
-        g.fillText(`Fotos: ${sessionPhotos.length}`, 80, y0+lh*2);
-        g.fillText(`KM (último): ${currentKMStr}`, 80, y0+lh*3);
-        g.font='600 22px system-ui'; g.fillStyle='#cfe7ff';
-        g.fillText('Observação: imagens carimbadas com KM, data/hora e GPS.', 80, y0+lh*5);
-        const b=await new Promise(r=>c.toBlob(r,'image/jpeg',0.82)); const u8=new Uint8Array(await b.arrayBuffer());
-        return {bytes:u8,w:W,h:H};
-      })();
-      await pdf.addImagePage(cover.bytes, cover.w, cover.h); pages++;
-    }
-    async function closeVol(){ if(pdf){ await pdf.finalize(); pdf=null; } }
-
-    await openVol();
-
-    // Processamento paralelo com limite de concorrência
-    const files = sessionPhotos.slice(); // nomes
-    let done = 0, idx = 0;
-    const CONC = Math.min(4, navigator.hardwareConcurrency||2);
-
-    async function worker(){
-      while(true){
-        let myIdx; if(idx>=files.length) break; myIdx = idx++;
-        const fname = files[myIdx];
-        try{
-          const fh = await dirHandle.getFileHandle(fname,{create:false});
-          const file = await fh.getFile();
-          const {bytes,w,h} = await downscaleBytes(file, 1280, 0.72);
-          await pdf.addImagePage(bytes,w,h);
-          pages++; done++; stepInfo(done, files.length);
-          if(pages>=REPORT_MAX_PAGES){ await closeVol(); vol++; await openVol(); }
-        }catch(e){ console.error('PDF img', fname, e); done++; stepInfo(done, files.length); }
-      }
-    }
-    const workers = Array.from({length:CONC}, worker);
-    await Promise.all(workers);
-
-    await closeVol();
-    showToast('Relatório PDF (completo) gerado');
-    badgeInfo.textContent='PDF pronto';
-  }catch(e){
-    console.error(e); showToast('Falha ao gerar PDF');
-    badgeInfo.textContent='Erro PDF';
-  }finally{
-    btnPDF.textContent='📄 PDF (todas as fotos)'; btnPDF.disabled=false;
-  }
-}
-
-/* ======= VÍDEO – HQ com KM ======= */
-function getQualityPreset(){
-  const v = qualitySel.value || '1080p_30_8';
-  const [hp, fps, mbps] = v.split('_');
-  const height = Number(hp.replace('p','')) || 1080;
-  const width = Math.round(height * 16/9);
-  const videoBitsPerSecond = Math.round((Number(mbps)||8) * 1000 * 1000);
-  return {width, height, fps:Number(fps)||30, videoBitsPerSecond};
-}
-function pickMimeType(){
-  for(const mt of PREFERRED_MIME_TYPES){ if(MediaRecorder.isTypeSupported(mt)) return mt; }
-  return '';
-}
-function getSegmentMs(){ const mins = Math.max(5, Number(segDurSel.value)||5); return mins * 60 * 1000; }
-function resizeCanvasToPreset(){
-  const {width, height} = getQualityPreset();
-  mix.width = width; mix.height = height;
-  mix.style.display='block'; cam.style.display='block';
-}
-function drawVideoFrame(){
-  if(!(cam.videoWidth && cam.videoHeight)) { drawRAF = requestAnimationFrame(drawVideoFrame); return; }
-  const W = mix.width, H = mix.height;
-  gx.fillStyle = '#000'; gx.fillRect(0,0,W,H);
-
-  const vw = cam.videoWidth, vh = cam.videoHeight;
-  const sc = Math.min(W/vw, H/vh);
-  const dw = Math.round(vw*sc), dh = Math.round(vh*sc);
-  const dx = Math.round((W-dw)/2), dy = Math.round((H-dh)/2);
-  gx.drawImage(cam, dx, dy, dw, dh);
-
-  const plateH = Math.max(90, Math.round(H*0.10));
-  const plateW = Math.min(W*0.78, Math.round(W*0.90));
-  const px = Math.round((W - plateW)/2), py = Math.round(16);
-  gx.fillStyle = '#e6f0ea'; gx.fillRect(px-6, py-6, plateW+12, plateH+12);
-  const gr = gx.createLinearGradient(0,py,0,py+plateH);
-  gr.addColorStop(0,'#0b7a39'); gr.addColorStop(1,'#085e2c');
-  gx.fillStyle = gr; gx.fillRect(px, py, plateW, plateH);
-  gx.strokeStyle='rgba(255,255,255,.6)'; gx.lineWidth=3; gx.strokeRect(px+3,py+3,plateW-6,plateH-6);
-  const fs = Math.round(plateH*0.55);
-  gx.fillStyle='#fff'; gx.font=`900 ${fs}px system-ui`; gx.textAlign='center'; gx.textBaseline='middle';
-  gx.fillText(currentKMStr, Math.round(W/2), Math.round(py + plateH/2));
-
-  const bandH=Math.max(110, Math.round(H*0.15));
-  gx.fillStyle='rgba(0,0,0,.60)'; gx.fillRect(0,H-bandH,W,bandH);
-  const d=new Date();
-  const ts=`${z2(d.getDate())}/${z2(d.getMonth()+1)}/${d.getFullYear()} ${z2(d.getHours())}:${z2(d.getMinutes())}:${z2(d.getSeconds())}`;
-  gx.textAlign='left'; gx.fillStyle='#fff'; gx.font=`700 ${Math.round(H*0.028)}px system-ui`;
-  gx.fillText(ts, 16, H-14);
-  if(lastPos){
-    gx.fillStyle='#cfe7ff'; gx.font=`600 ${Math.round(H*0.026)}px system-ui`;
-    gx.fillText(`${lastPos.lat?.toFixed(6)}, ${lastPos.lon?.toFixed(6)}  ±${Math.round(lastPos.acc||0)}m`, 16, H-bandH+28);
-  }
-  drawRAF = requestAnimationFrame(drawVideoFrame);
-}
-
-async function startCameraAndMic(){
-  const {width, height, fps} = getQualityPreset();
-  const constraints = { video:{ facingMode:{ideal:'environment'}, width:{ideal:width}, height:{ideal:height}, frameRate:{ideal:fps, max:fps} }, audio:false };
-  cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-  cam.srcObject = cameraStream; await new Promise(r=>{ if(cam.readyState>=1&&cam.videoWidth) r(); else cam.onloadedmetadata=r; });
-  if(useAudioChk.checked){ try{ micStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false}); }catch(e){ showToast('Sem microfone (prosseguindo sem áudio)'); micStream=null; } }
-  else micStream=null;
-}
-async function openSegmentFile(){
-  const kmPart = (currentKMStr||'KM —').replace('KM ','').replace(/\s+/g,'').replace('+','+');
-  const baseStart = (sessionStart||new Date()).toISOString().replace(/[:.]/g,'-');
-  const name = `VIDEO_${baseStart}_KM_${kmPart}_seg${String(++segmentIndex).padStart(2,'0')}.webm`;
-  try{ const fh = await dirHandle.getFileHandle(name, {create:true}); writable = await fh.createWritable(); return true; }
-  catch(e){ console.error(e); showToast('Falha ao abrir arquivo de vídeo'); return false; }
-}
-async function closeSegmentFile(){ try{ if(writable){ await writable.close(); writable=null; } }catch(e){ console.error(e); } }
-async function startRecorder(){
-  const {fps, videoBitsPerSecond} = getQualityPreset();
-  canvasStream = mix.captureStream(fps || 30);
-  const combined = new MediaStream();
-  canvasStream.getVideoTracks().forEach(t=> combined.addTrack(t));
-  if(micStream){ micStream.getAudioTracks().forEach(t=> combined.addTrack(t)); }
-  const mimeType = pickMimeType();
-  const opts = { mimeType, videoBitsPerSecond }; if(micStream) opts.audioBitsPerSecond = 128e3;
-  try{ mediaRecorder = new MediaRecorder(combined, opts); }catch(e){ mediaRecorder = new MediaRecorder(combined); }
-  mediaRecorder.ondataavailable = async (ev)=>{ if(!ev.data || !ev.data.size) return; try{ if(writable){ await writable.write(await ev.data.arrayBuffer()); } }catch(err){ console.error('write chunk', err); showToast('Falha ao gravar bloco (ver espaço/perm.)', 2000); } };
-  mediaRecorder.onstart = ()=>{ stateEl.textContent = `🎥 Gravando (seg ${segmentIndex}) • ${qualitySel.value}`; };
-  mediaRecorder.onstop = async ()=>{ await closeSegmentFile(); stateEl.textContent = `Segmento ${segmentIndex} finalizado`; };
-  mediaRecorder.start(2000);
-}
-async function stopRecorder(){
-  try{ if(mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); } }catch(e){ console.error(e); }
-  mediaRecorder = null; if(canvasStream){ canvasStream.getTracks().forEach(t=>t.stop()); canvasStream=null; }
-  await closeSegmentFile();
-}
-function startSegmentTimer(){ clearTimeout(segmentTimer); segmentTimer = setTimeout(async ()=>{ await stopRecorder(); if(running && mode==='video'){ if(await openSegmentFile()){ await startRecorder(); startSegmentTimer(); } } }, getSegmentMs()); }
-function stopSegmentTimer(){ clearTimeout(segmentTimer); }
-
-/* ======= Fluxos (start/stop) ======= */
-async function startPhotoMode(){
-  if(!dirHandle) throw new Error('no-folder');
-  await startCameraPhoto(); await startGPS(); await loadKM();
-  // Wake Lock
-  if('wakeLock' in navigator){ try{ await navigator.wakeLock.request('screen'); }catch{} }
-  running = true; sessionStart = new Date();
-  btnStartStop.classList.add('stop'); btnStartStop.textContent = '⏹ PARAR';
-  badgeInfo.textContent = 'Fotos';
-  photoLoop();
-}
-async function stopPhotoMode(){
-  running=false; btnStartStop.classList.remove('stop'); btnStartStop.textContent = '▶ INICIAR';
-  stateEl.textContent='PARADO'; btnPDF.disabled = sessionPhotos.length === 0; badgeInfo.textContent='Pronto';
-}
-async function startVideoMode(){
-  if(!dirHandle) throw new Error('no-folder');
-  await startCameraAndMic(); await startGPS(); await loadKM();
-  resizeCanvasToPreset(); cancelAnimationFrame(drawRAF); drawVideoFrame();
-  if('wakeLock' in navigator){ try{ await navigator.wakeLock.request('screen'); }catch{} }
-  sessionStart = new Date(); running = true; segmentIndex=0;
-  if(!(await openSegmentFile())) throw new Error('no-writable');
-  await startRecorder(); startSegmentTimer();
-  btnStartStop.classList.add('stop'); btnStartStop.textContent = '⏹ PARAR';
-  badgeInfo.textContent = 'Vídeo';
-}
-async function stopVideoMode(){
-  running=false; btnStartStop.classList.remove('stop'); btnStartStop.textContent = '▶ INICIAR';
-  stateEl.textContent='PARADO'; stopSegmentTimer(); await stopRecorder(); cancelAnimationFrame(drawRAF); badgeInfo.textContent='Pronto';
-}
-
-/* ======= Tabs Modo ======= */
-function setMode(newMode){
-  mode = newMode;
-  const photo = (mode==='photo');
-  tabPhoto.classList.toggle('active', photo); tabPhoto.setAttribute('aria-selected', String(photo));
-  tabVideo.classList.toggle('active', !photo); tabVideo.setAttribute('aria-selected', String(!photo));
-  rowPhoto.style.display = photo ? 'flex' : 'none';
-  rowVideo.style.display = photo ? 'none' : 'flex';
-  btnPDF.style.display = 'inline-flex';
-  stateEl.textContent = photo ? 'Modo FOTOS: selecione a pasta e INICIAR' : 'Modo VÍDEO: selecione a pasta e INICIAR';
-}
-tabPhoto.addEventListener('click', ()=>{ if(running) return; setMode('photo'); });
-tabVideo.addEventListener('click', ()=>{ if(running) return; setMode('video'); });
-
-/* ======= Ações ======= */
-btnPickStart.addEventListener('click', async ()=>{ try{ await pickFolder(); }catch{} });
-btnPick.addEventListener('click', async ()=>{ try{ await pickFolder(); }catch{} });
-
-btnStartOverlay.addEventListener('click', async ()=>{
-  try{
-    if(!dirHandle) await pickFolder(); // sempre pede no início
-    startOverlay.style.display='none';
-    if(mode==='photo') await startPhotoMode(); else await startVideoMode();
-  }catch(e){ console.error(e); showToast('Falha ao iniciar'); }
-});
-
-btnStartStop.addEventListener('click', async ()=>{
-  try{
-    if(!running){
-      if(!dirHandle){ await pickFolder(); } // exige selecionar pasta
-      if(mode==='photo') await startPhotoMode(); else await startVideoMode();
-    }else{
-      if(mode==='photo') await stopPhotoMode(); else await stopVideoMode();
-    }
-  }catch(e){ console.error(e); showToast('Erro ao alternar'); }
-});
-
-btnPDF.addEventListener('click', generatePDF_ALL);
-
-/* Ajustes em vídeo */
-qualitySel.addEventListener('change', ()=>{ if(!running && mode==='video') resizeCanvasToPreset(); });
-segDurSel.addEventListener('change', ()=>{ if(running && mode==='video'){ stopSegmentTimer(); startSegmentTimer(); } });
-useAudioChk.addEventListener('change', ()=>{ showToast('Áudio muda no próximo início/segmento', 1400); });
-
-/* Início: modo padrão e texto */
-setMode('photo');
 </script>
 </body>
 </html>
