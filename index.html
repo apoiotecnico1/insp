@@ -140,18 +140,18 @@
 
 <div id="state">Toque em “INICIAR”</div>
 
-<!-- Barra inferior (agora com controles uniformes) -->
+<!-- Barra inferior (controles uniformes) -->
 <div id="bar" role="toolbar" aria-label="Controles">
   <button id="btnStartStop" class="control btn" aria-pressed="false" aria-label="Iniciar captura">▶ INICIAR</button>
 
   <div class="control chip" title="Tempo entre fotos" role="group" aria-label="Intervalo">
     ⏱ Intervalo:
-    <input id="intervalMs" type="number" min="100" step="50" value="500" aria-label="Intervalo em milissegundos">
-    <select id="preset" aria-label="Presets de intervalo">
-      <option value="100">0,10 s</option>
+    <input id="intervalMs" type="number" min="100" step="50" value="100" aria-label="Intervalo em milissegundos" disabled>
+    <select id="preset" aria-label="Presets de intervalo" disabled>
+      <option value="100" selected>0,10 s</option>
       <option value="200">0,20 s</option>
       <option value="300">0,30 s</option>
-      <option value="500" selected>0,50 s</option>
+      <option value="500">0,50 s</option>
       <option value="700">0,70 s</option>
       <option value="1000">1,0 s</option>
       <option value="1500">1,5 s</option>
@@ -166,16 +166,16 @@
     <!-- Ícone WhatsApp -->
     <svg class="icon" viewBox="0 0 32 32" fill="none" aria-hidden="true">
       <path fill="#25D366" d="M27.8 4.2A15.9 15.9 0 0 0 16 0C7.2 0 0 7.2 0 16c0 2.8.7 5.5 2 7.9L0 32l8.3-2.2A15.9 15.9 0 0 0 16 32c8.8 0 16-7.2 16-16 0-4.3-1.7-8.3-4.2-11.8z"/>
-      <path fill="#fff" d="M25.6 22.9c-.4 1-2.3 1.9-3.2 2-0.9.1-1.9.3-6.4-1.3-5.4-1.9-8.9-7.7-9.2-8.1-.3-.4-2.2-2.9-2.2-5.5s1.4-3.9 2-4.4c.5-.5 1.2-.7 1.6-.7.4 0 .8 0 1.2.1.4.1.9-.1 1.4 1.1.5 1.2 1.7 4 1.8 4.3.1.3.1.6 0 .8-.1.3-.2.5-.4.8l-.6.9c-.2.3-.5.6-.2 1.2.3.5 1.4 2.4 3.1 3.8 2.1 1.9 3.8 2.5 4.3 2.8.5.2 1 .2 1.4-.1.4-.3 1.9-2.3 2.4-3.1.5-.8 1-.7 1.6-.5.6.2 3.8 1.8 4.4 2.1.6.3 1 0 1.2.2.2.1.2 1.1-.2 2.1z"/>
+      <path fill="#fff" d="M25.6 22.9c-.4 1-2.3 1.9-3.2 2-0.9.1-1.9.3-6.4-1.3-5.4-1.9-8.9-7.7-9.2-8.1-.3-.4-2.2-2.9-2.2-5.5s1.4-3.9 2-4.4c.5-.5 1.2-.7 1.6-.7.4 0 .8 0 1.2.1.4.1.9-.1 1.4 1.1.5 1.2 1.7 4 1.8 4.3.1.3.1.6 0 .8-.1.3-.2.5-.4.8l-.6.9c-.2.3-.5.6-.2 1.2.3.5 1.4 2.4 3.1 3.8 2.1 1.9 3.8 2.5 4.3 2.8.5.2 1 .2 1.4-.1.4-.3 1.9-2.3 2.4-3.1.5-.8 1-0.7 1.6-.5.6.2 3.8 1.8 4.4 2.1.6.3 1 0 1.2.2.2.1.2 1.1-.2 2.1z"/>
     </svg>
     <span>WhatsApp</span>
   </button>
 </div>
 
-<!-- Overlay inicial (um único botão) -->
+<!-- Overlay inicial -->
 <div id="startOverlay">
   <h2>Inspeção – Modo Painel</h2>
-  <p>Captura <b>1 foto a cada 0,5 s</b> (ajustável), carimba <b>KM</b> e, se disponível, os <b>5 IDs mais próximos</b>, além de <b>data/hora</b> e <b>GPS</b>.</p>
+  <p>Captura <b>1 foto a cada 0,10 s</b> (fixo), carimba <b>KM</b> e, se disponível, os <b>5 IDs mais próximos</b>, além de <b>data/hora</b> e <b>GPS</b>.</p>
   <p class="muted">Requisitos: <b>HTTPS</b>, permitir <b>Câmera</b> e <b>Localização</b>, e escolher a <b>Pasta</b>.</p>
   <button id="btnStart">▶ INICIAR</button>
   <p class="muted">Dica: toque longo (2s) na tela pausa/retoma durante a viagem.</p>
@@ -186,7 +186,7 @@
 <script>
 /* ================= CONFIG ================= */
 const MIN_INTERVAL_MS = 100;
-const DEFAULT_INTERVAL_MS = 500;
+const DEFAULT_INTERVAL_MS = 100;   // fixo no menor intervalo
 const MAX_DIM = 1600;
 const JPEG_Q = 0.88;
 const MIN_JPEG_BYTES = 1024;
@@ -222,9 +222,9 @@ let sessionEnd = null;
 let sessionPhotos = [];   // nomes dos arquivos salvos
 let reportFiles = [];     // PDFs gerados
 
-// métrica de encoder / “inteligência” de intervalo
-let encAvgMs = null;      // média móvel do tempo de captura
-const ENC_ALPHA = 0.25;   // suavização
+// média móvel (DESATIVADA)
+let encAvgMs = null;
+const ENC_ALPHA = 0.25;
 
 const can = document.createElement('canvas');
 const ctx = can.getContext('2d', {alpha:false});
@@ -239,36 +239,18 @@ function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; 
 function fmtKm(v){ if(!Number.isFinite(v)) return 'KM —'; let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
 const z2 = v => String(v).padStart(2,'0');
 function stampNow(){ const d=new Date(); return `${d.getFullYear()}-${z2(d.getMonth()+1)}-${z2(d.getDate())}_${z2(d.getHours())}-${z2(d.getMinutes())}-${z2(d.getSeconds())}`; }
+
+/* ===== Intervalo fixo em 100 ms ===== */
 function clampInterval(){
-  let v = Number(intervalMsInput.value || DEFAULT_INTERVAL_MS);
-  if(!Number.isFinite(v) || v < MIN_INTERVAL_MS) v = MIN_INTERVAL_MS;
-  intervalMsInput.value = String(v);
-  const match=[...presetSel.options].find(o=>Number(o.value)===v);
-  if(match) presetSel.value=String(v);
-  // localStorage.setItem('intervalMs', String(v)); // (opcional) persistir intervalo
-  return v;
+  intervalMsInput.value = String(MIN_INTERVAL_MS);
+  presetSel.value = String(MIN_INTERVAL_MS);
+  return MIN_INTERVAL_MS;
 }
-function adaptIntervalIfNeeded(lastEncMs){
-  encAvgMs = encAvgMs==null ? lastEncMs : (ENC_ALPHA*lastEncMs + (1-ENC_ALPHA)*encAvgMs);
-  const current = clampInterval();
-  if(encAvgMs > current * 0.7){
-    const target = Math.ceil(encAvgMs / 0.6); // folga ~40%
-    if(target > current){
-      intervalMsInput.value = String(target);
-      const match=[...presetSel.options].find(o=>Number(o.value)===target);
-      if(match) presetSel.value=String(target);
-      showToast(`Intervalo ajustado automaticamente para ${target} ms`);
-    }
-  }
-}
+/* Desativa qualquer adaptação automática */
+function adaptIntervalIfNeeded(){ return; }
 
 /* ============ PERMISSÕES/START ============ */
-
-/* =======================
-   Persistência do Handle
-   via IndexedDB nativo
-   ======================= */
-// === IndexedDB tiny helpers
+/* Persistência do Handle via IndexedDB */
 const DB_NAME='insp_persist'; const DB_STORE='fs_handles'; const DB_KEY='dirHandle';
 function idbOpen(){
   return new Promise((res,rej)=>{
@@ -290,7 +272,6 @@ function idbGet(key){
   }));
 }
 
-// === Verifica/solicita permissão em um handle já existente
 async function ensureDirPermission(handle){
   if(!handle) return false;
   if (await handle.queryPermission({mode:'readwrite'}) === 'granted') return true;
@@ -298,12 +279,10 @@ async function ensureDirPermission(handle){
   return false;
 }
 
-// === Tenta restaurar a pasta na abertura
 async function restoreFolderIfPossible(){
   try{
     const saved = await idbGet(DB_KEY);
     if(saved){
-      // Tentativa de garantir permissão sem abrir seletor
       const ok = await ensureDirPermission(saved);
       if(ok){
         dirHandle = saved;
@@ -317,12 +296,10 @@ async function restoreFolderIfPossible(){
 
 async function pickFolder(){
   try{
-    // Sugere persistência de storage (permite reter o handle por mais tempo)
     if('storage' in navigator && navigator.storage && navigator.storage.persist) {
       try{ await navigator.storage.persist(); }catch{}
     }
     dirHandle = await window.showDirectoryPicker({mode:'readwrite'});
-    // salva para reabrir na próxima sessão
     try{ await idbSet(DB_KEY, dirHandle); }catch{}
     showToast('Pasta OK',900);
   }catch{
@@ -473,7 +450,6 @@ async function captureOnce(){
     const fh=await dirHandle.getFileHandle(name,{create:true});
     try{ await safeWriteFile(fh, blob); }
     catch(e){
-      // 2ª via: dataURL
       const dataURL=can.toDataURL('image/jpeg', Math.max(0.7, JPEG_Q-0.1));
       const b64=dataURL.split(',')[1]; const bin=atob(b64);
       const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
@@ -481,25 +457,23 @@ async function captureOnce(){
     }
 
     sessionPhotos.push(name);
-    // Habilita botões após primeira foto
     btnPDF.disabled = false;
   }catch(e){ console.error('captureOnce', e); }
   finally{
     const encMs = performance.now() - t0;
-    adaptIntervalIfNeeded(encMs);
+    adaptIntervalIfNeeded(encMs); // no-op (desativado)
     busy=false;
   }
 }
 async function loop(){
-  // trava intervalo e presets enquanto captura
   intervalMsInput.disabled = true;
   presetSel.disabled = true;
   while(running){
     await captureOnce();
-    await new Promise(r=>setTimeout(r, clampInterval()));
+    await new Promise(r=>setTimeout(r, clampInterval())); // sempre 100ms
   }
-  intervalMsInput.disabled = false;
-  presetSel.disabled = false;
+  intervalMsInput.disabled = true; // mantem travado
+  presetSel.disabled = true;
 }
 
 /* ============ RELATÓRIO (PDF) ============ */
@@ -633,18 +607,15 @@ function sendWhats(){
 
 /* ============ CONTROLES ============ */
 presetSel.addEventListener('change', ()=>{
-  const v=Math.max(MIN_INTERVAL_MS, Number(presetSel.value)||DEFAULT_INTERVAL_MS);
-  intervalMsInput.value = String(v);
-  // localStorage.setItem('intervalMs', String(v));
+  clampInterval(); // permanece 100ms
 });
 intervalMsInput.addEventListener('change', ()=>{ clampInterval(); });
 
 btnStartOverlay.addEventListener('click', async ()=>{
   try{
-    // Primeiro tenta restaurar pasta sem abrir seletor:
+    // Restaurar pasta sem abrir seletor
     let restored = await restoreFolderIfPossible();
     if(!restored){
-      // Se não restaurou, pede a pasta normalmente
       await pickFolder();
     }
     await startCamera();
@@ -652,13 +623,15 @@ btnStartOverlay.addEventListener('click', async ()=>{
     await Promise.all([loadKM(), loadIDs()]);
     startOverlay.style.display='none';
     sessionStart = new Date();
-    stateEl.textContent='Pronto. Ajuste o intervalo e toque em INICIAR.';
+    stateEl.textContent='Pronto. Intervalo fixo em 0,10 s. Toque em INICIAR.';
     // Wake Lock
     if('wakeLock' in navigator){ try{ await navigator.wakeLock.request('screen'); }catch{} }
 
-    // (opcional) restaurar intervalo salvo
-    // const savedInt = Number(localStorage.getItem('intervalMs'));
-    // if(Number.isFinite(savedInt) && savedInt>=MIN_INTERVAL_MS){ intervalMsInput.value=String(savedInt); clampInterval(); }
+    // Travar visualmente (garantia extra)
+    intervalMsInput.value = "100";
+    presetSel.value = "100";
+    intervalMsInput.disabled = true;
+    presetSel.disabled = true;
 
   }catch(e){
     console.error(e); showToast('Falha ao iniciar');
@@ -666,7 +639,6 @@ btnStartOverlay.addEventListener('click', async ()=>{
 });
 
 btnStartStop.addEventListener('click', async ()=>{
-  // Se pasta não escolhida, força escolher
   if(!dirHandle){
     try{ await pickFolder(); }catch{ return; }
   }
@@ -677,10 +649,10 @@ btnStartStop.addEventListener('click', async ()=>{
   if(running){
     btnStartStop.textContent = '⏹ PARAR';
     btnStartStop.classList.add('stop');
-    stateEl.textContent = 'CAPTURANDO (toque longo para pausar)';
-    btnPDF.disabled = true;         // evita gerar PDF durante captura
-    btnWhats.disabled = true;       // evita enviar msg sem PDF
-    encAvgMs = null;                // reseta média adaptativa
+    stateEl.textContent = 'CAPTURANDO (intervalo 0,10 s – toque longo para pausar)';
+    btnPDF.disabled = true;
+    btnWhats.disabled = true;
+    encAvgMs = null;
     loop();
   }else{
     btnStartStop.textContent = '▶ INICIAR';
@@ -702,7 +674,7 @@ document.addEventListener('touchend', ()=>{
     if(running){
       btnStartStop.textContent = '⏹ PARAR';
       btnStartStop.classList.add('stop');
-      stateEl.textContent = 'CAPTURANDO (toque longo para pausar)';
+      stateEl.textContent = 'CAPTURANDO (intervalo 0,10 s – toque longo para pausar)';
       btnPDF.disabled = true; btnWhats.disabled = true;
       encAvgMs = null;
       loop();
@@ -719,6 +691,12 @@ document.addEventListener('touchend', ()=>{
 
 /* Atualiza KM/Top5 periodicamente */
 setInterval(updateKMandTop5, 500);
+
+/* Inicializa UI com 100ms */
+clampInterval();
+intervalMsInput.disabled = true;
+presetSel.disabled = true;
 </script>
 </body>
 </html>
+``
