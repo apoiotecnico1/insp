@@ -4,89 +4,162 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0b7a39" />
-<title>KM – Placa</title>
+<title>Inspeção – KM + Foto + Anotações + PDF</title>
 <style>
   :root{
     --green:#0b7a39; --green2:#085e2c; --fg:#eaf2ff; --border:#e6f0ea;
+    --glass: rgba(0,0,0,.55);
+    --hi:#35eb85; --txt:#eaf2ff; --muted:#cbd5e1;
   }
   html,body{
-    margin:0; height:100%; background:#000; color:#fff;
+    margin:0;height:100%;background:#000;overflow:hidden;
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;
     -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
   }
-  /* Contêiner central */
-  .wrap{
-    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-    padding-bottom:env(safe-area-inset-bottom);
-  }
+  /* Vídeo ocupa a tela */
+  #vid{position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
 
-  /* Placa de trânsito verde (estilo original) */
+  /* Placa de KM verde (estilo trânsito) */
   #kmBox{
-    background:linear-gradient(180deg,var(--green),var(--green2));
-    color:#fff;
-    padding:14px 26px;
-    border-radius:20px;
-    border:6px solid var(--border);
-    font-size: clamp(28px, 8vw, 120px);
-    font-weight:1000;
-    text-shadow:0 1px 0 rgba(0,0,0,.45);
-    box-shadow:
-      0 14px 28px rgba(0,0,0,.5),
-      inset 0 0 0 3px rgba(255,255,255,.5);
-    letter-spacing:.5px;
-    user-select:none;
+    position:fixed; top:14px; left:50%; transform:translateX(-50%);
+    background:linear-gradient(180deg,var(--green),var(--green2)); color:#fff;
+    padding:14px 24px; border-radius:18px; border:6px solid var(--border);
+    font-size:clamp(28px,8vw,120px); font-weight:1000; text-shadow:0 1px 0 rgba(0,0,0,.45);
+    box-shadow:0 14px 28px rgba(0,0,0,.5), inset 0 0 0 3px rgba(255,255,255,.5);
+    z-index:3; user-select:none; letter-spacing:.5px;
   }
 
-  /* Toast simples para mensagens */
+  /* Canvas transparente para desenho */
+  #draw{
+    position:fixed; inset:0; z-index:2; touch-action:none; /* para desenhar no touch */
+  }
+
+  /* Barra inferior */
+  #bar{
+    position:fixed; left:50%; transform:translateX(-50%);
+    bottom:calc(10px + env(safe-area-inset-bottom)); z-index:4;
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center;
+    background:var(--glass); border:1px solid rgba(255,255,255,.12);
+    padding:8px; border-radius:14px; backdrop-filter: blur(8px);
+    box-shadow:0 8px 24px rgba(0,0,0,.45); max-width:min(100vw - 16px, 1200px);
+  }
+  .btn, .chip{
+    height:48px; padding:0 14px; border-radius:12px; border:1px solid rgba(255,255,255,.18);
+    font-weight:900; font-size:.98rem; display:inline-flex; align-items:center; gap:10px;
+    color:#062a1a; background:linear-gradient(180deg,#35eb85,#22c55e); cursor:pointer; user-select:none;
+    transition:transform .06s ease, filter .12s ease, opacity .12s ease; outline:none;
+  }
+  .btn:active{ transform:translateY(1px) }
+  .chip{
+    color:#eaf2ff; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.14);
+  }
+  .chip input[type="color"], .chip input[type="range"]{
+    height:30px; background:#0d1731; border:1px solid rgba(255,255,255,.18);
+    color:#eaf2ff; border-radius:8px;
+  }
+  .chip input[type="range"]{ width:120px }
+  .muted{color:var(--muted); font-size:.9rem}
+
+  /* Toast */
   #toast{
-    position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom));
-    transform:translateX(-50%); display:none;
-    background:rgba(0,0,0,.75); color:#fff; border:1px solid rgba(255,255,255,.18);
+    position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); transform:translateX(-50%); display:none;
+    background:rgba(0,0,0,.78); color:#fff; border:1px solid rgba(255,255,255,.18);
     padding:8px 12px; border-radius:10px; font-size:.95rem; z-index:5
   }
 
-  /* Dica inicial (só aparece até começar a receber GPS) */
+  /* Dica inicial */
   #hint{
     position:fixed; top:14px; left:50%; transform:translateX(-50%);
-    color:#cfe7ff; font-weight:700; font-size:.95rem; opacity:.9;
+    color:#cfe7ff; font-weight:700; font-size:.95rem; opacity:.95; z-index:3;
     text-align:center; padding:4px 10px; border-radius:10px; background:rgba(0,0,0,.35);
     border:1px solid rgba(255,255,255,.12);
+  }
+
+  /* Badge de status da foto */
+  #shotBadge{
+    position:fixed; right:12px; top:12px; z-index:3;
+    background:rgba(0,0,0,.5); color:#fff; border:1px solid rgba(255,255,255,.18);
+    padding:6px 10px; border-radius:10px; font-weight:800; display:none;
+  }
+
+  @media (max-width:560px){
+    .btn, .chip{height:46px; font-size:.94rem}
+    #kmBox{padding:12px 20px}
   }
 </style>
 </head>
 <body>
 
-<div id="hint">Permita a Localização para ver o KM</div>
+<video id="vid" autoplay playsinline muted></video>
 
-<div class="wrap">
-  <div id="kmBox" aria-live="polite">KM —</div>
+<div id="kmBox">KM —</div>
+<canvas id="draw"></canvas>
+
+<div id="hint">Permita Câmera e Localização para iniciar</div>
+<div id="shotBadge">📷 1 foto pronta</div>
+
+<!-- Barra de ferramentas -->
+<div id="bar" role="toolbar" aria-label="Ferramentas">
+  <button id="btnPhoto" class="btn" title="Capturar a foto local com KM e anotações">🎯 Capturar</button>
+
+  <div class="chip" role="group" aria-label="Desenho">
+    ✏️ <label><input id="toggleDraw" type="checkbox"> Desenhar</label>
+    <span class="muted" style="margin-left:6px;">Cor</span>
+    <input id="color" type="color" value="#ff4444" title="Cor do traço">
+    <span class="muted">Espessura</span>
+    <input id="size" type="range" min="2" max="18" value="6" title="Espessura do traço">
+    <button id="btnUndo" class="chip" title="Desfazer último traço">↶ Desfazer</button>
+    <button id="btnClear" class="chip" title="Limpar todos os traços">🗑️ Limpar</button>
+  </div>
+
+  <button id="btnPDF" class="btn" title="Gerar relatório PDF com a foto e metadados" disabled>📄 PDF</button>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
-/* ======= Config ======= */
-const CSV_PATH = './SNVBR116SPRJ.csv'; // km;lat;lon (separador ;)
-const UPDATE_MS = 800;                 // atualização periódica (reforço do watch)
-const toastEl = document.getElementById('toast');
-const kmBox   = document.getElementById('kmBox');
-const hint    = document.getElementById('hint');
+/* ========== CONFIG E ESTADO ========== */
+const CSV_PATH = './SNVBR116SPRJ.csv'; // km;lat;lon
+const MAX_CAPTURE_DIM = 1600;         // máx. dimensão da imagem de saída
+const JPEG_Q = 0.9;
 
-let kmPoints = [];   // {km,lat,lon}
-let lastPos  = null; // {lat,lon,acc}
+const vid = document.getElementById('vid');
+const kmBox = document.getElementById('kmBox');
+const draw = document.getElementById('draw');
+const g = draw.getContext('2d');
+const hint = document.getElementById('hint');
+const toast = document.getElementById('toast');
+const shotBadge = document.getElementById('shotBadge');
 
-/* ======= Utils ======= */
-function showToast(msg, ms=1300){
-  toastEl.textContent=msg; toastEl.style.display='block';
-  clearTimeout(showToast._t); showToast._t=setTimeout(()=>toastEl.style.display='none',ms);
+const btnPhoto = document.getElementById('btnPhoto');
+const btnPDF = document.getElementById('btnPDF');
+const toggleDraw = document.getElementById('toggleDraw');
+const colorInp = document.getElementById('color');
+const sizeInp = document.getElementById('size');
+const btnUndo = document.getElementById('btnUndo');
+const btnClear = document.getElementById('btnClear');
+
+let kmPoints = [];     // {km, lat, lon}
+let lastPos = null;    // {lat, lon, acc}
+let currentKMStr = 'KM —';
+
+let strokes = [];      // [{pts:[{x,y}], color, size}]   (coords em pixels do VIDEO!)
+let drawing = false;   // modo desenho ativo?
+let isPointerDown = false;
+
+let shot = null;       // {blob, w, h, when, km, lat, lon, acc}
+
+/* ========== UTILS ========== */
+function showToast(msg, ms=1400){
+  toast.textContent = msg; toast.style.display='block';
+  clearTimeout(showToast._t); showToast._t = setTimeout(()=> toast.style.display='none', ms);
 }
 function parsePt(v){
   if(v==null) return NaN;
   const s=String(v).trim();
-  // Aceita "10,123" como decimal
   return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s);
 }
-function hav(a,b,c,d){ // haversine em metros
+function hav(a,b,c,d){ // haversine (m)
   const R=6371000, x=(c-a)*Math.PI/180, y=(d-b)*Math.PI/180;
   const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
   return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
@@ -97,44 +170,57 @@ function fmtKm(v){
   if(m>=1000){m-=1000;K+=1}
   return `KM ${K}+${String(m).padStart(3,'0')}`;
 }
+const z2 = v => String(v).padStart(2,'0');
 
-/* ======= Dados (CSV) ======= */
+/* ========== VIDEO BOX MAPEAMENTO (contain) ========== */
+function getVideoRectOnScreen(){
+  // Retorna o retângulo do conteúdo de vídeo (com object-fit: contain) em coordenadas de viewport
+  const vw = vid.videoWidth || 0, vh = vid.videoHeight || 0;
+  const cw = window.innerWidth, ch = window.innerHeight;
+  if(!vw || !vh) return {x:0,y:0,w:0,h:0, scale:1};
+  const scale = Math.min(cw/vw, ch/vh);
+  const w = vw*scale, h = vh*scale;
+  const x = (cw - w)/2, y = (ch - h)/2;
+  return {x,y,w,h, scale};
+}
+function screenToVideo(px, py){
+  const r = getVideoRectOnScreen();
+  if(r.w<=0 || r.h<=0) return {x:0,y:0, inside:false};
+  const x = (px - r.x)/r.scale;
+  const y = (py - r.y)/r.scale;
+  const inside = x>=0 && y>=0 && x<= (vid.videoWidth||0) && y<= (vid.videoHeight||0);
+  return {x, y, inside};
+}
+function videoToScreen(vx, vy){
+  const r = getVideoRectOnScreen();
+  return { x: r.x + vx*r.scale, y: r.y + vy*r.scale };
+}
+
+/* ========== CSV E GPS/KM ========== */
 async function loadKM(){
   try{
     const txt = await fetch(CSV_PATH, {cache:'no-store'}).then(r=>r.text());
     kmPoints.length=0;
     txt.split(/\r?\n/).forEach(l=>{
-      if(!l.trim()) return;
-      const c=l.split(';');
-      const km=parsePt(c[0]), lat=parsePt(c[1]), lon=parsePt(c[2]);
-      if(Number.isFinite(km) && Number.isFinite(lat) && Number.isFinite(lon)){
-        kmPoints.push({km,lat,lon});
-      }
+      const s=l.trim(); if(!s) return;
+      const c=s.split(';'); const km=parsePt(c[0]), lat=parsePt(c[1]), lon=parsePt(c[2]);
+      if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)) kmPoints.push({km,lat,lon});
     });
     if(!kmPoints.length) showToast('CSV sem pontos de KM', 1800);
-  }catch(e){
-    console.error(e);
-    showToast('Não foi possível carregar o CSV de KM', 1800);
-  }
+  }catch(e){ console.error(e); showToast('Não foi possível carregar o CSV de KM', 1800); }
 }
-
-/* ======= GPS + Atualização do KM ======= */
 function updateKM(){
-  if(!lastPos || !kmPoints.length){
-    kmBox.textContent = 'KM —';
-    return;
-  }
-  let best=null, bestD=Infinity;
-  const {lat,lon} = lastPos;
-  // Seleciona o ponto de referência de KM mais próximo
-  for(const p of kmPoints){
-    const d = hav(lat,lon,p.lat,p.lon);
-    if(d < bestD){ bestD = d; best = p; }
-  }
-  kmBox.textContent = best ? fmtKm(best.km) : 'KM —';
-  if(best) hint.style.display = 'none';
+  if(lastPos && kmPoints.length){
+    let best=null, bd=Infinity;
+    for(const p of kmPoints){
+      const d = hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
+      if(d < bd){ bd=d; best=p; }
+    }
+    currentKMStr = best ? fmtKm(best.km) : 'KM —';
+  }else currentKMStr = 'KM —';
+  kmBox.textContent = currentKMStr;
+  if(lastPos) hint.style.display='none';
 }
-
 function startGPS(){
   if(!('geolocation' in navigator)){
     showToast('Sem suporte a GPS no navegador', 1800);
@@ -143,26 +229,327 @@ function startGPS(){
   navigator.geolocation.getCurrentPosition(p=>{
     lastPos = {lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
     updateKM();
-    hint.style.display = 'none';
-    // Watch contínuo
     navigator.geolocation.watchPosition(pp=>{
       lastPos = {lat:pp.coords.latitude, lon:pp.coords.longitude, acc:pp.coords.accuracy};
       updateKM();
-    }, err=>{
-      console.warn('watchPosition error', err);
-    }, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
+    }, err=> console.warn('watchPosition', err),
+       {enableHighAccuracy:true, maximumAge:800, timeout:15000});
   }, err=>{
-    console.warn('getCurrentPosition error', err);
-    showToast('Autorize a Localização para atualizar o KM', 2200);
+    console.warn('getCurrentPosition', err);
+    showToast('Autorize a Localização para ver o KM', 2200);
   }, {enableHighAccuracy:true, timeout:10000});
 }
 
-/* ======= Init ======= */
+/* ========== CÂMERA ========== */
+async function startCamera(){
+  try{
+    const s = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30,max:30}},
+      audio:false
+    });
+    vid.srcObject = s;
+    await new Promise(r=>{ if(vid.readyState>=1 && vid.videoWidth) r(); else vid.onloadedmetadata=r; });
+  }catch(e){
+    console.error(e); showToast('Falha ao acessar a câmera', 1800);
+  }
+}
+
+/* ========== DESENHO ==========
+   Guardamos pontos em COORDENADAS DO VÍDEO (px) para capturar 1:1.
+   Renderização no overlay converte vídeo->tela conforme resize/orientação.
+================================= */
+function resizeDrawCanvas(){
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  draw.width = Math.round(window.innerWidth * dpr);
+  draw.height = Math.round(window.innerHeight * dpr);
+  draw.style.width = window.innerWidth + 'px';
+  draw.style.height = window.innerHeight + 'px';
+  g.setTransform(dpr,0,0,dpr,0,0);
+  renderStrokes();
+}
+function renderStrokes(){
+  g.clearRect(0,0, draw.width, draw.height);
+  const r = getVideoRectOnScreen();
+  for(const s of strokes){
+    g.strokeStyle = s.color;
+    g.lineWidth = s.size * r.scale; // escala espessura para tela atual
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    g.beginPath();
+    s.pts.forEach((p,i)=>{
+      const {x,y} = videoToScreen(p.x,p.y);
+      if(i===0) g.moveTo(x,y); else g.lineTo(x,y);
+    });
+    g.stroke();
+  }
+}
+function onPointerDown(ev){
+  if(!drawing) return;
+  isPointerDown = true;
+  const x = ev.clientX ?? (ev.touches?.[0]?.clientX||0);
+  const y = ev.clientY ?? (ev.touches?.[0]?.clientY||0);
+  const m = screenToVideo(x,y);
+  if(!m.inside) return;
+  strokes.push({ color: colorInp.value, size: Number(sizeInp.value||6), pts: [{x:m.x, y:m.y}] });
+  renderStrokes();
+}
+function onPointerMove(ev){
+  if(!drawing || !isPointerDown || strokes.length===0) return;
+  const x = ev.clientX ?? (ev.touches?.[0]?.clientX||0);
+  const y = ev.clientY ?? (ev.touches?.[0]?.clientY||0);
+  const m = screenToVideo(x,y);
+  if(!m.inside) return;
+  const s = strokes[strokes.length-1];
+  const last = s.pts[s.pts.length-1];
+  if(!last || Math.hypot(m.x-last.x, m.y-last.y) > 1.2){ // suaviza
+    s.pts.push({x:m.x, y:m.y});
+    renderStrokes();
+  }
+}
+function onPointerUp(){ isPointerDown = false; }
+
+/* ========== CAPTURA (FOTO) ==========
+   Composição final em canvas OFFSCREEN:
+   - base: frame da câmera em resolução nativa (ou reduzida até MAX_CAPTURE_DIM)
+   - placa KM
+   - desenhos (convertidos vídeo->canvas)
+   - rodapé: data/hora + lat/lon + precisão
+======================================= */
+async function captureShot(){
+  if(!(vid.videoWidth && vid.videoHeight)){
+    showToast('Aguardando câmera…', 1200); return;
+  }
+  const vw = vid.videoWidth, vh = vid.videoHeight;
+  const scale = Math.min(1, MAX_CAPTURE_DIM / Math.max(vw, vh));
+  const W = Math.round(vw * scale), H = Math.round(vh * scale);
+
+  const off = document.createElement('canvas'); off.width=W; off.height=H;
+  const gx = off.getContext('2d', {alpha:false});
+  gx.fillStyle='#000'; gx.fillRect(0,0,W,H);
+
+  // 1) frame do vídeo
+  gx.drawImage(vid, 0,0, W,H);
+
+  // 2) placa KM
+  const bandH = Math.max(90, Math.round(H*0.13));
+  const plateW = Math.min(W*0.78, 0.9*W);
+  const plateH = Math.round(bandH*0.68);
+  const px = Math.round((W - plateW)/2), py = Math.round(16 * scale);
+  // moldura
+  gx.fillStyle = '#e6f0ea';
+  gx.fillRect(px-6, py-6, plateW+12, plateH+12);
+  // corpo
+  const gr = gx.createLinearGradient(0,py,0,py+plateH);
+  gr.addColorStop(0,'#0b7a39'); gr.addColorStop(1,'#085e2c');
+  gx.fillStyle = gr;
+  gx.fillRect(px, py, plateW, plateH);
+  // borda interna
+  gx.strokeStyle='rgba(255,255,255,.6)'; gx.lineWidth=3; gx.strokeRect(px+3,py+3,plateW-6,plateH-6);
+  // texto
+  const fs = Math.round(plateH*0.55);
+  gx.fillStyle='#fff'; gx.font = `900 ${fs}px system-ui`; gx.textAlign='center'; gx.textBaseline='middle';
+  gx.fillText(currentKMStr, Math.round(W/2), Math.round(py + plateH/2));
+
+  // 3) desenhos - converter de coords do VÍDEO para coords do offscreen (video nativo * scale)
+  gx.lineJoin='round'; gx.lineCap='round';
+  for(const s of strokes){
+    gx.strokeStyle = s.color;
+    gx.lineWidth = s.size * scale;
+    gx.beginPath();
+    s.pts.forEach((p,i)=>{
+      const x = p.x * scale, y = p.y * scale;
+      if(i===0) gx.moveTo(x,y); else gx.lineTo(x,y);
+    });
+    gx.stroke();
+  }
+
+  // 4) rodapé info
+  const d = new Date();
+  const ts = `${z2(d.getDate())}/${z2(d.getMonth()+1)}/${d.getFullYear()} ${z2(d.getHours())}:${z2(d.getMinutes())}:${z2(d.getSeconds())}`;
+  gx.fillStyle='rgba(0,0,0,.60)'; gx.fillRect(0, H-bandH, W, bandH);
+  gx.fillStyle='#fff'; gx.textAlign='left';
+  gx.font = `700 ${Math.round(H*0.028)}px system-ui`;
+  gx.fillText(ts, 16, H-12);
+  if(lastPos){
+    gx.fillStyle='#cfe7ff';
+    gx.font = `600 ${Math.round(H*0.026)}px system-ui`;
+    gx.fillText(`${lastPos.lat?.toFixed(6)}, ${lastPos.lon?.toFixed(6)}  ±${Math.round(lastPos.acc||0)}m`, 16, H-bandH+28);
+  }
+
+  // Exporta JPEG
+  let blob = await new Promise(res=> off.toBlob(res,'image/jpeg', JPEG_Q));
+  if(!blob){
+    const dataURL = off.toDataURL('image/jpeg', JPEG_Q);
+    const b64 = dataURL.split(',')[1]; const bin = atob(b64);
+    const u8 = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+    blob = new Blob([u8], {type:'image/jpeg'});
+  }
+
+  shot = {
+    blob, w:W, h:H,
+    when: d.toISOString(),
+    km: currentKMStr,
+    lat: lastPos?.lat ?? null,
+    lon: lastPos?.lon ?? null,
+    acc: lastPos?.acc ?? null
+  };
+  btnPDF.disabled = false;
+  shotBadge.style.display = 'block';
+  showToast('Foto capturada', 900);
+}
+
+/* ========== PDF MÍNIMO (1 página) ========== */
+function makeWriter(stream){ const enc=new TextEncoder(); let pos=0; return {
+  async ws(s){const b=enc.encode(s); await stream.write(b); pos+=b.length;},
+  async wb(b){await stream.write(b); pos+=b.length;}, get pos(){return pos;}
+};}
+function createPdf(stream){
+  const w=makeWriter(stream); const offs=[]; let next=3; const PW=595,PH=842,M=24;
+  async function obj(n,body){ offs[n]=w.pos; await w.ws(`${n} 0 obj\n${body}\nendobj\n`); }
+  async function add(body){ const n=next++; await obj(n,body); return n; }
+  async function addStream(dict, data){
+    const n=next++; offs[n]=w.pos;
+    await w.ws(`${n} 0 obj\n${dict.replace('>>','')} /Length ${data.length} >>\nstream\n`);
+    await w.wb(data); await w.ws(`\nendstream\nendobj\n`); return n;
+  }
+  function fit(imgW,imgH){ let cw=PW-2*M, ch=PH-2*M; let dw=cw, dh=Math.round(imgH*(cw/imgW));
+    if(dh>ch){ dh=ch; dw=Math.round(imgW*(ch/imgH)); } const tx=M+Math.round((cw-dw)/2), ty=M+Math.round((ch-dh)/2);
+    return {dw,dh,tx,ty}; }
+
+  return {
+    async init(){ await w.ws('%PDF-1.4\n'); },
+    async addImagePage(jpegBytes, W, H, meta){
+      // Reaproveita a própria imagem como XObject
+      const im = await addStream(`<< /Type /XObject /Subtype /Image /Width ${W} /Height ${H} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, jpegBytes);
+      const fitr = fit(W,H);
+      // conteúdo: título + metadados + imagem
+      let text = '';
+      function T(x,y,s,fs=12,b=false){ 
+        text += `BT /F1 ${fs} Tf ${x} ${PH-y} Td ${b? '2 Tr':''} (${s.replace(/[()\\]/g,'\\$&')}) Tj ${b? '0 Tr':''} ET\n`;
+      }
+      // Recursos básicos
+      const fontObj = await add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+      const contentParts = [];
+      // Desenha texto
+      const header = (()=>{ 
+        const h = [];
+        // Título
+        h.push(`BT /F1 16 Tf 0 0 0 rg ${M} ${PH-(M+16)} Td (RELATORIO DE INSPECAO) Tj ET`);
+        // Metadados
+        const y0 = M+36;
+        const lines = [
+          `KM: ${meta.km||'-'}`,
+          `Data/Hora: ${meta.localWhen||'-'}`,
+          `Coords: ${meta.lat?.toFixed?.(6)||'-'}, ${meta.lon?.toFixed?.(6)||'-'}  ±${meta.acc!=null? Math.round(meta.acc)+'m':'-'}`,
+        ];
+        lines.forEach((s,i)=>{
+          h.push(`BT /F1 11 Tf 0 0 0 rg ${M} ${PH-(y0 + i*14)} Td (${s.replace(/[()\\]/g,'\\$&')}) Tj ET`);
+        });
+        return h.join('\n');
+      })();
+      const imgCmd = `q\n${fitr.dw} 0 0 ${fitr.dh} ${fitr.tx} ${PH-(fitr.ty+fitr.dh)} cm\n/Im0 Do\nQ\n`;
+      const content = [header, imgCmd].join('\n');
+      const cont = await addStream('<< >>', new TextEncoder().encode(content));
+      const page = await add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im0 ${im} 0 R >> /Font << /F1 ${fontObj} 0 R >> >> /Contents ${cont} 0 R >>`);
+      return page;
+    },
+    async finalize(pages){
+      await obj(2,`<< /Type /Pages /Kids [ ${pages.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pages.length} >>`);
+      await obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
+      const xref = w.pos; const count = Math.max(1, offs.length-1)+1;
+      let xr = `xref\n0 ${count}\n0000000000 65535 f \n`;
+      for(let i=1;i<count;i++){ const off = offs[i]??0; const inUse = (offs[i]!=null); xr += `${String(off).padStart(10,'0')} 00000 ${inUse?'n':'f'} \n`; }
+      await w.ws(xr);
+      await w.ws(`trailer\n<< /Size ${count} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+      if(stream.close) await stream.close();
+    }
+  };
+}
+
+/* ========== SALVAR PDF (showSaveFilePicker fallback) ========== */
+async function saveBytesAs(filename, mime, bytes){
+  // Tenta File System Access
+  if(window.showSaveFilePicker){
+    const handle = await window.showSaveFilePicker({
+      suggestedName: filename,
+      types: [{description: 'PDF', accept: {'application/pdf': ['.pdf']}}],
+    });
+    const writable = await handle.createWritable();
+    await writable.write(bytes);
+    await writable.close();
+    return;
+  }
+  // Fallback: download
+  const blob = new Blob([bytes], {type:mime});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+
+/* ========== GERAR PDF ========== */
+async function generatePDF(){
+  if(!shot){ showToast('Faça a captura primeiro', 1200); return; }
+  // Lê bytes do JPEG
+  const imgU8 = new Uint8Array(await shot.blob.arrayBuffer());
+  const stream = {
+    chunks:[],
+    async write(d){ this.chunks.push(d); },
+    async close(){},
+  };
+  const pdf = createPdf(stream);
+  await pdf.init();
+  const whenLocal = new Date(shot.when).toLocaleString();
+  const page = await pdf.addImagePage(imgU8, shot.w, shot.h, {
+    km: shot.km, localWhen: whenLocal, lat: shot.lat, lon: shot.lon, acc: shot.acc
+  });
+  await pdf.finalize([page]);
+
+  // Concatena chunks
+  let total=0; for(const c of stream.chunks) total+=c.length;
+  const out = new Uint8Array(total);
+  let off=0; for(const c of stream.chunks){ out.set(c, off); off+=c.length; }
+
+  const name = `RELATORIO_${shot.km.replace(/\s+/g,'_')}_${shot.when.replace(/[:.]/g,'-')}.pdf`;
+  await saveBytesAs(name, 'application/pdf', out);
+  showToast('PDF salvo', 1000);
+}
+
+/* ========== EVENTOS UI ========== */
+toggleDraw.addEventListener('change', ()=>{ drawing = toggleDraw.checked; });
+btnUndo.addEventListener('click', ()=>{ if(strokes.length){ strokes.pop(); renderStrokes(); }});
+btnClear.addEventListener('click', ()=>{ strokes.length=0; renderStrokes(); });
+btnPhoto.addEventListener('click', captureShot);
+btnPDF.addEventListener('click', generatePDF);
+
+/* Canvas desenho: mouse + touch */
+draw.addEventListener('pointerdown', (ev)=>{ if(!drawing) return; draw.setPointerCapture(ev.pointerId); onPointerDown(ev); });
+draw.addEventListener('pointermove', onPointerMove);
+draw.addEventListener('pointerup', onPointerUp);
+draw.addEventListener('pointercancel', onPointerUp);
+draw.addEventListener('touchstart', (ev)=>{ if(!drawing) return; onPointerDown(ev); }, {passive:true});
+draw.addEventListener('touchmove', (ev)=>{ if(!drawing) return; onPointerMove(ev); }, {passive:true});
+draw.addEventListener('touchend', onPointerUp, {passive:true});
+
+/* Resize/orientação */
+window.addEventListener('resize', resizeDrawCanvas);
+window.addEventListener('orientationchange', ()=> setTimeout(resizeDrawCanvas, 250));
+
+/* ========== INIT ========== */
 (async function init(){
+  resizeDrawCanvas();
   await loadKM();
+  await startCamera();
   startGPS();
-  // Reforço periódico (caso o watch seja “preguiçoso”)
-  setInterval(updateKM, UPDATE_MS);
+
+  // Wake Lock (tela ligada)
+  if('wakeLock' in navigator){ try{ await navigator.wakeLock.request('screen'); }catch{} }
+
+  // Dica some assim que tiver posição
+  setTimeout(()=>{ if(lastPos) hint.style.display='none'; }, 5000);
+
+  showToast('Pronto. Use 🎯 Capturar, ✏️ Desenhar e 📄 PDF.', 2200);
 })();
 </script>
 </body>
