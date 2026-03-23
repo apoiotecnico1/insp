@@ -2,316 +2,111 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Inspeção Rodoviária – Captura Segura</title>
-<meta name="theme-color" content="#0b1020">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Captura Ultra Rápida – Segura</title>
 
 <style>
-  :root{
-    --bg:#070c18; --fg:#eaf2ff; --muted:#b7c6ee;
-    --panel:rgba(0,0,0,.65); --accent:#22c55e; --danger:#ef4444; --border:rgba(255,255,255,.16);
-  }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
-  html,body{margin:0; height:100%; background:#050912; color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  #stage{position:fixed; inset:0; background:#000}
-  #vid{width:100%; height:100%; object-fit:contain; background:#000}
-
-  /* HUD */
-  #hud{position:absolute; inset:0; display:flex; flex-direction:column; justify-content:space-between; padding:12px; pointer-events:none}
-  .bar{background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:10px 12px; font-weight:800; display:flex; flex-wrap:wrap; gap:10px; align-items:center; pointer-events:auto}
-  .sp{flex:1 1 auto}
-  .pill{background:rgba(255,255,255,.08); padding:6px 10px; border-radius:10px; display:inline-flex; align-items:center; gap:8px}
-  .pill input[type="number"], .pill input[type="text"], .pill select{
-    height:34px; border-radius:8px; border:1px solid var(--border);
-    background:#0b1224; color:var(--fg); padding:0 8px; font-weight:800
-  }
-  .pill input[type="number"]{ width:92px }
-  .pill input[type="text"]{ width:160px }
-  .muted{color:#a8b4d8; font-weight:700}
-
-  .center{ text-align:center }
-  #btn{pointer-events:auto; width:min(90vw, 300px); height:64px; font-size:18px; font-weight:900; border-radius:14px; border:1px solid var(--border); background:linear-gradient(180deg,#24d06b,#1fb85b); color:#052014; cursor:pointer; box-shadow:0 10px 30px rgba(0,0,0,.45)}
-  #btn.stop{ background:linear-gradient(180deg,#f2544b,#cc3e36); color:#fff }
-
-  /* Modal pasta */
-  #gate{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:radial-gradient(1200px 600px at 50% -10%, #0c2a3f, transparent 65%), #060a12}
-  .card{background:linear-gradient(180deg, rgba(16,26,64,.9), rgba(14,22,52,.9)); border:1px solid var(--border); border-radius:16px; padding:20px; width:min(92vw, 460px); color:#cfe1ff; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.5)}
-  .card h2{margin:0 0 10px}
-  .card p{margin:0 0 14px; opacity:.9}
-  .card .row{display:flex; gap:8px; margin-bottom:10px}
-  .card input[type="text"]{flex:1; height:44px; border-radius:10px; border:1px solid var(--border); background:#0b1224; color:var(--fg); padding:0 10px; font-weight:800}
-  .card button{width:100%; height:56px; border-radius:12px; font-weight:900; border:1px solid var(--border); background:linear-gradient(180deg,#24d06b,#1fb85b); color:#062a1a; cursor:pointer}
-  .hint{font-size:.92rem; color:#a7b7e0; margin-top:10px}
-
-  /* Toast */
-  #toast{position:fixed; left:50%; bottom:14px; transform:translateX(-50%); background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,.6)); border:1px solid var(--border); color:var(--fg); padding:10px 14px; border-radius:12px; display:none; z-index:9}
+html,body{margin:0;height:100%;background:#000;color:#fff;font-family:system-ui}
+video{width:100%;height:100%;object-fit:contain}
+#hud{position:fixed;top:10px;left:10px;background:rgba(0,0,0,.6);padding:10px;border-radius:10px}
+#btn{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:260px;height:60px;font-size:20px;font-weight:900;border-radius:14px;border:none}
+.start{background:#22c55e}
+.stop{background:#ef4444;color:#fff}
+input{width:90px;font-size:16px;font-weight:800}
 </style>
 </head>
 <body>
 
-<div id="stage">
-  <video id="vid" autoplay playsinline muted></video>
+<video id="vid" autoplay playsinline muted></video>
 
-  <!-- HUD -->
-  <div id="hud">
-    <!-- topo -->
-    <div class="bar">
-      <span id="status">⏸ Parado</span>
-      <span class="pill">📷 <b id="okCnt">0</b> <span class="muted">salvas</span></span>
-      <span class="pill">⚠️ <b id="dropCnt">0</b> <span class="muted">descartes</span></span>
-
-      <span class="sp"></span>
-
-      <span class="pill">
-        <span class="muted">Intervalo:</span>
-        <input id="intervalMs" type="number" min="500" step="100" value="1500">
-        <span class="muted">ms</span>
-        <select id="preset">
-          <option value="500">0,5 s</option>
-          <option value="700">0,7 s</option>
-          <option value="1000">1,0 s</option>
-          <option value="1500" selected>1,5 s</option>
-          <option value="2000">2,0 s</option>
-        </select>
-      </span>
-
-      <span class="pill">
-        <span class="muted">Prefixo:</span>
-        <input id="prefix" type="text" placeholder="Ex.: BR116_SUL">
-      </span>
-    </div>
-
-    <!-- base: botão único -->
-    <div class="center">
-      <button id="btn">▶ INICIAR CAPTURA</button>
-    </div>
-  </div>
+<div id="hud">
+Intervalo (ms):
+<input id="interval" type="number" value="100" min="100">
+<br><br>
+Fotos: <b id="cnt">0</b>
+<br>
+<span id="warn"></span>
 </div>
 
-<!-- Modal de pasta -->
-<div id="gate" aria-modal="true" role="dialog">
-  <div class="card">
-    <h2>Selecionar Pasta de Saída</h2>
-    <p>As <b>fotos JPG</b> serão salvas <u>diretamente</u> na pasta escolhida.</p>
-    <div class="row">
-      <input id="gatePrefix" type="text" placeholder="Prefixo opcional (ex.: BR116_SUL)">
-      <button id="pickBtn">📁 Escolher pasta</button>
-    </div>
-    <div class="hint">Use Chrome/Edge em <b>HTTPS</b>. Conceda permissão de <b>localização</b> para carimbo GPS (opcional).</div>
-  </div>
-</div>
-
-<div id="toast"></div>
+<button id="btn" class="start">▶ INICIAR</button>
 
 <script>
-/* =============== CONFIG =============== */
-const MIN_INTERVAL_MS = 500;          // mínimo absoluto
-const DEFAULT_INTERVAL_MS = 1500;     // padrão estável
-const MAX_PIX = 1600;                 // downscale para estabilidade
-const JPEG_QUALITY = 0.88;            // qualidade (boa/leve)
-/* ===================================== */
+const MIN_INTERVAL = 100;
+const MAX_PIX = 1280;
 
 const vid = document.getElementById('vid');
 const btn = document.getElementById('btn');
-const statusTxt = document.getElementById('status');
-const okCnt = document.getElementById('okCnt');
-const dropCnt = document.getElementById('dropCnt');
-const intervalMsInput = document.getElementById('intervalMs');
-const presetSel = document.getElementById('preset');
-const prefixInput = document.getElementById('prefix');
+const cnt = document.getElementById('cnt');
+const intervalInput = document.getElementById('interval');
+const warn = document.getElementById('warn');
 
-const gate = document.getElementById('gate');
-const gatePrefix = document.getElementById('gatePrefix');
-const pickBtn = document.getElementById('pickBtn');
+let dir = null;
+let running=false;
+let busy=false;
+let saved=0;
 
-const toast = document.getElementById('toast');
+const can=document.createElement('canvas');
+const ctx=can.getContext('2d',{alpha:false});
 
-let dirHandle = null;
-let running = false;
-let successCount = 0;
-let dropCount = 0;
-let capturing = false;
-let lastPos = null;
-
-const can = document.createElement('canvas');
-const ctx = can.getContext('2d', {alpha:false});
-
-/* =============== UTIL =============== */
-function toastMsg(m,ms=1300){ toast.textContent=m; toast.style.display='block'; clearTimeout(toast.t); toast.t=setTimeout(()=>toast.style.display='none',ms); }
-const z2 = v => String(v).padStart(2,'0');
-function stampNow(){
-  const d=new Date();
-  return `${d.getFullYear()}-${z2(d.getMonth()+1)}-${z2(d.getDate())}_${z2(d.getHours())}-${z2(d.getMinutes())}-${z2(d.getSeconds())}`;
+async function cam(){
+ const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+ vid.srcObject=s;
+ await new Promise(r=>vid.onloadedmetadata=r);
 }
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-function getIntervalMs(){
-  let v = Number(intervalMsInput.value || DEFAULT_INTERVAL_MS);
-  if(!Number.isFinite(v) || v < MIN_INTERVAL_MS) v = MIN_INTERVAL_MS;
-  // sincroniza preset se existir exatamente
-  const match = [...presetSel.options].find(o => Number(o.value) === v);
-  if(match) presetSel.value = String(v);
-  return v;
-}
-function getPrefix(){
-  const p = String(prefixInput.value || "").trim();
-  return p ? p.replace(/[^\w\-+.]/g,'_') : "";
-}
-/* ==================================== */
+cam();
 
-/* =============== CAMERA =============== */
-async function startCamera(){
-  const st = await navigator.mediaDevices.getUserMedia({
-    video:{
-      facingMode:{ideal:"environment"},
-      width:{ideal:1920}, height:{ideal:1080},
-      frameRate:{ideal:30, max:30}
-    },
-    audio:false
-  });
-  vid.srcObject = st;
-  await new Promise(res => {
-    if(vid.readyState >= 1 && vid.videoWidth) res();
-    else vid.onloadedmetadata = res;
-  });
-}
-/* ===================================== */
-
-/* =============== GPS =============== */
-if('geolocation' in navigator){
-  navigator.geolocation.watchPosition(p=>{
-    lastPos = { lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy };
-  }, ()=>{}, { enableHighAccuracy:true, maximumAge:1000, timeout:15000 });
-}
-/* =================================== */
-
-/* =============== CAPTURA DE FOTO =============== */
-async function tryMakeJpegBlob(){
-  // 1ª tentativa
-  let blob = await new Promise(r => can.toBlob(r, 'image/jpeg', JPEG_QUALITY));
-  if(blob && blob.size >= 1000) return blob;
-  // pequena espera e 2ª tentativa
-  await sleep(40);
-  blob = await new Promise(r => can.toBlob(r, 'image/jpeg', JPEG_QUALITY));
-  if(blob && blob.size >= 1000) return blob;
-  return null;
+function clampInterval(){
+ let v=Number(intervalInput.value||MIN_INTERVAL);
+ if(v<MIN_INTERVAL){
+   intervalInput.value=MIN_INTERVAL;
+   warn.textContent="⚠️ Abaixo de 100 ms é fisicamente impossível";
+ }else warn.textContent="";
+ return v;
 }
 
-async function capturePhoto(){
-  if(capturing) return;
-  capturing = true;
-  let writer = null;
-
-  try{
-    const vw = vid.videoWidth, vh = vid.videoHeight;
-    if(!vw || !vh) { dropCount++; dropCnt.textContent = dropCount; return; }
-
-    const scale = Math.min(1, MAX_PIX / Math.max(vw, vh));
-    const w = Math.round(vw * scale);
-    const h = Math.round(vh * scale);
-
-    can.width = w; can.height = h;
-    ctx.drawImage(vid, 0, 0, w, h);
-
-    // Overlay GPS discreto
-    if(lastPos){
-      ctx.fillStyle = "rgba(0,0,0,.58)";
-      ctx.fillRect(0, h-56, w, 56);
-      ctx.fillStyle = "#fff";
-      ctx.font = "600 18px system-ui";
-      ctx.fillText(`${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)}  ±${Math.round(lastPos.acc||0)}m`, 12, h-20);
-    }
-
-    const blob = await tryMakeJpegBlob();
-    if(!blob){ dropCount++; dropCnt.textContent = dropCount; return; }
-
-    const prefix = getPrefix();
-    const name = (prefix ? `${prefix}_` : "") + `FOTO_${stampNow()}.jpg`;
-
-    const fh = await dirHandle.getFileHandle(name, {create:true});
-    writer = await fh.createWritable();
-    await writer.write(blob);
-    await writer.close(); writer = null;
-
-    successCount++; okCnt.textContent = successCount;
-  }catch(e){
-    console.error("capturePhoto error:", e);
-    dropCount++; dropCnt.textContent = dropCount;
-  }finally{
-    try{ await writer?.close(); }catch{}
-    capturing = false;
-  }
+async function snap(){
+ if(busy) return;
+ busy=true;
+ let w,h,wr=null;
+ try{
+  const vw=vid.videoWidth,vh=vid.videoHeight;
+  const sc=Math.min(1,MAX_PIX/Math.max(vw,vh));
+  w=Math.round(vw*sc);h=Math.round(vh*sc);
+  can.width=w;can.height=h;
+  ctx.drawImage(vid,0,0,w,h);
+  const blob=await new Promise(r=>can.toBlob(r,"image/jpeg",0.85));
+  if(!blob||blob.size<800) return;
+  const name=`FOTO_${Date.now()}.jpg`;
+  const fh=await dir.getFileHandle(name,{create:true});
+  wr=await fh.createWritable();
+  await wr.write(blob);
+  await wr.close();wr=null;
+  cnt.textContent=++saved;
+ }finally{ try{await wr?.close()}catch{} busy=false }
 }
-/* ============================================= */
 
-/* =============== LOOP =============== */
 async function loop(){
-  while(running){
-    statusTxt.textContent = "📸 Capturando...";
-    await capturePhoto();
-    await sleep(getIntervalMs());
-  }
+ while(running){
+  await snap();
+  await new Promise(r=>setTimeout(r, clampInterval()));
+ }
 }
-/* =================================== */
 
-/* =============== CONTROLES UI =============== */
-presetSel.addEventListener('change', ()=>{
-  const v = Math.max(MIN_INTERVAL_MS, Number(presetSel.value)||DEFAULT_INTERVAL_MS);
-  intervalMsInput.value = String(v);
-});
-intervalMsInput.addEventListener('change', ()=>{
-  const v = Math.max(MIN_INTERVAL_MS, Number(intervalMsInput.value)||DEFAULT_INTERVAL_MS);
-  intervalMsInput.value = String(Math.floor(v));
-  const match = [...presetSel.options].find(o => Number(o.value) === v);
-  if(match) presetSel.value = String(v);
-});
-
-/* Botão principal */
-btn.addEventListener('click', async ()=>{
-  if(!dirHandle){
-    toastMsg("Selecione a pasta primeiro");
-    return;
-  }
-  running = !running;
-  if(running){
-    // força mínimo e alinha preset
-    const v = Math.max(MIN_INTERVAL_MS, Number(intervalMsInput.value)||DEFAULT_INTERVAL_MS);
-    intervalMsInput.value = String(v);
-    const match = [...presetSel.options].find(o => Number(o.value) === v);
-    if(match) presetSel.value = String(v);
-
-    btn.textContent = "⏹ FINALIZAR";
-    btn.classList.add("stop");
-    statusTxt.textContent = "📸 Capturando...";
-    loop();
-  }else{
-    btn.textContent = "▶ INICIAR CAPTURA";
-    btn.classList.remove("stop");
-    statusTxt.textContent = "✅ Finalizado";
-  }
-});
-/* ============================================= */
-
-/* =============== MODAL PASTA =============== */
-pickBtn.addEventListener('click', async ()=>{
-  try{
-    dirHandle = await window.showDirectoryPicker({mode:"readwrite"});
-    // copia prefixo inicial da modal para o HUD
-    const p = String(gatePrefix.value||"").trim();
-    if(p) prefixInput.value = p.replace(/[^\w\-+.]/g,'_');
-
-    gate.style.display = "none";
-    toastMsg("Pasta selecionada");
-  }catch{
-    toastMsg("Seleção de pasta cancelada");
-  }
-});
-/* =========================================== */
-
-/* =============== BOOT =============== */
-(async function boot(){
-  try{ await startCamera(); }catch{ toastMsg("Falha na câmera"); }
-  // GPS será solicitado quando necessário pelo navegador (watchPosition já iniciado)
-})();
+btn.onclick=async()=>{
+ if(!dir){
+  dir=await showDirectoryPicker({mode:"readwrite"});
+  return;
+ }
+ running=!running;
+ if(running){
+  btn.textContent="⏹ FINALIZAR";
+  btn.className="stop";
+  loop();
+ }else{
+  btn.textContent="▶ INICIAR";
+  btn.className="start";
+ }
+};
 </script>
 
 </body>
