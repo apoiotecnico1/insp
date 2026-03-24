@@ -3,169 +3,218 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO RIVERSIDE PRO</title>
+    <title>INSPEÇÃO RODOVIÁRIA PRO</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --green: #056b3c; --bg: #000; }
-        body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; overflow: hidden; }
-        #viewport { width: 100vw; height: 38vh; background: #000; position: relative; }
+        :root { --highway-green: #056b3c; --bg: #0b1020; }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        
+        #cam-container { position: relative; flex: 1; background: #000; overflow: hidden; touch-action: none; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
+        /* KM idêntico ao seu original */
         #kmPlaque { 
-            background: linear-gradient(180deg, #0a8a4d, #056b3c);
-            color: white; text-align: center; padding: 12px;
-            font-size: 3.5rem; font-weight: 900; border: 4px solid #fff;
-            margin: 8px; border-radius: 12px; box-shadow: 0 8px 20px #000;
+            position: absolute; top: 10px; left: 10px; right: 10px;
+            background: #fff; color: #0b1020; border: 4px solid #1e3a8a;
+            border-radius: 10px; padding: 8px; text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6); z-index: 10;
         }
+        .km-label { font-size: 0.9rem; font-weight: 800; color: #1e3a8a; display: block; }
+        .km-val { font-size: 2.8rem; font-weight: 1000; line-height: 1; }
 
-        #noxBox { background: #0b1224; margin: 0 8px; padding: 8px; border: 1px solid #1e2647; border-radius: 8px; min-height: 80px; }
-        .nox-row { display: flex; justify-content: space-between; font-family: monospace; padding: 3px 8px; border-bottom: 1px solid #1e2647; font-size: 0.85rem; }
-        .top-nox { color: #00ff66; font-weight: bold; background: rgba(0,255,102,0.1); }
+        /* Lista de IDs Nox - Flutuante e Leve */
+        #noxList {
+            position: absolute; bottom: 80px; left: 10px; right: 10px;
+            background: rgba(15, 22, 48, 0.85); border-radius: 8px;
+            border: 1px solid #1e2647; padding: 5px; font-size: 0.8rem;
+        }
+        .nox-item { display: flex; justify-content: space-between; padding: 3px 8px; border-bottom: 1px solid #1e2647; }
+        .nox-item.best { color: #22c55e; font-weight: bold; background: rgba(34, 197, 94, 0.1); }
 
-        .stat-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; padding: 8px; }
-        .card { background: #111; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #222; }
-        .val { display: block; font-size: 1.2rem; font-weight: bold; color: #00d9ff; }
+        /* Controles Inferiores */
+        .controls { background: #0b1020; padding: 10px; display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: center; }
+        button { padding: 15px; border-radius: 10px; border: none; font-weight: 900; cursor: pointer; }
+        #btnStart { background: #22c55e; color: #0b1020; }
+        #btnStop { background: #ef4444; color: #fff; }
+        #btnCam { background: #334155; color: #fff; width: 50px; padding: 15px 0; font-size: 1.2rem; }
 
-        .btns { padding: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { padding: 20px; border-radius: 12px; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; }
-        #start { background: #00ff66; color: #000; }
-        #stop { background: #ff3333; color: #fff; }
+        .stats { font-size: 0.7rem; color: #a3b1d1; display: flex; justify-content: space-around; padding: 5px; background: #070b18; }
+        canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div id="viewport"><video id="v" autoplay playsinline muted></video></div>
-<div id="kmPlaque">KM --+---</div>
-
-<div id="noxBox">
-    <div id="noxItems"></div>
+<div id="cam-container">
+    <video id="vid" autoplay playsinline muted></video>
+    <div id="kmPlaque">
+        <span class="km-label">KM</span>
+        <span id="kmValue" class="km-val">—</span>
+    </div>
+    <div id="noxList"></div>
 </div>
 
-<div class="stat-bar">
-    <div class="card">FOTOS<span id="tPh" class="val">0</span></div>
-    <div class="card">LOTE<span id="tLo" class="val">0/200</span></div>
-    <div id="save" class="card" style="background:#1e3a8a">PDF<span id="tPd" class="val">0</span></div>
+<div class="stats">
+    <span id="stGps">GPS: ...</span>
+    <span id="stPh">FOTOS: 0</span>
+    <span id="stLote">LOTE: 0/200</span>
 </div>
 
-<div class="btns">
-    <button id="start">INICIAR</button>
-    <button id="stop" disabled>PARAR</button>
+<div class="controls">
+    <button id="btnStart">INICIAR</button>
+    <button id="btnStop" disabled>PARAR</button>
+    <button id="btnCam" title="Trocar Câmera">🔄</button>
 </div>
 
-<canvas id="c" style="display:none"></canvas>
+<canvas id="can"></canvas>
 
 <script>
-let kmGrid = new Map(), noxData = [];
-let lastPos = null, recording = false, photos = [], totalPh = 0, pdfs = 0;
-const GRID_SIZE = 0.005; // ~500 metros
+let kmData = [], noxData = [];
+let lastPos = null, recording = false, buffer = [], totalPhotos = 0;
+let currentFacing = "environment";
+let zoomLevel = 1;
 
-// Funções de limpeza idênticas ao seu original que funcionava
-function parseV(v){ const s=String(v||'').trim(); return /,\d{1,}$/.test(s)?Number(s.replace(/\./g,'').replace(',','.')):Number(s); }
-function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,u=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
+const vid = document.getElementById('vid');
+const can = document.getElementById('can');
+const ctx = can.getContext('2d');
 
-async function loadCSVs() {
-    try {
-        // Carrega KM com lógica de Grid Ultrarrápida
-        const rK = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
-        const tK = await rK.text();
-        tK.split(/\r?\n/).slice(1).forEach(l => {
-            const c = l.split(';');
-            const lat = parseV(c), lon = parseV(c);
-            if(!isNaN(lat)){
-                const key = `${Math.floor(lat/GRID_SIZE)},${Math.floor(lon/GRID_SIZE)}`;
-                if(!kmGrid.has(key)) kmGrid.set(key, []);
-                kmGrid.get(key).push({km: c, lat, lon});
-            }
-        });
-
-        // Carrega IDs NOX
-        const rN = await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now());
-        const tN = await rN.text();
-        noxData = tN.split(/\r?\n/).slice(1).map(l => {
-            const c = l.split(';');
-            return {id: c, lat: parseV(c), lon: parseV(c)};
-        }).filter(p => p.id && !isNaN(p.lat));
-    } catch(e) { console.error("Erro carga"); }
+// LÓGICA DE NORMALIZAÇÃO E DISTÂNCIA (IDÊNTICA AO SEU ORIGINAL)
+function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
+function findColumnIndex(headers, candidates){ 
+    const map=headers.map(h=>normalizeStr(h)); 
+    for(const c of candidates){ const i=map.indexOf(c); if(i>=0) return i; } 
+    return -1; 
+}
+function parsePt(v){ 
+    if(v==null) return NaN; 
+    const s=String(v).trim(); 
+    return /,\d{1,}$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); 
+}
+function hav(a,b,c,d){ 
+    const R=6371000, x=(c-a)*Math.PI/180, y=(d-b)*Math.PI/180; 
+    const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; 
+    return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); 
 }
 
-function updateLoc() {
+// CARGA DE ARQUIVOS
+async function loadFiles() {
+    try {
+        const rK = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
+        const tK = await rK.text();
+        const lK = tK.split(/\r?\n/).filter(l => l.trim() !== '');
+        const hK = lK.shift().split(';');
+        const iK=findColumnIndex(hK,['km']), iLa=findColumnIndex(hK,['lat']), iLo=findColumnIndex(hK,['lon']);
+        kmData = lK.map(l=>{
+            const r=l.split(';');
+            return { km: r[iK], lat: parsePt(r[iLa]), lon: parsePt(r[iLo]) };
+        }).filter(p => !isNaN(p.lat));
+
+        const rN = await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now());
+        const tN = await rN.text();
+        const lN = tN.split(/\r?\n/).filter(l => l.trim() !== '');
+        const hN = lN.shift().split(';');
+        const iI=findColumnIndex(hN,['id','idnox']), iNLa=findColumnIndex(hN,['lat']), iNLo=findColumnIndex(hN,['lon']);
+        noxData = lN.map(l=>{
+            const r=l.split(';');
+            return { id: r[iI], lat: parsePt(r[iNLa]), lon: parsePt(r[iNLo]) };
+        }).filter(p => p.id && !isNaN(p.lat));
+    } catch(e) { console.error("Erro no CSV"); }
+}
+
+// ATUALIZAÇÃO DE LOCALIZAÇÃO
+function updateUI() {
     if(!lastPos) return;
     const {lat, lon} = lastPos;
 
-    // KM por Grid (Velocidade Máxima)
+    // Busca KM
     let bK = null, minK = Infinity;
-    const gx = Math.floor(lat/GRID_SIZE), gy = Math.floor(lon/GRID_SIZE);
-    for(let x=gx-1; x<=gx+1; x++){
-        for(let y=gy-1; y<=gy+1; y++){
-            const pts = kmGrid.get(`${x},${y}`);
-            if(pts) pts.forEach(p => {
-                const d = Math.sqrt((lat-p.lat)**2 + (lon-p.lon)**2);
-                if(d < minK){ minK = d; bK = p; }
-            });
-        }
-    }
-    if(bK) document.getElementById('kmPlaque').textContent = "KM " + bK.km;
+    kmData.forEach(p => {
+        const d = hav(lat, lon, p.lat, p.lon);
+        if(d < minK) { minK = d; bK = p; }
+    });
+    if(bK) document.getElementById('kmValue').textContent = bK.km.replace('.',',');
 
-    // IDs Próximos
-    const sorted = noxData.map(p => ({...p, d: hav(lat, lon, p.lat, p.lon)}))
-        .sort((a,b) => a.d - b.d).slice(0, 4);
+    // Busca Nox (Top 3 para ficar leve)
+    const nSorted = noxData.map(p => ({...p, d: hav(lat, lon, p.lat, p.lon)}))
+        .sort((a,b) => a.d - b.d).slice(0, 3);
     
-    document.getElementById('noxItems').innerHTML = sorted.map((n, i) => 
-        `<div class="nox-row ${i===0?'top-nox':''}"><span>${n.id}</span><span>${Math.round(n.d)}m</span></div>`
+    document.getElementById('noxList').innerHTML = nSorted.map((n, i) => 
+        `<div class="nox-item ${i===0?'best':''}"><span>${n.id}</span><span>${Math.round(n.d)}m</span></div>`
     ).join('');
 }
 
-async function genPDF() {
-    if(!photos.length) return;
-    const batch = [...photos]; photos = []; pdfs++;
-    document.getElementById('tPd').textContent = pdfs;
+// CONTROLE DE CÂMERA E ZOOM
+async function initCam() {
+    if(vid.srcObject) vid.srcObject.getTracks().forEach(t => t.stop());
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: currentFacing, width: { ideal: 1280 } },
+            audio: false
+        });
+        vid.srcObject = stream;
+        // Ativar Zoom (se suportado pelo navegador/celular)
+        const [track] = stream.getVideoTracks();
+        const caps = track.getCapabilities();
+        if(caps.zoom) {
+            vid.onclick = () => {
+                zoomLevel = zoomLevel >= caps.zoom.max ? 1 : zoomLevel + 1;
+                track.applyConstraints({ advanced: [{ zoom: zoomLevel }] });
+            };
+        }
+    } catch(e) { alert("Câmera indisponível"); }
+}
+
+document.getElementById('btnCam').onclick = () => {
+    currentFacing = currentFacing === "environment" ? "user" : "environment";
+    initCam();
+};
+
+// RELATÓRIO PDF
+async function savePDF() {
+    if(!buffer.length) return;
+    const items = [...buffer]; buffer = [];
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
-    batch.forEach((p, i) => {
+    items.forEach((p, i) => {
         if(i>0) doc.addPage();
-        doc.setFillColor(0); doc.rect(0,0,297,20,'F');
-        doc.setTextColor(255); doc.setFontSize(9);
-        doc.text(`KM: ${p.km} | ID: ${p.id} | GPS: ${p.lat},${p.lon} | ${p.ts}`, 10, 12);
-        doc.addImage(p.img, 'JPEG', 10, 25, 277, 170);
+        doc.setFillColor(11, 16, 32); doc.rect(0,0,297,15,'F');
+        doc.setTextColor(255); doc.setFontSize(10);
+        doc.text(`KM: ${p.km} | ID: ${p.id} | GPS: ${p.lat},${p.lon} | ${p.ts}`, 10, 10);
+        doc.addImage(p.img, 'JPEG', 5, 20, 287, 180);
     });
-    doc.save(`RELATORIO_${pdfs}.pdf`);
+    doc.save(`INSPECAO_${Date.now()}.pdf`);
 }
 
 function loop() {
     if(!recording) return;
-    const can = document.getElementById('c'), vid = document.getElementById('v');
     can.width = vid.videoWidth; can.height = vid.videoHeight;
-    can.getContext('2d').drawImage(vid, 0, 0);
-    
-    photos.push({
-        img: can.toDataURL('image/jpeg', 0.5),
-        km: document.getElementById('kmPlaque').textContent.replace('KM ',''),
-        id: document.querySelector('.top-nox span')?.textContent || '-',
+    ctx.drawImage(vid, 0, 0);
+    buffer.push({
+        img: can.toDataURL('image/jpeg', 0.4),
+        km: document.getElementById('kmValue').textContent,
+        id: document.querySelector('.best span')?.textContent || '-',
         lat: lastPos.lat.toFixed(6), lon: lastPos.lon.toFixed(6),
-        ts: new Date().toLocaleString()
+        ts: new Date().toLocaleTimeString()
     });
-
-    totalPh++;
-    document.getElementById('tPh').textContent = totalPh;
-    document.getElementById('tLo').textContent = `${photos.length}/200`;
-    if(photos.length >= 200) genPDF();
-    setTimeout(loop, 250);
+    totalPhotos++;
+    document.getElementById('stPh').textContent = "FOTOS: " + totalPhotos;
+    document.getElementById('stLote').textContent = `LOTE: ${buffer.length}/200`;
+    if(buffer.length >= 200) savePDF();
+    setTimeout(loop, 300);
 }
 
-document.getElementById('start').onclick = () => { recording = true; document.getElementById('start').disabled = true; document.getElementById('stop').disabled = false; loop(); };
-document.getElementById('stop').onclick = () => { recording = false; document.getElementById('start').disabled = false; document.getElementById('stop').disabled = true; genPDF(); };
-document.getElementById('save').onclick = () => genPDF();
+document.getElementById('btnStart').onclick = () => { recording = true; document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; loop(); };
+document.getElementById('btnStop').onclick = () => { recording = false; document.getElementById('btnStart').disabled = false; document.getElementById('btnStop').disabled = true; savePDF(); };
 
-async function init() {
-    await loadCSVs();
-    const stream = await navigator.mediaDevices.getUserMedia({video: {facingMode:'environment', width:1280}, audio:false});
-    document.getElementById('v').srcObject = stream;
+async function start() {
+    await loadFiles();
+    await initCam();
     navigator.geolocation.watchPosition(p => {
         lastPos = {lat: p.coords.latitude, lon: p.coords.longitude};
-        updateLoc();
+        document.getElementById('stGps').textContent = "GPS: OK";
+        updateUI();
     }, null, {enableHighAccuracy:true});
 }
-init();
+start();
 </script>
 </body>
 </html>
