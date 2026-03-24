@@ -1,175 +1,119 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#0b7a39">
-<title>Painel KM – Estilo DNIT</title>
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#0b7a39" />
+<title>Inspeção – Painel KM (Base Original)</title>
 <style>
-:root{
-  --green:#0b7a39;
-  --green2:#0a6a32;
-  --border:#ffffff;
-  --text:#ffffff;
-}
+  :root{
+    --green:#0b7a39; --green2:#085e2c; --fg:#eaf2ff; --border:#e6f0ea;
+    --glass-bg: rgba(0,0,0,.55);
+  }
+  html,body{
+    margin:0;height:100%;background:#000;overflow:hidden;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial
+  }
+  video{position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
 
-html,body{
-  margin:0;
-  padding:0;
-  width:100%;
-  height:100%;
-  background:#000;
-  font-family:Arial, Helvetica, sans-serif;
-  overflow:hidden;
-}
+  /* ================= PAINEL KM (70% DA TELA) ================= */
+  #kmBox{
+    position:fixed;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%) scale(0.7); /* 70% da tela */
+    transform-origin:center;
+    background:linear-gradient(180deg,var(--green),var(--green2));
+    color:#fff;
+    padding:28px 48px;
+    border-radius:22px;
+    border:6px solid var(--border);
+    font-size:4.5rem; /* grande, estilo placa */
+    font-weight:1000;
+    white-space:nowrap;
+    text-shadow:0 2px 0 rgba(0,0,0,.45);
+    box-shadow:0 20px 40px rgba(0,0,0,.55), inset 0 0 0 3px rgba(255,255,255,.6);
+    z-index:3;
+  }
 
-#screen{
-  position:fixed;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-/* Placa padrão DNIT */
-#sign{
-  width:92vw;
-  height:80vh;
-  background:linear-gradient(180deg,var(--green),var(--green2));
-  border:10px solid var(--border);
-  border-radius:22px;
-  box-shadow:
-    inset 0 0 0 4px rgba(255,255,255,.5),
-    0 30px 60px rgba(0,0,0,.6);
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-}
-
-/* KM grande */
-#km{
-  white-space:nowrap;
-  width:100%;
-  text-align:center;
-  font-weight:900;
-  color:var(--text);
-  line-height:1;
-  font-size:clamp(72px, 16vw, 220px);
-  letter-spacing:.04em;
-}
-
-#gps{
-  margin-top:12px;
-  font-size:clamp(12px, 2.4vw, 18px);
-  font-weight:700;
-  color:#eaf2ff;
-}
-
-#bottom{
-  position:fixed;
-  left:0; right:0; bottom:0;
-  height:44px;
-  background:#000;
-  color:#fff;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:13px;
-  font-weight:800;
-  letter-spacing:.08em;
-}
+  /* Distância lateral discreta (embaixo) */
+  #distBar{
+    position:fixed;
+    left:50%; transform:translateX(-50%);
+    bottom:calc(8px + env(safe-area-inset-bottom));
+    background:rgba(0,0,0,.75);
+    color:#eaf2ff;
+    padding:6px 14px;
+    border-radius:10px;
+    font-size:.8rem; /* bem discreto */
+    font-weight:700;
+    letter-spacing:.04em;
+    z-index:4;
+  }
 </style>
 </head>
-
 <body>
 
-<div id="screen">
-  <div id="sign">
-    <div id="km">KM —</div>
-    <div id="gps">GPS: aguardando…</div>
-  </div>
-</div>
+<video id="vid" autoplay playsinline muted></video>
 
-<div id="bottom">DISTÂNCIA LATERAL —</div>
+<!-- Painel KM -->
+<div id="kmBox">KM —</div>
+
+<!-- Distância lateral discreta -->
+<div id="distBar">Distância lateral —</div>
 
 <script>
-/* ================= LÓGICA ORIGINAL DE KM ================= */
-
-const kmEl = document.getElementById('km');
-const gpsEl = document.getElementById('gps');
-const bottomEl = document.getElementById('bottom');
+/* ================= BASE ORIGINAL – LÓGICA DE KM ================= */
+const kmBox = document.getElementById('kmBox');
+const distBar = document.getElementById('distBar');
 
 let lastPos = null;   // {lat,lon,acc}
 let kmPoints = [];   // {km,lat,lon}
+let currentKMStr = 'KM —';
+let currentDist = null;
 
-function hav(a,b,c,d){
-  const R = 6371000;
-  const x = (c-a)*Math.PI/180;
-  const y = (d-b)*Math.PI/180;
-  const u = Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
-  return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
-}
-
-function fmtKm(v){
-  if(!Number.isFinite(v)) return 'KM —';
-  let K=Math.floor(v);
-  let m=Math.round((v-K)*1000);
-  if(m>=1000){m-=1000;K++;}
-  return `KM ${K}+${String(m).padStart(3,'0')}`;
-}
-
-function parsePt(v){
-  if(!v) return NaN;
-  return /,\d+$/.test(v) ? Number(v.replace(/\./g,'').replace(',','.')) : Number(v);
-}
+function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
+function hav(a,b,c,d){ const R=6371000; const x=(c-a)*Math.PI/180; const y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
+function fmtKm(v){ if(!Number.isFinite(v)) return 'KM —'; let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
 
 /* GPS – igual ao início */
 function startGPS(){
   if(!('geolocation' in navigator)) return;
-  navigator.geolocation.watchPosition(p=>{
-    lastPos = {lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
-  },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
+  navigator.geolocation.getCurrentPosition(p=>{
+    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    navigator.geolocation.watchPosition(pp=>{
+      lastPos={lat:pp.coords.latitude, lon:pp.coords.longitude, acc:pp.coords.accuracy};
+    },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
+  });
 }
 
 /* CSV de KM – igual ao início */
 async function loadKM(){
   try{
-    const txt = await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
+    const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
+    kmPoints.length=0;
     txt.split(/\r?
 /).forEach(l=>{
-      const c=l.split(';');
-      const km=parsePt(c[0]);
-      const lat=parsePt(c[1]);
-      const lon=parsePt(c[2]);
-      if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)){
-        kmPoints.push({km,lat,lon});
-      }
+      const c=l.split(';'); const km=parsePt(c[0]), lat=parsePt(c[1]), lon=parsePt(c[2]);
+      if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)) kmPoints.push({km,lat,lon});
     });
   }catch{}
 }
 
-/* Atualização – ponto mais próximo (LÓGICA ORIGINAL) */
+/* Atualiza KM (lógica original) + distância lateral */
 function updateKM(){
-  let best=null, bestDist=Infinity;
-
   if(lastPos && kmPoints.length){
-    for(const p of kmPoints){
-      const d = hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
-      if(d < bestDist){ bestDist = d; best = p; }
-    }
-    kmEl.textContent = best ? fmtKm(best.km) : 'KM —';
-    bottomEl.textContent = `DISTÂNCIA LATERAL ${Math.round(bestDist)} m`;
+    let best=null, bd=Infinity;
+    for(const p of kmPoints){ const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} }
+    currentKMStr = best ? fmtKm(best.km) : 'KM —';
+    currentDist = bd;
+  }else{
+    currentKMStr = 'KM —'; currentDist=null;
   }
-
-  if(lastPos){
-    gpsEl.textContent = `GPS ±${Math.round(lastPos.acc)} m`;
-  } else {
-    gpsEl.textContent = 'GPS: aguardando…';
+  kmBox.textContent = currentKMStr;
+  if(Number.isFinite(currentDist)){
+    distBar.textContent = `Distância lateral ${Math.round(currentDist)} m`;
   }
 }
-
 setInterval(updateKM, 500);
 
 /* START */
@@ -177,6 +121,5 @@ startGPS();
 loadKM();
 if('wakeLock' in navigator){ try{ navigator.wakeLock.request('screen'); }catch{} }
 </script>
-
 </body>
 </html>
