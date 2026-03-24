@@ -17,107 +17,87 @@
 
 html,body{
   margin:0;
+  width:100%;
   height:100%;
   background:#000;
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;
   overflow:hidden;
 }
 
-/* Vídeo opcional */
-video{
-  position:fixed;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  background:#000;
-  z-index:1;
-}
-
 /* Painel principal */
 #panel{
   position:fixed;
   inset:0;
-  z-index:3;
   display:flex;
   align-items:center;
   justify-content:center;
-  pointer-events:none;
 }
 
+/* Cartão estilo placa */
 #card{
-  width:94vw;
-  height:80vh;
-  max-width:1600px;
+  width:98vw;
+  height:92vh;
   background:linear-gradient(180deg,var(--green),var(--green2));
   border:12px solid var(--border);
-  border-radius:32px;
+  border-radius:28px;
   box-shadow:
-    0 40px 70px rgba(0,0,0,.6),
+    0 40px 70px rgba(0,0,0,.65),
     inset 0 0 0 4px rgba(255,255,255,.55);
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
+  position:relative;
 }
 
+/* KM gigante – nunca quebra linha */
 #km{
+  white-space:nowrap;
   font-weight:1000;
   color:var(--text);
   line-height:1;
-  font-size:clamp(90px, 18vw, 280px);
+  font-size:clamp(72px, 24vw, 300px);
   text-shadow:
     0 4px 0 rgba(0,0,0,.45),
-    0 15px 45px rgba(0,0,0,.6);
+    0 18px 55px rgba(0,0,0,.65);
 }
 
+/* GPS pequeno abaixo */
 #gps{
-  margin-top:10px;
-  font-size:clamp(12px, 2.6vw, 22px);
+  margin-top:12px;
+  font-size:clamp(12px, 3vw, 22px);
   font-weight:700;
   opacity:.9;
 }
 
+/* Aviso de precisão */
 #warn{
   margin-top:6px;
-  font-size:clamp(11px, 2.4vw, 20px);
+  font-size:clamp(11px, 2.8vw, 20px);
   font-weight:900;
   color:var(--warn);
   display:none;
 }
 
-/* Controles mínimos */
-#controls{
+/* Distância lateral – borda direita */
+#lateral{
   position:fixed;
-  bottom:8px;
-  left:50%;
-  transform:translateX(-50%);
-  z-index:5;
-  display:flex;
-  gap:10px;
-}
-
-button{
-  pointer-events:auto;
-  background:#111;
-  color:#fff;
-  border:1px solid #444;
-  border-radius:10px;
-  padding:8px 14px;
+  top:50%;
+  right:4px;
+  transform:translateY(-50%) rotate(90deg);
+  transform-origin:right center;
+  font-size:12px;
   font-weight:800;
-  cursor:pointer;
-}
-
-/* Modo noturno automático */
-@media (prefers-color-scheme: dark){
-  body{background:#000}
+  color:#eaf2ff;
+  opacity:.75;
+  letter-spacing:.08em;
+  white-space:nowrap;
+  pointer-events:none;
 }
 </style>
 </head>
 
 <body>
-
-<video id="vid" autoplay playsinline muted></video>
 
 <div id="panel">
   <div id="card">
@@ -127,45 +107,48 @@ button{
   </div>
 </div>
 
-<div id="controls">
-  <button id="btnStart">▶ Iniciar</button>
-  <button id="btnToggleVideo">📷 Vídeo</button>
-</div>
+<div id="lateral">DISTÂNCIA — m</div>
 
 <script>
-const vid = document.getElementById('vid');
-const kmEl = document.getElementById('km');
-const gpsEl = document.getElementById('gps');
-const warnEl = document.getElementById('warn');
-const btnStart = document.getElementById('btnStart');
-const btnToggleVideo = document.getElementById('btnToggleVideo');
-
-let lastPos = null;
+/* ================= ESTADO ================= */
+let lastPos = null; // {lat,lon,acc}
 let kmPoints = [];
-let videoVisible = true;
+let lastDist = null;
 
-/* Utilidades */
+/* ================= FUNÇÕES ================= */
 function hav(a,b,c,d){
   const R=6371000;
   const x=(c-a)*Math.PI/180;
   const y=(d-b)*Math.PI/180;
-  const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+  const u=Math.sin(x/2)**2 +
+          Math.cos(a*Math.PI/180) *
+          Math.cos(c*Math.PI/180) *
+          Math.sin(y/2)**2;
   return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
 function fmtKm(v){
   if(!Number.isFinite(v)) return 'KM —';
   let K=Math.floor(v);
   let m=Math.round((v-K)*1000);
-  if(m>=1000){m-=1000;K++}
+  if(m>=1000){m-=1000;K++;}
   return `KM ${K}+${String(m).padStart(3,'0')}`;
 }
 function parsePt(v){
   if(!v) return NaN;
-  return /,\d+$/.test(v) ? Number(v.replace(/\./g,'').replace(',','.')) : Number(v);
+  return /,\d+$/.test(v)
+    ? Number(v.replace(/\./g,'').replace(',','.'))
+    : Number(v);
 }
 
-/* GPS */
+/* ================= ELEMENTOS ================= */
+const kmEl=document.getElementById('km');
+const gpsEl=document.getElementById('gps');
+const warnEl=document.getElementById('warn');
+const latEl=document.getElementById('lateral');
+
+/* ================= GPS ================= */
 function startGPS(){
+  if(!('geolocation' in navigator)) return;
   navigator.geolocation.watchPosition(p=>{
     lastPos={
       lat:p.coords.latitude,
@@ -179,29 +162,23 @@ function startGPS(){
   });
 }
 
-/* Kamera */
-async function startCamera(){
-  const s = await navigator.mediaDevices.getUserMedia({
-    video:{facingMode:{ideal:'environment'}},
-    audio:false
-  });
-  vid.srcObject=s;
-}
-
-/* KM CSV */
+/* ================= KM CSV ================= */
 async function loadKM(){
   try{
     const txt = await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
     txt.split(/\r?\n/).forEach(l=>{
       const c=l.split(';');
-      const km=parsePt(c[0]), lat=parsePt(c[1]), lon=parsePt(c[2]);
-      if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon))
+      const km=parsePt(c[0]),
+            lat=parsePt(c[1]),
+            lon=parsePt(c[2]);
+      if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)){
         kmPoints.push({km,lat,lon});
+      }
     });
   }catch{}
 }
 
-/* Atualização visual */
+/* ================= ATUALIZA ================= */
 function updatePanel(){
   if(lastPos && kmPoints.length){
     let best=null, bd=Infinity;
@@ -209,33 +186,30 @@ function updatePanel(){
       const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
       if(d<bd){bd=d;best=p;}
     }
-    kmEl.textContent = best?fmtKm(best.km):'KM —';
+    kmEl.textContent = best ? fmtKm(best.km) : 'KM —';
+    lastDist = bd;
   }
 
   if(lastPos){
-    gpsEl.textContent=`GPS ±${Math.round(lastPos.acc)} m`;
-    warnEl.style.display = lastPos.acc>15?'block':'none';
+    gpsEl.textContent = `GPS ±${Math.round(lastPos.acc)} m`;
+    warnEl.style.display = lastPos.acc>15 ? 'block' : 'none';
   }else{
-    gpsEl.textContent='GPS: aguardando…';
-    warnEl.style.display='block';
+    gpsEl.textContent = 'GPS: aguardando…';
+    warnEl.style.display = 'block';
+  }
+
+  if(Number.isFinite(lastDist)){
+    latEl.textContent = `DISTÂNCIA LATERAL ${Math.round(lastDist)} m`;
   }
 }
 setInterval(updatePanel,500);
 
-/* Controles */
-btnStart.onclick=async()=>{
-  await startCamera();
-  startGPS();
-  await loadKM();
-  if('wakeLock' in navigator){
-    try{await navigator.wakeLock.request('screen');}catch{}
-  }
-};
-
-btnToggleVideo.onclick=()=>{
-  videoVisible=!videoVisible;
-  vid.style.display = videoVisible?'block':'none';
-};
+/* ================= START AUTOMÁTICO ================= */
+startGPS();
+loadKM();
+if('wakeLock' in navigator){
+  try{navigator.wakeLock.request('screen');}catch{}
+}
 </script>
 
 </body>
