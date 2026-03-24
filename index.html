@@ -35,28 +35,29 @@ html,body{
 
 /* Cartão estilo placa */
 #card{
-  width:98vw;
-  height:92vh;
+  width:96vw;            /* margem maior p/ não cortar */
+  height:88vh;
   background:linear-gradient(180deg,var(--green),var(--green2));
   border:12px solid var(--border);
   border-radius:28px;
   box-shadow:
     0 40px 70px rgba(0,0,0,.65),
     inset 0 0 0 4px rgba(255,255,255,.55);
+
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  position:relative;
 }
 
-/* KM gigante – nunca quebra linha */
+/* KM gigante – nunca quebra */
 #km{
   white-space:nowrap;
+  max-width:100%;
   font-weight:1000;
   color:var(--text);
   line-height:1;
-  font-size:clamp(72px, 24vw, 300px);
+  font-size:clamp(64px, 22vw, 260px); /* reduzido p/ não cortar */
   text-shadow:
     0 4px 0 rgba(0,0,0,.45),
     0 18px 55px rgba(0,0,0,.65);
@@ -65,34 +66,34 @@ html,body{
 /* GPS pequeno abaixo */
 #gps{
   margin-top:12px;
-  font-size:clamp(12px, 3vw, 22px);
+  font-size:clamp(12px, 2.8vw, 20px);
   font-weight:700;
   opacity:.9;
 }
 
-/* Aviso de precisão */
 #warn{
   margin-top:6px;
-  font-size:clamp(11px, 2.8vw, 20px);
+  font-size:clamp(11px, 2.6vw, 18px);
   font-weight:900;
   color:var(--warn);
   display:none;
 }
 
-/* Distância lateral – borda direita */
-#lateral{
+/* Barra inferior – sobre o verde, fundo preto */
+#bottomBar{
   position:fixed;
-  top:50%;
-  right:4px;
-  transform:translateY(-50%) rotate(90deg);
-  transform-origin:right center;
-  font-size:12px;
-  font-weight:800;
+  left:0;
+  right:0;
+  bottom:0;
+  height:48px;
+  background:rgba(0,0,0,.85);
   color:#eaf2ff;
-  opacity:.75;
-  letter-spacing:.08em;
-  white-space:nowrap;
-  pointer-events:none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:14px;
+  font-weight:800;
+  letter-spacing:.06em;
 }
 </style>
 </head>
@@ -103,11 +104,11 @@ html,body{
   <div id="card">
     <div id="km">KM —</div>
     <div id="gps">GPS: aguardando…</div>
-    <div id="warn">Precisão baixa • KM pode variar</div>
+    <div id="warn">Preciso baixa • KM pode variar</div>
   </div>
 </div>
 
-<div id="lateral">DISTÂNCIA — m</div>
+<div id="bottomBar">DISTÂNCIA LATERAL — m</div>
 
 <script>
 /* ================= ESTADO ================= */
@@ -120,10 +121,7 @@ function hav(a,b,c,d){
   const R=6371000;
   const x=(c-a)*Math.PI/180;
   const y=(d-b)*Math.PI/180;
-  const u=Math.sin(x/2)**2 +
-          Math.cos(a*Math.PI/180) *
-          Math.cos(c*Math.PI/180) *
-          Math.sin(y/2)**2;
+  const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
   return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
 function fmtKm(v){
@@ -135,31 +133,20 @@ function fmtKm(v){
 }
 function parsePt(v){
   if(!v) return NaN;
-  return /,\d+$/.test(v)
-    ? Number(v.replace(/\./g,'').replace(',','.'))
-    : Number(v);
+  return /,\d+$/.test(v)?Number(v.replace(/\./g,'').replace(',','.')):Number(v);
 }
 
-/* ================= ELEMENTOS ================= */
 const kmEl=document.getElementById('km');
 const gpsEl=document.getElementById('gps');
 const warnEl=document.getElementById('warn');
-const latEl=document.getElementById('lateral');
+const bottomBar=document.getElementById('bottomBar');
 
 /* ================= GPS ================= */
 function startGPS(){
   if(!('geolocation' in navigator)) return;
   navigator.geolocation.watchPosition(p=>{
-    lastPos={
-      lat:p.coords.latitude,
-      lon:p.coords.longitude,
-      acc:p.coords.accuracy
-    };
-  },()=>{},{
-    enableHighAccuracy:true,
-    maximumAge:800,
-    timeout:15000
-  });
+    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+  },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
 }
 
 /* ================= KM CSV ================= */
@@ -168,9 +155,7 @@ async function loadKM(){
     const txt = await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
     txt.split(/\r?\n/).forEach(l=>{
       const c=l.split(';');
-      const km=parsePt(c[0]),
-            lat=parsePt(c[1]),
-            lon=parsePt(c[2]);
+      const km=parsePt(c[0]), lat=parsePt(c[1]), lon=parsePt(c[2]);
       if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)){
         kmPoints.push({km,lat,lon});
       }
@@ -192,14 +177,14 @@ function updatePanel(){
 
   if(lastPos){
     gpsEl.textContent = `GPS ±${Math.round(lastPos.acc)} m`;
-    warnEl.style.display = lastPos.acc>15 ? 'block' : 'none';
+    warnEl.style.display = lastPos.acc>15?'block':'none';
   }else{
     gpsEl.textContent = 'GPS: aguardando…';
     warnEl.style.display = 'block';
   }
 
   if(Number.isFinite(lastDist)){
-    latEl.textContent = `DISTÂNCIA LATERAL ${Math.round(lastDist)} m`;
+    bottomBar.textContent = `DISTÂNCIA LATERAL ATÉ O KM: ${Math.round(lastDist)} m`;
   }
 }
 setInterval(updatePanel,500);
@@ -207,9 +192,7 @@ setInterval(updatePanel,500);
 /* ================= START AUTOMÁTICO ================= */
 startGPS();
 loadKM();
-if('wakeLock' in navigator){
-  try{navigator.wakeLock.request('screen');}catch{}
-}
+if('wakeLock' in navigator){try{navigator.wakeLock.request('screen');}catch{}}
 </script>
 
 </body>
