@@ -1,190 +1,176 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Relatório SNV – GPS Precision</title>
-<style>
-:root { --primary: #0ea5e9; --success: #22c55e; --danger: #ef4444; --bg: #030712; }
-body { margin: 0; background: var(--bg); color: #f3f4f6; font-family: 'Segoe UI', Roboto, sans-serif; padding: 10px; }
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Scanner Iluminação Noturna - SNV</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --blue: #0070f3; --red: #ff0000; --bg: #000; }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: monospace; overflow: hidden; }
+        
+        /* HUD de Inspeção */
+        #viewport { position: relative; width: 100vw; height: 50vh; background: #111; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        
+        #overlay {
+            position: absolute; top: 10px; left: 10px; right: 10px;
+            display: flex; justify-content: space-between;
+            background: rgba(0,0,0,0.6); padding: 5px; border-radius: 5px;
+        }
 
-/* Dashboard UI */
-#camCard { 
-    position: sticky; top: 0; width: 100%; height: 32vh; 
-    background: #000; border-radius: 16px; overflow: hidden; 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 10;
-}
-video { width: 100%; height: 100%; object-fit: cover; }
+        .km-panel {
+            background: #1e3a8a; border: 2px solid #fff;
+            text-align: center; padding: 10px; margin: 10px;
+            border-radius: 8px; box-shadow: 0 0 15px rgba(30,58,138,0.8);
+        }
+        #kmLabel { font-size: 2.5rem; font-weight: 900; display: block; }
+        
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; }
+        button { 
+            padding: 20px; border-radius: 12px; border: none; 
+            font-weight: bold; font-size: 1rem; color: #fff;
+        }
+        #btnStart { background: #16a34a; }
+        #btnStop { background: var(--red); }
+        #btnPdf { background: #9333ea; grid-column: span 2; }
 
-.km-display {
-    background: linear-gradient(145deg, #1e3a8a, #1e40af);
-    border: 3px solid #fff; border-radius: 12px;
-    padding: 12px; margin: 15px 0; text-align: center;
-}
-#kmLabel { font-size: 2rem; font-weight: 900; display: block; letter-spacing: -1px; }
-#coords { font-size: 0.75rem; color: #93c5fd; font-family: monospace; }
-
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-.card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 12px; }
-
-button {
-    width: 100%; padding: 16px; border-radius: 10px; border: 0;
-    font-weight: 800; text-transform: uppercase; cursor: pointer;
-    transition: transform 0.1s;
-}
-button:active { transform: scale(0.96); }
-#btnFolder { background: var(--primary); color: #fff; grid-column: span 2; }
-#btnStart { background: var(--success); color: #fff; }
-#btnStop { background: var(--danger); color: #fff; }
-#btnReport { background: #6366f1; color: #fff; grid-column: span 2; }
-
-.log-area { 
-    background: #000; height: 120px; overflow-y: auto; 
-    font-size: 0.7rem; padding: 8px; border-radius: 8px; color: #10b981;
-}
-.stat-val { color: var(--primary); font-weight: bold; }
-</style>
+        .stats { padding: 0 20px; font-size: 0.8rem; color: #aaa; }
+        #log { height: 60px; overflow-y: hidden; font-size: 0.7rem; padding: 10px; color: #0f0; }
+    </style>
 </head>
 <body>
 
-<div id="camCard">
+<div id="viewport">
     <video id="vid" autoplay playsinline muted></video>
-</div>
-
-<div class="km-display">
-    <span id="kmLabel">AGUARDANDO GPS...</span>
-    <div id="coords">Lat: 0.000000 | Lon: 0.000000</div>
-</div>
-
-<div class="grid">
-    <button id="btnFolder">📁 Definir Pasta de Campo</button>
-    <button id="btnStart">▶️ Iniciar</button>
-    <button id="btnStop" disabled>⏹️ Parar</button>
-    <button id="btnReport">📄 Gerar Log de Fotos</button>
-</div>
-
-<div class="card">
-    <div style="display:flex; justify-content: space-between; margin-bottom: 5px;">
-        <span>Fotos: <span id="count" class="stat-val">0</span></span>
-        <span>Precisão: <span id="acc" class="stat-val">---</span></span>
+    <div id="overlay">
+        <span id="osd-clock">00:00:00</span>
+        <span id="osd-acc">GPS: ---</span>
     </div>
-    <div id="log" class="log-area"></div>
 </div>
+
+<div class="km-panel">
+    <span id="kmLabel">KM 0+000</span>
+    <small id="snv-ids">Buscando IDs próximos...</small>
+</div>
+
+<div class="stats">
+    Fotos no Buffer: <span id="stCount">0</span> | Intervalo: <span id="stRate">100ms</span>
+</div>
+
+<div class="controls">
+    <button id="btnStart">▶ INICIAR INSPEÇÃO</button>
+    <button id="btnStop" disabled>⏹ PARAR</button>
+    <button id="btnPdf" disabled>📄 GERAR PDF AGORA</button>
+</div>
+
+<div id="log"></div>
 
 <canvas id="can" style="display:none"></canvas>
 
 <script>
-let folder = null;
-let active = false;
-let photoCount = 0;
-let lastKM = "0+000";
-let currentCoords = { lat: 0, lon: 0 };
-let reportData = "RELATÓRIO DE CAMPO - SNV\nSeq;Hora;KM;Lat;Lon\n";
+const { jsPDF } = window.jspdf;
+let doc = new jsPDF('l', 'mm', 'a4');
+let isRecording = false;
+let photoSeq = 0;
+let currentKM = "0+000";
+let lastCoords = { lat: 0, lon: 0 };
+let timer = null;
 
 const vid = document.getElementById('vid');
 const can = document.getElementById('can');
-const ctx = can.getContext('2d', { desynchronized: true, alpha: false });
+const ctx = can.getContext('2d', { alpha: false, desynchronized: true });
 
-/* ===== GPS & LÓGICA SNV ===== */
-function updateGPS() {
-    navigator.geolocation.watchPosition((pos) => {
+// Lógica de GPS e SNV
+function startGPS() {
+    navigator.geolocation.watchPosition(pos => {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
-        const accuracy = pos.coords.accuracy;
+        lastCoords = { lat, lon };
         
-        currentCoords = { lat, lon };
-        document.getElementById('coords').textContent = `Lat: ${lat.toFixed(6)} | Lon: ${lon.toFixed(6)}`;
-        document.getElementById('acc').textContent = accuracy.toFixed(1) + 'm';
-
-        // Lógica SNV Simplificada (Pode ser ajustada para sua rodovia específica)
-        // Aqui simulamos o KM baseada na oscilação da Latitude para fins de teste
-        // Em uso real, você integraria sua API de KM/Estaqueamento aqui.
-        const kmBase = Math.abs(Math.floor(lat * 10) % 999);
-        const metros = Math.abs(Math.floor(lat * 10000) % 999);
-        lastKM = `${kmBase}+${metros.toString().padStart(3, '0')}`;
-        document.getElementById('kmLabel').textContent = `KM ${lastKM}`;
+        // Simulação SNV (Metragem baseada na variação decimal da latitude)
+        const kmBase = Math.abs(Math.floor(lat * 10) % 500);
+        const metros = Math.abs(Math.floor(lat * 100000) % 999);
+        currentKM = `${kmBase}+${metros.toString().padStart(3, '0')}`;
         
-    }, (err) => { console.error(err); }, { enableHighAccuracy: true });
+        document.getElementById('kmLabel').textContent = `KM ${currentKM}`;
+        document.getElementById('osd-acc').textContent = `Precisão: ${pos.coords.accuracy.toFixed(1)}m`;
+        
+        // Simulação de IDs próximos do SNV (5 IDs aleatórios próximos ao KM)
+        const idBase = Math.floor(lat * -1000);
+        document.getElementById('snv-ids').textContent = `IDs: ${idBase}, ${idBase+1}, ${idBase+2}, ${idBase+3}, ${idBase+4}`;
+    }, null, { enableHighAccuracy: true });
 }
 
-/* ===== CAPTURA GARANTIDA (PRO) ===== */
-async function capture() {
-    if (!active || !folder) return;
+async function captureFrame() {
+    if (!isRecording) return;
 
-    try {
-        photoCount++;
-        const now = new Date().toLocaleTimeString();
-        
-        // Renderização ultra-rápida
-        ctx.drawImage(vid, 0, 0, can.width, can.height);
-        
-        const blob = await new Promise(r => can.toBlob(r, 'image/jpeg', 0.8));
-        const fileName = `IMG_${photoCount.toString().padStart(5,'0')}_KM_${lastKM.replace('+','-')}.jpg`;
-        
-        const fileHandle = await folder.getFileHandle(fileName, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(blob);
-        await writable.close();
+    photoSeq++;
+    const timestamp = new Date().toLocaleString();
+    
+    // Desenho com filtro leve para noite (ganho de exposição via software)
+    ctx.filter = "brightness(1.2) contrast(1.1)";
+    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    
+    // Converte para Base64 ultra-leve (JPEG 0.4 de qualidade para PDF não travar)
+    const imgData = can.toDataURL('image/jpeg', 0.4);
 
-        // Alimenta o Relatório
-        reportData += `${photoCount};${now};${lastKM};${currentCoords.lat};${currentCoords.lon}\n`;
-        
-        document.getElementById('count').textContent = photoCount;
-        const l = document.createElement('div');
-        l.textContent = `[${now}] ${fileName} salvo.`;
-        const log = document.getElementById('log');
-        log.prepend(l);
-        if(log.children.length > 30) log.lastChild.remove();
+    // Adiciona ao PDF em background
+    if (photoSeq > 1) doc.addPage();
+    doc.addImage(imgData, 'JPEG', 10, 20, 277, 150);
+    doc.setFontSize(12);
+    doc.setTextColor(255, 255, 255);
+    doc.rect(10, 10, 277, 10, 'F'); // Tarja preta
+    doc.text(`INSPEÇÃO NOTURNA | KM: ${currentKM} | DATA: ${timestamp} | SEQ: ${photoSeq}`, 15, 17);
 
-    } catch (e) {
-        console.error("Frame drop protection triggered", e);
-    }
-
-    if(active) setTimeout(capture, 1500); // Intervalo de 1.5s para garantir escrita em disco
+    document.getElementById('stCount').textContent = photoSeq;
+    
+    // Relógio OSD
+    document.getElementById('osd-clock').textContent = new Date().toLocaleTimeString();
+    
+    timer = setTimeout(captureFrame, 150); // Velocidade de ~150ms (ajustável)
 }
-
-/* ===== HANDLERS ===== */
-document.getElementById('btnFolder').onclick = async () => {
-    folder = await window.showDirectoryPicker({ mode: 'readwrite' });
-    document.getElementById('btnFolder').textContent = "📁 Pasta: " + folder.name;
-    document.getElementById('btnFolder').style.background = "#16a34a";
-};
 
 document.getElementById('btnStart').onclick = () => {
-    if(!folder) return alert("Selecione a pasta primeiro!");
-    active = true;
+    isRecording = true;
+    photoSeq = 0;
+    doc = new jsPDF('l', 'mm', 'a4'); // Novo PDF
     document.getElementById('btnStart').disabled = true;
     document.getElementById('btnStop').disabled = false;
-    capture();
+    document.getElementById('btnPdf').disabled = true;
+    captureFrame();
 };
 
 document.getElementById('btnStop').onclick = () => {
-    active = false;
+    isRecording = false;
+    clearTimeout(timer);
     document.getElementById('btnStart').disabled = false;
     document.getElementById('btnStop').disabled = true;
+    document.getElementById('btnPdf').disabled = false;
+    const l = document.createElement('div');
+    l.textContent = `>> Captura finalizada com ${photoSeq} frames.`;
+    document.getElementById('log').prepend(l);
 };
 
-document.getElementById('btnReport').onclick = async () => {
-    if(!folder) return;
-    const reportHandle = await folder.getFileHandle('RELATORIO_CAMPO.csv', { create: true });
-    const writable = await reportHandle.createWritable();
-    await writable.write(reportData);
-    await writable.close();
-    alert("Relatório CSV gerado dentro da pasta de fotos!");
+document.getElementById('btnPdf').onclick = () => {
+    const filename = `INSPECAO_ILUM_KM_${currentKM.replace('+', '_')}.pdf`;
+    doc.save(filename);
 };
 
-/* ===== INIT ===== */
+// Setup Câmera
 async function init() {
-    const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment', width: 1280, height: 720 }, 
-        audio: false 
-    });
-    vid.srcObject = stream;
-    vid.onloadedmetadata = () => {
-        can.width = vid.videoWidth;
-        can.height = vid.videoHeight;
-    };
-    updateGPS();
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: 1280, height: 720 },
+            audio: false
+        });
+        vid.srcObject = stream;
+        vid.onloadedmetadata = () => {
+            can.width = vid.videoWidth;
+            can.height = vid.videoHeight;
+        };
+        startGPS();
+    } catch (e) { alert("Câmera não disponível."); }
 }
 
 init();
