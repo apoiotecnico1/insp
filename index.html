@@ -3,245 +3,207 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO - KM REAL</title>
+    <title>INSPEÇÃO RODOVIÁRIA - KM ATUAL</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --highway-green: #056b3c; --panel-bg: #0b1224; }
-        body { margin: 0; background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
-        
-        #viewport { position: relative; width: 100vw; height: 42vh; background: #000; }
+        :root { --highway-green: #056b3c; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+        #viewport { width: 100vw; height: 42vh; background: #000; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* Placa de KM idêntica à de sinalização */
-        #kmPlaque { 
+        /* Placa de KM destaque */
+        #kmDisplay { 
             background: linear-gradient(180deg, #0a8a4d, #056b3c);
-            color: white; text-align: center; padding: 15px;
-            font-size: 3.5rem; font-weight: 900; border: 5px solid #fff;
+            color: white; text-align: center; padding: 12px;
+            font-size: 3.8rem; font-weight: 900; border: 5px solid #fff;
             margin: 10px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
-        .status-bar { display: flex; justify-content: space-around; padding: 8px; background: var(--panel-bg); font-size: 0.75rem; border-top: 1px solid #222; }
-        .st { padding: 4px 10px; border-radius: 20px; background: #1a2235; border: 1px solid #333; }
-        .ok { color: #00ff66; border-color: #00ff66; }
+        .status-container { display: flex; justify-content: space-around; padding: 10px; background: #0b1224; }
+        .indicator { padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; border: 1px solid #333; }
+        .active { border-color: #00ff66; color: #00ff66; font-weight: bold; }
 
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 10px; }
-        .card { background: #111; padding: 12px; border-radius: 10px; text-align: center; border: 1px solid #222; }
-        .val { display: block; font-size: 1.4rem; font-weight: bold; color: #00d9ff; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 10px; }
+        .info-box { background: #111; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #222; }
+        .info-box span { display: block; font-size: 1.3rem; font-weight: bold; color: #00d9ff; }
 
-        .btn-row { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { padding: 20px; border-radius: 12px; border: none; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; cursor: pointer; }
+        .controls { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { padding: 22px; border-radius: 12px; border: none; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
         #btnStart { background: #00ff66; color: #000; }
         #btnStop { background: #ff3333; color: #fff; }
         
-        #log { font-size: 0.7rem; color: #666; text-align: center; padding: 5px; }
+        #log { font-size: 0.7rem; color: #444; text-align: center; margin-top: 5px; }
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div id="viewport">
-    <video id="vid" autoplay playsinline muted></video>
+<div id="viewport"><video id="video" autoplay playsinline muted></video></div>
+
+<div id="kmDisplay">BUSCANDO KM...</div>
+
+<div class="status-container">
+    <div id="stCsv" class="indicator">CSV: CARREGANDO...</div>
+    <div id="stGps" class="indicator">GPS: AGUARDANDO...</div>
 </div>
 
-<div id="kmPlaque" id="kmTop">KM --+---</div>
-
-<div class="status-bar">
-    <div id="stCsv" class="st">CSV: CARREGANDO...</div>
-    <div id="stGps" class="st">GPS: BUSCANDO...</div>
-    <div id="stCam" class="st">CAM: OK</div>
+<div class="info-grid">
+    <div class="info-box">FOTOS<span id="txtPhotos">0</span></div>
+    <div class="info-box">LOTE<span id="txtBatch">0/200</span></div>
+    <div class="info-box" id="btnManualPdf" style="border-color:#1e3a8a">PDF<span id="txtPdfs">0</span></div>
 </div>
 
-<div class="dashboard">
-    <div class="card">FOTOS<span id="txtTotal" class="val">0</span></div>
-    <div class="card">BUFFER<span id="txtBuffer" class="val">0/200</span></div>
-    <div id="btnSaveNow" class="card" style="background:#1e3a8a; cursor:pointer">SALVAR PDF<span id="txtPdfs" class="val">0</span></div>
+<div class="controls">
+    <button id="btnStart">INICIAR</button>
+    <button id="btnStop" disabled>PARAR</button>
 </div>
 
-<div class="btn-row">
-    <button id="btnStart">Iniciar Inspeção</button>
-    <button id="btnStop" disabled>Parar</button>
-</div>
+<div id="log">Sincronizado com SNVBR116SPRJ.csv</div>
 
-<div id="log">Sistema Riverside Pro v2.0 - SNV Local Ativo</div>
-
-<canvas id="can"></canvas>
+<canvas id="canvas"></canvas>
 
 <script>
-/* ======= CONFIGURAÇÃO E ESTADO ======= */
-let kmPoints = []; 
-let activeBuffer = [];
-let isRecording = false;
-let photoCount = 0;
+let kmDatabase = [];
+let buffer = [];
+let recording = false;
+let totalPhotos = 0;
 let pdfCount = 0;
-let lastPos = null;
-const CELL_SIZE = 0.005; // Tamanho da grade para busca rápida ( Riverside Logic )
-const kmGrid = new Map();
+let currentPos = null;
 
-const vid = document.getElementById('vid');
-const can = document.getElementById('can');
-const ctx = can.getContext('2d', { alpha: false });
+const vid = document.getElementById('video');
+const can = document.getElementById('canvas');
+const ctx = can.getContext('2d');
 
-/* ======= CARREGAMENTO DO CSV (SNVBR116SPRJ.csv) ======= */
-async function loadCSV() {
+/* ======= CARREGAMENTO AUTOMÁTICO DO GITHUB ======= */
+async function loadData() {
     try {
-        const response = await fetch('./SNVBR116SPRJ.csv');
-        const data = await response.text();
-        const lines = data.split(/\r?\n/).filter(line => line.trim() !== '');
+        // Busca o arquivo na mesma pasta do seu index.html no GitHub Pages
+        const response = await fetch('SNVBR116SPRJ.csv');
+        if (!response.ok) throw new Error("Erro no Fetch");
         
-        kmPoints = [];
-        kmGrid.clear();
+        const text = await response.text();
+        const rows = text.split(/\r?\n/).filter(r => r.trim() !== '');
+        
+        kmDatabase = rows.map(row => {
+            const cols = row.split(';'); // Padrão ponto e vírgula do seu arquivo
+            return {
+                km: cols,
+                lat: parseFloat(cols?.replace(',', '.')),
+                lon: parseFloat(cols?.replace(',', '.'))
+            };
+        }).filter(p => !isNaN(p.lat));
 
-        lines.forEach(line => {
-            const cols = line.split(';');
-            // Lógica de captura idêntica ao seu sistema original
-            const kmRaw = cols ? cols.trim() : "";
-            const lat = parseFloat(cols?.replace(',', '.'));
-            const lon = parseFloat(cols?.replace(',', '.'));
-
-            if (!isNaN(lat) && !isNaN(lon)) {
-                const point = { km: kmRaw, lat, lon };
-                kmPoints.push(point);
-                
-                // Indexação em grade para busca instantânea
-                const key = `${Math.floor(lat / CELL_SIZE)},${Math.floor(lon / CELL_SIZE)}`;
-                if (!kmGrid.has(key)) kmGrid.set(key, []);
-                kmGrid.get(key).push(point);
-            }
-        });
-
-        document.getElementById('stCsv').textContent = "CSV: OK (" + kmPoints.length + ")";
-        document.getElementById('stCsv').classList.add('ok');
-    } catch (e) {
-        document.getElementById('stCsv').textContent = "CSV: ERRO NO ARQUIVO";
-        console.error(e);
+        document.getElementById('stCsv').textContent = "CSV: OK (" + kmDatabase.length + ")";
+        document.getElementById('stCsv').classList.add('active');
+    } catch (err) {
+        document.getElementById('stCsv').textContent = "CSV: ERRO";
+        console.error(err);
     }
 }
 
-/* ======= CÁLCULO DE KM RIVERSIDE (INSTANTÂNEO) ======= */
-function updateKM(lat, lon) {
-    if (kmPoints.length === 0) return;
+/* ======= LÓGICA DE KM RÁPIDA (BUSCA POR DISTÂNCIA) ======= */
+function findNearestKM(lat, lon) {
+    if (kmDatabase.length === 0) return;
 
     let closest = null;
-    let minDist = Infinity;
+    let minD = Infinity;
 
-    // Busca apenas nos quadrados vizinhos (muito mais rápido que ler o CSV todo)
-    const gx = Math.floor(lat / CELL_SIZE);
-    const gy = Math.floor(lon / CELL_SIZE);
-
-    for (let x = gx - 1; x <= gx + 1; x++) {
-        for (let y = gy - 1; y <= gy + 1; y++) {
-            const pts = kmGrid.get(`${x},${y}`);
-            if (pts) {
-                pts.forEach(p => {
-                    const d = Math.sqrt(Math.pow(lat - p.lat, 2) + Math.pow(lon - p.lon, 2));
-                    if (d < minDist) {
-                        minDist = d;
-                        closest = p;
-                    }
-                });
-            }
+    // Varredura rápida para encontrar o ponto mais próximo da sua coordenada
+    for (let i = 0; i < kmDatabase.length; i++) {
+        const p = kmDatabase[i];
+        const d = Math.sqrt(Math.pow(lat - p.lat, 2) + Math.pow(lon - p.lon, 2));
+        if (d < minD) {
+            minD = d;
+            closest = p;
         }
     }
 
     if (closest) {
-        document.getElementById('kmPlaque').textContent = "KM " + closest.km;
-        return closest.km;
+        document.getElementById('kmDisplay').textContent = "KM " + closest.km;
     }
-    return "0+000";
 }
 
-/* ======= CAPTURA E PDF ======= */
-async function savePDF() {
-    if (activeBuffer.length === 0) return;
-    const batch = [...activeBuffer];
-    activeBuffer = [];
+/* ======= FUNÇÕES DE CAPTURA E PDF ======= */
+async function generatePDF() {
+    if (buffer.length === 0) return;
+    const items = [...buffer];
+    buffer = [];
     pdfCount++;
     document.getElementById('txtPdfs').textContent = pdfCount;
-    document.getElementById('txtBuffer').textContent = "0/200";
+    document.getElementById('txtBatch').textContent = "0/200";
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
 
-    batch.forEach((item, i) => {
+    items.forEach((data, i) => {
         if (i > 0) doc.addPage();
-        doc.setFillColor(0, 0, 0);
-        doc.rect(0, 0, 297, 20, 'F');
+        doc.setFillColor(0, 0, 0); doc.rect(0, 0, 297, 20, 'F');
         doc.setTextColor(255, 255, 255);
-        doc.text(`KM: ${item.km} | GPS: ${item.lat}, ${item.lon} | DATA: ${item.ts}`, 10, 12);
-        doc.addImage(item.img, 'JPEG', 10, 25, 277, 170);
+        doc.text(`KM: ${data.km} | GPS: ${data.lat}, ${data.lon} | ${data.time}`, 10, 12);
+        doc.addImage(data.img, 'JPEG', 10, 25, 277, 170);
     });
 
-    doc.save(`INSPECAO_LOTE_${pdfCount}.pdf`);
+    doc.save(`INSPECAO_KM_${items.km}_A_${items[items.length-1].km}.pdf`);
 }
 
-function captureFrame() {
-    if (!isRecording) return;
+function processFrame() {
+    if (!recording) return;
 
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const imgData = can.toDataURL('image/jpeg', 0.6);
-    const currentKmValue = document.getElementById('kmPlaque').textContent.replace('KM ', '');
-
-    activeBuffer.push({
-        img: imgData,
-        km: currentKmValue,
-        lat: lastPos ? lastPos.lat.toFixed(6) : "0",
-        lon: lastPos ? lastPos.lon.toFixed(6) : "0",
-        ts: new Date().toLocaleString()
+    buffer.push({
+        img: can.toDataURL('image/jpeg', 0.5),
+        km: document.getElementById('kmDisplay').textContent.replace('KM ', ''),
+        lat: currentPos ? currentPos.lat.toFixed(6) : "0",
+        lon: currentPos ? currentPos.lon.toFixed(6) : "0",
+        time: new Date().toLocaleTimeString()
     });
 
-    photoCount++;
-    document.getElementById('txtTotal').textContent = photoCount;
-    document.getElementById('txtBuffer').textContent = `${activeBuffer.length}/200`;
+    totalPhotos++;
+    document.getElementById('txtPhotos').textContent = totalPhotos;
+    document.getElementById('txtBatch').textContent = `${buffer.length}/200`;
 
-    if (activeBuffer.length >= 200) savePDF();
-    setTimeout(captureFrame, 200);
+    if (buffer.length >= 200) generatePDF();
+    setTimeout(processFrame, 200);
 }
 
-/* ======= BOTÕES E BOOT ======= */
+/* ======= INICIALIZAÇÃO ======= */
 document.getElementById('btnStart').onclick = () => {
-    isRecording = true;
+    recording = true;
     document.getElementById('btnStart').disabled = true;
     document.getElementById('btnStop').disabled = false;
-    captureFrame();
+    processFrame();
 };
 
 document.getElementById('btnStop').onclick = () => {
-    isRecording = false;
+    recording = false;
     document.getElementById('btnStart').disabled = false;
     document.getElementById('btnStop').disabled = true;
-    savePDF();
+    generatePDF();
 };
 
-document.getElementById('btnSaveNow').onclick = () => savePDF();
+document.getElementById('btnManualPdf').onclick = () => generatePDF();
 
-async function init() {
-    // 1. Carrega CSV IMEDIATAMENTE
-    await loadCSV();
+async function start() {
+    await loadData();
 
-    // 2. Inicia Câmera
-    const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: 1280, height: 720 },
-        audio: false
-    });
-    vid.srcObject = stream;
-    vid.onloadedmetadata = () => {
-        can.width = vid.videoWidth;
-        can.height = vid.videoHeight;
-    };
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: 1280, height: 720 },
+            audio: false
+        });
+        vid.srcObject = stream;
+        vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
+    } catch(e) { alert("Câmera não permitida."); }
 
-    // 3. Inicia GPS com alta precisão
     navigator.geolocation.watchPosition(pos => {
-        lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        currentPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
         document.getElementById('stGps').textContent = "GPS: OK";
-        document.getElementById('stGps').classList.add('ok');
-        updateKM(lastPos.lat, lastPos.lon);
-    }, err => {
-        document.getElementById('stGps').textContent = "GPS: ERRO";
-    }, { enableHighAccuracy: true, maximumAge: 0 });
+        document.getElementById('stGps').classList.add('active');
+        findNearestKM(currentPos.lat, currentPos.lon);
+    }, null, { enableHighAccuracy: true });
 }
 
-init();
+start();
 </script>
 </body>
 </html>
