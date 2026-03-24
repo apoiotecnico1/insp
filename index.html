@@ -3,23 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Painel de Inspeção Rodoviária</title>
+<title>Inspeção Rodoviária – Painel Operacional</title>
 
 <style>
 :root{
-  --bg:#05080f; --panel:#0b1224; --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
-  --line:#1e40af; --txt:#e8eeff;
+  --bg:#05080f;--panel:#0b1224;--line:#1e40af;
+  --ok:#22c55e;--warn:#eab308;--bad:#ef4444;
 }
 *{box-sizing:border-box}
-body{
-  margin:0;background:var(--bg);color:var(--txt);
-  font-family:system-ui,Segoe UI,Roboto
-}
-#camBox{
+body{margin:0;background:var(--bg);color:#e8eeff;font-family:system-ui}
+#cam{
   position:fixed;top:0;left:0;right:0;height:42vh;
   background:#000;border-bottom:4px solid var(--line)
 }
-#vid{width:100%;height:100%;object-fit:contain}
+video{width:100%;height:100%;object-fit:contain}
 #panel{
   position:fixed;bottom:0;left:0;right:0;height:58vh;
   background:var(--panel);border-top:4px solid var(--line);
@@ -27,75 +24,70 @@ body{
 }
 .row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
 .badge{
-  padding:6px 12px;border-radius:999px;
   background:#0f1733;border:1px solid #263a8b;
+  padding:6px 12px;border-radius:999px;
   font-weight:900;font-size:.8rem
 }
-.ok{color:#b7ffd6}
-.warn{color:#fff1aa}
-.bad{color:#ffc1c1}
-.big{font-size:1.05rem}
+.ok{color:#b7ffd6}.warn{color:#fff1aa}.bad{color:#ffc1c1}
 button{
   flex:1;padding:14px;font-size:1rem;font-weight:900;
   border:none;border-radius:14px
 }
-#btnFolder{background:#22c55e;color:#022}
-#btnAuto{background:#ff7b45}
-#btnStop{background:#ef4444;color:#fff}
+#folder{background:#22c55e;color:#022}
+#start{background:#ff7b45}
+#stop{background:#ef4444;color:#fff}
 input[type=range]{width:100%}
 </style>
 </head>
 
 <body>
 
-<div id="camBox">
+<div id="cam">
   <video id="vid" autoplay playsinline muted></video>
 </div>
 
 <div id="panel">
 
   <div class="row">
-    <span class="badge" id="stCsv">CSV</span>
-    <span class="badge" id="stCam">CÂMERA</span>
-    <span class="badge" id="stGps">GPS</span>
-    <span class="badge big" id="stKm">KM —</span>
-    <span class="badge" id="stFotos">📸 0</span>
+    <span id="stCsv" class="badge warn">CSV</span>
+    <span id="stCam" class="badge warn">CÂMERA</span>
+    <span id="stGps" class="badge warn">GPS</span>
+    <span id="stKm"  class="badge">KM —</span>
+    <span id="stFotos" class="badge">📸 0</span>
   </div>
 
   <div class="row">
-    <span class="badge big" id="stIds">IDs: —</span>
+    <span id="stIds" class="badge">IDs: —</span>
   </div>
 
   <div class="row">
     <label class="badge">⏱ Intervalo (ms):
-      <input type="range" id="capInt" min="500" max="3000" step="100" value="1200">
-      <span id="capVal">1200</span>
+      <input id="interval" type="range" min="500" max="3000" step="100" value="1200">
+      <span id="ival">1200</span>
     </label>
   </div>
 
   <div class="row">
-    <button id="btnFolder">📁 Selecionar Pasta</button>
+    <button id="folder">📁 Selecionar Pasta</button>
   </div>
 
   <div class="row">
-    <button id="btnAuto">🎬 Captura Automática</button>
-    <button id="btnStop" disabled>⏹️ Parar</button>
+    <button id="start">🎬 Iniciar Captura</button>
+    <button id="stop" disabled>⏹ Parar</button>
   </div>
-
 </div>
 
 <canvas id="can" hidden></canvas>
 
 <script>
-/* ===== UTIL ===== */
+/* ================= UTIL ================= */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-function parsePt(v){if(!v)return NaN;return Number(String(v).replace(',','.'))}
-function rad(d){return d*Math.PI/180}
+const rad=d=>d*Math.PI/180;
 function hav(a,b,c,d){
  const R=6371000;
  const x=rad(c-a),y=rad(d-b);
  const u=Math.sin(x/2)**2+
-  Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(y/2)**2;
+ Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(y/2)**2;
  return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
 function fmtKm(v){
@@ -103,55 +95,51 @@ function fmtKm(v){
  if(m>=1000){k++;m=0}
  return `KM ${k}+${String(m).padStart(3,'0')}`;
 }
+function parsePt(v){return Number(String(v).replace(',','.'))}
 
-/* ===== GRID ===== */
+/* ================= GRID ================= */
 const CELL=0.005;
+const idGrid=new Map(), kmGrid=new Map();
 function key(lat,lon){return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`}
 function insert(grid,p){
  const k=key(p.lat,p.lon);
- const a=grid.get(k);a?a.push(p):grid.set(k,[p])
+ const a=grid.get(k); a?a.push(p):grid.set(k,[p])
 }
-function cands(grid,lat,lon,min=80,rad=5){
+function cands(grid,lat,lon,min=80,r=5){
  const ky=Math.floor(lat/CELL),kx=Math.floor(lon/CELL),o=[];
- for(let r=0;r<=rad&&o.length<min;r++)
-  for(let dy=-r;dy<=r;dy++)
-   for(let dx=-r;dx<=r;dx++){
-    const a=grid.get(`${ky+dy},${kx+dx}`);
+ for(let d=0;d<=r&&o.length<min;d++)
+  for(let y=-d;y<=d;y++)
+   for(let x=-d;x<=d;x++){
+    const a=grid.get(`${ky+y},${kx+x}`);
     if(a)o.push(...a)
    }
  return o
 }
 
-/* ===== ESTADO ===== */
-let dataset=[],kmPoints=[];
-let csvReady=false,camReady=false,gpsReady=false;
-let lastPos=null;
-let rootDir=null;
-let running=false,capMs=1200,fotos=0;
+/* ================= ESTADO ================= */
+let lastPos=null,rootDir=null;
+let csvReady=false, camReady=false, gpsReady=false;
+let dataset=[], kmPoints=[];
+let running=false, fotos=0, intervalMs=1200;
 
-/* ===== ELEMENTOS ===== */
-const vid=vid=document.getElementById('vid');
-const can=document.getElementById('can');
-const ctx=can.getContext('2d');
-
-/* ===== CAMERA ===== */
-navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
-.then(s=>{
+/* ================= CAMERA ================= */
+const vid=document.getElementById('vid');
+navigator.mediaDevices.getUserMedia({
+ video:{facingMode:'environment'},audio:false
+}).then(s=>{
  vid.srcObject=s;
  camReady=true;
- stCam.textContent='CÂMERA OK';stCam.classList.add('ok')
+ stCam.textContent='CÂMERA OK';stCam.className='badge ok'
 });
 
-/* ===== GPS ===== */
+/* ================= GPS ================= */
 navigator.geolocation.watchPosition(p=>{
  lastPos={lat:p.coords.latitude,lon:p.coords.longitude};
  gpsReady=true;
- stGps.textContent='GPS OK';stGps.classList.add('ok')
+ stGps.textContent='GPS OK';stGps.className='badge ok'
 },{},{enableHighAccuracy:true});
 
-/* ===== CSV ===== */
-const idGrid=new Map(),kmGrid=new Map();
-
+/* ================= CSV ================= */
 fetch('./Dados_Completos_Grupo_2_all.csv').then(r=>r.text()).then(t=>{
  const l=t.split(/\r?\n/);
  const h=l[0].toLowerCase().split(';');
@@ -162,91 +150,93 @@ fetch('./Dados_Completos_Grupo_2_all.csv').then(r=>r.text()).then(t=>{
   const c=l[i].split(';');
   if(!c[iId])continue;
   const p={id:c[iId],lat:parsePt(c[iLat]),lon:parsePt(c[iLon])};
-  if(isFinite(p.lat))dataset.push(p),insert(idGrid,p)
+  if(isFinite(p.lat)) dataset.push(p), insert(idGrid,p);
  }
 });
-
 fetch('./SNVBR116SPRJ.csv').then(r=>r.text()).then(t=>{
  t.split(/\r?\n/).forEach(l=>{
   const c=l.split(';');
   const p={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
-  if(isFinite(p.km)&&isFinite(p.lat))kmPoints.push(p),insert(kmGrid,p)
+  if(isFinite(p.km)&&isFinite(p.lat)) kmPoints.push(p), insert(kmGrid,p);
  });
  csvReady=true;
- stCsv.textContent='CSV OK';stCsv.classList.add('ok')
+ stCsv.textContent='CSV OK';stCsv.className='badge ok'
 });
 
-/* ===== BUSCAS ===== */
-function nearKM(){
- if(!lastPos)return null;
+/* ================= BUSCAS ================= */
+function nearestKM(){
  let b=null,d=1e12;
- cands(kmGrid,lastPos.lat,lastPos.lon).forEach(p=>{
+ cands(kmGrid,lastPos.lat,lastPos.lon)
+ .forEach(p=>{
   const h=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
-  if(h<d)d=h,b=p
+  if(h<d){d=h;b=p}
  });
  return b
 }
-function nearIds(){
- if(!lastPos)return[];
+function nearestIds(){
  return cands(idGrid,lastPos.lat,lastPos.lon)
  .map(p=>({...p,d:hav(lastPos.lat,lastPos.lon,p.lat,p.lon)}))
  .sort((a,b)=>a.d-b.d).slice(0,5)
 }
 
-/* ===== KM AO VIVO ===== */
+/* ================= OKM/OID AO VIVO ================= */
 setInterval(()=>{
- if(!csvReady||!gpsReady)return;
- const k=nearKM();
+ if(!(csvReady&&gpsReady))return;
+ const k=nearestKM();
  stKm.textContent=k?fmtKm(k.km):'KM —';
- stIds.textContent='IDs: '+nearIds().map(i=>i.id).join(' • ')
+ stIds.textContent='IDs: '+nearestIds().map(i=>i.id).join(' • ');
 },400);
 
-/* ===== FILE SYSTEM ===== */
-async function selectFolder(){
+/* ================= FILE SYSTEM ================= */
+folder.onclick=async()=>{
  rootDir=await window.showDirectoryPicker({mode:'readwrite'});
  alert('Pasta selecionada');
-}
+};
 
-/* ===== CAPTURA ===== */
+/* ================= CAPTURA ================= */
+const can=document.getElementById('can');
+const ctx=can.getContext('2d');
+
 async function captureOnce(){
- if(!(csvReady&&camReady&&gpsReady&&rootDir))return;
+ if(!(csvReady&&gpsReady&&camReady&&rootDir))return;
  const w=vid.videoWidth,h=vid.videoHeight;
  can.width=w;can.height=h;
  ctx.drawImage(vid,0,0,w,h);
- const k=nearKM();const km=k?fmtKm(k.km):'KM —';
+ const k=nearestKM(); const km=k?fmtKm(k.km):'KM —';
  ctx.fillStyle='rgba(0,0,0,.7)';
  ctx.fillRect(0,h-120,w,120);
  ctx.fillStyle='#b7ffcf';
  ctx.font='42px system-ui';
  ctx.fillText(km,20,h-60);
+
  const blob=await new Promise(r=>can.toBlob(r,'image/jpeg',0.9));
  const f=await rootDir.getFileHandle(`FOTO_${Date.now()}.jpg`,{create:true});
  const wr=await f.createWritable();
  await wr.write(blob);await wr.close();
+
  fotos++;stFotos.textContent=`📸 ${fotos}`
 }
 
-/* ===== LOOP ===== */
+/* ================= LOOP SÍNCRONO ================= */
 async function loop(){
  running=true;
  while(running){
   const t=performance.now();
   await captureOnce();
-  await sleep(Math.max(0,capMs-(performance.now()-t)))
+  await sleep(Math.max(0,intervalMs-(performance.now()-t)))
  }
 }
 
-/* ===== CONTROLES ===== */
-capInt.oninput=()=>{capMs=+capInt.value;capVal.textContent=capInt.value}
-btnFolder.onclick=selectFolder;
-btnAuto.onclick=()=>{
+/* ================= CONTROLES ================= */
+interval.oninput=()=>{intervalMs=+interval.value;ival.textContent=interval.value}
+start.onclick=()=>{
  if(!rootDir){alert('Selecione a pasta');return}
- btnAuto.disabled=true;btnStop.disabled=false;
+ start.disabled=true;stop.disabled=false;
  loop()
 };
-btnStop.onclick=()=>{
+stop.onclick=()=>{
  running=false;
- btnAuto.disabled=false;btnStop.disabled=true
+ start.disabled=false;stop.disabled=true
 };
 </script>
 
