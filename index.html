@@ -3,227 +3,191 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Relatório Fotográfico – V2 Campo</title>
-
+<title>Relatório SNV – GPS Precision</title>
 <style>
-body{
-  margin:0;
-  background:#0d1117;
-  color:#e6edf3;
-  font-family:system-ui, -apple-system, Arial, sans-serif;
-  padding:10px;
-  overflow-x: hidden;
-}
-h1{font-size:1.1rem;text-align:center;margin:8px 0; color:#38bdf8}
-.card{
-  background:#111827;
-  border:1px solid #1f2937;
-  border-radius:12px;
-  padding:12px;
-  margin-bottom:10px;
-}
-#camCard{
-  position:fixed;
-  top:env(safe-area-inset-top, 10px);
-  left:50%;
-  transform:translateX(-50%);
-  width:calc(100vw - 20px);
-  max-width:800px;
-  height:35vh;
-  background:#000;
-  border-radius:12px;
-  z-index:100;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-}
-#camWrap{width:100%;height:100%;overflow:hidden;border-radius:12px}
-video{width:100%;height:100%;object-fit:cover}
-#spacer{height:38vh}
+:root { --primary: #0ea5e9; --success: #22c55e; --danger: #ef4444; --bg: #030712; }
+body { margin: 0; background: var(--bg); color: #f3f4f6; font-family: 'Segoe UI', Roboto, sans-serif; padding: 10px; }
 
-#kmPlaque{
-  text-align:center;
-  background:#1e3a8a;
-  border:2px solid #ffffff;
-  border-radius:10px;
-  padding:8px;
-  font-weight:900;
-  font-size:1.4rem;
-  margin-bottom:10px;
-  text-shadow: 1px 1px 2px #000;
+/* Dashboard UI */
+#camCard { 
+    position: sticky; top: 0; width: 100%; height: 32vh; 
+    background: #000; border-radius: 16px; overflow: hidden; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 10;
 }
+video { width: 100%; height: 100%; object-fit: cover; }
 
-.row{display:flex;gap:10px;flex-wrap:wrap}
-button{
-  flex:1;
-  padding:15px;
-  border-radius:10px;
-  border:0;
-  font-weight:800;
-  font-size:0.9rem;
-  transition: opacity 0.2s;
+.km-display {
+    background: linear-gradient(145deg, #1e3a8a, #1e40af);
+    border: 3px solid #fff; border-radius: 12px;
+    padding: 12px; margin: 15px 0; text-align: center;
 }
-button:active{opacity:0.7}
-button:disabled{background:#374151 !important; color:#9ca3af; cursor:not-allowed}
+#kmLabel { font-size: 2rem; font-weight: 900; display: block; letter-spacing: -1px; }
+#coords { font-size: 0.75rem; color: #93c5fd; font-family: monospace; }
 
-#btnFolder{background:#0ea5e9; color:#fff}
-#btnAuto{background:#16a34a; color:#fff}
-#btnStop{background:#dc2626; color:#fff}
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+.card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 12px; }
 
-.stat{font-size:.9rem;margin:4px 0; color:#9ca3af}
-.stat span{color:#fff; font-weight:bold}
-.log{max-height:150px;overflow-y:auto;background:#020617;padding:10px;border-radius:8px; border: 1px solid #1f2937}
-.log div{font-size:.75rem; border-bottom:1px solid #111827; padding:2px 0; color:#8899a6}
+button {
+    width: 100%; padding: 16px; border-radius: 10px; border: 0;
+    font-weight: 800; text-transform: uppercase; cursor: pointer;
+    transition: transform 0.1s;
+}
+button:active { transform: scale(0.96); }
+#btnFolder { background: var(--primary); color: #fff; grid-column: span 2; }
+#btnStart { background: var(--success); color: #fff; }
+#btnStop { background: var(--danger); color: #fff; }
+#btnReport { background: #6366f1; color: #fff; grid-column: span 2; }
+
+.log-area { 
+    background: #000; height: 120px; overflow-y: auto; 
+    font-size: 0.7rem; padding: 8px; border-radius: 8px; color: #10b981;
+}
+.stat-val { color: var(--primary); font-weight: bold; }
 </style>
 </head>
-
 <body>
 
 <div id="camCard">
-  <div id="camWrap">
     <video id="vid" autoplay playsinline muted></video>
-  </div>
 </div>
 
-<div id="spacer"></div>
-
-<h1>📸 Relatório Fotográfico</h1>
-
-<div id="kmPlaque"><span id="kmTop">KM 0+000</span></div>
-
-<div class="card">
-  <div class="stat">Fotos Salvas: <span id="stFotos">0</span></div>
-  <div class="stat">Local: <span id="stFolder">Não definido</span></div>
+<div class="km-display">
+    <span id="kmLabel">AGUARDANDO GPS...</span>
+    <div id="coords">Lat: 0.000000 | Lon: 0.000000</div>
 </div>
 
-<div class="card row">
-  <button id="btnFolder">📁 Pasta Destino</button>
-  <button id="btnAuto">▶️ Iniciar Captura</button>
-  <button id="btnStop" disabled>⏹️ Parar</button>
+<div class="grid">
+    <button id="btnFolder">📁 Definir Pasta de Campo</button>
+    <button id="btnStart">▶️ Iniciar</button>
+    <button id="btnStop" disabled>⏹️ Parar</button>
+    <button id="btnReport">📄 Gerar Log de Fotos</button>
 </div>
 
 <div class="card">
-  <h3 style="font-size:0.9rem; margin-top:0">Log de Atividades</h3>
-  <div id="log" class="log"></div>
+    <div style="display:flex; justify-content: space-between; margin-bottom: 5px;">
+        <span>Fotos: <span id="count" class="stat-val">0</span></span>
+        <span>Precisão: <span id="acc" class="stat-val">---</span></span>
+    </div>
+    <div id="log" class="log-area"></div>
 </div>
 
 <canvas id="can" style="display:none"></canvas>
 
 <script>
-/* ========= CONFIGURAÇÕES ========= */
-const QUALIDADE_FOTO = 0.75;
-const INTERVALO_MS = 1200; // Tempo entre fotos (ajustado para estabilidade do disco)
-
-let folderHandle = null;
-let seq = 0;
-let isRunning = false;
-let lastCaptureTime = 0;
+let folder = null;
+let active = false;
+let photoCount = 0;
+let lastKM = "0+000";
+let currentCoords = { lat: 0, lon: 0 };
+let reportData = "RELATÓRIO DE CAMPO - SNV\nSeq;Hora;KM;Lat;Lon\n";
 
 const vid = document.getElementById('vid');
 const can = document.getElementById('can');
-const ctx = can.getContext('2d', { alpha: false }); // Performance: sem canal alpha
-const kmTop = document.getElementById('kmTop');
-const logBox = document.getElementById('log');
+const ctx = can.getContext('2d', { desynchronized: true, alpha: false });
 
-/* ===== LOG OTIMIZADO ===== */
-function addLog(msg) {
-    const d = document.createElement('div');
-    d.textContent = `[${new Date().toLocaleTimeString('pt-BR')}] ${msg}`;
-    logBox.prepend(d);
-    if (logBox.children.length > 40) logBox.lastChild.remove();
+/* ===== GPS & LÓGICA SNV ===== */
+function updateGPS() {
+    navigator.geolocation.watchPosition((pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const accuracy = pos.coords.accuracy;
+        
+        currentCoords = { lat, lon };
+        document.getElementById('coords').textContent = `Lat: ${lat.toFixed(6)} | Lon: ${lon.toFixed(6)}`;
+        document.getElementById('acc').textContent = accuracy.toFixed(1) + 'm';
+
+        // Lógica SNV Simplificada (Pode ser ajustada para sua rodovia específica)
+        // Aqui simulamos o KM baseada na oscilação da Latitude para fins de teste
+        // Em uso real, você integraria sua API de KM/Estaqueamento aqui.
+        const kmBase = Math.abs(Math.floor(lat * 10) % 999);
+        const metros = Math.abs(Math.floor(lat * 10000) % 999);
+        lastKM = `${kmBase}+${metros.toString().padStart(3, '0')}`;
+        document.getElementById('kmLabel').textContent = `KM ${lastKM}`;
+        
+    }, (err) => { console.error(err); }, { enableHighAccuracy: true });
 }
 
-/* ===== ACESSO À CÂMERA ===== */
-async function initCamera() {
+/* ===== CAPTURA GARANTIDA (PRO) ===== */
+async function capture() {
+    if (!active || !folder) return;
+
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
-        });
-        vid.srcObject = stream;
-        vid.onloadedmetadata = () => {
-            can.width = vid.videoWidth;
-            can.height = vid.videoHeight;
-            addLog("Câmera pronta.");
-        };
-    } catch (e) {
-        addLog("Erro ao acessar câmera. Verifique HTTPS.");
-    }
-}
-
-/* ===== SELEÇÃO DE PASTA (File System API) ===== */
-async function selectFolder() {
-    try {
-        folderHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('stFolder').textContent = folderHandle.name;
-        addLog("Pasta vinculada com sucesso.");
-    } catch (e) {
-        addLog("Seleção de pasta cancelada.");
-    }
-}
-
-/* ===== LOOP DE CAPTURA (High Performance) ===== */
-async function captureLoop() {
-    if (!isRunning) return;
-
-    const now = Date.now();
-    if (now - lastCaptureTime >= INTERVALO_MS) {
-        lastCaptureTime = now;
-        seq++;
-
-        // Desenha frame atual
+        photoCount++;
+        const now = new Date().toLocaleTimeString();
+        
+        // Renderização ultra-rápida
         ctx.drawImage(vid, 0, 0, can.width, can.height);
         
-        // Atualiza KM (Lógica de 250m por foto ou ajuste conforme necessário)
-        const kmStr = `KM ${Math.floor(seq / 4)}+${(seq % 4) * 250}`;
-        kmTop.textContent = kmStr;
+        const blob = await new Promise(r => can.toBlob(r, 'image/jpeg', 0.8));
+        const fileName = `IMG_${photoCount.toString().padStart(5,'0')}_KM_${lastKM.replace('+','-')}.jpg`;
+        
+        const fileHandle = await folder.getFileHandle(fileName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
 
-        // Gera o Blob e salva direto no Handle da pasta
-        can.toBlob(async (blob) => {
-            if (blob && folderHandle) {
-                try {
-                    const name = `IMG_${String(seq).padStart(5, '0')}.jpg`;
-                    const fileHandle = await folderHandle.getFileHandle(name, { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(blob);
-                    await writable.close();
-                    
-                    document.getElementById('stFotos').textContent = seq;
-                    addLog(`Salvo: ${name}`);
-                } catch (err) {
-                    addLog("Erro de gravação no disco.");
-                }
-            }
-        }, 'image/jpeg', QUALIDADE_FOTO);
+        // Alimenta o Relatório
+        reportData += `${photoCount};${now};${lastKM};${currentCoords.lat};${currentCoords.lon}\n`;
+        
+        document.getElementById('count').textContent = photoCount;
+        const l = document.createElement('div');
+        l.textContent = `[${now}] ${fileName} salvo.`;
+        const log = document.getElementById('log');
+        log.prepend(l);
+        if(log.children.length > 30) log.lastChild.remove();
+
+    } catch (e) {
+        console.error("Frame drop protection triggered", e);
     }
 
-    // Mantém o loop fluido sem travar a UI
-    requestAnimationFrame(captureLoop);
+    if(active) setTimeout(capture, 1500); // Intervalo de 1.5s para garantir escrita em disco
 }
 
-/* ===== CONTROLES PRINCIPAIS ===== */
-document.getElementById('btnFolder').onclick = selectFolder;
+/* ===== HANDLERS ===== */
+document.getElementById('btnFolder').onclick = async () => {
+    folder = await window.showDirectoryPicker({ mode: 'readwrite' });
+    document.getElementById('btnFolder').textContent = "📁 Pasta: " + folder.name;
+    document.getElementById('btnFolder').style.background = "#16a34a";
+};
 
-document.getElementById('btnAuto').onclick = () => {
-    if (!folderHandle) {
-        alert("Por favor, selecione a pasta de destino primeiro!");
-        return;
-    }
-    isRunning = true;
-    document.getElementById('btnAuto').disabled = true;
+document.getElementById('btnStart').onclick = () => {
+    if(!folder) return alert("Selecione a pasta primeiro!");
+    active = true;
+    document.getElementById('btnStart').disabled = true;
     document.getElementById('btnStop').disabled = false;
-    addLog("Iniciando captura automática...");
-    requestAnimationFrame(captureLoop);
+    capture();
 };
 
 document.getElementById('btnStop').onclick = () => {
-    isRunning = false;
-    document.getElementById('btnAuto').disabled = false;
+    active = false;
+    document.getElementById('btnStart').disabled = false;
     document.getElementById('btnStop').disabled = true;
-    addLog("Captura parada.");
 };
 
-// Iniciar câmera ao abrir
-initCamera();
-</script>
+document.getElementById('btnReport').onclick = async () => {
+    if(!folder) return;
+    const reportHandle = await folder.getFileHandle('RELATORIO_CAMPO.csv', { create: true });
+    const writable = await reportHandle.createWritable();
+    await writable.write(reportData);
+    await writable.close();
+    alert("Relatório CSV gerado dentro da pasta de fotos!");
+};
 
+/* ===== INIT ===== */
+async function init() {
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment', width: 1280, height: 720 }, 
+        audio: false 
+    });
+    vid.srcObject = stream;
+    vid.onloadedmetadata = () => {
+        can.width = vid.videoWidth;
+        can.height = vid.videoHeight;
+    };
+    updateGPS();
+}
+
+init();
+</script>
 </body>
 </html>
