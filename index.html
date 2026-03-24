@@ -2,162 +2,248 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Inspeção Rodoviária – NOX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inspeção Rodoviária – Base NOX</title>
 
 <style>
-body{margin:0;background:#05080f;color:#e8eeff;font-family:system-ui}
-#cam{height:45vh;background:#000}
-video{width:100%;height:100%;object-fit:contain}
-#panel{height:55vh;padding:10px;overflow:auto;background:#0b1224}
-.badge{padding:6px 12px;border-radius:999px;background:#0f1733;font-weight:800;font-size:13px}
-.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-button{padding:14px;font-size:15px;font-weight:900;border:none;border-radius:14px}
-#folder{background:#22c55e;color:#022}
-#start{background:#fb923c}
-#stop{background:#ef4444;color:#fff}
-#pdf{background:#eab308;color:#231c00}
+:root{
+  --bg:#0b1220; --fg:#fff; --muted:#9ca3b8;
+  --panel:#0f172a; --border:#1f2937;
+  --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
+}
+html,body{margin:0;height:100%}
+body{
+  background:var(--bg);color:var(--fg);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto;
+}
+
+/* câmera */
+#camBox{
+  height:42vh;
+  background:#000;
+  border-bottom:2px solid var(--border);
+}
+video{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+/* painel */
+#panel{
+  height:58vh;
+  padding:10px;
+  overflow:auto;
+  background:var(--panel);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.badge{
+  padding:6px 12px;
+  border-radius:999px;
+  background:#020617;
+  border:1px solid var(--border);
+  font-weight:900;font-size:.85rem;
+}
+button{
+  padding:14px 16px;
+  border-radius:14px;
+  border:none;
+  font-weight:900;
+  font-size:1rem;
+  cursor:pointer;
+}
+#btnFolder{background:var(--ok);color:#022}
+#btnStart{background:#fb923c}
+#btnStop{background:var(--bad);color:#fff}
+#btnPdf{background:var(--warn);color:#231c00}
+
+input[type=range]{width:100%}
 </style>
 </head>
 
 <body>
 
-<div id="cam">
+<div id="camBox">
   <video id="vid" autoplay playsinline muted></video>
 </div>
 
 <div id="panel">
   <div class="row">
-    <span class="badge" id="kmView">KM —</span>
-    <span class="badge" id="idView">IDs: —</span>
-    <span class="badge" id="countView">📸 0</span>
+    <span id="kmView" class="badge">KM —</span>
+    <span id="idView" class="badge">IDs: —</span>
+    <span id="countView" class="badge">📸 0</span>
   </div>
 
   <div class="row">
-    <button id="folder">📁 Pasta</button>
-    <button id="start">▶ Capturar</button>
-    <button id="stop" disabled>⏹ Parar</button>
-    <button id="pdf" disabled>📄 PDF</button>
+    <label class="badge">
+      Intervalo (ms)
+      <input id="interval" type="range" min="800" max="3000" step="100" value="1200">
+      <span id="ival">1200</span>
+    </label>
+  </div>
+
+  <div class="row">
+    <button id="btnFolder">📁 Selecionar Pasta</button>
+    <button id="btnStart">▶ Iniciar</button>
+    <button id="btnStop" disabled>⏹ Parar</button>
+    <button id="btnPdf" disabled>📄 PDF</button>
   </div>
 </div>
 
 <canvas id="can" hidden></canvas>
 
 <script>
-/* ========= UTIL ========= */
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const hav=(a,b,c,d)=>{
- const R=6371;
- const dLat=(c-a)*Math.PI/180;
- const dLon=(d-b)*Math.PI/180;
- const x=Math.sin(dLat/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLon/2)**2;
- return R*(2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)));
+/* ======= UTIL (IGUAL AO HTML QUE FUNCIONAVA) ======= */
+function parsePt(v){
+  if(v==null) return NaN;
+  return Number(String(v).trim().replace(/\./g,'').replace(',', '.'));
 }
-const fmtKm=v=>`KM ${Math.floor(v)}+${String(Math.round((v%1)*1000)).padStart(3,'0')}`;
-const pnum=v=>Number(String(v).replace(',','.'))
+function hav(lat1, lon1, lat2, lon2){
+  const R=6371000;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function nearestN(lat,lon,n=5){
+  if(!dataset.length) return [];
+  const arr=dataset.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}));
+  arr.sort((a,b)=>a.d-b.d);
+  return arr.slice(0,n);
+}
+function fmtKm(v){
+  let k=Math.floor(v);
+  let m=Math.round((v-k)*1000);
+  return `KM ${k}+${String(m).padStart(3,'0')}`;
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-/* ========= ESTADO ========= */
-let pontos=[], kms=[]
-let lastPos=null, root=null
-let run=false, fotos=0
-let blobs=[]
+/* ======= ESTADO ======= */
+let dataset=[], kmBase=[];
+let lastPos=null;
+let rootDir=null;
+let running=false;
+let fotos=0;
+let blobs=[];
+let intervalMs=1200;
+let lastRender=0;
 
-/* ========= CAMERA ========= */
+/* ======= CAMERA ======= */
 navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
-.then(s=>vid.srcObject=s)
+.then(s=>vid.srcObject=s);
 
-/* ========= GPS ========= */
+/* ======= GPS ======= */
 navigator.geolocation.watchPosition(p=>{
- lastPos={lat:p.coords.latitude,lon:p.coords.longitude}
-},{},{enableHighAccuracy:true})
+  lastPos={lat:p.coords.latitude, lon:p.coords.longitude};
+},{},{enableHighAccuracy:true});
 
-/* ========= CSV ========= */
-fetch('./Dados_Completos_Grupo_2_all.csv').then(r=>r.text()).then(t=>{
- const l=t.split(/\r?\n/); const h=l[0].toLowerCase().split(';')
- const iId=h.indexOf('id'), iLat=h.indexOf('lat'), iLon=h.indexOf('lon')
- for(let i=1;i<l.length;i++){
-  const c=l[i].split(';')
-  pontos.push({id:c[iId],lat:pnum(c[iLat]),lon:pnum(c[iLon])})
- }
-})
+/* ======= CSVs ======= */
+fetch('./dados.csv').then(r=>r.text()).then(t=>{
+  const l=t.split(/\r?\n/).filter(l=>l.trim());
+  const h=l.shift().split(';').map(x=>x.toLowerCase());
+  const iId=h.findIndex(x=>x.includes('id'));
+  const iLat=h.findIndex(x=>x.includes('lat'));
+  const iLon=h.findIndex(x=>x.includes('lon'));
+  l.forEach(line=>{
+    const c=line.split(';');
+    const p={id:c[iId],lat:parsePt(c[iLat]),lon:parsePt(c[iLon])};
+    if(Number.isFinite(p.lat)&&Number.isFinite(p.lon)) dataset.push(p);
+  });
+});
 
 fetch('./SNVBR116SPRJ.csv').then(r=>r.text()).then(t=>{
- t.split(/\r?\n/).forEach(l=>{
-  const c=l.split(';')
-  kms.push({km:pnum(c[0]),lat:pnum(c[1]),lon:pnum(c[2])})
- })
-})
+  t.split(/\r?\n/).forEach(l=>{
+    const c=l.split(';');
+    const p={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
+    if(Number.isFinite(p.km)&&Number.isFinite(p.lat)) kmBase.push(p);
+  });
+});
 
-/* ========= PROXIMIDADE (BASE NOX) ========= */
+/* ======= KM ATUAL ======= */
 function kmAtual(){
- let best=null,d=1e9
- kms.forEach(p=>{
-  const h=hav(lastPos.lat,lastPos.lon,p.lat,p.lon)
-  if(h<d){d=h;best=p}
- })
- return best
-}
-function idsProx(){
- return pontos
- .map(p=>({...p,d:hav(lastPos.lat,lastPos.lon,p.lat,p.lon)}))
- .sort((a,b)=>a.d-b.d)
- .slice(0,5)
+  if(!lastPos||!kmBase.length) return null;
+  let b=null,d=1e12;
+  kmBase.forEach(p=>{
+    const h=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
+    if(h<d){d=h;b=p;}
+  });
+  return b;
 }
 
-/* ========= UI AO VIVO ========= */
-setInterval(()=>{
- if(!lastPos)return
- const k=kmAtual()
- if(k) kmView.textContent=fmtKm(k.km)
- const ids=idsProx().map(p=>p.id).join(' • ')
- idView.textContent='IDs: '+ids
-},400)
+/* ======= UI EM TEMPO REAL (MESMA LÓGICA QUE FUNCIONAVA) ======= */
+function renderUI(force=false){
+  const now=performance.now();
+  if(!force && now-lastRender<250) return;
+  lastRender=now;
 
-/* ========= CAPTURA ========= */
-async function capture(){
- const w=vid.videoWidth,h=vid.videoHeight
- can.width=w;can.height=h
- const ctx=can.getContext('2d')
- ctx.drawImage(vid,0,0,w,h)
- const k=kmAtual()
- const ids=idsProx().map(p=>p.id).join(' • ')
- ctx.fillStyle='rgba(0,0,0,.7)'
- ctx.fillRect(0,h-140,w,140)
- ctx.fillStyle='#b7ffcf'
- ctx.font='40px system-ui'
- ctx.fillText(fmtKm(k.km),20,h-90)
- ctx.font='22px system-ui'
- ctx.fillText(ids,20,h-40)
+  if(!lastPos) return;
 
- const blob=await new Promise(r=>can.toBlob(r,'image/jpeg',0.85))
- const f=await root.getFileHandle(`FOTO_${Date.now()}.jpg`,{create:true})
- const wr=await f.createWritable()
- await wr.write(blob);await wr.close()
- blobs.push(blob); fotos++; countView.textContent=`📸 ${fotos}`
+  const k=kmAtual();
+  if(k) kmView.textContent=fmtKm(k.km);
+
+  const ids=nearestN(lastPos.lat,lastPos.lon,5).map(i=>i.id).join(' • ');
+  idView.textContent='IDs: '+ids;
+}
+setInterval(()=>renderUI(),200);
+
+/* ======= CAPTURA ======= */
+async function captureOnce(){
+  if(!rootDir||!lastPos) return;
+  const w=vid.videoWidth,h=vid.videoHeight;
+  can.width=w;can.height=h;
+  const ctx=can.getContext('2d');
+  ctx.drawImage(vid,0,0,w,h);
+
+  const km=kmAtual();
+  const ids=nearestN(lastPos.lat,lastPos.lon,5).map(i=>i.id).join(' • ');
+
+  ctx.fillStyle='rgba(0,0,0,.7)';
+  ctx.fillRect(0,h-140,w,140);
+  ctx.fillStyle='#22c55e';
+  ctx.font='40px system-ui';
+  ctx.fillText(fmtKm(km.km),20,h-90);
+  ctx.font='22px system-ui';
+  ctx.fillText(ids,20,h-40);
+
+  const blob=await new Promise(r=>can.toBlob(r,'image/jpeg',0.85));
+  const f=await rootDir.getFileHandle(`FOTO_${Date.now()}.jpg`,{create:true});
+  const wr=await f.createWritable();
+  await wr.write(blob);await wr.close();
+
+  blobs.push(blob);
+  fotos++;
+  countView.textContent=`📸 ${fotos}`;
 }
 
-/* ========= LOOP ========= */
+/* ======= LOOP SEGURO ======= */
 async function loop(){
- run=true
- while(run){ await capture(); await sleep(1200) }
+  running=true;
+  while(running){
+    const t=performance.now();
+    await captureOnce();
+    await sleep(Math.max(0,intervalMs-(performance.now()-t)));
+  }
 }
 
-/* ========= PDF ========= */
-pdf.onclick=()=>{
- const w=window.open()
- let h='<html><body>'
- blobs.forEach(b=>h+=`<img src="${URL.createObjectURL(b)}" style="width:100%;page-break-after:always">`)
- w.document.write(h+'</body></html>')
- w.print()
-}
+/* ======= PDF LEVE ======= */
+btnPdf.onclick=()=>{
+  const w=window.open();
+  let html='<html><body>';
+  blobs.forEach(b=>html+=`<img src="${URL.createObjectURL(b)}" style="width:100%;page-break-after:always">`);
+  w.document.write(html+'</body></html>');
+  w.print();
+};
 
-/* ========= CONTROLES ========= */
-folder.onclick=async()=>{
- root=await window.showDirectoryPicker({mode:'readwrite'})
- pdf.disabled=false
-}
-start.onclick=()=>{if(!root)return alert('Selecione pasta');start.disabled=true;stop.disabled=false;loop()}
-stop.onclick=()=>{run=false;start.disabled=false;stop.disabled=true}
+/* ======= CONTROLES ======= */
+interval.oninput=()=>{intervalMs=+interval.value;ival.textContent=interval.value};
+btnFolder.onclick=async()=>{rootDir=await window.showDirectoryPicker({mode:'readwrite'});btnPdf.disabled=false};
+btnStart.onclick=()=>{if(!rootDir)return alert('Selecione a pasta');btnStart.disabled=true;btnStop.disabled=false;loop()};
+btnStop.onclick=()=>{running=false;btnStart.disabled=false;btnStop.disabled=true};
 </script>
+
 </body>
 </html>
