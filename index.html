@@ -2,33 +2,39 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Painel de Inspeção Rodoviária</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Painel de Inspeção – Iluminação Rodoviária</title>
 
 <style>
-body{margin:0;background:#05080f;color:#e8eeff;font-family:system-ui}
-#top{
-  position:fixed;top:0;left:0;right:0;height:45vh;
-  border-bottom:3px solid #1e40af;background:#000
+:root{
+  --bg:#05080f; --panel:#0b1224; --line:#1e40af;
+  --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
 }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#e8eeff;font-family:system-ui}
 video{width:100%;height:100%;object-fit:contain}
+#top{height:42vh;border-bottom:4px solid var(--line);background:black}
 #panel{
-  position:fixed;bottom:0;left:0;right:0;height:55vh;
-  background:#0b1224;border-top:3px solid #1e40af;
-  overflow:auto;padding:8px
+  height:58vh;overflow:auto;
+  background:var(--panel);
+  border-top:4px solid var(--line);
+  padding:8px
 }
-.row{display:flex;gap:6px;flex-wrap:wrap}
+.row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
 .badge{
-  background:#0f1733;border:1px solid #223;
   padding:6px 10px;border-radius:999px;
-  font-weight:900;font-size:.85rem
+  background:#0f1733;border:1px solid #263a8b;
+  font-weight:900;font-size:.78rem
 }
+.big{font-size:1.05rem}
+.ok{color:#b7ffd6}
 button{
-  padding:14px;font-size:1rem;font-weight:900;
-  border-radius:12px;border:none;
+  flex:1;padding:14px;font-size:1rem;
+  font-weight:900;border:none;border-radius:12px
 }
-#btnStart{background:#22c55e;color:#022}
-#btnStop{background:#ef4444;color:#fff}
+#start{background:#22c55e;color:#022}
+#stop{background:#ef4444;color:white}
+input[type=range]{width:100%}
 </style>
 </head>
 
@@ -39,131 +45,184 @@ button{
 </div>
 
 <div id="panel">
+
   <div class="row">
-    <span class="badge" id="bCam">📷 CÂMERA</span>
-    <span class="badge" id="bGps">📡 GPS</span>
-    <span class="badge" id="bKm">📍 KM —</span>
-    <span class="badge" id="bFotos">📸 0</span>
+    <span class="badge" id="stCam">📷 CÂMERA</span>
+    <span class="badge" id="stGps">📡 GPS</span>
+    <span class="badge big" id="stKm">KM —</span>
+    <span class="badge" id="stFotos">📸 0</span>
   </div>
 
   <div class="row">
-    <button id="btnStart">▶ INICIAR CAPTURA</button>
-    <button id="btnStop" disabled>⏹ PARAR</button>
+    <span class="badge big" id="stIds">IDs: —</span>
   </div>
 
   <div class="row">
-    <span class="badge" id="bIds">IDs: —</span>
+    <label class="badge">⏱ Intervalo (ms):
+      <input type="range" id="interval" min="500" max="3000" step="100" value="1200">
+      <span id="ival">1200</span>
+    </label>
   </div>
+
+  <div class="row">
+    <button id="start">▶ INICIAR</button>
+    <button id="stop" disabled>⏹ PARAR</button>
+  </div>
+
 </div>
 
 <canvas id="can" hidden></canvas>
 
 <script>
-/* ========= UTIL ========= */
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+/* ==== FUNÇÕES ORIGINAIS (IGUAIS AO SEU PRIMEIRO HTML) ==== */
+function parsePt(v){
+ if(v==null) return NaN;
+ const s=String(v).trim();
+ return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')):Number(s);
+}
 const rad=d=>d*Math.PI/180;
 function hav(a,b,c,d){
  const R=6371000;
- const dLat=rad(c-a), dLon=rad(d-b);
- const x=Math.sin(dLat/2)**2+
-  Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(dLon/2)**2;
- return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+ const x=rad(c-a),y=rad(d-b);
+ const u=Math.sin(x/2)**2+
+   Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(y/2)**2;
+ return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
 function fmtKm(v){
- let k=Math.floor(v),m=Math.round((v-k)*1000);
- return `KM ${k}+${String(m).padStart(3,'0')}`;
+ let K=Math.floor(v),m=Math.round((v-K)*1000);
+ if(m>=1000){m=0;K++}
+ return `KM ${K}+${String(m).padStart(3,'0')}`;
 }
 
-/* ========= CÂMERA ========= */
+/* ==== GRID ESPACIAL (IGUAL AO ORIGINAL) ==== */
+const CELL=0.005;
+const idGrid=new Map(), kmGrid=new Map();
+function cellKey(lat,lon){return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`}
+function gridInsert(grid,p){
+ const k=cellKey(p.lat,p.lon);
+ const a=grid.get(k); a?a.push(p):grid.set(k,[p]);
+}
+function gridCands(grid,lat,lon,minCount=60,maxR=5){
+ const ky=Math.floor(lat/CELL),kx=Math.floor(lon/CELL);
+ const out=[];
+ for(let r=0;r<=maxR && out.length<minCount;r++){
+  for(let dy=-r;dy<=r;dy++)
+   for(let dx=-r;dx<=r;dx++){
+    const a=grid.get(`${ky+dy},${kx+dx}`);
+    if(a) out.push(...a);
+   }
+ }
+ return out;
+}
+
+/* ==== CSVs (IGUAIS AO ORIGINAL) ==== */
+let dataset=[], kmPoints=[];
+fetch('./Dados_Completos_Grupo_2_all.csv')
+ .then(r=>r.text()).then(t=>{
+  t.split(/\r?\n/).slice(1).forEach(l=>{
+   const c=l.split(';');
+   const id=c[0],lat=parsePt(c[1]),lon=parsePt(c[2]);
+   if(id && lat && lon){
+    dataset.push({id,lat,lon});
+    gridInsert(idGrid,{id,lat,lon});
+   }
+  });
+});
+fetch('./SNVBR116SPRJ.csv')
+ .then(r=>r.text()).then(t=>{
+  t.split(/\r?\n/).slice(1).forEach(l=>{
+   const c=l.split(';');
+   const km=parsePt(c[0]),lat=parsePt(c[1]),lon=parsePt(c[2]);
+   if(km && lat && lon){
+    kmPoints.push({km,lat,lon});
+    gridInsert(kmGrid,{km,lat,lon});
+   }
+  });
+});
+
+/* ==== BUSCAS (IGUAIS AO ORIGINAL) ==== */
+function nearestN(lat,lon,n=5){
+ const cand=gridCands(idGrid,lat,lon,n*30);
+ return cand.map(p=>({...p,d:hav(lat,lon,p.lat,p.lon)}))
+  .sort((a,b)=>a.d-b.d).slice(0,n);
+}
+function nearestKM(lat,lon){
+ const cand=gridCands(kmGrid,lat,lon,80);
+ let best=null,d=1e12;
+ cand.forEach(p=>{
+  const h=hav(lat,lon,p.lat,p.lon);
+  if(h<d){d=h;best=p}
+ });
+ return best;
+}
+
+/* ==== CÂMERA + GPS ==== */
 const vid=document.getElementById('vid');
+const can=document.getElementById('can');
+const ctx=can.getContext('2d');
+let lastPos=null;
+
 navigator.mediaDevices.getUserMedia({
  video:{facingMode:{ideal:'environment'}},audio:false
 }).then(s=>{
  vid.srcObject=s;
- document.getElementById('bCam').textContent='📷 OK';
+ stCam.textContent='📷 OK';
+ stCam.classList.add('ok');
 });
 
-/* ========= GPS ========= */
-let lastPos=null;
 navigator.geolocation.watchPosition(p=>{
  lastPos={lat:p.coords.latitude,lon:p.coords.longitude};
- document.getElementById('bGps').textContent='📡 OK';
+ stGps.textContent='📡 OK';
+ stGps.classList.add('ok');
 },{},{enableHighAccuracy:true});
 
-/* ========= CSV ========= */
-let kms=[],ids=[];
-fetch('./csv/SNVBR116.csv').then(r=>r.text()).then(t=>{
- t.split(/\r?\n/).slice(1).forEach(l=>{
-  const[c,la,lo]=l.split(';');
-  if(c)kms.push({km:+c,lat:+la,lon:+lo});
- });
-});
-fetch('./csv/IDS.csv').then(r=>r.text()).then(t=>{
- t.split(/\r?\n/).slice(1).forEach(l=>{
-  const[i,la,lo]=l.split(';');
-  if(i)ids.push({id:i,lat:+la,lon:+lo});
- });
-});
+/* ==== CAPTURA ==== */
+let running=false,fotos=0;
+async function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+async function captureOnce(){
+ if(!lastPos||!vid.videoWidth) return;
+ can.width=vid.videoWidth; can.height=vid.videoHeight;
+ ctx.drawImage(vid,0,0,can.width,can.height);
 
-/* ========= BUSCAS ========= */
-function nearestKm(){
- let b=null,d=1e12;
- kms.forEach(p=>{
-  const h=hav(p.lat,p.lon,lastPos.lat,lastPos.lon);
-  if(h<d){d=h;b=p}
- });
- return b?fmtKm(b.km):'KM —';
-}
-function nearestIds(){
- return ids
-  .map(p=>({...p,d:hav(p.lat,p.lon,lastPos.lat,lastPos.lon)}))
-  .sort((a,b)=>a.d-b.d).slice(0,5)
-  .map(p=>p.id).join(', ');
-}
+ const kmObj=nearestKM(lastPos.lat,lastPos.lon);
+ const kmStr=kmObj?fmtKm(kmObj.km):'KM —';
+ const ids=nearestN(lastPos.lat,lastPos.lon,5).map(i=>i.id).join(' • ');
 
-/* ========= CAPTURA ========= */
-const can=document.getElementById('can');
-const ctx=can.getContext('2d');
-let run=false,fotos=0;
+ stKm.textContent=kmStr;
+ stIds.textContent='IDs: '+ids;
 
-async function capture(){
- const w=vid.videoWidth,h=vid.videoHeight;
- can.width=w;can.height=h;
- ctx.drawImage(vid,0,0,w,h);
-
- const km=nearestKm();
  ctx.fillStyle='rgba(0,0,0,.7)';
- ctx.fillRect(0,h-120,w,120);
+ ctx.fillRect(0,can.height-130,can.width,130);
  ctx.fillStyle='#b7ffcf';
- ctx.font='40px system-ui';
- ctx.fillText(km,20,h-60);
+ ctx.font='42px system-ui';
+ ctx.fillText(kmStr,20,can.height-60);
 
- fotos++;
- document.getElementById('bFotos').textContent=`📸 ${fotos}`;
- document.getElementById('bKm').textContent=`📍 ${km}`;
- document.getElementById('bIds').textContent=
-  `IDs: ${nearestIds()}`;
+ fotos++; stFotos.textContent=`📸 ${fotos}`;
 }
 
+/* ==== LOOP ESTÁVEL ==== */
 async function loop(){
- while(run){
-  const t=performance.now();
-  if(lastPos && kms.length) await capture();
-  await sleep(Math.max(0,1000-(performance.now()-t)));
+ while(running){
+  const t0=performance.now();
+  await captureOnce();
+  const dt=performance.now()-t0;
+  const iv=interval.value|0;
+  await sleep(Math.max(0,iv-dt));
  }
 }
 
-/* ========= BOTÕES ========= */
-btnStart.onclick=()=>{
- run=true;
- btnStart.disabled=true;
- btnStop.disabled=false;
+/* ==== CONTROLES ==== */
+interval.oninput=()=>ival.textContent=interval.value;
+start.onclick=()=>{
+ running=true;
+ start.disabled=true;
+ stop.disabled=false;
  loop();
 };
-btnStop.onclick=()=>{
- run=false;
- btnStart.disabled=false;
- btnStop.disabled=true;
+stop.onclick=()=>{
+ running=false;
+ start.disabled=false;
+ stop.disabled=true;
 };
 </script>
 
