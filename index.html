@@ -8,11 +8,10 @@
 
 <style>
 :root{
-  --green:#0b7a39;      /* verde padrão placas rodoviárias */
+  --green:#0b7a39;
   --green2:#0a6a32;
   --border:#ffffff;
   --text:#ffffff;
-  --black:#000000;
 }
 
 html,body{
@@ -25,7 +24,6 @@ html,body{
   overflow:hidden;
 }
 
-/* Área total */
 #screen{
   position:fixed;
   inset:0;
@@ -44,14 +42,13 @@ html,body{
   box-shadow:
     inset 0 0 0 4px rgba(255,255,255,.5),
     0 30px 60px rgba(0,0,0,.6);
-
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
 }
 
-/* KM principal */
+/* KM grande */
 #km{
   white-space:nowrap;
   width:100%;
@@ -63,7 +60,6 @@ html,body{
   letter-spacing:.04em;
 }
 
-/* GPS pequeno */
 #gps{
   margin-top:12px;
   font-size:clamp(12px, 2.4vw, 18px);
@@ -71,12 +67,9 @@ html,body{
   color:#eaf2ff;
 }
 
-/* Barra inferior preta */
 #bottom{
   position:fixed;
-  left:0;
-  right:0;
-  bottom:0;
+  left:0; right:0; bottom:0;
   height:44px;
   background:#000;
   color:#fff;
@@ -99,24 +92,23 @@ html,body{
   </div>
 </div>
 
-<div id="bottom">DISTÂNCIA LATERAL</div>
+<div id="bottom">DISTÂNCIA LATERAL —</div>
 
 <script>
-/* ===== ESTADO ===== */
-let lastPos=null;
-let kmPoints=[];
-let lastDist=null;
+/* ================= LÓGICA ORIGINAL DE KM ================= */
 
-const kmEl=document.getElementById('km');
-const gpsEl=document.getElementById('gps');
-const bottom=document.getElementById('bottom');
+const kmEl = document.getElementById('km');
+const gpsEl = document.getElementById('gps');
+const bottomEl = document.getElementById('bottom');
 
-/* ===== FUNÇÕES ===== */
+let lastPos = null;   // {lat,lon,acc}
+let kmPoints = [];   // {km,lat,lon}
+
 function hav(a,b,c,d){
-  const R=6371000;
-  const x=(c-a)*Math.PI/180;
-  const y=(d-b)*Math.PI/180;
-  const u=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+  const R = 6371000;
+  const x = (c-a)*Math.PI/180;
+  const y = (d-b)*Math.PI/180;
+  const u = Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
   return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
 
@@ -130,25 +122,27 @@ function fmtKm(v){
 
 function parsePt(v){
   if(!v) return NaN;
-  return /,\d+$/.test(v)?Number(v.replace(/\./g,'').replace(',','.')):Number(v);
+  return /,\d+$/.test(v) ? Number(v.replace(/\./g,'').replace(',','.')) : Number(v);
 }
 
-/* ===== GPS ===== */
+/* GPS – igual ao início */
 function startGPS(){
   if(!('geolocation' in navigator)) return;
   navigator.geolocation.watchPosition(p=>{
-    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    lastPos = {lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
   },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
 }
 
-/* ===== KM CSV ===== */
+/* CSV de KM – igual ao início */
 async function loadKM(){
   try{
-    const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
+    const txt = await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
     txt.split(/\r?
 /).forEach(l=>{
       const c=l.split(';');
-      const km=parsePt(c[0]), lat=parsePt(c[1]), lon=parsePt(c[2]);
+      const km=parsePt(c[0]);
+      const lat=parsePt(c[1]);
+      const lon=parsePt(c[2]);
       if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)){
         kmPoints.push({km,lat,lon});
       }
@@ -156,35 +150,32 @@ async function loadKM(){
   }catch{}
 }
 
-/* ===== UPDATE ===== */
-function update(){
+/* Atualização – ponto mais próximo (LÓGICA ORIGINAL) */
+function updateKM(){
+  let best=null, bestDist=Infinity;
+
   if(lastPos && kmPoints.length){
-    let best=null, bd=Infinity;
     for(const p of kmPoints){
-      const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
-      if(d<bd){bd=d;best=p;}
+      const d = hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
+      if(d < bestDist){ bestDist = d; best = p; }
     }
-    kmEl.textContent=best?fmtKm(best.km):'KM —';
-    lastDist=bd;
+    kmEl.textContent = best ? fmtKm(best.km) : 'KM —';
+    bottomEl.textContent = `DISTÂNCIA LATERAL ${Math.round(bestDist)} m`;
   }
 
   if(lastPos){
-    gpsEl.textContent=`GPS ±${Math.round(lastPos.acc)} m`;
-  }else{
-    gpsEl.textContent='GPS: aguardando…';
-  }
-
-  if(Number.isFinite(lastDist)){
-    bottom.textContent=`DISTÂNCIA LATERAL ${Math.round(lastDist)} m`;
+    gpsEl.textContent = `GPS ±${Math.round(lastPos.acc)} m`;
+  } else {
+    gpsEl.textContent = 'GPS: aguardando…';
   }
 }
 
-setInterval(update,500);
+setInterval(updateKM, 500);
 
-/* ===== START ===== */
+/* START */
 startGPS();
 loadKM();
-if('wakeLock' in navigator){try{navigator.wakeLock.request('screen');}catch{}}
+if('wakeLock' in navigator){ try{ navigator.wakeLock.request('screen'); }catch{} }
 </script>
 
 </body>
