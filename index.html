@@ -24,7 +24,7 @@ html,body{
   overflow:hidden;
 }
 
-/* Painel principal */
+/* Painel */
 #panel{
   position:fixed;
   inset:0;
@@ -33,37 +33,29 @@ html,body{
   justify-content:center;
 }
 
-/* Cartão estilo placa */
+/* Placa */
 #card{
-  width:96vw;            /* margem maior p/ não cortar */
+  width:96vw;
   height:88vh;
   background:linear-gradient(180deg,var(--green),var(--green2));
   border:12px solid var(--border);
   border-radius:28px;
-  box-shadow:
-    0 40px 70px rgba(0,0,0,.65),
-    inset 0 0 0 4px rgba(255,255,255,.55);
-
+  box-shadow:0 40px 70px rgba(0,0,0,.65), inset 0 0 0 4px rgba(255,255,255,.55);
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
 }
 
-/* KM gigante – nunca quebra */
+/* KM – tamanho calculado dinamicamente */
 #km{
   white-space:nowrap;
-  max-width:100%;
   font-weight:1000;
   color:var(--text);
   line-height:1;
-  font-size:clamp(64px, 22vw, 260px); /* reduzido p/ não cortar */
-  text-shadow:
-    0 4px 0 rgba(0,0,0,.45),
-    0 18px 55px rgba(0,0,0,.65);
+  text-shadow:0 4px 0 rgba(0,0,0,.45), 0 18px 55px rgba(0,0,0,.65);
 }
 
-/* GPS pequeno abaixo */
 #gps{
   margin-top:12px;
   font-size:clamp(12px, 2.8vw, 20px);
@@ -79,21 +71,19 @@ html,body{
   display:none;
 }
 
-/* Barra inferior – sobre o verde, fundo preto */
+/* Barra inferior */
 #bottomBar{
   position:fixed;
-  left:0;
-  right:0;
-  bottom:0;
-  height:48px;
+  left:0; right:0; bottom:0;
+  height:46px;
   background:rgba(0,0,0,.85);
   color:#eaf2ff;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:14px;
+  font-size:13px;
   font-weight:800;
-  letter-spacing:.06em;
+  letter-spacing:.08em;
 }
 </style>
 </head>
@@ -104,24 +94,30 @@ html,body{
   <div id="card">
     <div id="km">KM —</div>
     <div id="gps">GPS: aguardando…</div>
-    <div id="warn">Preciso baixa • KM pode variar</div>
+    <div id="warn">Precisão baixa • KM pode variar</div>
   </div>
 </div>
 
-<div id="bottomBar">DISTÂNCIA LATERAL — m</div>
+<div id="bottomBar">DISTÂNCIA LATERAL</div>
 
 <script>
-/* ================= ESTADO ================= */
-let lastPos = null; // {lat,lon,acc}
-let kmPoints = [];
-let lastDist = null;
+/* ===== ESTADO ===== */
+let lastPos=null;
+let kmPoints=[];
+let lastDist=null;
 
-/* ================= FUNÇÕES ================= */
+const kmEl=document.getElementById('km');
+const gpsEl=document.getElementById('gps');
+const warnEl=document.getElementById('warn');
+const bottomBar=document.getElementById('bottomBar');
+const card=document.getElementById('card');
+
+/* ===== FUNÇÕES ===== */
 function hav(a,b,c,d){
   const R=6371000;
   const x=(c-a)*Math.PI/180;
   const y=(d-b)*Math.PI/180;
-  const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+  const u=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
   return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
 function fmtKm(v){
@@ -136,12 +132,18 @@ function parsePt(v){
   return /,\d+$/.test(v)?Number(v.replace(/\./g,'').replace(',','.')):Number(v);
 }
 
-const kmEl=document.getElementById('km');
-const gpsEl=document.getElementById('gps');
-const warnEl=document.getElementById('warn');
-const bottomBar=document.getElementById('bottomBar');
+/* ===== AUTO AJUSTE DE FONTE (NUNCA CORTA) ===== */
+function fitKmText(){
+  const maxW = card.clientWidth * 0.92;
+  let size = card.clientHeight * 0.45;
+  kmEl.style.fontSize = size + 'px';
+  while(kmEl.scrollWidth > maxW && size > 20){
+    size -= 2;
+    kmEl.style.fontSize = size + 'px';
+  }
+}
 
-/* ================= GPS ================= */
+/* ===== GPS ===== */
 function startGPS(){
   if(!('geolocation' in navigator)) return;
   navigator.geolocation.watchPosition(p=>{
@@ -149,21 +151,20 @@ function startGPS(){
   },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
 }
 
-/* ================= KM CSV ================= */
+/* ===== KM CSV ===== */
 async function loadKM(){
   try{
-    const txt = await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
-    txt.split(/\r?\n/).forEach(l=>{
+    const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
+    txt.split(/\r?
+/).forEach(l=>{
       const c=l.split(';');
       const km=parsePt(c[0]), lat=parsePt(c[1]), lon=parsePt(c[2]);
-      if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)){
-        kmPoints.push({km,lat,lon});
-      }
+      if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)) kmPoints.push({km,lat,lon});
     });
   }catch{}
 }
 
-/* ================= ATUALIZA ================= */
+/* ===== UPDATE ===== */
 function updatePanel(){
   if(lastPos && kmPoints.length){
     let best=null, bd=Infinity;
@@ -171,25 +172,28 @@ function updatePanel(){
       const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
       if(d<bd){bd=d;best=p;}
     }
-    kmEl.textContent = best ? fmtKm(best.km) : 'KM —';
-    lastDist = bd;
+    kmEl.textContent = best?fmtKm(best.km):'KM —';
+    lastDist=bd;
+    fitKmText();
   }
 
   if(lastPos){
-    gpsEl.textContent = `GPS ±${Math.round(lastPos.acc)} m`;
+    gpsEl.textContent=`GPS ±${Math.round(lastPos.acc)} m`;
     warnEl.style.display = lastPos.acc>15?'block':'none';
   }else{
-    gpsEl.textContent = 'GPS: aguardando…';
-    warnEl.style.display = 'block';
+    gpsEl.textContent='GPS: aguardando…';
+    warnEl.style.display='block';
   }
 
   if(Number.isFinite(lastDist)){
-    bottomBar.textContent = `DISTÂNCIA LATERAL ATÉ O KM: ${Math.round(lastDist)} m`;
+    bottomBar.textContent=`DISTÂNCIA LATERAL ${Math.round(lastDist)} m`;
   }
 }
-setInterval(updatePanel,500);
 
-/* ================= START AUTOMÁTICO ================= */
+setInterval(updatePanel,500);
+window.addEventListener('resize', fitKmText);
+
+/* ===== START ===== */
 startGPS();
 loadKM();
 if('wakeLock' in navigator){try{navigator.wakeLock.request('screen');}catch{}}
