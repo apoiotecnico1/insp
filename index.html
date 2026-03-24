@@ -4,28 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0b7a39">
-<title>Painel de KM – Modo Veicular</title>
+<title>Painel KM – Estilo DNIT</title>
 
 <style>
 :root{
-  --green:#0b7a39;
-  --green2:#064e24;
-  --border:#e6f0ea;
+  --green:#0b7a39;      /* verde padrão placas rodoviárias */
+  --green2:#0a6a32;
+  --border:#ffffff;
   --text:#ffffff;
-  --warn:#ffdd88;
+  --black:#000000;
 }
 
 html,body{
   margin:0;
+  padding:0;
   width:100%;
   height:100%;
   background:#000;
-  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+  font-family:Arial, Helvetica, sans-serif;
   overflow:hidden;
 }
 
-/* Painel */
-#panel{
+/* Área total */
+#screen{
   position:fixed;
   inset:0;
   display:flex;
@@ -33,57 +34,52 @@ html,body{
   justify-content:center;
 }
 
-/* Placa */
-#card{
-  width:94vw;           /* reduzido para não cortar em nenhuma orientação */
-  height:86vh;          /* mais folga vertical */
+/* Placa padrão DNIT */
+#sign{
+  width:92vw;
+  height:80vh;
   background:linear-gradient(180deg,var(--green),var(--green2));
-  border:12px solid var(--border);
-  border-radius:28px;
+  border:10px solid var(--border);
+  border-radius:22px;
   box-shadow:
-    0 40px 70px rgba(0,0,0,.65),
-    inset 0 0 0 4px rgba(255,255,255,.55);
+    inset 0 0 0 4px rgba(255,255,255,.5),
+    0 30px 60px rgba(0,0,0,.6);
+
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
 }
 
-/* KM – CSS PURO, sempre inteiro */
+/* KM principal */
 #km{
   white-space:nowrap;
-  max-width:100%;
-  font-weight:1000;
+  width:100%;
+  text-align:center;
+  font-weight:900;
   color:var(--text);
   line-height:1;
-  font-size:clamp(56px, 18vw, 230px); /* faixa segura */
-  text-shadow:
-    0 4px 0 rgba(0,0,0,.45),
-    0 18px 55px rgba(0,0,0,.65);
+  font-size:clamp(72px, 16vw, 220px);
+  letter-spacing:.04em;
 }
 
+/* GPS pequeno */
 #gps{
   margin-top:12px;
-  font-size:clamp(12px, 2.6vw, 18px);
+  font-size:clamp(12px, 2.4vw, 18px);
   font-weight:700;
-  opacity:.9;
-}
-
-#warn{
-  margin-top:6px;
-  font-size:clamp(11px, 2.4vw, 16px);
-  font-weight:900;
-  color:var(--warn);
-  display:none;
-}
-
-/* Barra inferior fixa */
-#bottomBar{
-  position:fixed;
-  left:0; right:0; bottom:0;
-  height:44px;
-  background:rgba(0,0,0,.85);
   color:#eaf2ff;
+}
+
+/* Barra inferior preta */
+#bottom{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  height:44px;
+  background:#000;
+  color:#fff;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -96,15 +92,14 @@ html,body{
 
 <body>
 
-<div id="panel">
-  <div id="card">
+<div id="screen">
+  <div id="sign">
     <div id="km">KM —</div>
     <div id="gps">GPS: aguardando…</div>
-    <div id="warn">Precisão baixa • KM pode variar</div>
   </div>
 </div>
 
-<div id="bottomBar">DISTÂNCIA LATERAL</div>
+<div id="bottom">DISTÂNCIA LATERAL</div>
 
 <script>
 /* ===== ESTADO ===== */
@@ -114,8 +109,7 @@ let lastDist=null;
 
 const kmEl=document.getElementById('km');
 const gpsEl=document.getElementById('gps');
-const warnEl=document.getElementById('warn');
-const bottomBar=document.getElementById('bottomBar');
+const bottom=document.getElementById('bottom');
 
 /* ===== FUNÇÕES ===== */
 function hav(a,b,c,d){
@@ -125,6 +119,7 @@ function hav(a,b,c,d){
   const u=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
   return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
+
 function fmtKm(v){
   if(!Number.isFinite(v)) return 'KM —';
   let K=Math.floor(v);
@@ -132,6 +127,7 @@ function fmtKm(v){
   if(m>=1000){m-=1000;K++;}
   return `KM ${K}+${String(m).padStart(3,'0')}`;
 }
+
 function parsePt(v){
   if(!v) return NaN;
   return /,\d+$/.test(v)?Number(v.replace(/\./g,'').replace(',','.')):Number(v);
@@ -153,37 +149,37 @@ async function loadKM(){
 /).forEach(l=>{
       const c=l.split(';');
       const km=parsePt(c[0]), lat=parsePt(c[1]), lon=parsePt(c[2]);
-      if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)) kmPoints.push({km,lat,lon});
+      if(Number.isFinite(km)&&Number.isFinite(lat)&&Number.isFinite(lon)){
+        kmPoints.push({km,lat,lon});
+      }
     });
   }catch{}
 }
 
 /* ===== UPDATE ===== */
-function updatePanel(){
+function update(){
   if(lastPos && kmPoints.length){
     let best=null, bd=Infinity;
     for(const p of kmPoints){
       const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
       if(d<bd){bd=d;best=p;}
     }
-    kmEl.textContent = best?fmtKm(best.km):'KM —';
+    kmEl.textContent=best?fmtKm(best.km):'KM —';
     lastDist=bd;
   }
 
   if(lastPos){
     gpsEl.textContent=`GPS ±${Math.round(lastPos.acc)} m`;
-    warnEl.style.display = lastPos.acc>15?'block':'none';
   }else{
     gpsEl.textContent='GPS: aguardando…';
-    warnEl.style.display='block';
   }
 
   if(Number.isFinite(lastDist)){
-    bottomBar.textContent=`DISTÂNCIA LATERAL ${Math.round(lastDist)} m`;
+    bottom.textContent=`DISTÂNCIA LATERAL ${Math.round(lastDist)} m`;
   }
 }
 
-setInterval(updatePanel,500);
+setInterval(update,500);
 
 /* ===== START ===== */
 startGPS();
