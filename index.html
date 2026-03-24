@@ -3,268 +3,250 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO NOTURNA PRO - ULTRA VELOCIDADE</title>
+    <title>INSPEÇÃO PRO - MULTI-BUFFER SNV</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --neon-green: #00ff66; --neon-blue: #00d9ff; --neon-red: #ff3333; }
-        body { margin: 0; background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        :root { --blue: #1e3a8a; --neon: #00ff66; --bg: #0f172a; }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; overflow-x: hidden; }
         
-        #viewport { position: relative; width: 100vw; height: 42vh; background: #111; border-bottom: 2px solid #333; }
+        /* Câmera Fixa no Topo */
+        #camContainer { position: sticky; top: 0; width: 100%; height: 45vh; background: #000; z-index: 100; border-bottom: 3px solid var(--blue); }
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        .status-hud {
-            position: absolute; top: 10px; left: 10px; right: 10px;
-            display: flex; flex-wrap: wrap; gap: 8px; pointer-events: none;
-        }
-        .badge { 
-            padding: 4px 10px; border-radius: 4px; font-size: 0.65rem; font-weight: bold;
-            background: rgba(0,0,0,0.85); border: 1px solid #444; display: flex; align-items: center; gap: 6px;
-        }
-        .dot { width: 7px; height: 7px; border-radius: 50%; background: #444; }
-        .active-rec .dot { background: var(--neon-red); animation: blink 0.8s infinite; }
-        .active-gps .dot { background: var(--neon-green); }
-        .active-proc .dot { background: var(--neon-blue); animation: pulse 1s infinite; }
-
-        .km-panel {
-            background: #0a0a0c; padding: 15px; text-align: center; border-bottom: 1px solid #222;
-        }
-        #kmLabel { font-size: 3.5rem; font-weight: 900; color: #fff; line-height: 1; display: block; letter-spacing: -2px; }
-        #coordsInfo { font-size: 0.75rem; color: #888; margin-top: 8px; font-family: monospace; }
-
-        .dashboard { padding: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-        .stat-card { background: #111; padding: 8px; border-radius: 6px; border: 1px solid #222; text-align: center; }
-        .stat-label { font-size: 0.55rem; color: #666; text-transform: uppercase; display: block; }
-        .stat-val { font-size: 1rem; font-weight: bold; color: var(--neon-green); }
-
-        .controls { padding: 0 12px 12px 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { 
-            padding: 16px; border-radius: 10px; border: none; font-weight: 800; font-size: 0.85rem; transition: 0.2s;
-        }
-        #btnFolder { background: #2563eb; color: #fff; grid-column: span 2; }
-        #btnStart { background: var(--neon-green); color: #000; }
-        #btnStop { background: #333; color: #fff; }
-        
-        #log { 
-            position: fixed; bottom: 0; width: 100%; height: 35px; 
-            background: #000; font-size: 0.65rem; padding: 8px 15px; 
-            color: #777; border-top: 1px solid #222; overflow: hidden;
+        /* Painel de KM (Estilo Placa de Rodovia) */
+        #kmPlaque { 
+            background: linear-gradient(180deg, #059669, #047857);
+            color: white; text-align: center; padding: 10px;
+            font-size: 3rem; font-weight: 900; border: 4px solid #fff;
+            margin: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+        .status-bar { display: flex; justify-content: space-around; padding: 10px; background: #1e293b; font-size: 0.8rem; }
+        .badge { padding: 4px 8px; border-radius: 4px; background: #334155; }
+        .active { color: var(--neon); font-weight: bold; }
+
+        .controls { padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { padding: 15px; border-radius: 8px; border: none; font-weight: bold; font-size: 1rem; cursor: pointer; }
+        #btnFolder { background: #3b82f6; color: white; grid-column: span 2; }
+        #btnStart { background: var(--neon); color: #000; }
+        #btnStop { background: #ef4444; color: white; }
+
+        .stats { display: flex; gap: 10px; padding: 0 15px; }
+        .stat-card { flex: 1; background: #1e293b; padding: 10px; border-radius: 8px; text-align: center; }
+        .stat-val { display: block; font-size: 1.2rem; font-weight: bold; color: var(--neon); }
+
+        #log { font-size: 0.7rem; color: #94a3b8; padding: 10px; text-align: center; }
+        canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div id="viewport">
+<div id="camContainer">
     <video id="vid" autoplay playsinline muted></video>
-    <div class="status-hud">
-        <div id="badgeRec" class="badge"><div class="dot"></div> ESCANEANDO</div>
-        <div id="badgeGps" class="badge"><div class="dot"></div> GPS</div>
-        <div id="badgeProc" class="badge"><div class="dot"></div> PROCESSANDO PDF...</div>
-    </div>
 </div>
 
-<div class="km-panel">
-    <span id="kmLabel">0+000</span>
-    <div id="coordsInfo">Sincronizando Satélites...</div>
+<div id="kmPlaque">KM --+---</div>
+
+<div class="status-bar">
+    <span id="stCsv" class="badge">CSV: AGUARDANDO</span>
+    <span id="stGps" class="badge">GPS: BUSCANDO</span>
+    <span id="stProc" class="badge">PDF: OCIOSO</span>
 </div>
 
-<div class="dashboard">
-    <div class="stat-card">
-        <span class="stat-label">Fotos</span>
-        <span id="stTotal" class="stat-val">0</span>
-    </div>
-    <div class="stat-card">
-        <span class="stat-label">Buffer Atual</span>
-        <span id="stBuffer" class="stat-val">0/200</span>
-    </div>
-    <div class="stat-card">
-        <span class="stat-label">PDFs Prontos</span>
-        <span id="stPdfs" class="stat-val">0</span>
-    </div>
+<div class="stats">
+    <div class="stat-card">FOTOS<span id="txtTotal">0</span></div>
+    <div class="stat-card">BUFFER<span id="txtBuffer">0/200</span></div>
+    <div class="stat-card">PDFs<span id="txtPdfs">0</span></div>
 </div>
 
 <div class="controls">
-    <button id="btnFolder">📁 1. CONECTAR PASTA DE CAMPO</button>
-    <button id="btnStart">▶ 2. INICIAR GRAVAÇÃO</button>
+    <button id="btnFolder">📁 1. SELECIONAR PASTA COM CSVs</button>
+    <button id="btnStart">▶ 2. INICIAR CAPTURA</button>
     <button id="btnStop" disabled>⏹ PARAR</button>
 </div>
 
-<div id="log">Sistema Pronto para Inspeção Noturna.</div>
+<div id="log">Aguardando permissão de pasta e câmera...</div>
 
-<canvas id="can" style="display:none"></canvas>
+<canvas id="can"></canvas>
 
 <script>
 const { jsPDF } = window.jspdf;
-const FOTOS_LIMITE = 200; 
+const LIMITE_BUFFER = 200;
 
+// Estado Global
 let isRecording = false;
-let photoTotal = 0;
-let pdfTotal = 0;
-let currentKM = "0+000";
-let folderHandle = null;
+let photoCount = 0;
+let pdfCount = 0;
+let activeBuffer = [];
 let processingCount = 0;
-
-// O SEGREDO: Fila de Buffers
-let activeBuffer = []; 
+let lastPos = { lat: 0, lon: 0 };
+let currentKM = "0+000";
+let kmPoints = []; // Base SNV
+let folderHandle = null;
 
 const vid = document.getElementById('vid');
 const can = document.getElementById('can');
 const ctx = can.getContext('2d', { alpha: false });
 
-/* ===== GPS SNV ===== */
-function startGPS() {
-    navigator.geolocation.watchPosition(pos => {
-        document.getElementById('badgeGps').classList.add('active-gps');
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        const kmBase = Math.abs(Math.floor(lat * 10) % 999);
-        const metros = Math.abs(Math.floor(lat * 100000) % 999);
-        currentKM = `${kmBase}+${metros.toString().padStart(3, '0')}`;
-        document.getElementById('kmLabel').textContent = currentKM;
-        document.getElementById('coordsInfo').textContent = `LAT: ${lat.toFixed(6)} | LON: ${lon.toFixed(6)} | ACC: ${pos.coords.accuracy.toFixed(1)}m`;
-    }, null, { enableHighAccuracy: true });
+/* ===== LÓGICA SNV (Cálculo Real Riverside) ===== */
+function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371000; 
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-/* ===== GERAÇÃO DE PDF EM SEGUNDA INSTÂNCIA (ASSÍNCRONA) ===== */
-async function generatePDFInstance(photosData, instanceNum) {
+async function loadSNV() {
+    if (!folderHandle) return;
+    try {
+        const fileHandle = await folderHandle.getFileHandle('SNVBR116SPRJ.csv');
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        const lines = text.split('\n');
+        
+        kmPoints = [];
+        lines.forEach(line => {
+            const c = line.split(';');
+            if (c.length >= 3) {
+                const km = c.trim();
+                const lat = parseFloat(c.replace(',', '.'));
+                const lon = parseFloat(c.replace(',', '.'));
+                if (!isNaN(lat)) kmPoints.push({ km, lat, lon });
+            }
+        });
+        document.getElementById('stCsv').textContent = "CSV: OK";
+        document.getElementById('stCsv').classList.add('active');
+    } catch (e) {
+        alert("Erro: Certifique-se que o arquivo SNVBR116SPRJ.csv está na pasta.");
+    }
+}
+
+function updateKM(lat, lon) {
+    if (kmPoints.length === 0) return;
+    let closest = kmPoints;
+    let minDist = Infinity;
+
+    for (const p of kmPoints) {
+        const d = haversine(lat, lon, p.lat, p.lon);
+        if (d < minDist) {
+            minDist = d;
+            closest = p;
+        }
+    }
+    currentKM = closest.km;
+    document.getElementById('kmPlaque').textContent = `KM ${currentKM}`;
+}
+
+/* ===== ENGINE DE CAPTURA E MULTI-BUFFER ===== */
+async function generatePDFInBackground(photos, id) {
     processingCount++;
-    updateProcBadge();
-    
+    document.getElementById('stProc').textContent = `PDF: PROCESSANDO (${processingCount})`;
+    document.getElementById('stProc').classList.add('active');
+
     const doc = new jsPDF('l', 'mm', 'a4');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `INSPECAO_LOTE_${instanceNum}_KM_${currentKM.replace('+','-')}_${timestamp}.pdf`;
-
-    addLog(`Gerando PDF Lote ${instanceNum}...`);
-
-    for (let i = 0; i < photosData.length; i++) {
+    for (let i = 0; i < photos.length; i++) {
         if (i > 0) doc.addPage();
         
-        // Cabeçalho Técnico
-        doc.setFillColor(0, 0, 0);
-        doc.rect(0, 0, 297, 18, 'F');
+        // Carimbo Técnico
+        doc.setFillColor(0, 46, 110);
+        doc.rect(0, 0, 297, 15, 'F');
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(9);
-        doc.text(`KM: ${photosData[i].km} | DATA: ${photosData[i].time} | GPS: ${photosData[i].lat}, ${photosData[i].lon}`, 10, 11);
-
-        // Imagem Centralizada (Sem esticar)
-        doc.addImage(photosData[i].img, 'JPEG', 10, 22, 277, 175);
+        doc.setFontSize(10);
+        doc.text(`KM: ${photos[i].km} | GPS: ${photos[i].lat}, ${photos[i].lon} | DATA: ${photos[i].ts}`, 10, 10);
+        
+        doc.addImage(photos[i].img, 'JPEG', 10, 20, 277, 175);
     }
 
+    const name = `INSPECAO_LOTE_${id}_KM_${currentKM.replace('+','-')}.pdf`;
+    
     try {
-        if (folderHandle) {
-            const fileHandle = await folderHandle.getFileHandle(fileName, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(doc.output('blob'));
-            await writable.close();
-            addLog(`✅ Lote ${instanceNum} salvo na pasta.`);
-        } else {
-            doc.save(fileName);
-        }
+        const f = await folderHandle.getFileHandle(name, { create: true });
+        const w = await f.createWritable();
+        await w.write(doc.output('blob'));
+        await w.close();
     } catch (e) {
-        console.error("Erro ao salvar PDF:", e);
+        doc.save(name);
     }
 
-    pdfTotal++;
-    document.getElementById('stPdfs').textContent = pdfTotal;
+    pdfCount++;
     processingCount--;
-    updateProcBadge();
-}
-
-function updateProcBadge() {
-    const badge = document.getElementById('badgeProc');
-    if (processingCount > 0) {
-        badge.classList.add('active-proc');
-        badge.style.display = "flex";
-    } else {
-        badge.classList.remove('active-proc');
-        badge.style.display = "none";
+    document.getElementById('txtPdfs').textContent = pdfCount;
+    if (processingCount === 0) {
+        document.getElementById('stProc').textContent = "PDF: OCIOSO";
+        document.getElementById('stProc').classList.remove('active');
     }
 }
 
-/* ===== LOOP DE CAPTURA PRINCIPAL ===== */
 async function captureLoop() {
     if (!isRecording) return;
 
-    // Captura rápida para o Canvas
+    // Desenha frame no canvas
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const frameData = can.toDataURL('image/jpeg', 0.5); // 50% qualidade = leve e nítido
+    const dataUrl = can.toDataURL('image/jpeg', 0.6);
 
     // Adiciona ao buffer ativo
     activeBuffer.push({
-        img: frameData,
+        img: dataUrl,
         km: currentKM,
-        time: new Date().toLocaleString(),
-        lat: document.getElementById('coordsInfo').textContent.split('|').replace('LAT:','').trim(),
-        lon: document.getElementById('coordsInfo').textContent.split('|').replace('LON:','').trim()
+        lat: lastPos.lat.toFixed(6),
+        lon: lastPos.lon.toFixed(6),
+        ts: new Date().toLocaleString()
     });
 
-    photoTotal++;
-    document.getElementById('stTotal').textContent = photoTotal;
-    document.getElementById('stBuffer').textContent = `${activeBuffer.length}/${FOTOS_LIMITE}`;
+    photoCount++;
+    document.getElementById('txtTotal').textContent = photoCount;
+    document.getElementById('txtBuffer').textContent = `${activeBuffer.length}/${LIMITE_BUFFER}`;
 
-    // SE ATINGIR O LIMITE, LANÇA A GERAÇÃO E CONTINUA CAPTURANDO
-    if (activeBuffer.length >= FOTOS_LIMITE) {
-        const batchToProcess = [...activeBuffer]; // Clona o buffer
-        activeBuffer = []; // Limpa o buffer original imediatamente para as próximas fotos
-        generatePDFInstance(batchToProcess, pdfTotal + 1); // Dispara sem 'await' para não parar a captura
+    // LÓGICA DE INSTÂNCIA: Buffer cheio? Dispara PDF e abre novo buffer na hora.
+    if (activeBuffer.length >= LIMITE_BUFFER) {
+        const snapshot = [...activeBuffer];
+        activeBuffer = []; // Esvazia para continuar capturando
+        generatePDFInBackground(snapshot, pdfCount + 1);
     }
 
-    // Velocidade de Inspeção: ~150ms a 200ms por foto
-    setTimeout(captureLoop, 180);
+    setTimeout(captureLoop, 150); // ~6 fotos por segundo
 }
 
-/* ===== INTERAÇÃO ===== */
+/* ===== INICIALIZAÇÃO E GPS ===== */
 document.getElementById('btnFolder').onclick = async () => {
-    try {
-        folderHandle = await window.showDirectoryPicker();
-        document.getElementById('btnFolder').style.background = "#059669";
-        document.getElementById('btnFolder').textContent = "✅ PASTA CONECTADA";
-        addLog("Conectado à pasta: " + folderHandle.name);
-    } catch (e) { addLog("Acesso à pasta negado."); }
+    folderHandle = await window.showDirectoryPicker();
+    await loadSNV();
 };
 
 document.getElementById('btnStart').onclick = () => {
-    if (!folderHandle) { alert("Conecte a pasta primeiro!"); return; }
+    if (!folderHandle) return alert("Selecione a pasta primeiro!");
     isRecording = true;
-    document.getElementById('badgeRec').classList.add('active-rec');
     document.getElementById('btnStart').disabled = true;
     document.getElementById('btnStop').disabled = false;
-    addLog("Iniciando Escaneamento...");
     captureLoop();
 };
 
-document.getElementById('btnStop').onclick = async () => {
+document.getElementById('btnStop').onclick = () => {
     isRecording = false;
-    document.getElementById('badgeRec').classList.remove('active-rec');
     document.getElementById('btnStart').disabled = false;
     document.getElementById('btnStop').disabled = true;
-    
-    if (activeBuffer.length > 0) {
-        await generatePDFInstance([...activeBuffer], pdfTotal + 1);
-        activeBuffer = [];
-    }
-    addLog("Inspeção Interrompida.");
+    if (activeBuffer.length > 0) generatePDFInBackground([...activeBuffer], pdfCount + 1);
 };
 
-function addLog(msg) {
-    document.getElementById('log').textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-}
-
 async function init() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: 1280, height: 720 },
-            audio: false
-        });
-        vid.srcObject = stream;
-        vid.onloadedmetadata = () => {
-            can.width = vid.videoWidth;
-            can.height = vid.videoHeight;
-        };
-        startGPS();
-    } catch (e) { alert("Câmera indisponível."); }
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: 1280, height: 720 },
+        audio: false
+    });
+    vid.srcObject = stream;
+    vid.onloadedmetadata = () => {
+        can.width = vid.videoWidth;
+        can.height = vid.videoHeight;
+    };
+
+    navigator.geolocation.watchPosition(p => {
+        lastPos = { lat: p.coords.latitude, lon: p.coords.longitude };
+        document.getElementById('stGps').textContent = "GPS: OK";
+        document.getElementById('stGps').classList.add('active');
+        updateKM(lastPos.lat, lastPos.lon);
+    }, null, { enableHighAccuracy: true });
 }
 
 init();
