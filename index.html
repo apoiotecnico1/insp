@@ -2,248 +2,195 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Inspeção Rodoviária – Base NOX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b1020">
+<title>Inspeção Rodoviária – Captura Direta</title>
 
 <style>
 :root{
-  --bg:#0b1220; --fg:#fff; --muted:#9ca3b8;
-  --panel:#0f172a; --border:#1f2937;
-  --ok:#22c55e; --warn:#eab308; --bad:#ef4444;
+  --bg:#0a1026; --fg:#eaf2ff; --muted:#b7c6ee;
+  --hud:rgba(6,12,30,.78); --ok:#22c55e; --warn:#eab308; --danger:#ef4444;
+  --border:#1d2a58; --shadow:0 14px 36px rgba(0,0,0,.45);
+  --btnH:64px;
 }
+*{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{
-  background:var(--bg);color:var(--fg);
-  font-family:system-ui,-apple-system,"Segoe UI",Roboto;
+  background:linear-gradient(180deg,#0b122b,#0a1024);
+  color:var(--fg); font-family:system-ui,-apple-system,"Segoe UI",Roboto;
+  overflow:hidden;
 }
-
-/* câmera */
-#camBox{
-  height:42vh;
-  background:#000;
-  border-bottom:2px solid var(--border);
+#camWrap{position:absolute;inset:0;background:#000}
+video{width:100%;height:100%;object-fit:contain}
+.hud{position:absolute;left:0;right:0;display:flex;gap:8px;padding:10px;pointer-events:none}
+#hudTop{top:0} #hudBottom{bottom:0;justify-content:center}
+.chip{
+  pointer-events:auto;
+  background:var(--hud);border:1px solid rgba(255,255,255,.18);
+  border-radius:12px;padding:8px 12px;font-weight:900;
+  box-shadow:var(--shadow);display:flex;gap:10px;align-items:center
 }
-video{
-  width:100%;
-  height:100%;
-  object-fit:contain;
+.controls{display:flex;gap:14px}
+.btn{
+  height:var(--btnH);padding:0 20px;border-radius:14px;
+  border:1px solid var(--border);font-weight:900;font-size:1.05rem;
+  background:linear-gradient(180deg,#101a44,#0c1436);
+  color:var(--fg);cursor:pointer;box-shadow:var(--shadow)
 }
-
-/* painel */
-#panel{
-  height:58vh;
-  padding:10px;
-  overflow:auto;
-  background:var(--panel);
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-.row{display:flex;gap:10px;flex-wrap:wrap}
-.badge{
-  padding:6px 12px;
-  border-radius:999px;
-  background:#020617;
-  border:1px solid var(--border);
-  font-weight:900;font-size:.85rem;
-}
-button{
-  padding:14px 16px;
-  border-radius:14px;
-  border:none;
-  font-weight:900;
-  font-size:1rem;
-  cursor:pointer;
-}
-#btnFolder{background:var(--ok);color:#022}
-#btnStart{background:#fb923c}
-#btnStop{background:var(--bad);color:#fff}
-#btnPdf{background:var(--warn);color:#231c00}
-
-input[type=range]{width:100%}
+.btn.primary{background:#22c55e;color:#062a1a}
+.btn.auto-on{background:#ff8f49;color:#1b0b02}
+.btn.rec-on{background:#ef4444;color:#fff}
+#folderGate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#060a12;z-index:9}
+.gateCard{background:#0e173b;border:1px solid var(--border);border-radius:16px;padding:20px;text-align:center;width:90vw;max-width:420px}
+#toast{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);
+  background:#000c;border:1px solid #fff2;padding:10px 14px;border-radius:12px;display:none}
 </style>
 </head>
 
 <body>
 
-<div id="camBox">
+<div id="camWrap">
   <video id="vid" autoplay playsinline muted></video>
-</div>
 
-<div id="panel">
-  <div class="row">
-    <span id="kmView" class="badge">KM —</span>
-    <span id="idView" class="badge">IDs: —</span>
-    <span id="countView" class="badge">📸 0</span>
+  <div class="hud" id="hudTop">
+    <div class="chip">🛣️ <span id="kmLive">KM —</span></div>
+    <div class="chip">🆔 <span id="idLive">—</span></div>
   </div>
 
-  <div class="row">
-    <label class="badge">
-      Intervalo (ms)
-      <input id="interval" type="range" min="800" max="3000" step="100" value="1200">
-      <span id="ival">1200</span>
-    </label>
-  </div>
-
-  <div class="row">
-    <button id="btnFolder">📁 Selecionar Pasta</button>
-    <button id="btnStart">▶ Iniciar</button>
-    <button id="btnStop" disabled>⏹ Parar</button>
-    <button id="btnPdf" disabled>📄 PDF</button>
+  <div class="hud" id="hudBottom">
+    <div class="controls">
+      <button id="btnAuto" class="btn primary">🎬 AUTO</button>
+      <button id="btnRec" class="btn">⏺ REC</button>
+    </div>
   </div>
 </div>
 
-<canvas id="can" hidden></canvas>
+<div id="folderGate">
+  <div class="gateCard">
+    <h2>Selecionar Pasta</h2>
+    <button id="btnPickFolder" class="btn primary">📁 Escolher Pasta</button>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script>
-/* ======= UTIL (IGUAL AO HTML QUE FUNCIONAVA) ======= */
-function parsePt(v){
-  if(v==null) return NaN;
-  return Number(String(v).trim().replace(/\./g,'').replace(',', '.'));
-}
-function hav(lat1, lon1, lat2, lon2){
-  const R=6371000;
-  const dLat=(lat2-lat1)*Math.PI/180;
-  const dLon=(lon2-lon1)*Math.PI/180;
-  const a=Math.sin(dLat/2)**2+
-    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-  return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-function nearestN(lat,lon,n=5){
-  if(!dataset.length) return [];
-  const arr=dataset.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}));
-  arr.sort((a,b)=>a.d-b.d);
-  return arr.slice(0,n);
-}
-function fmtKm(v){
-  let k=Math.floor(v);
-  let m=Math.round((v-k)*1000);
-  return `KM ${k}+${String(m).padStart(3,'0')}`;
-}
+/* ===== UTIL ===== */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const hav=(a,b,c,d)=>{
+ const R=6371000;
+ const dLat=(c-a)*Math.PI/180, dLon=(d-b)*Math.PI/180;
+ const x=Math.sin(dLat/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLon/2)**2;
+ return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+};
+const fmtKm=v=>{
+ let k=Math.floor(v),m=Math.round((v-k)*1000);
+ return `KM ${k}+${String(m).padStart(3,'0')}`;
+};
+const parsePt=v=>Number(String(v).replace(',','.'));
+const toast=(m,t=1200)=>{toastEl.textContent=m;toastEl.style.display='block';
+ clearTimeout(toast.t); toast.t=setTimeout(()=>toastEl.style.display='none',t)};
 
-/* ======= ESTADO ======= */
-let dataset=[], kmBase=[];
-let lastPos=null;
-let rootDir=null;
-let running=false;
-let fotos=0;
-let blobs=[];
-let intervalMs=1200;
-let lastRender=0;
+/* ===== ESTADO ===== */
+let root=null,lastPos=null;
+let ids=[],kms=[];
+let isAuto=false,autoT=null;
+let camOK=false;
 
-/* ======= CAMERA ======= */
+/* ===== REFS ===== */
+const vid=vid=document.getElementById('vid');
+const kmLive=document.getElementById('kmLive');
+const idLive=document.getElementById('idLive');
+const btnAuto=document.getElementById('btnAuto');
+const btnRec=document.getElementById('btnRec');
+const toastEl=document.getElementById('toast');
+
+/* ===== CAMERA ===== */
 navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
-.then(s=>vid.srcObject=s);
+.then(s=>{vid.srcObject=s;camOK=true});
 
-/* ======= GPS ======= */
+/* ===== GPS ===== */
 navigator.geolocation.watchPosition(p=>{
-  lastPos={lat:p.coords.latitude, lon:p.coords.longitude};
+ lastPos={lat:p.coords.latitude,lon:p.coords.longitude};
 },{},{enableHighAccuracy:true});
 
-/* ======= CSVs ======= */
-fetch('./dados.csv').then(r=>r.text()).then(t=>{
-  const l=t.split(/\r?\n/).filter(l=>l.trim());
-  const h=l.shift().split(';').map(x=>x.toLowerCase());
-  const iId=h.findIndex(x=>x.includes('id'));
-  const iLat=h.findIndex(x=>x.includes('lat'));
-  const iLon=h.findIndex(x=>x.includes('lon'));
-  l.forEach(line=>{
-    const c=line.split(';');
-    const p={id:c[iId],lat:parsePt(c[iLat]),lon:parsePt(c[iLon])};
-    if(Number.isFinite(p.lat)&&Number.isFinite(p.lon)) dataset.push(p);
-  });
+/* ===== CSV IDs ===== */
+fetch('./Dados_Completos_Grupo_2_all.csv').then(r=>r.text()).then(t=>{
+ t.split(/\r?\n/).slice(1).forEach(l=>{
+  const c=l.split(';');
+  const p={id:c[0],lat:parsePt(c[1]),lon:parsePt(c[2])};
+  if(isFinite(p.lat)&&isFinite(p.lon)) ids.push(p);
+ });
 });
 
+/* ===== CSV KM ===== */
 fetch('./SNVBR116SPRJ.csv').then(r=>r.text()).then(t=>{
-  t.split(/\r?\n/).forEach(l=>{
-    const c=l.split(';');
-    const p={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
-    if(Number.isFinite(p.km)&&Number.isFinite(p.lat)) kmBase.push(p);
-  });
+ t.split(/\r?\n/).forEach(l=>{
+  const c=l.split(';');
+  const p={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
+  if(isFinite(p.km)&&isFinite(p.lat)) kms.push(p);
+ });
 });
 
-/* ======= KM ATUAL ======= */
-function kmAtual(){
-  if(!lastPos||!kmBase.length) return null;
-  let b=null,d=1e12;
-  kmBase.forEach(p=>{
-    const h=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
-    if(h<d){d=h;b=p;}
-  });
-  return b;
+/* ===== CÁLCULO BASE (IGUAL AO QUE FUNCIONAVA) ===== */
+function nearestKm(){
+ let b=null,d=1e12;
+ kms.forEach(p=>{
+  const h=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
+  if(h<d){d=h;b=p}
+ });
+ return b;
+}
+function nearestIds(n=5){
+ return ids.map(p=>({...p,d:hav(lastPos.lat,lastPos.lon,p.lat,p.lon)}))
+ .sort((a,b)=>a.d-b.d).slice(0,n);
 }
 
-/* ======= UI EM TEMPO REAL (MESMA LÓGICA QUE FUNCIONAVA) ======= */
-function renderUI(force=false){
-  const now=performance.now();
-  if(!force && now-lastRender<250) return;
-  lastRender=now;
+/* ===== HUD AO VIVO ===== */
+setInterval(()=>{
+ if(!lastPos)return;
+ const k=nearestKm();
+ if(k) kmLive.textContent=fmtKm(k.km);
+ const list=nearestIds().map(i=>i.id).join(' • ');
+ idLive.textContent=list||'—';
+},400);
 
-  if(!lastPos) return;
-
-  const k=kmAtual();
-  if(k) kmView.textContent=fmtKm(k.km);
-
-  const ids=nearestN(lastPos.lat,lastPos.lon,5).map(i=>i.id).join(' • ');
-  idView.textContent='IDs: '+ids;
-}
-setInterval(()=>renderUI(),200);
-
-/* ======= CAPTURA ======= */
-async function captureOnce(){
-  if(!rootDir||!lastPos) return;
-  const w=vid.videoWidth,h=vid.videoHeight;
-  can.width=w;can.height=h;
-  const ctx=can.getContext('2d');
-  ctx.drawImage(vid,0,0,w,h);
-
-  const km=kmAtual();
-  const ids=nearestN(lastPos.lat,lastPos.lon,5).map(i=>i.id).join(' • ');
-
-  ctx.fillStyle='rgba(0,0,0,.7)';
-  ctx.fillRect(0,h-140,w,140);
-  ctx.fillStyle='#22c55e';
-  ctx.font='40px system-ui';
-  ctx.fillText(fmtKm(km.km),20,h-90);
-  ctx.font='22px system-ui';
-  ctx.fillText(ids,20,h-40);
-
-  const blob=await new Promise(r=>can.toBlob(r,'image/jpeg',0.85));
-  const f=await rootDir.getFileHandle(`FOTO_${Date.now()}.jpg`,{create:true});
-  const wr=await f.createWritable();
-  await wr.write(blob);await wr.close();
-
-  blobs.push(blob);
-  fotos++;
-  countView.textContent=`📸 ${fotos}`;
-}
-
-/* ======= LOOP SEGURO ======= */
-async function loop(){
-  running=true;
-  while(running){
-    const t=performance.now();
-    await captureOnce();
-    await sleep(Math.max(0,intervalMs-(performance.now()-t)));
-  }
-}
-
-/* ======= PDF LEVE ======= */
-btnPdf.onclick=()=>{
-  const w=window.open();
-  let html='<html><body>';
-  blobs.forEach(b=>html+=`<img src="${URL.createObjectURL(b)}" style="width:100%;page-break-after:always">`);
-  w.document.write(html+'</body></html>');
-  w.print();
+/* ===== PASTA ===== */
+btnPickFolder.onclick=async()=>{
+ root=await showDirectoryPicker({mode:'readwrite'});
+ document.getElementById('folderGate').style.display='none';
+ toast('Pasta OK');
 };
 
-/* ======= CONTROLES ======= */
-interval.oninput=()=>{intervalMs=+interval.value;ival.textContent=interval.value};
-btnFolder.onclick=async()=>{rootDir=await window.showDirectoryPicker({mode:'readwrite'});btnPdf.disabled=false};
-btnStart.onclick=()=>{if(!rootDir)return alert('Selecione a pasta');btnStart.disabled=true;btnStop.disabled=false;loop()};
-btnStop.onclick=()=>{running=false;btnStart.disabled=false;btnStop.disabled=true};
-</script>
+/* ===== AUTO FOTO ===== */
+async function capture(){
+ if(!root||!camOK||!lastPos)return;
+ const c=document.createElement('canvas');
+ c.width=vid.videoWidth; c.height=vid.videoHeight;
+ const ctx=c.getContext('2d');
+ ctx.drawImage(vid,0,0,c.width,c.height);
 
+ const km=nearestKm();
+ const text=`${fmtKm(km.km)} | ${nearestIds().map(i=>i.id).join(' • ')}`;
+ ctx.fillStyle='rgba(0,0,0,.7)';
+ ctx.fillRect(0,c.height-100,c.width,100);
+ ctx.fillStyle='#22c55e';ctx.font='32px system-ui';
+ ctx.fillText(text,20,c.height-40);
+
+ const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.85));
+ const fh=await root.getFileHandle(`FOTO_${Date.now()}.jpg`,{create:true});
+ const wr=await fh.createWritable(); await wr.write(blob); await wr.close();
+}
+
+/* ===== CONTROLES ===== */
+btnAuto.onclick=()=>{
+ if(isAuto){clearInterval(autoT);isAuto=false;btnAuto.classList.remove('auto-on');}
+ else{
+  if(!root)return toast('Escolha a pasta');
+  isAuto=true;btnAuto.classList.add('auto-on');
+  autoT=setInterval(()=>capture().catch(()=>{}),800);
+ }
+};
+</script>
 </body>
 </html>
