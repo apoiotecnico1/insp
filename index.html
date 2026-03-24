@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-
 <title>Relatório Fotográfico – V2 Campo</title>
 
 <style>
@@ -11,57 +10,68 @@ body{
   margin:0;
   background:#0d1117;
   color:#e6edf3;
-  font-family:system-ui, Arial;
+  font-family:system-ui, -apple-system, Arial, sans-serif;
   padding:10px;
+  overflow-x: hidden;
 }
-h1{font-size:1.15rem;text-align:center;margin:6px 0}
+h1{font-size:1.1rem;text-align:center;margin:8px 0; color:#38bdf8}
 .card{
   background:#111827;
   border:1px solid #1f2937;
   border-radius:12px;
-  padding:10px;
+  padding:12px;
   margin-bottom:10px;
 }
 #camCard{
   position:fixed;
-  top:env(safe-area-inset-top);
+  top:env(safe-area-inset-top, 10px);
   left:50%;
   transform:translateX(-50%);
   width:calc(100vw - 20px);
-  max-width:900px;
-  height:38vh;
+  max-width:800px;
+  height:35vh;
   background:#000;
   border-radius:12px;
   z-index:100;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
 }
 #camWrap{width:100%;height:100%;overflow:hidden;border-radius:12px}
-video{width:100%;height:100%;object-fit:contain}
-#spacer{height:40vh}
+video{width:100%;height:100%;object-fit:cover}
+#spacer{height:38vh}
 
 #kmPlaque{
   text-align:center;
   background:#1e3a8a;
-  border:2px solid #fff;
+  border:2px solid #ffffff;
   border-radius:10px;
-  padding:6px;
+  padding:8px;
   font-weight:900;
+  font-size:1.4rem;
   margin-bottom:10px;
+  text-shadow: 1px 1px 2px #000;
 }
 
-.row{display:flex;gap:8px;flex-wrap:wrap}
+.row{display:flex;gap:10px;flex-wrap:wrap}
 button{
   flex:1;
-  padding:12px;
+  padding:15px;
   border-radius:10px;
   border:0;
   font-weight:800;
+  font-size:0.9rem;
+  transition: opacity 0.2s;
 }
-#btnFolder{background:#0ea5e9}
-#btnAuto{background:#f97316}
-#btnStop{background:#dc2626;color:#fff}
-.stat{font-size:.9rem;margin:3px 0}
-.log{max-height:180px;overflow:auto;background:#020617;padding:8px;border-radius:8px}
-.log div{font-size:.75rem}
+button:active{opacity:0.7}
+button:disabled{background:#374151 !important; color:#9ca3af; cursor:not-allowed}
+
+#btnFolder{background:#0ea5e9; color:#fff}
+#btnAuto{background:#16a34a; color:#fff}
+#btnStop{background:#dc2626; color:#fff}
+
+.stat{font-size:.9rem;margin:4px 0; color:#9ca3af}
+.stat span{color:#fff; font-weight:bold}
+.log{max-height:150px;overflow-y:auto;background:#020617;padding:10px;border-radius:8px; border: 1px solid #1f2937}
+.log div{font-size:.75rem; border-bottom:1px solid #111827; padding:2px 0; color:#8899a6}
 </style>
 </head>
 
@@ -77,126 +87,142 @@ button{
 
 <h1>📸 Relatório Fotográfico</h1>
 
-<div id="kmPlaque"><span id="kmTop">KM —</span></div>
+<div id="kmPlaque"><span id="kmTop">KM 0+000</span></div>
 
 <div class="card">
-  <div class="stat" id="stFotos">Fotos: 0</div>
-  <div class="stat" id="stPdf">PDFs gerados: 0</div>
-  <div class="stat" id="stFolder">Pasta: não definida</div>
+  <div class="stat">Fotos Salvas: <span id="stFotos">0</span></div>
+  <div class="stat">Local: <span id="stFolder">Não definido</span></div>
 </div>
 
 <div class="card row">
-  <button id="btnFolder">📁 Pasta base</button>
-  <button id="btnAuto">🎬 Captura Auto</button>
+  <button id="btnFolder">📁 Pasta Destino</button>
+  <button id="btnAuto">▶️ Iniciar Captura</button>
   <button id="btnStop" disabled>⏹️ Parar</button>
 </div>
 
 <div class="card">
-  <h3>Registro</h3>
+  <h3 style="font-size:0.9rem; margin-top:0">Log de Atividades</h3>
   <div id="log" class="log"></div>
 </div>
 
-<canvas id="can" width="1280" height="720" style="display:none"></canvas>
+<canvas id="can" style="display:none"></canvas>
 
 <script>
-/* ========= CONFIG ========= */
-const FOTOS_POR_PDF = 200;
-const QUAL_FOTO = 0.78;
-const QUAL_PDF  = 0.68;
-/* ========================== */
+/* ========= CONFIGURAÇÕES ========= */
+const QUALIDADE_FOTO = 0.75;
+const INTERVALO_MS = 1200; // Tempo entre fotos (ajustado para estabilidade do disco)
 
-let folderHandle=null;
-let seq=0, pdfCount=0;
-let auto=false, timer=null;
-const bufferPdf=[];
+let folderHandle = null;
+let seq = 0;
+let isRunning = false;
+let lastCaptureTime = 0;
 
-const vid=document.getElementById('vid');
-const can=document.getElementById('can');
-const ctx=can.getContext('2d');
-const kmTop=document.getElementById('kmTop');
+const vid = document.getElementById('vid');
+const can = document.getElementById('can');
+const ctx = can.getContext('2d', { alpha: false }); // Performance: sem canal alpha
+const kmTop = document.getElementById('kmTop');
+const logBox = document.getElementById('log');
 
-function log(t){
- const d=document.createElement('div');
- d.textContent=t;
- document.getElementById('log').prepend(d);
+/* ===== LOG OTIMIZADO ===== */
+function addLog(msg) {
+    const d = document.createElement('div');
+    d.textContent = `[${new Date().toLocaleTimeString('pt-BR')}] ${msg}`;
+    logBox.prepend(d);
+    if (logBox.children.length > 40) logBox.lastChild.remove();
 }
 
-/* ===== CÂMERA ===== */
-async function startCamera(){
- const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
- vid.srcObject=st;
-}
-startCamera();
-
-/* ===== PASTA ===== */
-async function pickFolder(){
- if(!window.showDirectoryPicker){
-   alert('Use Chrome/Edge em HTTPS');
-   return;
- }
- folderHandle=await showDirectoryPicker({mode:'readwrite'});
- document.getElementById('stFolder').textContent='Pasta: '+folderHandle.name;
-}
-
-/* ===== PDF SIMPLIFICADO ===== */
-async function gerarPdf(){
- pdfCount++;
- bufferPdf.length=0;
- document.getElementById('stPdf').textContent='PDFs gerados: '+pdfCount;
- log('📄 PDF '+pdfCount+' gerado automaticamente');
+/* ===== ACESSO À CÂMERA ===== */
+async function initCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+        });
+        vid.srcObject = stream;
+        vid.onloadedmetadata = () => {
+            can.width = vid.videoWidth;
+            can.height = vid.videoHeight;
+            addLog("Câmera pronta.");
+        };
+    } catch (e) {
+        addLog("Erro ao acessar câmera. Verifique HTTPS.");
+    }
 }
 
-/* ===== CAPTURA ===== */
-async function capturar(){
- seq++;
-
- const w=vid.videoWidth||1280;
- const h=vid.videoHeight||720;
- can.width=w; can.height=h;
- ctx.drawImage(vid,0,0,w,h);
-
- const km='KM '+Math.floor(seq/4)+'+000';
- kmTop.textContent=km;
-
- const blob=await new Promise(r=>can.toBlob(r,'image/jpeg',QUAL_FOTO));
-
- if(folderHandle){
-   const fh=await folderHandle.getFileHandle(
-     'FOTO_'+String(seq).padStart(6,'0')+'.jpg',
-     {create:true}
-   );
-   const wr=await fh.createWritable();
-   await wr.write(blob);
-   await wr.close();
- }
-
- document.getElementById('stFotos').textContent='Fotos: '+seq;
- bufferPdf.push(seq);
- log('📸 Foto '+seq+' salva');
-
- if(bufferPdf.length>=FOTOS_POR_PDF){
-   await gerarPdf();
- }
+/* ===== SELEÇÃO DE PASTA (File System API) ===== */
+async function selectFolder() {
+    try {
+        folderHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('stFolder').textContent = folderHandle.name;
+        addLog("Pasta vinculada com sucesso.");
+    } catch (e) {
+        addLog("Seleção de pasta cancelada.");
+    }
 }
 
-/* ===== AUTO ===== */
-function startAuto(){
- auto=true;
- btnAuto.disabled=true;
- btnStop.disabled=false;
- timer=setInterval(capturar,900);
-}
-function stopAuto(){
- auto=false;
- clearInterval(timer);
- btnAuto.disabled=false;
- btnStop.disabled=true;
+/* ===== LOOP DE CAPTURA (High Performance) ===== */
+async function captureLoop() {
+    if (!isRunning) return;
+
+    const now = Date.now();
+    if (now - lastCaptureTime >= INTERVALO_MS) {
+        lastCaptureTime = now;
+        seq++;
+
+        // Desenha frame atual
+        ctx.drawImage(vid, 0, 0, can.width, can.height);
+        
+        // Atualiza KM (Lógica de 250m por foto ou ajuste conforme necessário)
+        const kmStr = `KM ${Math.floor(seq / 4)}+${(seq % 4) * 250}`;
+        kmTop.textContent = kmStr;
+
+        // Gera o Blob e salva direto no Handle da pasta
+        can.toBlob(async (blob) => {
+            if (blob && folderHandle) {
+                try {
+                    const name = `IMG_${String(seq).padStart(5, '0')}.jpg`;
+                    const fileHandle = await folderHandle.getFileHandle(name, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    
+                    document.getElementById('stFotos').textContent = seq;
+                    addLog(`Salvo: ${name}`);
+                } catch (err) {
+                    addLog("Erro de gravação no disco.");
+                }
+            }
+        }, 'image/jpeg', QUALIDADE_FOTO);
+    }
+
+    // Mantém o loop fluido sem travar a UI
+    requestAnimationFrame(captureLoop);
 }
 
-/* ===== EVENTOS ===== */
-document.getElementById('btnFolder').onclick=pickFolder;
-document.getElementById('btnAuto').onclick=startAuto;
-document.getElementById('btnStop').onclick=stopAuto;
+/* ===== CONTROLES PRINCIPAIS ===== */
+document.getElementById('btnFolder').onclick = selectFolder;
+
+document.getElementById('btnAuto').onclick = () => {
+    if (!folderHandle) {
+        alert("Por favor, selecione a pasta de destino primeiro!");
+        return;
+    }
+    isRunning = true;
+    document.getElementById('btnAuto').disabled = true;
+    document.getElementById('btnStop').disabled = false;
+    addLog("Iniciando captura automática...");
+    requestAnimationFrame(captureLoop);
+};
+
+document.getElementById('btnStop').onclick = () => {
+    isRunning = false;
+    document.getElementById('btnAuto').disabled = false;
+    document.getElementById('btnStop').disabled = true;
+    addLog("Captura parada.");
+};
+
+// Iniciar câmera ao abrir
+initCamera();
 </script>
 
 </body>
