@@ -1,183 +1,220 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="original">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Relatório Fotográfico – Inspeção</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1020" />
+<title>Inspeção Noturna – Iluminação Rodoviária</title>
 
 <style>
-body{margin:0;background:#000;color:#fff;font-family:system-ui}
-video{width:100vw;height:55vh;object-fit:cover}
-#overlay{
-  position:absolute;bottom:10px;left:10px;
-  background:rgba(0,0,0,.65);
-  padding:10px 14px;border-radius:10px;
-  font-weight:900;
+/* ================= BASE VISUAL ================= */
+:root{
+  --bg:#0b1220;
+  --surface:#0f1733;
+  --fg:#e8eeff;
+  --ok:#22c55e;
+  --warn:#eab308;
+  --danger:#ef4444;
+  --border:#1e2a5a;
+  --radius:14px;
+  --camH:42vh;
 }
-#overlay small{display:block;font-size:.75rem;font-weight:600;color:#c7d2fe}
-#controls{display:flex;gap:8px;padding:10px}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+  padding:10px;
+}
+h1{text-align:center;font-size:1.2rem;margin:4px 0 8px}
+
+/* ================= CÂMERA ================= */
+#camCard{
+  position:sticky;
+  top:0;
+  background:#000;
+  border:2px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+  height:var(--camH);
+}
+video{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+/* ================= STATUS ================= */
+#status{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin:6px 0;
+}
+.badge{
+  padding:5px 10px;
+  border-radius:999px;
+  font-size:.8rem;
+  font-weight:800;
+  background:#111;
+  border:1px solid var(--border);
+}
+.ok{color:#b6ffd6}
+.warn{color:#fff1aa}
+
+/* ================= BOTÕES ================= */
 button{
-  flex:1;padding:14px;font-size:1.1rem;
-  font-weight:900;border:0;border-radius:14px
+  width:100%;
+  padding:14px;
+  font-size:1rem;
+  font-weight:900;
+  border-radius:14px;
+  border:none;
+  margin:6px 0;
+  background:#f97316;
+  color:#1b0b02;
 }
-#fotoBtn{background:#22c55e;color:#052}
-#pdfBtn{background:#facc15;color:#221}
-canvas{display:none}
+button.stop{
+  background:#ef4444;
+  color:#fff;
+}
+
+/* ================= KM ================= */
+#kmTop{
+  text-align:center;
+  font-size:1.05rem;
+  font-weight:900;
+  margin:6px 0;
+}
 </style>
 </head>
 
 <body>
 
-<video id="vid" autoplay playsinline muted></video>
-<canvas id="can"></canvas>
+<h1>📸 Inspeção de Iluminação</h1>
 
-<div id="overlay">
-  <div id="kmTxt">KM —</div>
-  <small id="dtTxt">—</small>
+<div id="camCard">
+  <video id="vid" autoplay playsinline muted></video>
+  <canvas id="can" style="display:none"></canvas>
 </div>
 
-<div id="controls">
-  <button id="fotoBtn">📷 FOTO</button>
-  <button id="pdfBtn">📄 RELATÓRIO</button>
+<div id="kmTop">KM —</div>
+
+<div id="status">
+  <span class="badge" id="stCam">Câmera…</span>
+  <span class="badge" id="stGps">GPS…</span>
+  <span class="badge" id="stFotos">Fotos: 0</span>
 </div>
+
+<button id="btnAuto">▶️ Iniciar Inspeção</button>
 
 <script>
-/* ================= DADOS ================= */
-let kmPoints=[], idsData=[];
-let lastPos=null, lastShot=0, lock=false;
-let fotos=[];
+/* ================= ESTADO ================= */
+const vid = document.getElementById('vid');
+const can = document.getElementById('can');
+const ctx = can.getContext('2d');
+const btnAuto = document.getElementById('btnAuto');
+const kmTop = document.getElementById('kmTop');
 
-/* ================= UTIL ================= */
-function hav(a,b,c,d){
-  const R=6371000;
-  const x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;
-  const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
-  return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
-}
-function fmtKm(v){
-  const K=Math.floor(v);
-  let m=Math.round((v-K)*1000);
-  if(m>=1000){m-=1000}
-  return `KM ${K}+${String(m).padStart(3,'0')}`;
-}
-
-/* ================= CSV ================= */
-async function loadCSV(url){
-  const t=await fetch(url).then(r=>r.text());
-  return t.split(/\r?\n/).map(l=>l.split(';'));
-}
-async function loadSNV(){
-  const c=await loadCSV('SNVBR116SPRJ.csv');
-  c.forEach(l=>{
-    const km=parseFloat(l[0]), lat=parseFloat(l[1]), lon=parseFloat(l[2]);
-    if(!isNaN(km)&&!isNaN(lat)&&!isNaN(lon))
-      kmPoints.push({km,lat,lon});
-  });
-}
-async function loadIDs(){
-  const c=await loadCSV('Dados_Completos_Grupo_2_all.csv');
-  c.forEach(l=>{
-    const id=l[0], lat=parseFloat(l[1]), lon=parseFloat(l[2]);
-    if(id&&!isNaN(lat)&&!isNaN(lon))
-      idsData.push({id,lat,lon});
-  });
-}
-
-/* ================= CALC ================= */
-function nearestKM(lat,lon){
-  let best=null,bd=Infinity;
-  kmPoints.forEach(p=>{
-    const d=hav(lat,lon,p.lat,p.lon);
-    if(d<bd){bd=d;best=p}
-  });
-  return best;
-}
-function nearestIDs(lat,lon,n=5){
-  return idsData
-    .map(p=>({id:p.id,d:hav(lat,lon,p.lat,p.lon)}))
-    .sort((a,b)=>a.d-b.d)
-    .slice(0,n);
-}
-
-/* ================= CAMERA ================= */
-const vid=document.getElementById('vid');
-const can=document.getElementById('can');
-const ctx=can.getContext('2d');
-
-navigator.mediaDevices.getUserMedia({
-  video:{facingMode:'environment'},audio:false
-}).then(s=>vid.srcObject=s);
+let photoCount = 0;
+let isRunning = false;
+let lastPos = null;
 
 /* ================= GPS ================= */
 navigator.geolocation.watchPosition(p=>{
-  lastPos={
+  lastPos = {
     lat:p.coords.latitude,
-    lon:p.coords.longitude
+    lon:p.coords.longitude,
+    acc:p.coords.accuracy
   };
-  const kmObj=nearestKM(lastPos.lat,lastPos.lon);
-  if(kmObj) document.getElementById('kmTxt').textContent=fmtKm(kmObj.km);
-  document.getElementById('dtTxt').textContent=new Date().toLocaleString();
+  document.getElementById('stGps').textContent = `GPS ±${Math.round(lastPos.acc)}m`;
+  document.getElementById('stGps').className = 'badge ok';
 },{},{enableHighAccuracy:true});
 
+/* ================= CÂMERA ================= */
+async function startCamera(){
+  const st = await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:{ideal:'environment'}},
+    audio:false
+  });
+  vid.srcObject = st;
+  await new Promise(r=>vid.onloadedmetadata=r);
+  document.getElementById('stCam').textContent = 'Câmera OK';
+  document.getElementById('stCam').className = 'badge ok';
+}
+startCamera();
+
+/* ================= KM MOCK (substitui SNV) ================= */
+function fmtKmFake(){
+  if(!lastPos) return 'KM —';
+  const km = 123 + ((Date.now()/1000)%1);
+  return `KM ${Math.floor(km)}+${String(Math.floor((km%1)*1000)).padStart(3,'0')}`;
+}
+
 /* ================= CAPTURA ================= */
-function capturar(){
-  const now=Date.now();
-  if(lock||now-lastShot<800||!lastPos) return;
-  lock=true; lastShot=now;
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-  can.width=vid.videoWidth;
-  can.height=vid.videoHeight;
-  ctx.drawImage(vid,0,0);
+async function captureOnce(){
+  const vw = vid.videoWidth;
+  const vh = vid.videoHeight;
 
-  const kmObj=nearestKM(lastPos.lat,lastPos.lon);
-  const kmStr=kmObj?fmtKm(kmObj.km):'KM —';
-  const ids=nearestIDs(lastPos.lat,lastPos.lon,5);
-  const dt=new Date().toLocaleString();
+  const isNight = new Date().getHours() >= 18 || new Date().getHours() <= 6;
+  const maxDim = isNight ? 2200 : 1600;
+  const s = Math.min(1, maxDim/Math.max(vw,vh));
 
-  // Overlay
-  const h=can.height,w=can.width;
-  ctx.fillStyle='rgba(0,0,0,.65)';
-  ctx.fillRect(0,h-120,w,120);
+  const w = Math.round(vw*s);
+  const h = Math.round(vh*s);
+  can.width=w; can.height=h;
+
+  ctx.filter = isNight ? 'contrast(1.15) brightness(1.1)' : 'none';
+  ctx.drawImage(vid,0,0,w,h);
+  ctx.filter='none';
+
+  const kmStr = fmtKmFake();
+  const ts = new Date().toLocaleString();
+
+  ctx.fillStyle='rgba(0,0,0,.7)';
+  ctx.fillRect(0,h-140,w,140);
 
   ctx.fillStyle='#b7ffcf';
-  ctx.font='bold 52px system-ui';
-  ctx.fillText(kmStr,20,h-60);
+  ctx.font=`900 ${Math.round(h*0.06)}px system-ui`;
+  ctx.fillText(kmStr,20,h-70);
 
-  ctx.font='600 22px system-ui';
-  ctx.fillText(dt,20,h-24);
+  ctx.fillStyle='#fff';
+  ctx.font=`700 ${Math.round(h*0.03)}px system-ui`;
+  ctx.fillText(ts,20,h-30);
 
-  ctx.font='600 18px system-ui';
-  ctx.textAlign='right';
-  ctx.fillStyle='#d7e5ff';
-  ids.forEach((e,i)=>{
-    ctx.fillText(e.id,w-20,h-100+i*18);
-  });
-  ctx.textAlign='left';
+  await new Promise(res=>can.toBlob(res,'image/jpeg',isNight?0.92:0.85));
 
-  fotos.push(can.toDataURL('image/jpeg',0.9));
-  setTimeout(()=>lock=false,300);
+  photoCount++;
+  document.getElementById('stFotos').textContent = `Fotos: ${photoCount}`;
+  kmTop.textContent = kmStr;
 }
 
-/* ================= PDF ================= */
-function gerarPDF(){
-  if(!fotos.length) return;
-  const b=new Blob(fotos,{type:'application/pdf'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(b);
-  a.download='RELATORIO_FOTOGRAFICO_INSPECAO.pdf';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  fotos.length=0;
+/* ================= LOOP SEGURO ================= */
+async function captureLoop(){
+  while(isRunning){
+    const ini = performance.now();
+    if(lastPos) await captureOnce();
+    const dt = performance.now()-ini;
+    await sleep(Math.max(0,1200-dt));
+  }
 }
 
-/* ================= START ================= */
-fotoBtn.onclick=capturar;
-pdfBtn.onclick=gerarPDF;
-
-(async()=>{
-  await loadSNV();
-  await loadIDs();
-})();
+/* ================= BOTÃO ================= */
+btnAuto.onclick = ()=>{
+  isRunning = !isRunning;
+  if(isRunning){
+    btnAuto.textContent = '⏹️ Parar Inspeção';
+    btnAuto.classList.add('stop');
+    captureLoop();
+  }else{
+    btnAuto.textContent = '▶️ Iniciar Inspeção';
+    btnAuto.classList.remove('stop');
+  }
+};
 </script>
 
 </body>
