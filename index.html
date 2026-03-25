@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V6.0 - MASTER CONTROL</title>
+    <title>INSPEÇÃO PRO V6.1 - FIXED LAYOUT</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --highway-green: #056b3c; --accent: #00d9ff; --dark-bg: #000; --panel-bg: rgba(10, 15, 25, 0.98); }
@@ -12,14 +12,15 @@
         #viewport { position: relative; width: 100vw; height: 60vh; background: #000; flex-shrink: 0; border-bottom: 2px solid var(--accent); overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
+        /* PLACA KM - AJUSTADA PARA LINHA ÚNICA */
         #kmPlaque { 
             position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); z-index: 5;
             background: linear-gradient(180deg, #0a8a4d, #056b3c); color: white; text-align: center; 
-            padding: 8px 20px; font-size: 2.5rem; font-weight: 900; border: 4px solid #fff;
-            border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            padding: 8px 15px; font-size: 1.8rem; font-weight: 900; border: 3px solid #fff;
+            border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            white-space: nowrap; display: inline-block; min-width: 180px;
         }
 
-        /* MENU DE CONFIGURAÇÕES ROBUSTO */
         #settings-panel { 
             position: fixed; top: 0; right: -100%; width: 90%; height: 100%; 
             background: var(--panel-bg); z-index: 2000; transition: 0.4s; 
@@ -40,7 +41,6 @@
         input, select { width: 100%; padding: 10px; background: #111; border: 1px solid #333; color: #fff; border-radius: 5px; margin-bottom: 10px; font-size: 0.9rem; }
         input[type="range"] { accent-color: var(--accent); margin-bottom: 15px; }
 
-        /* DASHBOARD */
         #controls { flex-grow: 1; background: #000; display: flex; flex-direction: column; justify-content: space-between; }
         .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #222; }
         .card { background: #000; padding: 10px 2px; text-align: center; }
@@ -53,18 +53,16 @@
         #btnStop { background: #ff3333; color: #fff; }
 
         .icon-top { position: absolute; top: 15px; right: 15px; z-index: 1500; background: rgba(0,0,0,0.6); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border: 1px solid #fff; }
-
         #save-toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--highway-green); padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; display: none; z-index: 3000; }
     </style>
 </head>
 <body>
 
 <div id="save-toast">PROCESSSANDO PDF...</div>
-
 <div class="icon-top" onclick="toggleSettings()">⚙️</div>
 
 <div id="settings-panel">
-    <h2 style="margin:0; font-size: 1.2rem; color:var(--accent)">PAINEL DE CONTROLE MASTER</h2>
+    <h2 style="margin:0; font-size: 1.2rem; color:var(--accent)">PAINEL MASTER</h2>
     
     <div class="tab-nav">
         <button class="tab-btn active" onclick="openTab(event, 'tab-cam')">CÂMERA</button>
@@ -77,12 +75,11 @@
             <h4>HARDWARE</h4>
             <label>Lente Disponível</label>
             <select id="cfgCam" onchange="switchCamera()"></select>
-            <label>Lanterna / Flash</label>
-            <button onclick="toggleTorch()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:5px">LIGAR/DESLIGAR</button>
+            <button onclick="toggleTorch()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:5px">LIGAR/DESLIGAR LANTERNA</button>
         </div>
         <div class="group">
             <h4>CAPTURA</h4>
-            <label>Intervalo (ms) [Padrão 200]</label>
+            <label>Intervalo (ms)</label>
             <input type="number" id="cfgDelay" value="200">
             <label>Fotos por Lote PDF</label>
             <input type="number" id="cfgBatch" value="200">
@@ -91,34 +88,26 @@
 
     <div id="tab-img" class="tab-content">
         <div class="group">
-            <h4>FILTROS DE CAMPO (AO VIVO)</h4>
+            <h4>FILTROS DE CAMPO</h4>
             <label>Brilho (Noturno)</label>
             <input type="range" id="fBright" min="50" max="250" value="100" oninput="applyFilters()">
             <label>Contraste</label>
             <input type="range" id="fContrast" min="50" max="200" value="100" oninput="applyFilters()">
             <label>Saturação</label>
             <input type="range" id="fSat" min="0" max="200" value="100" oninput="applyFilters()">
-            <label>Nitidez (Sepia/Grão)</label>
-            <input type="range" id="fGrayscale" min="0" max="100" value="0" oninput="applyFilters()">
+            <button onclick="resetFilters()" style="width:100%; padding:8px; background:#444; color:#fff; border:none; border-radius:5px; font-size:0.7rem">RESETAR FILTROS</button>
         </div>
     </div>
 
     <div id="tab-pdf" class="tab-content">
         <div class="group">
-            <h4>DADOS DO CABEÇALHO</h4>
-            <label>Título do Relatório</label>
+            <h4>CABEÇALHO</h4>
+            <label>Título Relatório</label>
             <input type="text" id="pdfTitle" value="INSPEÇÃO TÉCNICA RODOVIÁRIA">
-            <label>Inspetor / Empresa</label>
-            <input type="text" id="pdfAuthor" value="Departamento de Engenharia">
-            <label>Prefixo do Arquivo</label>
-            <input type="text" id="pdfPrefix" value="BR116_INSP">
-        </div>
-        <div class="group">
-            <h4>QUALIDADE E ESTILO</h4>
-            <label>Qualidade Imagem (0.1 a 1.0)</label>
-            <input type="number" id="pdfQual" value="0.7" step="0.1">
-            <label>Tamanho do KM no PDF</label>
-            <input type="range" id="pdfFontSize" min="20" max="100" value="70">
+            <label>Inspetor</label>
+            <input type="text" id="pdfAuthor" value="Engenharia de Campo">
+            <label>Prefixo Arquivo</label>
+            <input type="text" id="pdfPrefix" value="INSP_RODOVIA">
         </div>
     </div>
 
@@ -140,12 +129,12 @@
             <div class="card"><label>TOTAL</label><span id="txtTotal" class="val">0</span></div>
             <div class="card"><label>LOTE</label><span id="txtBuffer" class="val">0</span></div>
             <div class="card"><label>PDFS</label><span id="txtPdfs" class="val">0</span></div>
-            <div class="card" onclick="takeSinglePhoto()" style="background:#1a1a1a; cursor:pointer"><span style="font-size:1.2rem">📸</span><label style="color:var(--accent)">AVULSA</label></div>
+            <div class="card btn-snap" onclick="takeSinglePhoto()" style="cursor:pointer"><span style="font-size:1.1rem">📸</span><label style="color:var(--accent)">AVULSA</label></div>
         </div>
 
         <div class="btn-row">
-            <button id="btnStart" class="main-action">INICIAR INSPEÇÃO</button>
-            <button id="btnStop" class="main-action" disabled>FINALIZAR</button>
+            <button id="btnStart" class="main-action">INICIAR</button>
+            <button id="btnStop" class="main-action" disabled>PARAR</button>
         </div>
     </div>
 </div>
@@ -157,7 +146,6 @@ let directoryHandle = null, kmDataset = [], lastPos = null, isRecording = false;
 let photoCount = 0, pdfCount = 0, activeBuffer = [], startTime = 0, timerInterval;
 const vid = document.getElementById('vid'), can = document.getElementById('can'), ctx = can.getContext('2d');
 
-// --- TABS ---
 function openTab(evt, tabId) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -165,7 +153,6 @@ function openTab(evt, tabId) {
     evt.currentTarget.classList.add('active');
 }
 
-// --- CÂMERA E LANTERNA ---
 async function scanCameras() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(d => d.kind === 'videoinput');
@@ -173,7 +160,7 @@ async function scanCameras() {
     videoDevices.forEach((device, index) => {
         const option = document.createElement('option');
         option.value = device.deviceId;
-        option.text = device.label || `Lente ${index + 1}`;
+        option.text = device.label || `Câmera ${index + 1}`;
         select.appendChild(option);
     });
     if (videoDevices.length > 0) switchCamera();
@@ -189,19 +176,22 @@ async function switchCamera() {
 
 async function toggleTorch() {
     const track = vid.srcObject.getVideoTracks();
-    const caps = track.getCapabilities();
-    if(caps.torch) {
-        const current = track.getSettings().torch;
-        await track.applyConstraints({ advanced: [{ torch: !current }] });
-    } else { alert("Lanterna não suportada nesta lente."); }
+    try {
+        await track.applyConstraints({ advanced: [{ torch: !track.getSettings().torch }] });
+    } catch(e) { alert("Lanterna não disponível nesta lente."); }
 }
 
 function applyFilters() {
-    const filters = `brightness(${document.getElementById('fBright').value}%) contrast(${document.getElementById('fContrast').value}%) saturate(${document.getElementById('fSat').value}%) grayscale(${document.getElementById('fGrayscale').value}%)`;
-    vid.style.filter = filters;
+    vid.style.filter = `brightness(${document.getElementById('fBright').value}%) contrast(${document.getElementById('fContrast').value}%) saturate(${document.getElementById('fSat').value}%)`;
 }
 
-// --- MOTOR DE SALVAMENTO ---
+function resetFilters() {
+    document.getElementById('fBright').value = 100;
+    document.getElementById('fContrast').value = 100;
+    document.getElementById('fSat').value = 100;
+    applyFilters();
+}
+
 async function checkFolder() {
     if (directoryHandle) return true;
     try { directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); return true; } 
@@ -216,17 +206,16 @@ async function savePDF(manualBuffer = null) {
     document.getElementById('save-toast').style.display = 'block';
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
-    const quality = parseFloat(document.getElementById('pdfQual').value);
 
     for(let i=0; i<buffer.length; i++){
         if(i > 0) doc.addPage();
         const img = new Image();
         await new Promise(res => {
             img.onload = () => {
-                ctx.filter = vid.style.filter; // Aplica os mesmos filtros no PDF
+                ctx.filter = vid.style.filter;
                 ctx.drawImage(img, 0, 0);
                 drawStamp(buffer[i]);
-                doc.addImage(can.toDataURL('image/jpeg', quality), 'JPEG', 0, 0, 297, 210);
+                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, 297, 210);
                 res();
             };
             img.src = buffer[i].img;
@@ -245,17 +234,14 @@ async function savePDF(manualBuffer = null) {
 }
 
 function drawStamp(item) {
-    const size = document.getElementById('pdfFontSize').value;
-    ctx.font = `bold ${size}px Arial Black`;
+    ctx.font = `bold 70px Arial Black`;
     ctx.fillStyle = "white"; ctx.strokeStyle = "black"; ctx.lineWidth = 4;
     ctx.strokeText("KM " + item.km, 50, can.height - 150);
     ctx.fillText("KM " + item.km, 50, can.height - 150);
-    
     ctx.font = "30px Arial";
     ctx.fillText(`${item.ts} | ${document.getElementById('pdfAuthor').value}`, 50, can.height - 50);
 }
 
-// --- LOOP E GPS ---
 function captureLoop() {
     if(!isRecording) return;
     ctx.drawImage(vid, 0, 0, can.width, can.height);
@@ -273,15 +259,15 @@ function captureLoop() {
 }
 
 async function takeSinglePhoto() {
-    const ok = await checkFolder();
-    if(!ok) return;
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const snap = [{
-        img: can.toDataURL('image/jpeg', 0.8),
-        km: document.getElementById('kmPlaque').textContent.replace('KM ', ''),
-        ts: new Date().toLocaleString()
-    }];
-    savePDF(snap);
+    if(await checkFolder()) {
+        ctx.drawImage(vid, 0, 0, can.width, can.height);
+        const snap = [{
+            img: can.toDataURL('image/jpeg', 0.8),
+            km: document.getElementById('kmPlaque').textContent.replace('KM ', ''),
+            ts: new Date().toLocaleString()
+        }];
+        savePDF(snap);
+    }
 }
 
 document.getElementById('btnStart').onclick = async () => {
@@ -302,12 +288,11 @@ document.getElementById('btnStop').onclick = () => {
     document.getElementById('btnStart').disabled = false; document.getElementById('btnStop').disabled = true;
 };
 
-// --- CARGA CSV E GPS ---
 async function loadCSV(){
     try {
         const r = await fetch('SNVBR116SPRJ.csv');
         const t = await r.text();
-        const l = t.split('\n');
+        const l = t.split('\n').filter(x => x.trim() !== '');
         l.shift();
         kmDataset = l.map(row => {
             const c = row.split(';');
@@ -320,7 +305,7 @@ async function loadCSV(){
 navigator.geolocation.watchPosition(p => {
     lastPos = { lat: p.coords.latitude, lon: p.coords.longitude };
     document.getElementById('stGps').textContent = "GPS: OK";
-    if(!isRecording || kmDataset.length) {
+    if(kmDataset.length) {
         let best = kmDataset, bd = Infinity;
         kmDataset.forEach(pt => {
             const d = Math.hypot(pt.lat - lastPos.lat, pt.lon - lastPos.lon);
