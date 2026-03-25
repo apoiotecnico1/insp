@@ -9,7 +9,6 @@
         :root { --highway-green: #056b3c; --panel-bg: #0b1224; --accent: #00d9ff; --gold: #ffd700; }
         body { margin: 0; background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        /* Layout Adaptável (Modo Direção Horizontal) */
         #main-container { display: flex; flex-direction: column; height: 100%; transition: 0.3s; }
         @media (orientation: landscape) {
             #main-container { flex-direction: row; }
@@ -29,7 +28,6 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
-        /* Botão Engrenagem Discreta */
         #settings-trigger {
             position: absolute; top: 10px; right: 10px; z-index: 1000;
             background: rgba(0,0,0,0.5); border-radius: 50%; width: 32px; height: 32px;
@@ -37,7 +35,6 @@
             border: 1px solid rgba(255,255,255,0.3); font-size: 18px;
         }
 
-        /* Super Painel de Configurações */
         #settings-panel {
             position: fixed; top: 0; right: -100%; width: 90%; height: 100%;
             background: rgba(10, 15, 28, 0.98); z-index: 2000; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -68,6 +65,10 @@
         button.action { padding: 15px; border-radius: 10px; border: none; font-weight: 800; text-transform: uppercase; cursor: pointer; }
         #btnStart { background: #00ff66; color: #000; }
         #btnStop { background: #ff3333; color: #fff; }
+
+        /* Estilo para o seletor de diretório */
+        #dirSelector { background: var(--gold); color: #000; grid-column: span 2; margin-top: 10px; font-weight: bold; }
+        #dirSelector.ready { background: #00ff66; }
 
         canvas { display: none; }
     </style>
@@ -137,14 +138,15 @@
         <div class="dashboard">
             <div class="card">FOTOS<span id="txtTotal" class="val">0</span></div>
             <div class="card">LOTE<span id="txtBuffer" class="val">0/200</span></div>
-            <div id="btnSaveManual" class="card" style="background:#1e3a8a; cursor:pointer">GERAR PDF<span id="txtPdfs" class="val">0</span></div>
+            <div id="btnSaveManual" class="card" style="background:#1e3a8a; cursor:pointer">LOTE PDF<span id="txtPdfs" class="val">0</span></div>
         </div>
 
         <div class="btn-row">
-            <button id="btnStart" class="action">INICIAR</button>
+            <button id="dirSelector" class="action">1. DEFINIR PASTA DE DESTINO</button>
+            <button id="btnStart" class="action" disabled>2. INICIAR</button>
             <button id="btnStop" class="action" disabled>PARAR</button>
         </div>
-        <div style="font-size:0.6rem; text-align:center; color:#555; padding:5px">RIVERSIDE WORKSTATION v5.0</div>
+        <div style="font-size:0.6rem; text-align:center; color:#555; padding:5px">RIVERSIDE WORKSTATION v5.0 | AUTO-SAVE ENABLED</div>
     </div>
 </div>
 
@@ -154,12 +156,12 @@
 /* ======= CORE: LÓGICA DA BASE (KM & GPS) ======= */
 let kmDataset = [], lastPos = null, isRecording = false;
 let photoCount = 0, pdfCount = 0, activeBuffer = [];
+let directoryHandle = null; // Guardará a permissão da pasta
 
 const vid = document.getElementById('vid');
 const can = document.getElementById('can');
 const ctx = can.getContext('2d');
 
-// Lógica Haversine e Normalização (Idêntico à Base)
 function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
 function findColumnIndex(headers, candidates){ 
     const map=headers.map(h=>normalizeStr(h)); 
@@ -205,6 +207,20 @@ function updateKM() {
     if(best) document.getElementById('kmPlaque').textContent = "KM " + best.km;
 }
 
+/* ======= SISTEMA DE DIRETÓRIO AUTOMÁTICO ======= */
+document.getElementById('dirSelector').onclick = async () => {
+    try {
+        directoryHandle = await window.showDirectoryPicker({
+            mode: 'readwrite'
+        });
+        document.getElementById('dirSelector').textContent = "PASTA SELECIONADA ✓";
+        document.getElementById('dirSelector').classList.add('ready');
+        document.getElementById('btnStart').disabled = false;
+    } catch (err) {
+        alert("A permissão de pasta é necessária para o salvamento automático.");
+    }
+};
+
 /* ======= INTERFACE & CONFIGURAÇÕES ======= */
 function toggleSettings() { document.getElementById('settings-panel').classList.toggle('active'); }
 function openTab(evt, tabName) {
@@ -218,7 +234,6 @@ function openTab(evt, tabName) {
 
 async function initCamera() {
     const mode = document.getElementById('cfgCam').value;
-    const res = document.getElementById('cfgRes').value;
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: mode, width: {ideal: 1280}, height: {ideal: 720} },
@@ -238,13 +253,11 @@ function drawStamp(item) {
     const stripeColor = document.getElementById('cfgStripeColor').value;
     const alpha = document.getElementById('cfgAlpha').value / 100;
 
-    // Tarja
     ctx.save();
     const sH = h * 0.18;
     ctx.fillStyle = hexToRgba(stripeColor, alpha);
     ctx.fillRect(0, h - sH, w, sH);
 
-    // Texto KM
     ctx.fillStyle = color;
     ctx.font = `bold ${fontSize}px ${font}`;
     if(document.getElementById('cfgShadow').checked) {
@@ -252,7 +265,6 @@ function drawStamp(item) {
     }
     ctx.fillText("KM " + item.km, 40, h - (sH/2));
 
-    // GPS e Data
     if(document.getElementById('cfgShowGps').checked) {
         ctx.font = `${fontSize/3}px Arial`;
         ctx.fillText(`${item.ts} | LAT: ${item.lat} LON: ${item.lon}`, 40, h - 20);
@@ -266,9 +278,13 @@ function hexToRgba(hex, a) {
 }
 
 async function savePDF() {
-    if(!activeBuffer.length) return;
-    const batch = [...activeBuffer]; activeBuffer = [];
-    pdfCount++; document.getElementById('txtPdfs').textContent = pdfCount;
+    if(!activeBuffer.length || !directoryHandle) return;
+    
+    const batch = [...activeBuffer]; 
+    activeBuffer = []; 
+    pdfCount++; 
+    document.getElementById('txtPdfs').textContent = pdfCount;
+    
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
 
@@ -286,7 +302,20 @@ async function savePDF() {
             img.src = batch[i].img;
         });
     }
-    doc.save(`INSPECAO_LOTE_${pdfCount}.pdf`);
+    
+    // LOGICA DE SALVAMENTO AUTOMÁTICO SEM CLICK
+    try {
+        const fileName = `INSPECAO_LOTE_${pdfCount}_${Date.now()}.pdf`;
+        const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+        const writable = await fileHandle.createWritable();
+        const pdfBlob = doc.output('blob');
+        await writable.write(pdfBlob);
+        await writable.close();
+        console.log("Arquivo salvo automaticamente: " + fileName);
+    } catch (e) {
+        console.error("Falha no auto-save:", e);
+        doc.save(`INSPECAO_LOTE_${pdfCount}.pdf`); // Fallback caso perca permissão
+    }
 }
 
 function captureLoop() {
@@ -300,16 +329,30 @@ function captureLoop() {
         ts: new Date().toLocaleString()
     });
     photoCount++;
+    const limit = parseInt(document.getElementById('cfgBatch').value);
     document.getElementById('txtTotal').textContent = photoCount;
-    document.getElementById('txtBuffer').textContent = `${activeBuffer.length}/${document.getElementById('cfgBatch').value}`;
+    document.getElementById('txtBuffer').textContent = `${activeBuffer.length}/${limit}`;
     
-    if(activeBuffer.length >= parseInt(document.getElementById('cfgBatch').value)) savePDF();
+    if(activeBuffer.length >= limit) savePDF();
     setTimeout(captureLoop, parseInt(document.getElementById('cfgDelay').value));
 }
 
 /* ======= BOTÕES E GPS ======= */
-document.getElementById('btnStart').onclick = () => { isRecording = true; captureLoop(); document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; };
-document.getElementById('btnStop').onclick = () => { isRecording = false; savePDF(); document.getElementById('btnStart').disabled = false; document.getElementById('btnStop').disabled = true; };
+document.getElementById('btnStart').onclick = () => { 
+    if(!directoryHandle) { alert("Selecione a pasta primeiro!"); return; }
+    isRecording = true; 
+    captureLoop(); 
+    document.getElementById('btnStart').disabled = true; 
+    document.getElementById('btnStop').disabled = false; 
+};
+
+document.getElementById('btnStop').onclick = () => { 
+    isRecording = false; 
+    savePDF(); 
+    document.getElementById('btnStart').disabled = false; 
+    document.getElementById('btnStop').disabled = true; 
+};
+
 document.getElementById('btnSaveManual').onclick = savePDF;
 
 navigator.geolocation.watchPosition(p => {
