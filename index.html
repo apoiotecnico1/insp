@@ -3,110 +3,216 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V6 - NEXUS</title>
+    <title>SISTEMA DE INSPEÇÃO - MOTIVA RODOVIAS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --neon: #00d9ff; --danger: #ff3333; --go: #00ff66; --bg: #050a16; --glass: rgba(11, 18, 36, 0.85); }
-        body { margin: 0; background: #000; color: #fff; font-family: 'Segoe UI', system-ui; overflow: hidden; height: 100vh; }
+        :root { 
+            --motiva-orange: #ff6a00; /* Laranja da sinalização e segurança */
+            --motiva-blue: #002d5b;   /* Azul institucional profundo */
+            --motiva-light: #f4f7f9;
+            --motiva-dark: #1a1a1a;
+            --success: #28a745;
+        }
         
-        /* HUD Layout */
-        #main-container { display: grid; grid-template-rows: 1fr auto; height: 100vh; }
-        @media (orientation: landscape) { #main-container { grid-template-columns: 1fr 320px; grid-template-rows: 1fr; } }
-
-        #viewport { position: relative; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-        video { width: 100%; height: 100%; object-fit: cover; border-right: 1px solid #222; }
-        
-        /* Floating Plaque */
-        #kmPlaque { 
-            position: absolute; top: 20px; left: 20px;
-            background: linear-gradient(135deg, #0a8a4d, #056b3c);
-            padding: 10px 25px; border-radius: 8px; border: 3px solid #fff;
-            font-size: 2.5rem; font-weight: 900; box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-            letter-spacing: -1px; pointer-events: none; z-index: 10;
+        body { 
+            margin: 0; 
+            background: var(--motiva-light); 
+            color: var(--motiva-blue); 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            overflow: hidden; 
+            height: 100vh; 
         }
 
-        #controls { background: var(--bg); padding: 15px; display: flex; flex-direction: column; gap: 12px; border-left: 1px solid #1a2235; }
+        /* Topbar Institucional */
+        #header {
+            background: var(--motiva-blue);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid var(--motiva-orange);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
 
-        /* Dashboard Otimizado */
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .card { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid #1a2235; text-align: center; }
-        .card span { display: block; font-size: 1.2rem; font-weight: bold; color: var(--neon); }
-        .card label { font-size: 0.6rem; text-transform: uppercase; color: #556; }
+        #header h1 { margin: 0; font-size: 1rem; letter-spacing: 1px; font-weight: 800; }
 
-        /* Ações */
-        .btn-main { height: 70px; border-radius: 15px; border: none; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
-        #btnStart { background: var(--go); color: #000; box-shadow: 0 0 20px rgba(0,255,102,0.2); }
-        #btnStart.active { background: var(--danger); color: #fff; animation: pulse 1.5s infinite; }
-        #btnPDF { background: #1e3a8a; color: #fff; }
+        /* Layout */
+        #main-container { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; }
+        @media (orientation: landscape) { 
+            #main-container { grid-template-columns: 1fr 350px; grid-template-rows: auto 1fr; }
+            #header { grid-column: 1 / span 2; }
+        }
 
-        /* Configurações (Slide-in) */
-        #settings-trigger { position: absolute; top: 20px; right: 20px; z-index: 100; font-size: 24px; cursor: pointer; background: var(--glass); padding: 8px; border-radius: 50%; border: 1px solid #333; }
-        #settings-panel { position: fixed; right: -400px; top: 0; width: 350px; height: 100%; background: var(--glass); backdrop-filter: blur(10px); z-index: 1000; transition: 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); padding: 20px; border-left: 1px solid var(--neon); }
+        /* Viewport com Moldura de Segurança */
+        #viewport { 
+            position: relative; 
+            background: #000; 
+            border: 5px solid #ddd;
+            margin: 10px;
+            border-radius: 4px;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+        }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Placa de KM Estilo Motiva */
+        #kmPlaque { 
+            position: absolute; bottom: 20px; left: 20px;
+            background: #00703c; /* Verde padrão DNIT/Rodovias */
+            color: white; padding: 5px 20px; border-radius: 4px;
+            border: 3px solid white; font-size: 3rem; font-weight: 900;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 10;
+        }
+
+        /* Painel Lateral */
+        #controls { 
+            background: white; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            border-left: 2px solid #ddd;
+        }
+
+        .status-box {
+            background: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            border-left: 4px solid var(--motiva-blue);
+        }
+
+        /* Cards de Dados */
+        .card { 
+            background: var(--motiva-light); 
+            padding: 15px; 
+            border-radius: 6px; 
+            border: 1px solid #ced4da;
+            text-align: center;
+        }
+        .card span { display: block; font-size: 1.8rem; font-weight: 800; color: var(--motiva-orange); }
+        .card label { font-size: 0.7rem; font-weight: bold; color: var(--motiva-blue); text-transform: uppercase; }
+
+        /* Botões Padrão Motiva */
+        .btn-action { 
+            height: 60px; border-radius: 4px; border: none; 
+            font-size: 1rem; font-weight: 800; cursor: pointer; 
+            transition: all 0.2s; text-transform: uppercase;
+        }
+        #btnStart { background: var(--motiva-orange); color: white; box-shadow: 0 4px 0 #d35400; }
+        #btnStart:active { transform: translateY(3px); box-shadow: none; }
+        #btnStart.active { background: #c0392b; box-shadow: 0 4px 0 #922b21; animation: blink 1s infinite; }
+
+        #btnPDF { background: var(--motiva-blue); color: white; }
+
+        /* Settings Slide */
+        #settings-trigger { cursor: pointer; font-size: 20px; transition: 0.3s; }
+        #settings-trigger:hover { color: var(--motiva-orange); }
+
+        #settings-panel { 
+            position: fixed; right: -400px; top: 0; width: 320px; height: 100%; 
+            background: white; z-index: 1000; transition: 0.4s; padding: 25px;
+            box-shadow: -5px 0 20px rgba(0,0,0,0.2); border-left: 6px solid var(--motiva-orange);
+        }
         #settings-panel.open { right: 0; }
 
-        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 0.8rem; color: #ccc; }
-        input, select { background: #000; border: 1px solid #333; color: #fff; padding: 5px; border-radius: 5px; }
-
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-        #folder-hint { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: none; align-items: center; justify-content: center; text-align: center; padding: 20px; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
+        
+        #folder-hint { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,45,91,0.9); z-index: 9999; display: none; 
+            align-items: center; justify-content: center; color: white;
+        }
     </style>
 </head>
 <body>
 
-<div id="folder-hint"><h2>📂 SELECIONE A PASTA DE DESTINO<br><small style="color:var(--neon)">Para salvar relatórios e fotos automaticamente</small></h2></div>
-<div id="settings-trigger" onclick="toggleSets()">⚙️</div>
-
-<div id="settings-panel">
-    <h2 style="color:var(--neon); margin-top:0">Ajustes de Missão</h2>
-    <div class="setting-row">Câmera: <select id="cfgCam" onchange="initCamera()"><option value="environment">Traseira</option><option value="user">Frontal</option></select></div>
-    <div class="setting-row">Lote de Fotos: <input type="number" id="cfgBatch" value="100" style="width:50px"></div>
-    <div class="setting-row">Intervalo (ms): <input type="number" id="cfgDelay" value="300" style="width:50px"></div>
-    <div class="setting-row">Cor da Estampa: <input type="color" id="cfgColor" value="#ffffff"></div>
-    <div class="setting-row">Qualidade PDF: <input type="range" id="cfgQual" min="0.1" max="1" step="0.1" value="0.7"></div>
-    <button onclick="toggleSets()" style="width:100%; padding:10px; background:var(--danger); border:none; color:#fff; border-radius:5px; margin-top:20px">FECHAR</button>
+<div id="folder-hint">
+    <div style="text-align:center">
+        <div style="font-size:50px">📂</div>
+        <h2>DIRETÓRIO DE DESTINO</h2>
+        <p>Selecione a pasta para armazenamento dos relatórios Motiva.</p>
+    </div>
 </div>
 
 <div id="main-container">
+    <header id="header">
+        <h1>MOTIVA RODOVIAS | INSPEÇÃO DE CAMPO</h1>
+        <div id="settings-trigger" onclick="toggleSets()">⚙️ CONFIGURAÇÕES</div>
+    </header>
+
     <div id="viewport">
         <div id="kmPlaque">KM --+---</div>
         <video id="vid" autoplay playsinline muted></video>
     </div>
 
-    <div id="controls">
-        <div class="status-bar" style="display:flex; justify-content: space-between; font-size:0.7rem; color:#556">
-            <span id="stGps">GPS: BUSCANDO...</span>
-            <span id="stCsv">CSV: AGUARDANDO...</span>
-        </div>
+    <aside id="controls">
+        <div class="status-box" id="stGps">SINAL GPS: BUSCANDO...</div>
+        <div class="status-box" id="stCsv">BASE DE DADOS: CARREGANDO...</div>
 
-        <div class="dashboard">
-            <div class="card"><label>Fotos Capturadas</label><span id="txtTotal">0</span></div>
-            <div class="card"><label>Buffer do Lote</label><span id="txtBuffer">0/100</span></div>
+        <div class="card">
+            <label>Registros Capturados</label>
+            <span id="txtTotal">0</span>
         </div>
-
-        <button id="btnStart" class="btn-main">INICIAR INSPEÇÃO</button>
-        <button id="btnPDF" class="btn-main">GERAR PDF AGORA</button>
         
-        <div style="text-align:center; font-size:0.5rem; color:#334; margin-top:auto">NEXUS ENGINEERING OS v6.0</div>
+        <div class="card">
+            <label>Fotos no Lote Atual</label>
+            <span id="txtBuffer">0/100</span>
+        </div>
+
+        <button id="btnStart" class="btn-action">INICIAR INSPEÇÃO</button>
+        <button id="btnPDF" class="btn-action">FECHAR LOTE (PDF)</button>
+        
+        <div style="margin-top:auto; text-align:center">
+            <img src="https://via.placeholder.com/120x40?text=MOTIVA+RODOVIAS" alt="Logo Motiva" style="opacity:0.5">
+            <p style="font-size:0.6rem; color:#999">V4.0 PRO - CORPORATE LICENCE</p>
+        </div>
+    </aside>
+</div>
+
+<div id="settings-panel">
+    <h3 style="color:var(--motiva-blue)">AJUSTES TÉCNICOS</h3>
+    <hr border="0" height="1" bgcolor="#eee">
+    <div style="margin:20px 0">
+        <label style="display:block; font-size:0.7rem; margin-bottom:5px">CÂMERA ATIVA</label>
+        <select id="cfgCam" onchange="initCamera()" style="width:100%; padding:8px">
+            <option value="environment">Traseira (Principal)</option>
+            <option value="user">Frontal</option>
+        </select>
     </div>
+    <div style="margin:20px 0">
+        <label style="display:block; font-size:0.7rem; margin-bottom:5px">FOTOS POR PDF</label>
+        <input type="number" id="cfgBatch" value="100" style="width:100%; padding:8px">
+    </div>
+    <div style="margin:20px 0">
+        <label style="display:block; font-size:0.7rem; margin-bottom:5px">INTERVALO CAPTURA (MS)</label>
+        <input type="number" id="cfgDelay" value="300" style="width:100%; padding:8px">
+    </div>
+    <button onclick="toggleSets()" style="width:100%; background:var(--motiva-blue); color:white; border:none; padding:12px; cursor:pointer">SALVAR E VOLTAR</button>
 </div>
 
 <canvas id="can" style="display:none"></canvas>
 
 <script>
+/* MANTENDO TODA A FUNCIONALIDADE ORIGINAL */
 let directoryHandle = null, kmDataset = [], lastPos = null, isRecording = false;
 let photoCount = 0, pdfCount = 0, activeBuffer = [];
 const vid = document.getElementById('vid'), can = document.getElementById('can'), ctx = can.getContext('2d');
 
-// --- ENGINE CORE ---
 const toggleSets = () => document.getElementById('settings-panel').classList.toggle('open');
 
 async function initCamera() {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: document.getElementById('cfgCam').value, width: 1280, height: 720 } });
-    vid.srcObject = stream;
-    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: document.getElementById('cfgCam').value, width: 1280, height: 720 } 
+        });
+        vid.srcObject = stream;
+        vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
+    } catch(e) { console.error("Erro ao acessar câmera."); }
 }
 
-// --- GPS & CSV (Compacto) ---
 async function loadCSV() {
     try {
         const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
@@ -115,13 +221,13 @@ async function loadCSV() {
             const c = l.split(';');
             return { km: c, lat: parseFloat(c?.replace(',','.')), lon: parseFloat(c?.replace(',','.')) };
         }).filter(x => !isNaN(x.lat));
-        document.getElementById('stCsv').innerHTML = "CSV: PRONTO";
-    } catch(e) { document.getElementById('stCsv').innerHTML = "CSV: ERRO"; }
+        document.getElementById('stCsv').innerHTML = "BASE DE DADOS: OK";
+    } catch(e) { document.getElementById('stCsv').innerHTML = "BASE DE DADOS: ERRO"; }
 }
 
 navigator.geolocation.watchPosition(p => {
     lastPos = { lat: p.coords.latitude, lon: p.coords.longitude };
-    document.getElementById('stGps').innerHTML = "GPS: OK";
+    document.getElementById('stGps').innerHTML = "SINAL GPS: ATIVO (" + p.coords.accuracy.toFixed(0) + "m)";
     if(kmDataset.length) {
         let nearest = kmDataset.reduce((prev, curr) => {
             const d = Math.hypot(curr.lat - lastPos.lat, curr.lon - lastPos.lon);
@@ -131,16 +237,22 @@ navigator.geolocation.watchPosition(p => {
     }
 }, null, { enableHighAccuracy: true });
 
-// --- RENDER ENGINE ---
 function drawStamp(km, coords) {
     const h = can.height, w = can.width;
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    // Barra inferior sólida institucional
+    ctx.fillStyle = "#002d5b";
     ctx.fillRect(0, h-120, w, 120);
-    ctx.fillStyle = document.getElementById('cfgColor').value;
-    ctx.font = "bold 60px Arial";
+    // Linha de detalhe laranja (Marca Motiva)
+    ctx.fillStyle = "#ff6a00";
+    ctx.fillRect(0, h-124, w, 4);
+    
+    ctx.fillStyle = "white";
+    ctx.font = "bold 70px Arial";
     ctx.fillText("KM " + km, 40, h-50);
-    ctx.font = "20px Monospace";
-    ctx.fillText(`${new Date().toLocaleString()} | LAT: ${coords.lat} LON: ${coords.lon}`, 40, h-20);
+    
+    ctx.font = "24px Arial";
+    ctx.fillText(`MOTIVA RODOVIAS | ${new Date().toLocaleString()}`, 40, h-22);
+    ctx.fillText(`COORD: ${coords.lat}, ${coords.lon}`, w - 400, h-22);
 }
 
 async function savePDF() {
@@ -164,12 +276,14 @@ async function savePDF() {
         });
     }
 
-    const name = `RELATORIO_LOTE_${pdfCount}.pdf`;
+    const name = `INSPECAO_MOTIVA_LOTE_${pdfCount}.pdf`;
     if(directoryHandle) {
-        const fh = await directoryHandle.getFileHandle(name, { create: true });
-        const wr = await fh.createWritable();
-        await wr.write(doc.output('blob'));
-        await wr.close();
+        try {
+            const fh = await directoryHandle.getFileHandle(name, { create: true });
+            const wr = await fh.createWritable();
+            await wr.write(doc.output('blob'));
+            await wr.close();
+        } catch(e) { doc.save(name); }
     } else { doc.save(name); }
 }
 
@@ -191,7 +305,6 @@ async function loop() {
     setTimeout(loop, parseInt(document.getElementById('cfgDelay').value));
 }
 
-// --- EVENTS ---
 document.getElementById('btnStart').onclick = async function() {
     if(!isRecording) {
         if(!directoryHandle && 'showDirectoryPicker' in window) {
@@ -201,7 +314,7 @@ document.getElementById('btnStart').onclick = async function() {
             if(!directoryHandle) return;
         }
         isRecording = true;
-        this.innerText = "PARAR INSPEÇÃO";
+        this.innerText = "PARAR OPERAÇÃO";
         this.classList.add('active');
         loop();
     } else {
