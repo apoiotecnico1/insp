@@ -3,62 +3,126 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V5.7</title>
+    <title>INSPEÇÃO PRO V6.0 - MASTER CONTROL</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --highway-green: #056b3c; --accent: #00d9ff; --dark-bg: #000; }
+        :root { --highway-green: #056b3c; --accent: #00d9ff; --dark-bg: #000; --panel-bg: rgba(10, 15, 25, 0.98); }
         body { margin: 0; background: var(--dark-bg); color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        #viewport { position: relative; width: 100vw; height: 68vh; background: #000; flex-shrink: 0; border-bottom: 2px solid var(--accent); }
+        #viewport { position: relative; width: 100vw; height: 60vh; background: #000; flex-shrink: 0; border-bottom: 2px solid var(--accent); overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
         #kmPlaque { 
             position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); z-index: 5;
-            background: linear-gradient(180deg, #0a8a4d, #056b3c);
-            color: white; text-align: center; padding: 6px 18px;
-            font-size: 2.2rem; font-weight: 900; border: 3px solid #fff;
-            border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+            background: linear-gradient(180deg, #0a8a4d, #056b3c); color: white; text-align: center; 
+            padding: 8px 20px; font-size: 2.5rem; font-weight: 900; border: 4px solid #fff;
+            border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
         }
 
-        .top-icons { position: absolute; top: 15px; right: 15px; display: flex; gap: 12px; z-index: 1000; }
-        .icon-btn { background: rgba(0,0,0,0.6); border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border: 1px solid #fff; cursor: pointer; font-size: 20px; }
-
-        #controls { flex-grow: 1; display: flex; flex-direction: column; background: #000; justify-content: space-between; }
+        /* MENU DE CONFIGURAÇÕES ROBUSTO */
+        #settings-panel { 
+            position: fixed; top: 0; right: -100%; width: 90%; height: 100%; 
+            background: var(--panel-bg); z-index: 2000; transition: 0.4s; 
+            padding: 20px; overflow-y: auto; border-left: 2px solid var(--accent);
+        }
+        #settings-panel.active { right: 0; }
         
-        /* DASHBOARD COM BOTÃO DE FOTO ÚNICA */
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1px; background: #222; }
+        .tab-content { display: none; margin-top: 15px; }
+        .tab-content.active { display: block; }
+        .tab-nav { display: flex; gap: 5px; border-bottom: 1px solid #333; padding-bottom: 10px; overflow-x: auto; }
+        .tab-btn { background: #1a1a1a; color: #777; border: 1px solid #333; padding: 8px 12px; border-radius: 5px; font-size: 0.7rem; white-space: nowrap; }
+        .tab-btn.active { background: var(--accent); color: #000; font-weight: bold; }
+
+        .group { margin-bottom: 20px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; }
+        .group h4 { margin: 0 0 10px 0; font-size: 0.8rem; color: var(--accent); border-bottom: 1px solid #333; padding-bottom: 5px; }
+        
+        label { display: block; font-size: 0.7rem; margin-bottom: 5px; color: #ccc; }
+        input, select { width: 100%; padding: 10px; background: #111; border: 1px solid #333; color: #fff; border-radius: 5px; margin-bottom: 10px; font-size: 0.9rem; }
+        input[type="range"] { accent-color: var(--accent); margin-bottom: 15px; }
+
+        /* DASHBOARD */
+        #controls { flex-grow: 1; background: #000; display: flex; flex-direction: column; justify-content: space-between; }
+        .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #222; }
         .card { background: #000; padding: 10px 2px; text-align: center; }
-        .card label { font-size: 0.5rem; color: #555; display: block; text-transform: uppercase; }
-        .val { display: block; font-size: 1rem; font-weight: bold; color: var(--accent); }
-        
-        .btn-snap { background: #1a1a1a !important; border-left: 1px solid #333 !important; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .card label { font-size: 0.5rem; color: #555; }
+        .val { font-size: 1.1rem; font-weight: bold; color: var(--accent); }
 
-        .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
-        button.action { height: 75px; border: none; font-weight: 900; font-size: 1rem; text-transform: uppercase; cursor: pointer; }
+        .btn-row { display: grid; grid-template-columns: 1fr 1fr; }
+        button.main-action { height: 80px; border: none; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; cursor: pointer; }
         #btnStart { background: #00ff66; color: #000; }
         #btnStop { background: #ff3333; color: #fff; }
 
-        #save-status { position: fixed; top: 20px; left: 20px; background: var(--highway-green); color: white; padding: 8px 15px; border-radius: 5px; font-weight: bold; font-size: 0.7rem; display: none; z-index: 3000; border: 1px solid #fff; }
-        #settings-panel { position: fixed; top: 0; right: -100%; width: 85%; height: 100%; background: #0b1224; z-index: 2000; transition: 0.4s; padding: 20px; }
-        .active { right: 0 !important; }
+        .icon-top { position: absolute; top: 15px; right: 15px; z-index: 1500; background: rgba(0,0,0,0.6); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border: 1px solid #fff; }
 
-        canvas { display: none; }
+        #save-toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--highway-green); padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; display: none; z-index: 3000; }
     </style>
 </head>
 <body>
 
-<div id="save-status">💾 SALVANDO PDF...</div>
+<div id="save-toast">PROCESSSANDO PDF...</div>
 
-<div class="top-icons">
-    <div class="icon-btn" onclick="toggleSettings()">⚙️</div>
-</div>
+<div class="icon-top" onclick="toggleSettings()">⚙️</div>
 
 <div id="settings-panel">
-    <h3 style="color:var(--accent)">CONFIGURAÇÕES</h3>
-    <div style="margin:15px 0"><label>CÂMERA:</label><select id="cfgCamList" onchange="switchCamera()" style="width:100%; padding:10px;"></select></div>
-    <div style="margin:15px 0"><label>TÍTULO:</label><input type="text" id="cfgTitle" value="INSPECAO" style="width:90%; padding:10px;"></div>
-    <div style="margin:15px 0"><label>LOTE (FOTOS):</label><input type="number" id="cfgBatch" value="200" style="width:90%; padding:10px;"></div>
-    <button onclick="toggleSettings()" style="width:100%; padding:15px; background:var(--accent); border:none; font-weight:bold; margin-top:20px">FECHAR</button>
+    <h2 style="margin:0; font-size: 1.2rem; color:var(--accent)">PAINEL DE CONTROLE MASTER</h2>
+    
+    <div class="tab-nav">
+        <button class="tab-btn active" onclick="openTab(event, 'tab-cam')">CÂMERA</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab-img')">IMAGEM</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab-pdf')">RELATÓRIO</button>
+    </div>
+
+    <div id="tab-cam" class="tab-content active">
+        <div class="group">
+            <h4>HARDWARE</h4>
+            <label>Lente Disponível</label>
+            <select id="cfgCam" onchange="switchCamera()"></select>
+            <label>Lanterna / Flash</label>
+            <button onclick="toggleTorch()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:5px">LIGAR/DESLIGAR</button>
+        </div>
+        <div class="group">
+            <h4>CAPTURA</h4>
+            <label>Intervalo (ms) [Padrão 200]</label>
+            <input type="number" id="cfgDelay" value="200">
+            <label>Fotos por Lote PDF</label>
+            <input type="number" id="cfgBatch" value="200">
+        </div>
+    </div>
+
+    <div id="tab-img" class="tab-content">
+        <div class="group">
+            <h4>FILTROS DE CAMPO (AO VIVO)</h4>
+            <label>Brilho (Noturno)</label>
+            <input type="range" id="fBright" min="50" max="250" value="100" oninput="applyFilters()">
+            <label>Contraste</label>
+            <input type="range" id="fContrast" min="50" max="200" value="100" oninput="applyFilters()">
+            <label>Saturação</label>
+            <input type="range" id="fSat" min="0" max="200" value="100" oninput="applyFilters()">
+            <label>Nitidez (Sepia/Grão)</label>
+            <input type="range" id="fGrayscale" min="0" max="100" value="0" oninput="applyFilters()">
+        </div>
+    </div>
+
+    <div id="tab-pdf" class="tab-content">
+        <div class="group">
+            <h4>DADOS DO CABEÇALHO</h4>
+            <label>Título do Relatório</label>
+            <input type="text" id="pdfTitle" value="INSPEÇÃO TÉCNICA RODOVIÁRIA">
+            <label>Inspetor / Empresa</label>
+            <input type="text" id="pdfAuthor" value="Departamento de Engenharia">
+            <label>Prefixo do Arquivo</label>
+            <input type="text" id="pdfPrefix" value="BR116_INSP">
+        </div>
+        <div class="group">
+            <h4>QUALIDADE E ESTILO</h4>
+            <label>Qualidade Imagem (0.1 a 1.0)</label>
+            <input type="number" id="pdfQual" value="0.7" step="0.1">
+            <label>Tamanho do KM no PDF</label>
+            <input type="range" id="pdfFontSize" min="20" max="100" value="70">
+        </div>
+    </div>
+
+    <button onclick="toggleSettings()" style="width:100%; padding:15px; background:var(--accent); border:none; color:#000; font-weight:bold; border-radius:10px; margin-top:10px">SALVAR E VOLTAR</button>
 </div>
 
 <div id="main-container">
@@ -68,24 +132,20 @@
     </div>
 
     <div id="controls">
-        <div style="display:flex; justify-content: space-around; font-size: 0.6rem; padding: 4px; background:#111">
-            <span id="stCsv">CSV: ...</span>
-            <span id="stGps">GPS: ...</span>
+        <div style="display:flex; justify-content:space-around; background:#111; padding:5px; font-size:0.6rem; color:#888">
+            <span id="stCsv">CSV: ...</span> <span id="stGps">GPS: ...</span> <span id="txtTimer">00:00</span>
         </div>
-
+        
         <div class="dashboard">
             <div class="card"><label>TOTAL</label><span id="txtTotal" class="val">0</span></div>
-            <div class="card"><label>LOTE</label><span id="txtBuffer" class="val">0/200</span></div>
+            <div class="card"><label>LOTE</label><span id="txtBuffer" class="val">0</span></div>
             <div class="card"><label>PDFS</label><span id="txtPdfs" class="val">0</span></div>
-            <div class="card btn-snap" onclick="takeSinglePhoto()">
-                <span style="font-size:1.2rem">📸</span>
-                <label style="color:var(--accent)">AVULSA</label>
-            </div>
+            <div class="card" onclick="takeSinglePhoto()" style="background:#1a1a1a; cursor:pointer"><span style="font-size:1.2rem">📸</span><label style="color:var(--accent)">AVULSA</label></div>
         </div>
 
         <div class="btn-row">
-            <button id="btnStart" class="action">INICIAR INSPEÇÃO</button>
-            <button id="btnStop" class="action" disabled>PARAR E SALVAR</button>
+            <button id="btnStart" class="main-action">INICIAR INSPEÇÃO</button>
+            <button id="btnStop" class="main-action" disabled>FINALIZAR</button>
         </div>
     </div>
 </div>
@@ -94,22 +154,22 @@
 
 <script>
 let directoryHandle = null, kmDataset = [], lastPos = null, isRecording = false;
-let photoCount = 0, pdfCount = 0, activeBuffer = [];
+let photoCount = 0, pdfCount = 0, activeBuffer = [], startTime = 0, timerInterval;
 const vid = document.getElementById('vid'), can = document.getElementById('can'), ctx = can.getContext('2d');
 
-// --- GESTÃO DE PASTA FIXA ---
-async function checkFolder() {
-    if (directoryHandle) return true;
-    try {
-        directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        return true;
-    } catch (e) { return false; }
+// --- TABS ---
+function openTab(evt, tabId) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    evt.currentTarget.classList.add('active');
 }
 
+// --- CÂMERA E LANTERNA ---
 async function scanCameras() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(d => d.kind === 'videoinput');
-    const select = document.getElementById('cfgCamList');
+    const select = document.getElementById('cfgCam');
     videoDevices.forEach((device, index) => {
         const option = document.createElement('option');
         option.value = device.deviceId;
@@ -121,166 +181,159 @@ async function scanCameras() {
 
 async function switchCamera() {
     const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { deviceId: { exact: document.getElementById('cfgCamList').value }, width: 1280, height: 720 } 
+        video: { deviceId: { exact: document.getElementById('cfgCam').value }, width: 1920, height: 1080 } 
     });
     vid.srcObject = stream;
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
-// --- FOTO ÚNICA (AVULSA) ---
-async function takeSinglePhoto() {
-    const hasFolder = await checkFolder();
-    if(!hasFolder) return;
-    
-    document.getElementById('save-status').textContent = "📸 GERANDO FOTO AVULSA...";
-    document.getElementById('save-status').style.display = 'block';
-
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const data = {
-        img: can.toDataURL('image/jpeg', 0.8),
-        km: document.getElementById('kmPlaque').textContent.replace('KM ', ''),
-        lat: lastPos?.lat.toFixed(6) || "0", lon: lastPos?.lon.toFixed(6) || "0",
-        ts: new Date().toLocaleString()
-    };
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4');
-    
-    // Estampa a foto no canvas antes de enviar ao PDF
-    const imgObj = new Image();
-    imgObj.onload = async () => {
-        ctx.drawImage(imgObj, 0, 0);
-        drawStamp(data);
-        doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, 297, 210);
-        
-        const fileName = `AVULSA_KM_${data.km}_${Date.now()}.pdf`;
-        const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(doc.output('blob'));
-        await writable.close();
-        
-        document.getElementById('save-status').style.display = 'none';
-        URL.revokeObjectURL(data.img);
-    };
-    imgObj.src = data.img;
+async function toggleTorch() {
+    const track = vid.srcObject.getVideoTracks();
+    const caps = track.getCapabilities();
+    if(caps.torch) {
+        const current = track.getSettings().torch;
+        await track.applyConstraints({ advanced: [{ torch: !current }] });
+    } else { alert("Lanterna não suportada nesta lente."); }
 }
 
-// --- MOTOR DE CAPTURA EM LOTE ---
-async function silentSavePDF() {
-    if(!activeBuffer.length) return;
-    document.getElementById('save-status').textContent = "💾 SALVANDO LOTE...";
-    document.getElementById('save-status').style.display = 'block';
+function applyFilters() {
+    const filters = `brightness(${document.getElementById('fBright').value}%) contrast(${document.getElementById('fContrast').value}%) saturate(${document.getElementById('fSat').value}%) grayscale(${document.getElementById('fGrayscale').value}%)`;
+    vid.style.filter = filters;
+}
 
-    const batch = [...activeBuffer];
-    activeBuffer = []; 
-    pdfCount++;
-    document.getElementById('txtPdfs').textContent = pdfCount;
+// --- MOTOR DE SALVAMENTO ---
+async function checkFolder() {
+    if (directoryHandle) return true;
+    try { directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); return true; } 
+    catch (e) { return false; }
+}
 
+async function savePDF(manualBuffer = null) {
+    const buffer = manualBuffer || activeBuffer;
+    if(!buffer.length) return;
+    if(!manualBuffer) activeBuffer = []; 
+
+    document.getElementById('save-toast').style.display = 'block';
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
+    const quality = parseFloat(document.getElementById('pdfQual').value);
 
-    for(let i=0; i<batch.length; i++){
-        if(i>0) doc.addPage();
+    for(let i=0; i<buffer.length; i++){
+        if(i > 0) doc.addPage();
         const img = new Image();
         await new Promise(res => {
             img.onload = () => {
+                ctx.filter = vid.style.filter; // Aplica os mesmos filtros no PDF
                 ctx.drawImage(img, 0, 0);
-                drawStamp(batch[i]);
-                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, 297, 210);
+                drawStamp(buffer[i]);
+                doc.addImage(can.toDataURL('image/jpeg', quality), 'JPEG', 0, 0, 297, 210);
                 res();
             };
-            img.src = batch[i].img;
+            img.src = buffer[i].img;
         });
-        URL.revokeObjectURL(batch[i].img);
+        URL.revokeObjectURL(buffer[i].img);
     }
 
-    const fileName = `${document.getElementById('cfgTitle').value}_LOTE_${pdfCount}.pdf`;
+    const fileName = `${document.getElementById('pdfPrefix').value}_${Date.now()}.pdf`;
     const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(doc.output('blob'));
     await writable.close();
-    document.getElementById('save-status').style.display = 'none';
+    
+    if(!manualBuffer) { pdfCount++; document.getElementById('txtPdfs').textContent = pdfCount; }
+    document.getElementById('save-toast').style.display = 'none';
 }
 
 function drawStamp(item) {
-    ctx.font = "bold 80px Arial Black";
+    const size = document.getElementById('pdfFontSize').value;
+    ctx.font = `bold ${size}px Arial Black`;
     ctx.fillStyle = "white"; ctx.strokeStyle = "black"; ctx.lineWidth = 4;
     ctx.strokeText("KM " + item.km, 50, can.height - 150);
     ctx.fillText("KM " + item.km, 50, can.height - 150);
+    
     ctx.font = "30px Arial";
-    ctx.fillText(`${item.ts} | LAT: ${item.lat} LON: ${item.lon}`, 50, can.height - 50);
+    ctx.fillText(`${item.ts} | ${document.getElementById('pdfAuthor').value}`, 50, can.height - 50);
 }
 
+// --- LOOP E GPS ---
 function captureLoop() {
     if(!isRecording) return;
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     activeBuffer.push({
         img: can.toDataURL('image/jpeg', 0.4),
         km: document.getElementById('kmPlaque').textContent.replace('KM ', ''),
-        lat: lastPos?.lat.toFixed(6) || "0", lon: lastPos?.lon.toFixed(6) || "0",
         ts: new Date().toLocaleString()
     });
     photoCount++;
     document.getElementById('txtTotal').textContent = photoCount;
-    document.getElementById('txtBuffer').textContent = `${activeBuffer.length}/${document.getElementById('cfgBatch').value}`;
-    if(activeBuffer.length >= parseInt(document.getElementById('cfgBatch').value)) silentSavePDF();
-    setTimeout(captureLoop, 200); 
+    document.getElementById('txtBuffer').textContent = activeBuffer.length;
+    
+    if(activeBuffer.length >= parseInt(document.getElementById('cfgBatch').value)) savePDF();
+    setTimeout(captureLoop, parseInt(document.getElementById('cfgDelay').value));
 }
 
-// --- BOTÕES DE AÇÃO ---
+async function takeSinglePhoto() {
+    const ok = await checkFolder();
+    if(!ok) return;
+    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    const snap = [{
+        img: can.toDataURL('image/jpeg', 0.8),
+        km: document.getElementById('kmPlaque').textContent.replace('KM ', ''),
+        ts: new Date().toLocaleString()
+    }];
+    savePDF(snap);
+}
+
 document.getElementById('btnStart').onclick = async () => {
-    const ok = await checkFolder(); // Só pede a pasta se não tiver
-    if(ok) {
-        isRecording = true;
+    if(await checkFolder()) {
+        isRecording = true; startTime = Date.now();
+        timerInterval = setInterval(() => {
+            const d = new Date(Date.now() - startTime);
+            document.getElementById('txtTimer').textContent = d.toISOString().substr(14, 5);
+        }, 1000);
         captureLoop();
-        document.getElementById('btnStart').disabled = true;
-        document.getElementById('btnStop').disabled = false;
+        document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false;
     }
 };
 
 document.getElementById('btnStop').onclick = () => {
-    isRecording = false;
-    silentSavePDF();
-    document.getElementById('btnStart').disabled = false;
-    document.getElementById('btnStop').disabled = true;
+    isRecording = false; clearInterval(timerInterval);
+    savePDF();
+    document.getElementById('btnStart').disabled = false; document.getElementById('btnStop').disabled = true;
 };
 
-// --- GPS E CSV ---
-async function loadKMCSV(){
+// --- CARGA CSV E GPS ---
+async function loadCSV(){
     try {
-        const resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now());
-        const text = await resp.text();
-        const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-        const head = lines.shift().split(';');
-        const iKm = head.findIndex(h => h.toLowerCase().includes('km')), iLat = head.findIndex(h => h.toLowerCase().includes('lat')), iLon = head.findIndex(h => h.toLowerCase().includes('lon'));
-        kmDataset = lines.map(l => {
-            const r = l.split(';');
-            return { km: r[iKm], lat: parseFloat(r[iLat]?.replace(',', '.')), lon: parseFloat(r[iLon]?.replace(',', '.')) };
-        }).filter(p => !isNaN(p.lat));
+        const r = await fetch('SNVBR116SPRJ.csv');
+        const t = await r.text();
+        const l = t.split('\n');
+        l.shift();
+        kmDataset = l.map(row => {
+            const c = row.split(';');
+            return { km: c, lat: parseFloat(c?.replace(',','.')), lon: parseFloat(c?.replace(',','.')) };
+        });
         document.getElementById('stCsv').textContent = "CSV: OK";
-    } catch(e) { }
+    } catch(e) {}
 }
 
 navigator.geolocation.watchPosition(p => {
     lastPos = { lat: p.coords.latitude, lon: p.coords.longitude };
     document.getElementById('stGps').textContent = "GPS: OK";
-    if(!isRecording) updateKM();
-}, null, {enableHighAccuracy:true});
-
-function updateKM() {
-    if(!lastPos || !kmDataset.length) return;
-    let best = kmDataset, bd = Infinity;
-    for(const p of kmDataset){
-        const d = Math.hypot(p.lat - lastPos.lat, p.lon - lastPos.lon);
-        if(d < bd){ bd = d; best = p; }
+    if(!isRecording || kmDataset.length) {
+        let best = kmDataset, bd = Infinity;
+        kmDataset.forEach(pt => {
+            const d = Math.hypot(pt.lat - lastPos.lat, pt.lon - lastPos.lon);
+            if(d < bd) { bd = d; best = pt; }
+        });
+        document.getElementById('kmPlaque').textContent = "KM " + best.km;
     }
-    document.getElementById('kmPlaque').textContent = "KM " + best.km;
-}
+}, null, {enableHighAccuracy:true});
 
 function toggleSettings() { document.getElementById('settings-panel').classList.toggle('active'); }
 
-loadKMCSV();
 scanCameras();
+loadCSV();
 </script>
 </body>
 </html>
