@@ -4,179 +4,238 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>INSPEÇÃO PRO - KM SINCRONIZADO</title>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-:root { --highway-green:#056b3c; --panel-bg:#0b1224; }
-body{margin:0;background:#000;color:#fff;font-family:'Segoe UI',sans-serif;overflow:hidden}
+:root { --green:#056b3c; --panel:#0b1224; }
+body { margin:0; background:#000; color:#fff; font-family:Segoe UI,sans-serif; overflow:hidden }
 
-#viewport{width:100vw;height:40vh}
-video{width:100%;height:100%;object-fit:cover}
+#viewport { width:100vw; height:40vh }
+video { width:100%; height:100%; object-fit:cover }
 
-#kmPlaque{
-background:linear-gradient(#0a8a4d,#056b3c);
-color:#fff;padding:12px;font-size:3.5rem;
-font-weight:900;border:5px solid #fff;
-margin:10px;border-radius:15px;
-box-shadow:0 10px 30px rgba(0,0,0,.8)
+#kmPlaque {
+    background:linear-gradient(#0a8a4d,#056b3c);
+    color:#fff;
+    text-align:center;
+    padding:12px;
+    font-size:3.5rem;
+    font-weight:900;
+    border:5px solid #fff;
+    margin:10px;
+    border-radius:15px;
+    box-shadow:0 10px 30px rgba(0,0,0,.8);
 }
 
-.status-bar{display:flex;justify-content:space-around;padding:8px;background:#0b1224;font-size:.75rem}
-.st{padding:4px 10px;border-radius:20px;background:#1a2235;border:1px solid #333}
-.ok{color:#00ff66;border-color:#00ff66}
-.err{color:#ff4444;border-color:#ff4444}
+.dashboard {
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:10px;
+    padding:10px;
+}
+.card {
+    background:#111;
+    padding:12px;
+    border-radius:10px;
+    text-align:center;
+    border:1px solid #222;
+}
+.val {
+    display:block;
+    font-size:1.4rem;
+    font-weight:bold;
+    color:#00d9ff;
+}
 
-.dashboard{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:10px}
-.card{background:#111;padding:12px;border-radius:10px;text-align:center;border:1px solid #222}
-.val{display:block;font-size:1.4rem;font-weight:bold;color:#00d9ff}
+.btn-row {
+    padding:10px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+button {
+    padding:20px;
+    border-radius:12px;
+    border:none;
+    font-weight:900;
+    font-size:1.1rem;
+    cursor:pointer;
+}
+#btnStart { background:#00ff66; color:#000 }
+#btnStop { background:#ff3333; color:#fff }
 
-.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
-button{padding:20px;border-radius:12px;border:none;font-weight:900;font-size:1.1rem}
-#btnStart{background:#00ff66}
-#btnStop{background:#ff3333;color:#fff}
-
-canvas{display:none}
+canvas { display:none }
 </style>
 </head>
 
 <body>
 
 <div id="viewport">
-<video id="vid" autoplay muted playsinline></video>
+    <video id="vid" autoplay muted playsinline></video>
 </div>
 
 <div id="kmPlaque">KM --+---</div>
 
-<div class="status-bar">
-<div id="stCsv" class="st">CSV</div>
-<div id="stGps" class="st">GPS</div>
-</div>
-
 <div class="dashboard">
-<div class="card">FOTOS<span id="txtTotal" class="val">0</span></div>
-<div class="card">LOTE<span id="txtBuffer" class="val">0/200</span></div>
-<div id="btnSaveManual" class="card" style="background:#1e3a8a;cursor:pointer">
-GERAR PDF<span id="txtPdfs" class="val">0</span>
-</div>
+    <div class="card">FOTOS<span id="txtTotal" class="val">0</span></div>
+    <div class="card">LOTE<span id="txtBuffer" class="val">0/200</span></div>
+    <div id="btnSaveManual" class="card" style="background:#1e3a8a;cursor:pointer">
+        GERAR PDF<span id="txtPdfs" class="val">0</span>
+    </div>
 </div>
 
 <div class="btn-row">
-<button id="btnStart">Iniciar Inspeção</button>
-<button id="btnStop" disabled>Parar e Salvar</button>
+    <button id="btnStart">Iniciar Inspeção</button>
+    <button id="btnStop" disabled>Parar e Salvar</button>
 </div>
 
 <canvas id="can"></canvas>
 
 <script>
-let kmDataset=[],lastPos=null,isRecording=false;
-let photoCount=0,pdfCount=0,activeBuffer=[];
+/* ===== VARIÁVEIS ===== */
+let kmDataset=[], lastPos=null;
+let isRecording=false, photoCount=0, pdfCount=0;
+let activeBuffer=[];
 
 const vid=document.getElementById("vid");
 const can=document.getElementById("can");
 const ctx=can.getContext("2d",{alpha:false});
 
-/* ======= FUNÇÕES ORIGINAIS ======= */
-function normalizeStr(s){return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]+/g,' ')}
-function findColumnIndex(h,c){const m=h.map(x=>normalizeStr(x));for(const k of c){const i=m.indexOf(k);if(i>=0)return i}return-1}
-function parsePt(v){const s=String(v||'').trim();return /,\d+$/.test(s)?Number(s.replace(/\./g,'').replace(',','.')):Number(s)}
+/* ===== FUNÇÕES CSV / KM ===== */
+function normalizeStr(s){
+    return String(s||'').trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/[^a-z0-9 ]+/g,' ');
+}
+function findColumnIndex(h,c){
+    const m=h.map(x=>normalizeStr(x));
+    for(const k of c){ const i=m.indexOf(k); if(i>=0) return i; }
+    return -1;
+}
+function parsePt(v){
+    const s=String(v||"").trim();
+    return /,\d+$/.test(s)
+        ? Number(s.replace(/\./g,'').replace(',','.'))
+        : Number(s);
+}
 function hav(a,b,c,d){
-const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180
-const u=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2
-return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u))
+    const R=6371000;
+    const x=(c-a)*Math.PI/180;
+    const y=(d-b)*Math.PI/180;
+    const u=Math.sin(x/2)**2+
+        Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*
+        Math.sin(y/2)**2;
+    return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
 
-/* ======= CSV ======= */
+/* ===== CSV ===== */
 async function loadKMCSV(){
-const r=await fetch("SNVBR116SPRJ.csv?v="+Date.now(),{cache:"no-store"})
-let t=await r.text(); if(t.charCodeAt(0)===0xFEFF)t=t.slice(1)
-const L=t.split(/\r?\n/).filter(l=>l.trim()); const h=L.shift().split(";")
-const iKm=findColumnIndex(h,["km"])
-const iLat=findColumnIndex(h,["lat","latitude"])
-const iLon=findColumnIndex(h,["lon","longitude"])
-kmDataset=L.map(l=>{const r=l.split(";");return{km:r[iKm],lat:parsePt(r[iLat]),lon:parsePt(r[iLon])}})
-.filter(p=>p.km&&Number.isFinite(p.lat)&&Number.isFinite(p.lon))
-stCsv.classList.add("ok")
+    const r=await fetch("SNVBR116SPRJ.csv?v="+Date.now(),{cache:"no-store"});
+    let t=await r.text();
+    if(t.charCodeAt(0)===0xFEFF) t=t.slice(1);
+    const lines=t.split(/\r?\n/).filter(l=>l.trim());
+    const h=lines.shift().split(";");
+    const iKm=findColumnIndex(h,["km"]);
+    const iLat=findColumnIndex(h,["lat","latitude"]);
+    const iLon=findColumnIndex(h,["lon","longitude"]);
+    kmDataset=lines.map(l=>{
+        const r=l.split(";");
+        return{km:r[iKm],lat:parsePt(r[iLat]),lon:parsePt(r[iLon])};
+    }).filter(p=>p.km&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
 }
 
-/* ======= ATUALIZA KM ======= */
+/* ===== ATUALIZA KM ===== */
 function updateKM(){
-if(!lastPos||!kmDataset.length)return
-let b=null,d0=Infinity
-for(const p of kmDataset){
-const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon)
-if(d<d0){d0=d;b=p}
-}
-if(b)kmPlaque.textContent="KM "+b.km
-}
-
-/* ======= PDF ESTILO PLACA DE RODOVIA ======= */
-async function savePDF(){
-if(!activeBuffer.length)return
-const batch=[...activeBuffer];activeBuffer=[]
-const {jsPDF}=window.jspdf
-const doc=new jsPDF("l","mm","a4")
-pdfCount++;txtPdfs.textContent=pdfCount
-
-batch.forEach((item,i)=>{
-if(i)doc.addPage()
-
-/* PLACA AZUL */
-doc.setFillColor(0,70,160)
-doc.roundedRect(10,8,277,30,5,5,'F')
-
-doc.setTextColor(255,255,255)
-doc.setFont("helvetica","bold")
-doc.setFontSize(20)
-doc.text("RELATÓRIO DE INSPEÇÃO RODOVIÁRIA",148,22,{align:"center"})
-
-doc.setFontSize(16)
-doc.text("KM "+item.km,250,22,{align:"right"})
-
-doc.setFontSize(10)
-doc.text(`Data: ${item.ts}`,14,42)
-doc.text(`GPS: ${item.lat}, ${item.lon}`,200,42)
-
-/* FOTO */
-doc.addImage(item.img,"JPEG",10,48,277,145)
-})
-
-doc.save("INSPECAO_LOTE_"+pdfCount+".pdf")
+    if(!lastPos||!kmDataset.length) return;
+    let best=null,bd=Infinity;
+    for(const p of kmDataset){
+        const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
+        if(d<bd){bd=d;best=p;}
+    }
+    if(best) kmPlaque.textContent="KM "+best.km;
 }
 
-/* ======= CAPTURA ======= */
+/* ===== CAPTURA ===== */
 function captureLoop(){
-if(!isRecording)return
-ctx.drawImage(vid,0,0,can.width,can.height)
-activeBuffer.push({
-img:can.toDataURL("image/jpeg",0.6),
-km:kmPlaque.textContent.replace("KM ",""),
-lat:lastPos?lastPos.lat.toFixed(6):"0",
-lon:lastPos?lastPos.lon.toFixed(6):"0",
-ts:new Date().toLocaleString("pt-BR")
-})
-photoCount++;txtTotal.textContent=photoCount
-txtBuffer.textContent=activeBuffer.length+"/200"
-if(activeBuffer.length>=200)savePDF()
-setTimeout(captureLoop,200)
+    if(!isRecording) return;
+
+    ctx.drawImage(vid,0,0,can.width,can.height);
+
+    const kmAtual = kmPlaque.textContent.replace("KM","").trim();
+
+    activeBuffer.push({
+        img: can.toDataURL("image/jpeg",0.6),
+        km: kmAtual,
+        lat: lastPos ? lastPos.lat.toFixed(6) : "0",
+        lon: lastPos ? lastPos.lon.toFixed(6) : "0",
+        ts: new Date().toLocaleString("pt-BR")
+    });
+
+    photoCount++;
+    txtTotal.textContent=photoCount;
+    txtBuffer.textContent=activeBuffer.length+"/200";
+
+    if(activeBuffer.length>=200) savePDF();
+    setTimeout(captureLoop,200);
 }
 
-/* ======= CONTROLES ======= */
-btnStart.onclick=()=>{isRecording=true;btnStart.disabled=true;btnStop.disabled=false;captureLoop()}
-btnStop.onclick=()=>{isRecording=false;btnStart.disabled=false;btnStop.disabled=true;savePDF()}
-btnSaveManual.onclick=savePDF
+/* ===== PDF (PLACA DE RODOVIA) ===== */
+function savePDF(){
+    if(!activeBuffer.length) return;
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF("l","mm","a4");
+    pdfCount++; txtPdfs.textContent=pdfCount;
 
-/* ======= INIT ======= */
+    activeBuffer.forEach((item,i)=>{
+        if(i) doc.addPage();
+
+        doc.setFillColor(0,70,160);
+        doc.roundedRect(10,8,277,30,5,5,'F');
+
+        doc.setTextColor(255,255,255);
+        doc.setFont("helvetica","bold");
+        doc.setFontSize(20);
+        doc.text("RELATÓRIO DE INSPEÇÃO RODOVIÁRIA",148,22,{align:"center"});
+
+        doc.setFontSize(16);
+        doc.text("KM "+item.km,285,22,{align:"right"});
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica","normal");
+        doc.text("Data: "+item.ts,12,44);
+        doc.text("GPS: "+item.lat+", "+item.lon,200,44);
+
+        doc.addImage(item.img,"JPEG",10,48,277,145);
+    });
+
+    activeBuffer=[];
+    doc.save("INSPECAO_LOTE_"+pdfCount+".pdf");
+}
+
+/* ===== CONTROLES ===== */
+btnStart.onclick=()=>{isRecording=true;btnStart.disabled=true;btnStop.disabled=false;captureLoop();}
+btnStop.onclick=()=>{isRecording=false;btnStart.disabled=false;btnStop.disabled=true;savePDF();}
+btnSaveManual.onclick=savePDF;
+
+/* ===== INIT ===== */
 (async()=>{
-await loadKMCSV()
-const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false})
-vid.srcObject=s
-vid.onloadedmetadata=()=>{can.width=vid.videoWidth;can.height=vid.videoHeight}
-navigator.geolocation.watchPosition(p=>{
-lastPos={lat:p.coords.latitude,lon:p.coords.longitude}
-stGps.classList.add("ok")
-updateKM()
-},{},{enableHighAccuracy:true})
-})()
+    await loadKMCSV();
+
+    const s=await navigator.mediaDevices.getUserMedia({
+        video:{facingMode:"environment",width:1280,height:720},
+        audio:false
+    });
+    vid.srcObject=s;
+    vid.onloadedmetadata=()=>{
+        can.width=vid.videoWidth;
+        can.height=vid.videoHeight;
+    };
+
+    navigator.geolocation.watchPosition(p=>{
+        lastPos={lat:p.coords.latitude,lon:p.coords.longitude};
+        updateKM();
+    },null,{enableHighAccuracy:true,maximumAge:0});
+})();
 </script>
 
 </body>
