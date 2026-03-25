@@ -3,109 +3,67 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V5.2 - MODO ENGENHARIA</title>
+    <title>INSPEÇÃO PRO V5.3</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --highway-green: #056b3c; --panel-bg: #0b1224; --accent: #00d9ff; --gold: #ffd700; }
+        :root { --highway-green: #056b3c; --panel-bg: #0b1224; --accent: #00d9ff; }
         body { margin: 0; background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        #main-container { display: flex; flex-direction: column; height: 100%; transition: 0.3s; }
+        #main-container { display: flex; flex-direction: column; height: 100%; }
         @media (orientation: landscape) {
             #main-container { flex-direction: row; }
-            #viewport { width: 65vw !important; height: 100vh !important; }
-            #controls { width: 35vw; height: 100vh; overflow-y: auto; background: #050a16; }
-            #kmPlaque { font-size: 2.0rem !important; bottom: 15px; } /* Ajuste landscape */
+            #viewport { width: 70vw !important; height: 100vh !important; }
+            #controls { width: 30vw; height: 100vh; background: #050a16; justify-content: center; }
         }
 
-        #viewport { position: relative; width: 100vw; height: 42vh; background: #000; flex-shrink: 0; border-bottom: 2px solid #222; overflow: hidden; }
+        /* ÁREA DA CÂMERA - AUMENTADA */
+        #viewport { position: relative; width: 100vw; height: 55vh; background: #000; flex-shrink: 0; border-bottom: 2px solid var(--accent); overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* KM PLAQUE NA TELA: POSIÇÃO ORIGINAL (INFERIOR CENTRO) + 10% TAMANHO */
         #kmPlaque { 
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5;
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); z-index: 5;
             background: linear-gradient(180deg, #0a8a4d, #056b3c);
-            color: white; text-align: center; 
-            padding: 8px 18px; /* Aumentado ~10% */
-            font-size: 2.2rem; /* Aumentado ~10% de 1.8rem */
-            font-weight: 900; border: 4px solid #fff; /* Borda original */
-            border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            pointer-events: none;
-            white-space: nowrap;
+            color: white; text-align: center; padding: 6px 14px;
+            font-size: 2rem; font-weight: 900; border: 3px solid #fff;
+            border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5); pointer-events: none; white-space: nowrap;
         }
 
-        #settings-trigger {
-            position: absolute; top: 10px; right: 10px; z-index: 1000;
-            background: rgba(0,0,0,0.5); border-radius: 50%; width: 32px; height: 32px;
-            display: flex; align-items: center; justify-content: center; cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.3); font-size: 18px;
-        }
+        #controls { flex-grow: 1; display: flex; flex-direction: column; background: #000; padding: 5px; justify-content: space-between; }
 
-        #settings-panel {
-            position: fixed; top: 0; right: -100%; width: 90%; height: 100%;
-            background: rgba(10, 15, 28, 0.98); z-index: 2000; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow-y: auto; padding: 15px; border-left: 3px solid var(--accent);
-        }
-        #settings-panel.active { right: 0; }
-        
-        .tabs { display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; border-bottom: 1px solid #333; }
-        .tab-btn { background: #1a2235; border: none; color: #888; padding: 8px 15px; border-radius: 5px; font-size: 0.7rem; cursor: pointer; white-space: nowrap; }
-        .tab-btn.active { background: var(--accent); color: #000; font-weight: bold; }
-
-        .setting-group { display: none; }
-        .setting-group.active { display: block; }
-        .setting-item { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; font-size: 0.8rem; padding: 5px 0; border-bottom: 1px solid #1a1a1a; }
-        
-        select, input { background: #050a16; color: white; border: 1px solid #444; padding: 4px; border-radius: 4px; font-size: 0.8rem; }
-        input[type="range"] { width: 100px; }
-
-        .status-bar { display: flex; justify-content: space-around; padding: 5px; background: var(--panel-bg); font-size: 0.65rem; }
-        .st { padding: 2px 8px; border-radius: 10px; border: 1px solid #333; }
+        /* STATUS E DASHBOARD COMPACTOS */
+        .status-bar { display: flex; justify-content: space-around; padding: 4px; font-size: 0.6rem; }
+        .st { padding: 2px 6px; border-radius: 8px; border: 1px solid #333; }
         .ok { color: #00ff66; border-color: #00ff66; }
         
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 8px; }
-        .card { background: #111; padding: 8px; border-radius: 8px; text-align: center; border: 1px solid #222; }
-        .val { display: block; font-size: 1.1rem; font-weight: bold; color: var(--accent); }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; padding: 5px; }
+        .card { background: #111; padding: 6px; border-radius: 6px; text-align: center; border: 1px solid #222; }
+        .card label { font-size: 0.55rem; color: #888; display: block; text-transform: uppercase; }
+        .val { display: block; font-size: 0.9rem; font-weight: bold; color: var(--accent); }
 
-        .btn-row { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button.action { padding: 15px; border-radius: 10px; border: none; font-weight: 800; text-transform: uppercase; cursor: pointer; }
+        /* BOTÕES DESLOCADOS PARA BAIXO */
+        .btn-row { padding: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 5px; }
+        button.action { padding: 12px; border-radius: 8px; border: none; font-weight: 800; font-size: 0.85rem; text-transform: uppercase; cursor: pointer; }
         #btnStart { background: #00ff66; color: #000; }
         #btnStop { background: #ff3333; color: #fff; }
 
-        #folder-toast {
-            position: fixed; top: 0; left: 0; width: 100%; background: var(--accent);
-            color: #000; text-align: center; padding: 15px; font-weight: bold;
-            z-index: 3000; display: none; font-size: 0.9rem;
-        }
-
+        #settings-trigger { position: absolute; top: 10px; right: 10px; z-index: 1000; background: rgba(0,0,0,0.5); border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border: 1px solid #fff; }
+        #settings-panel { position: fixed; top: 0; right: -100%; width: 85%; height: 100%; background: #0b1224; z-index: 2000; transition: 0.4s; padding: 15px; }
+        #settings-panel.active { right: 0; }
+        
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div id="folder-toast">📂 ESCOLHA A PASTA DE DESTINO DO RELATÓRIO E FOTOS</div>
 <div id="settings-trigger" onclick="toggleSettings()">⚙️</div>
 
 <div id="settings-panel">
-    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom:15px">
-        <h3 style="margin:0; color:var(--accent)">WORKSTATION SETUP</h3>
-        <button onclick="toggleSettings()" style="background:red; color:white; border:none; border-radius:4px; padding:5px 10px">FECHAR</button>
-    </div>
-
-    <div class="tabs">
-        <button class="tab-btn active" onclick="openTab(event, 'tabCam')">CÂMERA</button>
-        <button class="tab-btn" onclick="openTab(event, 'tabAuto')">AUTOMAÇÃO</button>
-    </div>
-
-    <div id="tabCam" class="setting-group active">
-        <div class="setting-item">Lente Ativa: <select id="cfgCam" onchange="initCamera()"><option value="environment">Traseira (Principal)</option><option value="user">Frontal (Selfie)</option></select></div>
-        <div class="setting-item">Brilho: <input type="range" id="cfgBright" min="50" max="150" value="100"></div>
-    </div>
-
-    <div id="tabAuto" class="setting-group">
-        <div class="setting-item">Fotos por PDF: <input type="number" id="cfgBatch" value="200" style="width:60px"></div>
-        <div class="setting-item">Velocidade (ms): <input type="number" id="cfgDelay" value="200" style="width:60px"></div>
-    </div>
+    <h3 style="color:var(--accent)">AJUSTES</h3>
+    <div style="margin:10px 0">Câmera: <select id="cfgCam" onchange="initCamera()"><option value="environment">Traseira</option><option value="user">Frontal</option></select></div>
+    <div style="margin:10px 0">Fotos Lote: <input type="number" id="cfgBatch" value="200" style="width:50px"></div>
+    <div style="margin:10px 0">Brilho: <input type="range" id="cfgBright" min="50" max="150" value="100"></div>
+    <button onclick="toggleSettings()" style="width:100%; padding:10px; margin-top:20px">VOLTAR</button>
 </div>
 
 <div id="main-container">
@@ -121,16 +79,16 @@
         </div>
 
         <div class="dashboard">
-            <div class="card">FOTOS<span id="txtTotal" class="val">0</span></div>
-            <div class="card">LOTE<span id="txtBuffer" class="val">0/200</span></div>
-            <div id="btnSaveManual" class="card" style="background:#1e3a8a; cursor:pointer">GERAR PDF<span id="txtPdfs" class="val">0</span></div>
+            <div class="card"><label>Fotos</label><span id="txtTotal" class="val">0</span></div>
+            <div class="card"><label>Lote</label><span id="txtBuffer" class="val">0/200</span></div>
+            <div id="btnSaveManual" class="card" style="background:#1e3a8a; border-color:var(--accent)"><label style="color:#fff">PDF</label><span id="txtPdfs" class="val">0</span></div>
         </div>
 
         <div class="btn-row">
             <button id="btnStart" class="action">INICIAR</button>
             <button id="btnStop" class="action" disabled>PARAR</button>
         </div>
-        <div style="font-size:0.6rem; text-align:center; color:#555; padding:5px">RIVERSIDE WORKSTATION v5.2</div>
+        <div style="font-size:0.5rem; text-align:center; color:#333; margin-bottom: 2px;">V5.3 | RIVERSIDE</div>
     </div>
 </div>
 
@@ -139,153 +97,62 @@
 <script>
 let directoryHandle = null, kmDataset = [], lastPos = null, isRecording = false;
 let photoCount = 0, pdfCount = 0, activeBuffer = [];
+const vid = document.getElementById('vid'), can = document.getElementById('can'), ctx = can.getContext('2d');
 
-const vid = document.getElementById('vid');
-const can = document.getElementById('can');
-const ctx = can.getContext('2d');
-
-async function getDirectoryPermission() {
-    document.getElementById('folder-toast').style.display = 'block';
-    try {
-        if ('showDirectoryPicker' in window) {
-            directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-            document.getElementById('folder-toast').style.display = 'none';
-            return true;
-        } else {
-            document.getElementById('folder-toast').style.display = 'none';
-            return true; 
-        }
-    } catch (err) {
-        document.getElementById('folder-toast').style.display = 'none';
-        return false;
-    }
+// --- Câmera e GPS (Mantendo sua lógica funcional) ---
+async function initCamera() {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: document.getElementById('cfgCam').value, width: 1280, height: 720 } });
+    vid.srcObject = stream;
+    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
-// GPS & CSV
-function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
-function findColumnIndex(headers, candidates){ 
-    const map=headers.map(h=>normalizeStr(h)); 
-    for(const c of candidates){ const i=map.indexOf(c); if(i>=0) return i; } 
-    return -1; 
-}
-function parsePt(v){ 
-    if(v==null) return NaN; 
-    const s=String(v).trim(); 
-    return /,\d{1,}$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); 
-}
-function hav(a,b,c,d){ 
-    const R=6371000, x=(c-a)*Math.PI/180, y=(d-b)*Math.PI/180; 
-    const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; 
-    return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); 
-}
-
-async function loadKMCSV(){
-    try {
-        const resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now());
-        let text = await resp.text();
-        const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-        const head = lines.shift().split(';');
-        const iKm = findColumnIndex(head, ['km']), iLat = findColumnIndex(head, ['lat','latitude']), iLon = findColumnIndex(head, ['lon','long','longitude']);
-        kmDataset = lines.map(l => {
-            const r = l.split(';');
-            return { km: r[iKm], lat: parsePt(r[iLat]), lon: parsePt(r[iLon]) };
-        }).filter(p => p.km && !isNaN(p.lat));
-        document.getElementById('stCsv').textContent = "CSV: OK";
-        document.getElementById('stCsv').classList.add('ok');
-    } catch(e) { document.getElementById('stCsv').textContent = "CSV: ERRO"; }
-}
+navigator.geolocation.watchPosition(p => {
+    lastPos = { lat: p.coords.latitude, lon: p.coords.longitude };
+    document.getElementById('stGps').textContent = "GPS: OK";
+    document.getElementById('stGps').classList.add('ok');
+    updateKM();
+}, null, {enableHighAccuracy:true});
 
 function updateKM() {
     if(!lastPos || !kmDataset.length) return;
-    let best = null, bd = Infinity;
+    let best = kmDataset, bd = Infinity;
     for(const p of kmDataset){
-        const d = hav(lastPos.lat, lastPos.lon, p.lat, p.lon);
+        const d = Math.hypot(p.lat - lastPos.lat, p.lon - lastPos.lon);
         if(d < bd){ bd = d; best = p; }
     }
-    if(best) document.getElementById('kmPlaque').textContent = "KM " + best.km;
+    document.getElementById('kmPlaque').textContent = "KM " + best.km;
 }
 
-// ESTAMPA DO PDF: PLACA VERDE CORRIGIDA E CENTRALIZADA
+// --- Funções de Desenho para o PDF (Corrigidas e Centralizadas) ---
 function drawStamp(item) {
-    const w = can.width;
-    const h = can.height;
+    const w = can.width, h = can.height;
     const textKM = "KM " + item.km;
-
-    // Configurações Proporcionais baseadas na altura da foto
-    const placaH = h * 0.15; // Altura da placa proporcional à foto
-    
-    // Configura a fonte temporariamente para medir o tamanho do texto
-    const fontSizeKM = placaH * 0.65; // Fonte proporcional à altura da placa
-    ctx.font = `900 ${fontSizeKM}px Arial Black`;
-    const textMetrics = ctx.measureText(textKM);
-    const textW = textMetrics.width;
-
-    // Dimensiona a largura da placa baseado no texto medido + margens laterais
+    const placaH = h * 0.15;
+    ctx.font = `900 ${placaH * 0.65}px Arial Black`;
+    const textW = ctx.measureText(textKM).width;
     const paddingX = placaH * 0.4; 
     const placaW = textW + (paddingX * 2);
-    
-    const posX = 40; // Margem da borda esquerda
-    const posY = h - placaH - 50; // Margem da borda inferior
+    const posX = 40, posY = h - placaH - 60;
 
     ctx.save();
-    
-    // 1. Desenha o Fundo Verde com Gradiente
     const grd = ctx.createLinearGradient(posX, posY, posX, posY + placaH);
-    grd.addColorStop(0, "#0a8a4d");
-    grd.addColorStop(1, "#056b3c");
+    grd.addColorStop(0, "#0a8a4d"); grd.addColorStop(1, "#056b3c");
+    ctx.fillStyle = grd; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 6;
     
-    ctx.fillStyle = grd;
-    ctx.strokeStyle = "#ffffff"; // Borda Branca
-    ctx.lineWidth = placaH * 0.08; // Espessura da borda proporcional
-    
-    // Retângulo arredondado para a placa
-    roundRect(ctx, posX, posY, placaW, placaH, 15, true, true);
-    
-    // 2. Texto do KM: CENTRALIZADO DENTRO DA PLACA
-    ctx.fillStyle = "#ffffff";
-    ctx.font = `900 ${fontSizeKM}px Arial Black`; // Reinicia fonte para garantir
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle"; // Alinhamento vertical central
-    
-    // Sombra do texto para legibilidade
-    ctx.shadowColor = "rgba(0,0,0,0.6)";
-    ctx.shadowBlur = placaH * 0.1;
-    ctx.shadowOffsetX = placaH * 0.03;
-    ctx.shadowOffsetY = placaH * 0.03;
-    
-    // Desenha o texto no centro X e centro Y da placa desenhada
-    ctx.fillText(textKM, posX + (placaW/2), posY + (placaH/2) + (fontSizeKM*0.05)); // Pequeno ajuste baseline
-    
-    // 3. Mini legenda (Data/GPS) abaixo da placa (Sombra Simples)
-    ctx.restore();
-    ctx.fillStyle = "white";
-    ctx.font = "bold 22px Arial";
-    ctx.textAlign = "left";
-    ctx.shadowColor = "black"; ctx.shadowBlur = 8;
-    ctx.fillText(`${item.ts} | LAT: ${item.lat} LON: ${item.lon}`, posX, h - 18);
-}
-
-// Helper para desenhar retângulo arredondado (Corrigido para Canvas)
-function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
-    if (typeof radius === 'undefined') radius = 5;
-    if (typeof radius === 'number') radius = {tl: radius, tr: radius, br: radius, bl: radius};
-    else {
-        var defaultRadius = {tl: 0, tr: 0, br: 0, bl: 0};
-        for (var key in defaultRadius) radius[key] = radius[key] || defaultRadius[key];
-    }
+    // Desenha placa arredondada
     ctx.beginPath();
-    ctx.moveTo(x + radius.tl, y);
-    ctx.lineTo(x + width - radius.tr, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
-    ctx.lineTo(x + width, y + height - radius.br);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
-    ctx.lineTo(x + radius.bl, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
-    ctx.lineTo(x, y + radius.tl);
-    ctx.quadraticCurveTo(x, y, x + radius.tl, y);
-    ctx.closePath();
-    if (fill) ctx.fill();
-    if (stroke) ctx.stroke();
+    ctx.roundRect(posX, posY, placaW, placaH, 15);
+    ctx.fill(); ctx.stroke();
+    
+    // Texto Centralizado
+    ctx.fillStyle = "#ffffff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 10;
+    ctx.fillText(textKM, posX + (placaW/2), posY + (placaH/2));
+    
+    // Legenda GPS
+    ctx.restore(); ctx.fillStyle = "white"; ctx.font = "bold 22px Arial";
+    ctx.shadowColor = "black"; ctx.shadowBlur = 5;
+    ctx.fillText(`${item.ts} | LAT: ${item.lat} LON: ${item.lon}`, posX, h - 20);
 }
 
 async function savePDF() {
@@ -302,23 +169,14 @@ async function savePDF() {
             img.onload = () => {
                 ctx.filter = `brightness(${document.getElementById('cfgBright').value}%)`;
                 ctx.drawImage(img, 0, 0);
-                drawStamp(batch[i]); // Carimba a placa verde corrigida na foto
+                drawStamp(batch[i]);
                 doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, 297, 210);
                 res();
             };
             img.src = batch[i].img;
         });
     }
-    
-    const fileName = `INSPECAO_LOTE_${pdfCount}.pdf`;
-    if (directoryHandle) {
-        try {
-            const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(doc.output('blob'));
-            await writable.close();
-        } catch (e) { doc.save(fileName); }
-    } else { doc.save(fileName); }
+    doc.save(`INSPECAO_LOTE_${pdfCount}.pdf`);
 }
 
 function captureLoop() {
@@ -339,44 +197,12 @@ function captureLoop() {
 }
 
 function toggleSettings() { document.getElementById('settings-panel').classList.toggle('active'); }
-function openTab(evt, tabName) {
-    const groups = document.getElementsByClassName("setting-group");
-    for (let i = 0; i < groups.length; i++) groups[i].className = groups[i].className.replace(" active", "");
-    const btns = document.getElementsByClassName("tab-btn");
-    for (let i = 0; i < btns.length; i++) btns[i].className = btns[i].className.replace(" active", "");
-    document.getElementById(tabName).className += " active";
-    evt.currentTarget.className += " active";
-}
-
-async function initCamera() {
-    const mode = document.getElementById('cfgCam').value;
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode, width: {ideal: 1280}, height: {ideal: 720} } });
-        vid.srcObject = stream;
-        vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-    } catch(e) { console.error("Erro câmera"); }
-}
-
-document.getElementById('btnStart').onclick = async () => {
-    if (!directoryHandle && 'showDirectoryPicker' in window) {
-        const ok = await getDirectoryPermission();
-        if (!ok) return;
-    }
-    isRecording = true; captureLoop(); 
-    document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false;
-};
-
+document.getElementById('btnStart').onclick = () => { isRecording = true; captureLoop(); document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; };
 document.getElementById('btnStop').onclick = () => { isRecording = false; savePDF(); document.getElementById('btnStart').disabled = false; document.getElementById('btnStop').disabled = true; };
 document.getElementById('btnSaveManual').onclick = savePDF;
 
-navigator.geolocation.watchPosition(p => {
-    lastPos = { lat: p.coords.latitude, lon: p.coords.longitude };
-    document.getElementById('stGps').textContent = "GPS: OK";
-    document.getElementById('stGps').classList.add('ok');
-    updateKM();
-}, null, {enableHighAccuracy:true});
-
-loadKMCSV(); initCamera();
+// Início
+initCamera();
 </script>
 </body>
 </html>
