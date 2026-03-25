@@ -132,27 +132,23 @@ const vid = document.getElementById('vid');
 const can = document.getElementById('can');
 const ctx = can.getContext('2d');
 
-/* ======= MOTOR DE ESTAMPA: PLACA TÉCNICA (RODOVIÁRIA) ======= */
 function drawStamp(data) {
     const w = can.width, h = can.height;
     const base = h / 720; 
     
     ctx.save();
     
-    // Dimensões da Placa
-    const margin = 25 * base;
-    const pW = 380 * base;
-    const pH = 130 * base;
+    const margin = 20 * base;
+    const pW = 360 * base;
+    const pH = 120 * base;
     const pX = margin;
     const pY = h - pH - margin;
     const cornerRadius = 8 * base;
 
-    // 1. SOMBRA DA PLACA
     ctx.shadowColor = "rgba(0,0,0,0.5)";
-    ctx.shadowBlur = 15 * base;
-    ctx.shadowOffsetY = 5 * base;
+    ctx.shadowBlur = 10 * base;
+    ctx.shadowOffsetY = 3 * base;
 
-    // 2. FUNDO VERDE (PADRÃO DNIT/DER)
     ctx.beginPath();
     ctx.moveTo(pX + cornerRadius, pY);
     ctx.lineTo(pX + pW - cornerRadius, pY);
@@ -164,43 +160,31 @@ function drawStamp(data) {
     ctx.lineTo(pX, pY + cornerRadius);
     ctx.quadraticCurveTo(pX, pY, pX + cornerRadius, pY);
     ctx.closePath();
-    ctx.fillStyle = "#056b3c"; // Verde Rodoviário
+    ctx.fillStyle = "#056b3c"; 
     ctx.fill();
     
-    ctx.shadowBlur = 0; // Remove sombra para o restante
+    ctx.shadowBlur = 0; 
 
-    // 3. MOLDURA BRANCA (BORDA INTERNA DUPLA)
     ctx.strokeStyle = "white";
     ctx.lineWidth = 3 * base;
     ctx.strokeRect(pX + (8 * base), pY + (8 * base), pW - (16 * base), pH - (16 * base));
     
-    // 4. TEXTO KM (DESTAQUE)
     ctx.fillStyle = "white";
-    ctx.font = `bold ${48 * base}px Arial`;
+    ctx.font = `bold ${44 * base}px Arial`;
     ctx.textAlign = "left";
-    ctx.fillText("KM " + data.km, pX + 25 * base, pY + 60 * base);
+    ctx.fillText("KM " + data.km, pX + 25 * base, pY + 55 * base);
 
-    // 5. LINHA DIVISÓRIA (DISCRETA)
-    ctx.beginPath();
-    ctx.moveTo(pX + 20 * base, pY + 75 * base);
-    ctx.lineTo(pX + pW - 20 * base, pY + 75 * base);
-    ctx.strokeStyle = "rgba(255,255,255,0.3)";
-    ctx.lineWidth = 1 * base;
-    ctx.stroke();
-
-    // 6. INFORMAÇÕES GPS E DATA (LEGENDA TÉCNICA)
-    ctx.font = `bold ${15 * base}px 'Courier New', monospace`;
+    ctx.font = `bold ${14 * base}px 'Courier New', monospace`;
     ctx.fillStyle = "#ffffff";
     const gpsLine = `LAT: ${data.lat} LON: ${data.lon}`;
     const timeLine = `${data.ts}`;
     
-    ctx.fillText(gpsLine, pX + 25 * base, pY + 98 * base);
-    ctx.fillText(timeLine, pX + 25 * base, pY + 115 * base);
+    ctx.fillText(gpsLine, pX + 25 * base, pY + 88 * base);
+    ctx.fillText(timeLine, pX + 25 * base, pY + 105 * base);
 
     ctx.restore();
 }
 
-/* ======= LÓGICA DE CAPTURA E PDF (SEM MARGENS) ======= */
 async function captureLoop() {
     if(!isRecording) return;
     can.width = vid.videoWidth;
@@ -243,12 +227,10 @@ async function savePDF() {
     document.getElementById('txtPdfs').textContent = pdfCount;
 
     const { jsPDF } = window.jspdf;
-    // PDF A4 Paisagem (297x210)
     const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
 
     for(let i=0; i < batch.length; i++) {
         if(i > 0) doc.addPage();
-        // Desenha a imagem ocupando toda a folha (0,0 até 297,210)
         doc.addImage(batch[i].img, 'JPEG', 0, 0, 297, 210);
     }
 
@@ -261,7 +243,6 @@ async function savePDF() {
     } catch (e) { doc.save(`RELATORIO_LOTE_${pdfCount}.pdf`); }
 }
 
-/* ======= SISTEMA E GPS ======= */
 async function initCamera() {
     const mode = document.getElementById('cfgCam').value;
     try {
@@ -269,7 +250,7 @@ async function initCamera() {
             video: { facingMode: mode, width: {ideal: 1920}, height: {ideal: 1080} }
         });
         vid.srcObject = stream;
-    } catch(e) { alert("Erro na câmera."); }
+    } catch(e) {}
 }
 
 document.getElementById('dirSelector').onclick = async () => {
@@ -278,7 +259,7 @@ document.getElementById('dirSelector').onclick = async () => {
         document.getElementById('dirSelector').textContent = "PASTA OK ✓";
         document.getElementById('dirSelector').classList.add('ready');
         document.getElementById('btnStart').disabled = false;
-    } catch (err) { alert("Selecione uma pasta para salvar!"); }
+    } catch (err) {}
 };
 
 document.getElementById('btnStart').onclick = () => { isRecording = true; captureLoop(); document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; };
@@ -293,7 +274,6 @@ function openTab(e, name) {
     e.target.classList.add('active');
 }
 
-// Lógica de Sincronia GPS/KM
 async function loadCSV() {
     try {
         const r = await fetch('SNVBR116SPRJ.csv');
