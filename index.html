@@ -2,8 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>INSPEÇÃO PRO – KM GPS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>INSPEÇÃO PRO - KM SINCRONIZADO</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -42,6 +42,7 @@ font-size:1.4rem;
 font-weight:bold;
 color:#00d9ff
 }
+
 .btn-row{
 display:grid;
 grid-template-columns:1fr 1fr;
@@ -93,9 +94,9 @@ let activeBuffer=[];
 
 const vid=document.getElementById("vid");
 const can=document.getElementById("can");
-const ctx=can.getContext("2d");
+const ctx=can.getContext("2d",{alpha:false});
 
-/* ===== FUNÇÕES CSV / KM ===== */
+/* ===== FUNÇÕES DO PRIMEIRO HTML ===== */
 function normalizeStr(s){
 return String(s||'').trim().toLowerCase()
 .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
@@ -112,7 +113,7 @@ return /,\d+$/.test(s)?Number(s.replace(/\./g,'').replace(',','.')):Number(s);
 }
 function hav(a,b,c,d){
 const R=6371000;
-const x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;
+const x=(c-a)*Math.PI/180, y=(d-b)*Math.PI/180;
 const u=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
 return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
@@ -126,10 +127,14 @@ const h=L.shift().split(";");
 const iKm=findColumnIndex(h,["km"]);
 const iLat=findColumnIndex(h,["lat","latitude"]);
 const iLon=findColumnIndex(h,["lon","longitude"]);
+
 kmDataset=L.map(l=>{
 const r=l.split(";");
-let lat=parsePt(r[iLat]), lon=parsePt(r[iLon]);
-if(Math.abs(lat)>90&&Math.abs(lon)<=90){const tmp=lat;lat=lon;lon=tmp;}
+let lat=parsePt(r[iLat]);
+let lon=parsePt(r[iLon]);
+if(Math.abs(lat)>90&&Math.abs(lon)<=90){
+const tmp=lat;lat=lon;lon=tmp;
+}
 return{km:r[iKm],lat,lon};
 }).filter(p=>p.km&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
 }
@@ -145,32 +150,21 @@ if(d<d0){d0=d;best=p;}
 if(best) kmPlaque.textContent="KM "+best.km;
 }
 
-/* ===== OVERLAY ARTÍSTICO (KM + DATA + GPS) ===== */
-function drawOverlay(km,ts,lat,lon){
-const x=20,y=can.height-150,w=460,h=120;
+/* ===== QUEIMA KM + DATA NA FOTO ===== */
+function drawOverlay(km,ts){
+ctx.fillStyle="rgba(0,0,0,.6)";
+ctx.fillRect(20,can.height-110,400,80);
 
-// GRADIENTE
-const g=ctx.createLinearGradient(x,y,x+w,y+h);
-g.addColorStop(0,"#0b0b0b");
-g.addColorStop(1,"#056b3c");
-
-ctx.fillStyle=g;
-ctx.fillRect(x,y,w,h);
-
-// CONTORNO
-ctx.strokeStyle="#ffffff";
-ctx.lineWidth=5;
-ctx.strokeRect(x,y,w,h);
+ctx.strokeStyle="#fff";
+ctx.lineWidth=4;
+ctx.strokeRect(20,can.height-110,400,80);
 
 ctx.fillStyle="#fff";
-ctx.font="bold 44px Segoe UI";
-ctx.fillText("KM "+km,x+20,y+55);
+ctx.font="bold 40px Segoe UI";
+ctx.fillText("KM "+km,40,can.height-65);
 
-ctx.font="22px Segoe UI";
-ctx.fillText(ts,x+20,y+85);
-
-ctx.font="18px Segoe UI";
-ctx.fillText("GPS: "+lat+", "+lon,x+20,y+110);
+ctx.font="20px Segoe UI";
+ctx.fillText(ts,40,can.height-40);
 }
 
 /* ===== CAPTURA ===== */
@@ -181,12 +175,12 @@ ctx.drawImage(vid,0,0,can.width,can.height);
 
 const kmAtual=kmPlaque.textContent.replace("KM","").trim();
 const ts=new Date().toLocaleString("pt-BR");
-const lat= lastPos ? lastPos.lat.toFixed(6) : "0";
-const lon= lastPos ? lastPos.lon.toFixed(6) : "0";
 
-drawOverlay(kmAtual,ts,lat,lon);
+drawOverlay(kmAtual,ts);
 
-activeBuffer.push({img:can.toDataURL("image/jpeg",0.7)});
+activeBuffer.push({
+img:can.toDataURL("image/jpeg",0.7)
+});
 
 photoCount++; txtTotal.textContent=photoCount;
 txtBuffer.textContent=activeBuffer.length+"/200";
@@ -195,7 +189,7 @@ if(activeBuffer.length>=200) savePDF();
 setTimeout(captureLoop,200);
 }
 
-/* ===== PDF (SOMENTE FOTO) ===== */
+/* ===== PDF (APENAS FOTO) ===== */
 function savePDF(){
 if(!activeBuffer.length)return;
 const {jsPDF}=window.jspdf;
@@ -221,7 +215,10 @@ btnSaveManual.onclick=savePDF;
 await loadKMCSV();
 const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
 vid.srcObject=s;
-vid.onloadedmetadata=()=>{can.width=vid.videoWidth;can.height=vid.videoHeight;}
+vid.onloadedmetadata=()=>{
+can.width=vid.videoWidth;
+can.height=vid.videoHeight;
+};
 navigator.geolocation.watchPosition(p=>{
 lastPos={lat:p.coords.latitude,lon:p.coords.longitude};
 updateKM();
