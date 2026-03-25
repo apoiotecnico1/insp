@@ -77,7 +77,6 @@
     <div class="tabs">
         <button class="tab-btn active" onclick="openTab(event, 'tabCam')">CÂMERA</button>
         <button class="tab-btn" onclick="openTab(event, 'tabAuto')">AUTOMAÇÃO</button>
-        <button class="tab-btn" onclick="openTab(event, 'tabGps')">GPS</button>
     </div>
 
     <div id="tabCam" class="setting-group active">
@@ -90,10 +89,6 @@
         <div class="setting-item">Captura (ms): <input type="number" id="cfgDelay" value="500" style="width:60px"></div>
         <div class="setting-item">Fotos por Lote: <input type="number" id="cfgBatch" value="100" style="width:60px"></div>
         <div class="setting-item">Qualidade JPG: <input type="range" id="cfgQuality" min="10" max="100" value="75"></div>
-    </div>
-
-    <div id="tabGps" class="setting-group">
-        <div class="setting-item">Exibir Info: <input type="checkbox" id="cfgShowGps" checked></div>
     </div>
     
     <button onclick="toggleSettings()" style="width:100%; margin-top:20px; padding:10px; background:red; color:white; border:none; border-radius:5px">FECHAR</button>
@@ -137,55 +132,80 @@ const vid = document.getElementById('vid');
 const can = document.getElementById('can');
 const ctx = can.getContext('2d');
 
-/* ======= MOTOR DE ESTAMPA TÉCNICO ======= */
+/* ======= MOTOR DE ESTAMPA: PLACA TÉCNICA (RODOVIÁRIA) ======= */
 function drawStamp(data) {
     const w = can.width, h = can.height;
-    const base = h / 720; // Escala base
+    const base = h / 720; 
     
     ctx.save();
     
-    // Configurações da Placa
-    const margin = 20 * base;
-    const pW = 340 * base;
-    const pH = 100 * base;
+    // Dimensões da Placa
+    const margin = 25 * base;
+    const pW = 380 * base;
+    const pH = 130 * base;
     const pX = margin;
     const pY = h - pH - margin;
+    const cornerRadius = 8 * base;
 
-    // 1. Fundo da placa (Verde Rodoviário Semi-transparente)
-    ctx.fillStyle = "rgba(5, 107, 60, 0.85)";
-    ctx.fillRect(pX, pY, pW, pH);
+    // 1. SOMBRA DA PLACA
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = 15 * base;
+    ctx.shadowOffsetY = 5 * base;
 
-    // 2. Moldura Fina Branca
+    // 2. FUNDO VERDE (PADRÃO DNIT/DER)
+    ctx.beginPath();
+    ctx.moveTo(pX + cornerRadius, pY);
+    ctx.lineTo(pX + pW - cornerRadius, pY);
+    ctx.quadraticCurveTo(pX + pW, pY, pX + pW, pY + cornerRadius);
+    ctx.lineTo(pX + pW, pY + pH - cornerRadius);
+    ctx.quadraticCurveTo(pX + pW, pY + pH, pX + pW - cornerRadius, pY + pH);
+    ctx.lineTo(pX + cornerRadius, pY + pH);
+    ctx.quadraticCurveTo(pX, pY + pH, pX, pY + pH - cornerRadius);
+    ctx.lineTo(pX, pY + cornerRadius);
+    ctx.quadraticCurveTo(pX, pY, pX + cornerRadius, pY);
+    ctx.closePath();
+    ctx.fillStyle = "#056b3c"; // Verde Rodoviário
+    ctx.fill();
+    
+    ctx.shadowBlur = 0; // Remove sombra para o restante
+
+    // 3. MOLDURA BRANCA (BORDA INTERNA DUPLA)
     ctx.strokeStyle = "white";
-    ctx.lineWidth = 2 * base;
-    ctx.strokeRect(pX + (5 * base), pY + (5 * base), pW - (10 * base), pH - (10 * base));
-
-    // 3. Texto do KM
+    ctx.lineWidth = 3 * base;
+    ctx.strokeRect(pX + (8 * base), pY + (8 * base), pW - (16 * base), pH - (16 * base));
+    
+    // 4. TEXTO KM (DESTAQUE)
     ctx.fillStyle = "white";
-    ctx.font = `bold ${42 * base}px Arial`;
-    ctx.fillText("KM " + data.km, pX + 20 * base, pY + 50 * base);
+    ctx.font = `bold ${48 * base}px Arial`;
+    ctx.textAlign = "left";
+    ctx.fillText("KM " + data.km, pX + 25 * base, pY + 60 * base);
 
-    // 4. Legenda GPS e Data (Discreta)
-    if(document.getElementById('cfgShowGps').checked) {
-        ctx.font = `${14 * base}px 'Courier New', monospace`;
-        ctx.fillStyle = "#ffffff";
-        const info1 = `LAT: ${data.lat} | LON: ${data.lon}`;
-        const info2 = `${data.ts}`;
-        ctx.fillText(info1, pX + 20 * base, pY + 72 * base);
-        ctx.fillText(info2, pX + 20 * base, pY + 88 * base);
-    }
+    // 5. LINHA DIVISÓRIA (DISCRETA)
+    ctx.beginPath();
+    ctx.moveTo(pX + 20 * base, pY + 75 * base);
+    ctx.lineTo(pX + pW - 20 * base, pY + 75 * base);
+    ctx.strokeStyle = "rgba(255,255,255,0.3)";
+    ctx.lineWidth = 1 * base;
+    ctx.stroke();
+
+    // 6. INFORMAÇÕES GPS E DATA (LEGENDA TÉCNICA)
+    ctx.font = `bold ${15 * base}px 'Courier New', monospace`;
+    ctx.fillStyle = "#ffffff";
+    const gpsLine = `LAT: ${data.lat} LON: ${data.lon}`;
+    const timeLine = `${data.ts}`;
+    
+    ctx.fillText(gpsLine, pX + 25 * base, pY + 98 * base);
+    ctx.fillText(timeLine, pX + 25 * base, pY + 115 * base);
 
     ctx.restore();
 }
 
-/* ======= LÓGICA DE CAPTURA E PDF ======= */
+/* ======= LÓGICA DE CAPTURA E PDF (SEM MARGENS) ======= */
 async function captureLoop() {
     if(!isRecording) return;
-
     can.width = vid.videoWidth;
     can.height = vid.videoHeight;
 
-    // Aplica Brilho/Contraste
     ctx.filter = `brightness(${document.getElementById('cfgBright').value}%) contrast(${document.getElementById('cfgContrast').value}%)`;
     ctx.drawImage(vid, 0, 0);
     ctx.filter = 'none';
@@ -223,38 +243,42 @@ async function savePDF() {
     document.getElementById('txtPdfs').textContent = pdfCount;
 
     const { jsPDF } = window.jspdf;
+    // PDF A4 Paisagem (297x210)
     const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
 
     for(let i=0; i < batch.length; i++) {
         if(i > 0) doc.addPage();
+        // Desenha a imagem ocupando toda a folha (0,0 até 297,210)
         doc.addImage(batch[i].img, 'JPEG', 0, 0, 297, 210);
     }
 
     try {
-        const fileName = `INSPECAO_LOTE_${pdfCount}.pdf`;
+        const fileName = `RELATORIO_LOTE_${pdfCount}.pdf`;
         const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
         const writable = await fileHandle.createWritable();
         await writable.write(doc.output('blob'));
         await writable.close();
-    } catch (e) { doc.save(`LOTE_${pdfCount}.pdf`); }
+    } catch (e) { doc.save(`RELATORIO_LOTE_${pdfCount}.pdf`); }
 }
 
-/* ======= INICIALIZAÇÃO E GPS ======= */
+/* ======= SISTEMA E GPS ======= */
 async function initCamera() {
     const mode = document.getElementById('cfgCam').value;
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: mode, width: {ideal: 1280}, height: {ideal: 720} }
+            video: { facingMode: mode, width: {ideal: 1920}, height: {ideal: 1080} }
         });
         vid.srcObject = stream;
-    } catch(e) { alert("Câmera indisponível."); }
+    } catch(e) { alert("Erro na câmera."); }
 }
 
 document.getElementById('dirSelector').onclick = async () => {
-    directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-    document.getElementById('dirSelector').textContent = "PASTA OK ✓";
-    document.getElementById('dirSelector').classList.add('ready');
-    document.getElementById('btnStart').disabled = false;
+    try {
+        directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('dirSelector').textContent = "PASTA OK ✓";
+        document.getElementById('dirSelector').classList.add('ready');
+        document.getElementById('btnStart').disabled = false;
+    } catch (err) { alert("Selecione uma pasta para salvar!"); }
 };
 
 document.getElementById('btnStart').onclick = () => { isRecording = true; captureLoop(); document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; };
@@ -269,7 +293,7 @@ function openTab(e, name) {
     e.target.classList.add('active');
 }
 
-// GPS e CSV (Lógica mantida do seu original)
+// Lógica de Sincronia GPS/KM
 async function loadCSV() {
     try {
         const r = await fetch('SNVBR116SPRJ.csv');
