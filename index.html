@@ -92,7 +92,7 @@ function parsePt(v){
 function hav(a,b,c,d){ 
     const R=6371000, x=(c-a)*Math.PI/180, y=(d-b)*Math.PI/180; 
     const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; 
-    return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); 
+    return 2=R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); 
 }
 
 async function loadKMCSV(){
@@ -126,55 +126,38 @@ function updateKMDisplay() {
     if(best) document.getElementById('kmPlaque').textContent = "KM " + best.km;
 }
 
-// NOVO: Função para desenhar a estampa (HUD) na foto
+// ATUALIZADO: Função para desenhar o carimbo ESTILO MODELO (Tarja Preta no fundo)
 function drawStamp(item) {
     const w = can.width;
     const h = can.height;
 
-    // 1. Placa de KM (Estilo Rodovia)
-    const pW = w * 0.25;
-    const pH = h * 0.12;
-    const pX = 30;
-    const pY = 30;
+    // Configurações de estilo baseadas na imagem de referência
+    const stripeHeight = h * 0.22; // Tarja ocupa cerca de 22% da altura da foto
+    const paddingLeft = w * 0.05; // 5% de margem à esquerda
+    const topTextSize = h * 0.08; // Fonte grande para o KM
+    const bottomTextSize = h * 0.045; // Fonte menor para data/hora
 
-    // Sombra da placa
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 15;
-    
-    // Fundo Verde Gradiente
-    const grad = ctx.createLinearGradient(pX, pY, pX, pY + pH);
-    grad.addColorStop(0, '#0a8a4d');
-    grad.addColorStop(1, '#056b3c');
-    ctx.fillStyle = grad;
-    
-    // Desenha Placa com borda branca
-    ctx.beginPath();
-    ctx.roundRect(pX, pY, pW, pH, 15);
-    ctx.fill();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 5;
-    ctx.stroke();
-    ctx.shadowBlur = 0; // Limpa sombra para textos
+    // 1. Tarja Inferior Preta Sólida (idêntica ao modelo)
+    ctx.fillStyle = 'rgba(0,0,0,0.85)'; // Preta com leve transparência para ver o fundo
+    ctx.fillRect(0, h - stripeHeight, w, stripeHeight);
 
-    // Texto KM
+    // 2. Configuração de Texto (Branco e Negrito)
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold ${h * 0.07}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.fillText("KM " + item.km, pX + (pW/2), pY + (pH * 0.75));
-
-    // 2. Tarja Inferior Transparente para Dados
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(0, h - 70, w, 70);
-
-    // 3. Textos Auxiliares (Data, Hora, GPS)
     ctx.textAlign = 'left';
-    ctx.font = `bold ${h * 0.03}px Courier New`;
-    ctx.fillStyle = '#00ff66'; // Verde Neon para destaque
-    ctx.fillText(`GPS: ${item.lat}, ${item.lon}`, 20, h - 25);
+    ctx.textBaseline = 'top';
+
+    // 3. Desenha KM (Texto Superior da tarja)
+    ctx.font = `bold ${topTextSize}px Arial, sans-serif`;
+    // Centraliza verticalmente o bloco de texto dentro da tarja
+    const textBlockHeight = topTextSize + bottomTextSize + (h * 0.02); // Altura total das duas linhas + pequeno espaçamento
+    const textStartY = h - stripeHeight + ((stripeHeight - textBlockHeight) / 2);
     
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(`${item.ts}`, w - 20, h - 25);
+    ctx.fillText("KM " + item.km, paddingLeft, textStartY);
+
+    // 4. Desenha Data e Hora (Texto Inferior da tarja)
+    ctx.font = `normal ${bottomTextSize}px Arial, sans-serif`;
+    // Adiciona a Data e Hora logo abaixo do KM, com um pequeno recuo
+    ctx.fillText(item.ts, paddingLeft, textStartY + topTextSize + (h * 0.01));
 }
 
 async function savePDF() {
@@ -199,7 +182,7 @@ async function savePDF() {
                 ctx.drawImage(tempImg, 0, 0);
                 drawStamp(item);
                 const stampedImg = can.toDataURL('image/jpeg', 0.8);
-                doc.addImage(stampedImg, 'JPEG', 0, 0, 297, 210);
+                doc.addImage(stampedImg, 'JPEG', 0, 0, 297, 210); // Foto ocupa a página inteira
                 resolve();
             };
             tempImg.src = item.img;
