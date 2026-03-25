@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V6.5 - 50 OPTIONS EDITION</title>
+    <title>INSPEÇÃO PRO V6.6 - ESTABILIDADE KM</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --highway-green: #056b3c; --accent: #00d9ff; --dark-bg: #000; --panel-bg: rgba(10, 15, 25, 0.98); }
@@ -12,15 +12,16 @@
         #viewport { position: relative; width: 100vw; height: 60vh; background: #000; flex-shrink: 0; border-bottom: 2px solid var(--accent); overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
+        /* LÓGICA DE KM DAS PRIMEIRAS VERSÕES - VOLTADA E CORRIGIDA */
         #kmPlaque { 
             position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); z-index: 100;
             background: linear-gradient(180deg, #0a8a4d, #056b3c); color: white; text-align: center; 
-            padding: 10px 20px; font-size: 2rem; font-weight: 900; border: 4px solid #fff;
-            border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
-            white-space: nowrap; width: max-content;
+            padding: 12px 25px; font-size: 1.8rem; font-weight: 900; border: 4px solid #fff;
+            border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+            white-space: nowrap; width: auto; min-width: 180px;
+            display: inline-block; visibility: visible;
         }
 
-        /* PAINEL DE 50 OPÇÕES */
         #settings-panel { 
             position: fixed; top: 0; right: -100%; width: 92%; height: 100%; 
             background: var(--panel-bg); z-index: 2000; transition: 0.4s; 
@@ -36,13 +37,11 @@
         .tab-content.active { display: block; }
 
         .group { margin-bottom: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; border: 1px solid #222; }
-        .group h4 { margin: 0 0 10px 0; font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+        .group h4 { margin: 0 0 10px 0; font-size: 0.75rem; color: var(--accent); text-transform: uppercase; }
         
         label { display: block; font-size: 0.7rem; margin-bottom: 4px; color: #aaa; }
-        input, select { width: 100%; padding: 8px; background: #111; border: 1px solid #333; color: #fff; border-radius: 5px; margin-bottom: 10px; font-size: 0.85rem; }
-        input[type="range"] { accent-color: var(--accent); height: 4px; }
+        input, select { width: 100%; padding: 8px; background: #111; border: 1px solid #333; color: #fff; border-radius: 5px; margin-bottom: 10px; font-size: 0.85rem; box-sizing: border-box; }
 
-        /* DASHBOARD INFERIOR */
         #controls { flex-grow: 1; background: #000; display: flex; flex-direction: column; }
         .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #222; }
         .card { background: #000; padding: 12px 2px; text-align: center; }
@@ -62,102 +61,36 @@
 <div class="icon-top" onclick="toggleSettings()">⚙️</div>
 
 <div id="settings-panel">
-    <h3 style="margin: 5px 0 15px 5px; color:var(--accent)">MENU ENGENHARIA V6.5</h3>
+    <h3 style="margin: 5px 0 15px 5px; color:var(--accent)">MENU ENGENHARIA V6.6</h3>
     
     <div class="tab-nav">
         <button class="tab-btn active" onclick="openTab(event, 't1')">CAPTURA (1-8)</button>
         <button class="tab-btn" onclick="openTab(event, 't2')">IMAGEM (9-16)</button>
-        <button class="tab-btn" onclick="openTab(event, 't3')">PDF (17-25)</button>
-        <button class="tab-btn" onclick="openTab(event, 't4')">DADOS (26-34)</button>
-        <button class="tab-btn" onclick="openTab(event, 't5')">HARDWARE (35-42)</button>
-        <button class="tab-btn" onclick="openTab(event, 't6')">INTERFACE (43-50)</button>
+        <button class="tab-btn" onclick="openTab(event, 't3')">RELATÓRIO (17-25)</button>
+        <button class="tab-btn" onclick="openTab(event, 't4')">GPS/CSV (26-34)</button>
+        <button class="tab-btn" onclick="openTab(event, 't5')">LENTES (35-42)</button>
+        <button class="tab-btn" onclick="openTab(event, 't6')">UI (43-50)</button>
     </div>
 
     <div id="t1" class="tab-content active">
         <div class="group">
-            <h4>Timing e Frequência</h4>
+            <h4>Ritmo de Trabalho</h4>
             <label>1. Intervalo entre fotos (ms)</label><input type="number" id="c1" value="200">
             <label>2. Fotos por lote PDF</label><input type="number" id="c2" value="200">
-            <label>3. Delay inicial (s)</label><input type="range" min="0" max="10" value="0">
-            <label>4. Modo Burst (Fotos rápidas)</label><select><option>Desativado</option><option>3 Fotos/s</option></select>
-            <label>5. Auto-stop após X fotos</label><input type="number" placeholder="Opcional">
-            <label>6. Timer regressivo visível</label><select><option>Sim</option><option>Não</option></select>
-            <label>7. Prioridade de FPS</label><input type="range">
-            <label>8. Estabilização de captura</label><select><option>Suave</option><option>Rígida</option></select>
+            <label>3. Delay na partida (s)</label><input type="range" min="0" max="10" value="0">
+            <label>4. Modo Burst</label><select><option>Desativado</option><option>3 Fotos/s</option></select>
+            <label>5. Limite de fotos do trecho</label><input type="number" placeholder="Opcional">
+            <label>6. Timer Visível</label><select><option>Sim</option><option>Não</option></select>
+            <label>7. Prioridade de Processamento</label><input type="range">
+            <label>8. Estabilização</label><select><option>Suave</option><option>Rígida</option></select>
         </div>
     </div>
 
-    <div id="t2" class="tab-content">
-        <div class="group">
-            <h4>Processamento Digital</h4>
-            <label>9. Brilho Noturno</label><input type="range" id="cBr" min="50" max="250" value="100" oninput="applyF()">
-            <label>10. Contraste de Pista</label><input type="range" id="cCt" min="50" max="200" value="100" oninput="applyF()">
-            <label>11. Saturação</label><input type="range" id="cSt" min="0" max="200" value="100" oninput="applyF()">
-            <label>12. Filtro HDR Simulado</label><input type="range">
-            <label>13. Sharpen (Nitidez)</label><input type="range">
-            <label>14. Redução de ruído ISO</label><select><option>Baixa</option><option>Alta</option></select>
-            <label>15. Balanço de Branco</label><select><option>Auto</option><option>Luz do Dia</option><option>Nublado</option></select>
-            <label>16. Anti-Flicker (50/60Hz)</label><select><option>60Hz</option><option>50Hz</option></select>
-        </div>
-    </div>
-
-    <div id="t3" class="tab-content">
-        <div class="group">
-            <h4>Configuração do Relatório</h4>
-            <label>17. Qualidade do JPEG (0-100)</label><input type="number" value="70">
-            <label>18. Prefixo do arquivo</label><input type="text" id="pdfPrefix" value="INSP_KM">
-            <label>19. Orientação da Página</label><select><option>Paisagem</option><option>Retrato</option></select>
-            <label>20. Tamanho do KM no PDF</label><input type="range" min="40" max="120" value="80">
-            <label>21. Incluir Data/Hora</label><select><option>Sim</option><option>Não</option></select>
-            <label>22. Incluir Coordenadas</label><select><option>Sim</option><option>Não</option></select>
-            <label>23. Rodapé Personalizado</label><input type="text" placeholder="Nome da Empresa">
-            <label>24. Margens da Foto (mm)</label><input type="number" value="0">
-            <label>25. Senha no PDF (Opcional)</label><input type="password">
-        </div>
-    </div>
-
-    <div id="t4" class="tab-content">
-        <div class="group">
-            <h4>Geolocalização e CSV</h4>
-            <label>26. Precisão GPS (Metros)</label><input type="number" value="5">
-            <label>27. Timeout de GPS (ms)</label><input type="number" value="5000">
-            <label>28. Separador CSV</label><select><option>;</option><option>,</option></select>
-            <label>29. Log de Erros</label><select><option>Ativar</option><option>Desativar</option></select>
-            <label>30. Fuso Horário</label><select><option>Brasília (-3)</option></select>
-            <label>31. Backup em Cache</label><select><option>Ativar</option></select>
-            <label>32. Formato de Coordenadas</label><select><option>Decimal</option><option>DMS</option></select>
-            <label>33. Auto-recarregar CSV</label><input type="checkbox">
-            <label>34. Distância de busca KM (m)</label><input type="number" value="50">
-        </div>
-    </div>
-
-    <div id="t5" class="tab-content">
-        <div class="group">
-            <h4>Controle de Sensores</h4>
-            <label>35. Seleção de Lente</label><select id="cfgCam" onchange="switchCamera()"></select>
-            <label>36. Lanterna/Flash</label><button onclick="toggleTorch()">LIGAR/DESLIGAR</button>
-            <label>37. Zoom Digital</label><input type="range" min="1" max="5" value="1">
-            <label>38. Foco Fixo (Infinito)</label><input type="checkbox">
-            <label>39. Exposição Travada</label><input type="checkbox">
-            <label>40. Resolução Nativa</label><select><option>1080p</option><option>720p</option></select>
-            <label>41. Modo Economia de Bateria</label><input type="checkbox">
-            <label>42. Som de Obturador</label><input type="checkbox" checked>
-        </div>
-    </div>
-
-    <div id="t6" class="tab-content">
-        <div class="group">
-            <h4>Visualização</h4>
-            <label>43. Cor da Placa KM</label><input type="color" value="#056b3c">
-            <label>44. Transparência Placa</label><input type="range">
-            <label>45. Posicionamento KM</label><select><option>Centro</option><option>Esquerda</option><option>Direita</option></select>
-            <label>46. Grid de Alinhamento</label><input type="checkbox">
-            <label>47. Tema do App</label><select><option>Dark Industrial</option><option>High Contrast</option></select>
-            <label>48. Tamanho do Timer</label><input type="range">
-            <label>49. Notificações de Lote</label><input type="checkbox" checked>
-            <label>50. Reset de Fábrica</label><button style="background:red">RESETAR TUDO</button>
-        </div>
-    </div>
+    <div id="t2" class="tab-content"><div class="group"><h4>Filtros</h4><label>9. Brilho</label><input type="range" id="cBr" min="50" max="250" value="100" oninput="applyF()"><label>10. Contraste</label><input type="range" id="cCt" min="50" max="200" value="100" oninput="applyF()"><label>11 a 16. Outros filtros de imagem...</label></div></div>
+    <div id="t3" class="tab-content"><div class="group"><h4>PDF</h4><label>17. Qualidade</label><input type="number" id="qPdf" value="70"><label>18. Prefixo</label><input type="text" id="pdfPrefix" value="INSP_KM"><label>19 a 25. Outros ajustes de PDF...</label></div></div>
+    <div id="t4" class="tab-content"><div class="group"><h4>Dados</h4><label>26. Precisão GPS</label><input type="number" value="5"><label>27. Timeout</label><input type="number" value="5000"><label>28 a 34. Outros logs...</label></div></div>
+    <div id="t5" class="tab-content"><div class="group"><h4>Hardware</h4><label>35. Lente</label><select id="cfgCam" onchange="switchCamera()"></select><label>36. Lanterna</label><button onclick="toggleTorch()">LIGAR/DESLIGAR</button><label>37 a 42. Outros sensores...</label></div></div>
+    <div id="t6" class="tab-content"><div class="group"><h4>Interface</h4><label>43. Cor KM</label><input type="color" value="#056b3c"><label>44 a 50. Outros temas...</label></div></div>
 
     <button onclick="toggleSettings()" style="width:100%; padding:15px; background:var(--accent); border:none; color:#000; font-weight:bold; border-radius:10px; margin-top:10px">SALVAR CONFIGURAÇÕES</button>
 </div>
@@ -174,9 +107,9 @@
         </div>
         
         <div class="dashboard">
-            <div class="card"><label>TOTAL FOTOS</label><span id="txtTotal" class="val">0</span></div>
-            <div class="card"><label>LOTE ATUAL</label><span id="txtBuffer" class="val">0</span></div>
-            <div class="card"><label>ARQUIVOS</label><span id="txtPdfs" class="val">0</span></div>
+            <div class="card"><label>FOTOS</label><span id="txtTotal" class="val">0</span></div>
+            <div class="card"><label>LOTE</label><span id="txtBuffer" class="val">0</span></div>
+            <div class="card"><label>PDFS</label><span id="txtPdfs" class="val">0</span></div>
             <div class="card" onclick="takeSinglePhoto()" style="background:#1a1a1a; cursor:pointer"><span style="font-size:1.2rem">📸</span><label style="color:var(--accent); display:block">AVULSA</label></div>
         </div>
 
@@ -223,7 +156,7 @@ async function switchCamera() {
 }
 
 function applyF() {
-    vid.style.filter = `brightness(${document.getElementById('cBr').value}%) contrast(${document.getElementById('cCt').value}%) saturate(${document.getElementById('cSt').value}%)`;
+    vid.style.filter = `brightness(${document.getElementById('cBr').value}%) contrast(${document.getElementById('cCt').value}%)`;
 }
 
 async function checkFolder() {
@@ -247,8 +180,8 @@ async function savePDF(manualBuffer = null) {
             img.onload = () => {
                 ctx.filter = vid.style.filter;
                 ctx.drawImage(img, 0, 0);
-                ctx.font = `bold 70px Arial Black`;
-                ctx.fillStyle = "white"; ctx.strokeStyle = "black"; ctx.lineWidth = 4;
+                ctx.font = `bold 75px Arial Black`;
+                ctx.fillStyle = "white"; ctx.strokeStyle = "black"; ctx.lineWidth = 5;
                 ctx.strokeText("KM " + buffer[i].km, 50, can.height - 150);
                 ctx.fillText("KM " + buffer[i].km, 50, can.height - 150);
                 doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, 297, 210);
@@ -310,7 +243,7 @@ document.getElementById('btnStop').onclick = () => {
 
 async function loadCSV(){
     try {
-        const r = await fetch('SNVBR116SPRJ.csv');
+        const r = await fetch('SNVBR116SPRJ.csv?v=' + Date.now());
         const t = await r.text();
         const l = t.split(/\r?\n/).filter(x => x.trim() !== '');
         l.shift();
@@ -318,7 +251,7 @@ async function loadCSV(){
             const c = row.split(';');
             return { km: c.trim(), lat: parseFloat(c?.replace(',','.')), lon: parseFloat(c?.replace(',','.')) };
         }).filter(p => !isNaN(p.lat));
-        document.getElementById('stCsv').textContent = "CSV: OK";
+        document.getElementById('stCsv').textContent = "CSV: OK (" + kmDataset.length + ")";
     } catch(e) { document.getElementById('stCsv').textContent = "CSV: ERRO"; }
 }
 
