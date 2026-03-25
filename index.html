@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V5.1 - ENGENHARIA</title>
+    <title>INSPEÇÃO PRO V5.2 - ENGENHARIA</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --highway-green: #056b3c; --panel-bg: #0b1224; --accent: #00d9ff; --gold: #ffd700; }
@@ -143,7 +143,7 @@ const vid = document.getElementById('vid');
 const can = document.getElementById('can');
 const ctx = can.getContext('2d');
 
-// --- SISTEMA DE CÂMERAS ---
+// --- SISTEMA DE CÂMERAS (AJUSTADO) ---
 async function listCameras() {
     try {
         await navigator.mediaDevices.getUserMedia({video: true});
@@ -157,27 +157,46 @@ async function listCameras() {
             opt.text = d.label || `Câmera ${i + 1}`;
             select.appendChild(opt);
         });
-        document.getElementById('stCam').textContent = "CAM: OK";
+        document.getElementById('stCam').textContent = "CAM: PRONTA";
         document.getElementById('stCam').classList.add('ok');
-    } catch (e) { console.error("Erro câmera:", e); }
+    } catch (e) { console.error("Erro lista:", e); }
 }
 
 async function initCamera() {
     const deviceId = document.getElementById('cfgCamList').value;
-    const res = document.getElementById('cfgRes').value == "1080" ? {width: 1920, height: 1080} : {width: 1280, height: 720};
-    if (vid.srcObject) vid.srcObject.getTracks().forEach(t => t.stop());
+    const isFullHD = document.getElementById('cfgRes').value === "1080";
     
+    if (vid.srcObject) {
+        vid.srcObject.getTracks().forEach(track => track.stop());
+        vid.srcObject = null;
+    }
+    
+    const constraints = {
+        video: {
+            deviceId: deviceId ? { exact: deviceId } : undefined,
+            width: isFullHD ? { ideal: 1920 } : { ideal: 1280 },
+            height: isFullHD ? { ideal: 1080 } : { ideal: 720 }
+        },
+        audio: false
+    };
+
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { deviceId: {exact: deviceId}, ...res },
-            audio: false
-        });
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         vid.srcObject = stream;
         vid.onloadedmetadata = () => {
             can.width = vid.videoWidth;
             can.height = vid.videoHeight;
         };
-    } catch(e) { alert("Erro ao acessar sensor."); }
+        document.getElementById('stCam').textContent = "CAM: OK";
+        document.getElementById('stCam').classList.add('ok');
+    } catch (e) {
+        if (e.name === "OverconstrainedError") {
+            const fallback = await navigator.mediaDevices.getUserMedia({ video: true });
+            vid.srcObject = fallback;
+        } else {
+            alert("Erro no sensor. Tente recarregar ou verifique permissões HTTPS.");
+        }
+    }
 }
 
 // --- CORE LÓGICA KM/GPS ---
@@ -208,9 +227,9 @@ async function loadKMCSV(){
             const r = l.split(';');
             return { km: r[iKm], lat: parsePt(r[iLat]), lon: parsePt(r[iLon]) };
         }).filter(p => p.km && !isNaN(p.lat));
-        document.getElementById('stCsv').textContent = "CSV: ATIVO";
+        document.getElementById('stCsv').textContent = "CSV: OK";
         document.getElementById('stCsv').classList.add('ok');
-    } catch(e) { document.getElementById('stCsv').textContent = "CSV: AUSENTE"; }
+    } catch(e) { document.getElementById('stCsv').textContent = "CSV: OFF"; }
 }
 
 function updateKM() {
@@ -223,7 +242,7 @@ function updateKM() {
     if(best) document.getElementById('kmPlaque').textContent = "KM " + best.km;
 }
 
-// --- RENDERIZADOR DE ESTAMPA (NOVO DESIGN ENGENHARIA) ---
+// --- RENDERIZADOR DE ESTAMPA (DESIGN AJUSTADO) ---
 function drawHighwayStamp(item) {
     const w = can.width, h = can.height;
     const style = document.getElementById('cfgPlateStyle').value;
@@ -245,13 +264,13 @@ function drawHighwayStamp(item) {
     ctx.shadowBlur = 15 * scale;
     ctx.shadowOffsetY = 8 * scale;
 
-    // Borda Branca
+    // Borda Branca (Moldura)
     ctx.fillStyle = "white";
     ctx.beginPath();
     ctx.roundRect(margin, h - plateH - margin, plateW, plateH, radius);
     ctx.fill();
 
-    // Fundo Colorido
+    // Fundo Colorido (Centralizado)
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
     ctx.fillStyle = baseColor;
@@ -260,7 +279,7 @@ function drawHighwayStamp(item) {
     ctx.roundRect(margin + pad, h - plateH - margin + pad, plateW - (pad*2), plateH - (pad*2), radius - (5*scale));
     ctx.fill();
 
-    // Texto KM Centralizado
+    // Texto KM Centralizado e com Auto-Ajuste
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -279,7 +298,7 @@ function drawHighwayStamp(item) {
     
     ctx.fillText(textStr, margin + (plateW/2), h - margin - (plateH/2));
 
-    // Dados GPS com Contorno para legibilidade
+    // Dados GPS com Borda de Proteção
     if(document.getElementById('cfgShowGps').checked) {
         ctx.textAlign = "left";
         ctx.textBaseline = "alphabetic";
@@ -334,8 +353,7 @@ async function savePDF() {
         });
     }
     
-    const fileName = `INSPECAO_LOTE_${pdfCount}_${Date.now()}.pdf`;
-    
+    const fileName = `INSPECAO_${pdfCount}_${Date.now()}.pdf`;
     if (directoryHandle) {
         try {
             const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
@@ -350,10 +368,7 @@ async function savePDF() {
 
 function captureLoop() {
     if(!isRecording) return;
-    
-    // Captura o frame limpo do vídeo
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    
     activeBuffer.push({
         raw: can.toDataURL('image/jpeg', 0.6),
         km: document.getElementById('kmPlaque').textContent.replace('KM ', ''),
@@ -361,40 +376,26 @@ function captureLoop() {
         lon: lastPos?.lon.toFixed(6) || "0.000000",
         ts: new Date().toLocaleString('pt-BR')
     });
-
     photoCount++;
     const limit = parseInt(document.getElementById('cfgBatch').value);
     document.getElementById('txtTotal').textContent = photoCount;
     document.getElementById('txtBuffer').textContent = `${activeBuffer.length}/${limit}`;
-    
     if(activeBuffer.length >= limit) savePDF();
     setTimeout(captureLoop, parseInt(document.getElementById('cfgDelay').value));
 }
 
-// --- INTERFACE ---
+// --- UI TRIGGERS ---
 document.getElementById('dirSelector').onclick = async () => {
     try {
         directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('dirSelector').textContent = "✓ PASTA CONECTADA";
+        document.getElementById('dirSelector').textContent = "✓ PASTA PRONTA";
         document.getElementById('dirSelector').classList.add('ready');
         document.getElementById('btnStart').disabled = false;
-    } catch (err) { alert("Acesso à pasta negado."); }
+    } catch (err) {}
 };
 
-document.getElementById('btnStart').onclick = () => { 
-    isRecording = true; 
-    captureLoop(); 
-    document.getElementById('btnStart').disabled = true; 
-    document.getElementById('btnStop').disabled = false; 
-};
-
-document.getElementById('btnStop').onclick = () => { 
-    isRecording = false; 
-    savePDF(); 
-    document.getElementById('btnStart').disabled = false; 
-    document.getElementById('btnStop').disabled = true; 
-};
-
+document.getElementById('btnStart').onclick = () => { isRecording = true; captureLoop(); document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; };
+document.getElementById('btnStop').onclick = () => { isRecording = false; savePDF(); document.getElementById('btnStart').disabled = false; document.getElementById('btnStop').disabled = true; };
 function toggleSettings() { document.getElementById('settings-panel').classList.toggle('active'); }
 function openTab(evt, tabName) {
     document.querySelectorAll(".setting-group").forEach(g => g.classList.remove("active"));
@@ -403,10 +404,9 @@ function openTab(evt, tabName) {
     evt.currentTarget.classList.add("active");
 }
 
-// GPS e Inicialização
 navigator.geolocation.watchPosition(p => {
     lastPos = { lat: p.coords.latitude, lon: p.coords.longitude };
-    document.getElementById('stGps').textContent = "GPS: SINAL OK";
+    document.getElementById('stGps').textContent = "GPS: OK";
     document.getElementById('stGps').classList.add('ok');
     updateKM();
 }, null, {enableHighAccuracy:true});
