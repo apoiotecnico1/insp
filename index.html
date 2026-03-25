@@ -1,250 +1,252 @@
+
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="original">
+<html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Relatório Fotográfico Profissional - Rodovias</title>
-<style>
-  :root{
-    --bg:#0b1020; --bg2:#0b1224; --surface:#0f1731cc; --surface-strong:#1b368f;
-    --fg:#e8eeff; --muted:#a9b7df; --border:#1e284d; --glow:#43ff9b; --radius: 14px;
-    --camH: 45vh; --btnGradA:#0d1430; --btnGradB:#0a0f26;
-  }
-  body{ margin:0; color:var(--fg); background: var(--bg); font-family: system-ui, sans-serif; padding:10px; line-height:1.4; }
-  .card{ background: linear-gradient(180deg, var(--surface), rgba(15,23,49,0.8)); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: var(--radius); padding:12px; margin-bottom:12px; box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
-  
-  #kmPlaque{ text-align:center; padding:10px; background: linear-gradient(180deg, #0d3b8e, #0a2e6d); border:2px solid #fff; border-radius:12px; margin:0 auto 12px; font-weight:900; font-size:1.6rem; color:#fff; box-shadow:0 6px 16px rgba(0,0,0,0.3); }
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>INSPEÇÃO PRO - KM SINCRONIZADO</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --highway-green: #056b3c; --panel-bg: #0b1224; }
+        body { margin: 0; background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        
+        #viewport { position: relative; width: 100vw; height: 40vh; background: #000; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Placa de KM idêntica à sinalização de rodovia */
+        #kmPlaque { 
+            background: linear-gradient(180deg, #0a8a4d, #056b3c);
+            color: white; text-align: center; padding: 12px;
+            font-size: 3.5rem; font-weight: 900; border: 5px solid #fff;
+            margin: 10px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
 
-  #camCard{ position: relative; width: 100%; height: var(--camH); border-radius: var(--radius); overflow: hidden; background: #000; border: 1px solid var(--border); }
-  #vid{ width:100%; height:100%; object-fit: cover; }
-  
-  .st{ display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:99px; font-size:.75rem; font-weight:800; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); margin:2px; }
-  .ok{ color: #43ff9b; border-color: #43ff9b33; }
-  .warn{ color: #eab308; }
+        .status-bar { display: flex; justify-content: space-around; padding: 8px; background: var(--panel-bg); font-size: 0.75rem; border-top: 1px solid #222; }
+        .st { padding: 4px 10px; border-radius: 20px; background: #1a2235; border: 1px solid #333; }
+        .ok { color: #00ff66; border-color: #00ff66; }
+        .err { color: #ff4444; border-color: #ff4444; }
 
-  .row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
-  button{ flex:1; min-width:140px; padding:14px; border-radius:12px; border:1px solid var(--border); background: linear-gradient(180deg, var(--btnGradA), var(--btnGradB)); color:#fff; font-weight:900; cursor:pointer; transition: transform 0.1s; }
-  button:active{ transform: scale(0.96); }
-  #btnAuto{ background: linear-gradient(180deg, #ff7b45, #e5612e); color:#000; }
-  #btnPdf{ background: linear-gradient(180deg, #857b5d, #eab308); color:#000; }
-  
-  .gallery{ display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:8px; }
-  .thumb{ border:1px solid var(--border); border-radius:8px; overflow:hidden; background:#000; position: relative; }
-  .thumb img{ width:100%; display:block; }
-  .thumb .meta{ position:absolute; bottom:0; background:rgba(0,0,0,0.7); font-size:9px; width:100%; padding:2px; }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 10px; }
+        .card { background: #111; padding: 12px; border-radius: 10px; text-align: center; border: 1px solid #222; }
+        .val { display: block; font-size: 1.4rem; font-weight: bold; color: #00d9ff; }
 
-  #splash{ position:fixed; inset:0; z-index:9999; background:#060a12; display:flex; align-items:center; justify-content:center; flex-direction:column; transition: opacity 0.6s ease; }
-  .matrix-text{ color:#43ff9b; font-family:monospace; font-weight:bold; font-size:1.2rem; text-shadow:0 0 8px #43ff9b; }
-</style>
+        .btn-row { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { padding: 20px; border-radius: 12px; border: none; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; cursor: pointer; }
+        #btnStart { background: #00ff66; color: #000; }
+        #btnStop { background: #ff3333; color: #fff; }
+        
+        #log { font-size: 0.7rem; color: #666; text-align: center; padding: 5px; }
+        canvas { display: none; }
+    </style>
 </head>
 <body>
 
-<div id="splash">
-    <div class="matrix-text">INICIALIZANDO SISTEMA...</div>
-    <button id="btnStart" style="margin-top:20px; min-width:200px">INICIAR INSPEÇÃO</button>
-</div>
-
-<div id="kmPlaque"><span id="kmTop">KM --+---</span></div>
-
-<div id="statusBar">
-    <span id="stGps" class="st">GPS: OFF</span>
-    <span id="stCsv" class="st">CSV: OFF</span>
-    <span id="stCam" class="st">CAM: OFF</span>
-    <span id="stFotos" class="st">FOTOS: 0</span>
-</div>
-
-<div id="camCard" onclick="capture()">
+<div id="viewport">
     <video id="vid" autoplay playsinline muted></video>
 </div>
 
-<div class="card">
-    <div class="row">
-        <button id="btnAuto">MODO AUTO (2s)</button>
-        <button id="btnPdf">GERAR RELATÓRIO PDF</button>
-    </div>
-    <div class="row">
-        <button id="btnClear" style="background:#ef4444">LIMPAR SESSÃO</button>
-    </div>
+<div id="kmPlaque">KM --+---</div>
+
+<div class="status-bar">
+    <div id="stCsv" class="st">CSV: CARREGANDO...</div>
+    <div id="stGps" class="st">GPS: BUSCANDO...</div>
 </div>
 
-<div class="card">
-    <h3 style="margin:0 0 10px; font-size:1rem">Galeria de Lote (Máx 200+)</h3>
-    <div id="gal" class="gallery"></div>
+<div class="dashboard">
+    <div class="card">FOTOS<span id="txtTotal" class="val">0</span></div>
+    <div class="card">LOTE<span id="txtBuffer" class="val">0/200</span></div>
+    <div id="btnSaveManual" class="card" style="background:#1e3a8a; cursor:pointer">GERAR PDF<span id="txtPdfs" class="val">0</span></div>
 </div>
 
-<canvas id="mainCanvas" style="display:none"></canvas>
+<div class="btn-row">
+    <button id="btnStart">Iniciar Inspeção</button>
+    <button id="btnStop" disabled>Parar e Salvar</button>
+</div>
+
+<div id="log">Sistema Riverside Pro v3.0 - SNV BR-116 Ativo</div>
+
+<canvas id="can"></canvas>
 
 <script>
-let kmBase = [], noxBase = [], photos = [], gps = null;
-let isAuto = false, autoTimer = null;
-const canvas = document.getElementById('mainCanvas');
-const ctx = canvas.getContext('2d');
+/* ======= MOTOR DE BUSCA DO SEU INDEX ORIGINAL ======= */
+let kmDataset = [];
+let lastPos = null;
+let isRecording = false;
+let photoCount = 0;
+let pdfCount = 0;
+let activeBuffer = [];
 
-// Lógica Haversine para precisão máxima (Evita erro do KM 231)
-function getDist(la1, lo1, la2, lo2) {
-    const R = 6371000;
-    const dLat = (la2 - la1) * Math.PI / 180;
-    const dLon = (lo2 - lo1) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLon/2)**2;
-    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+const vid = document.getElementById('vid');
+const can = document.getElementById('can');
+const ctx = can.getContext('2d', { alpha: false });
+
+// Funções de utilidade do seu código original
+function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
+function findColumnIndex(headers, candidates){ 
+    const map=headers.map(h=>normalizeStr(h)); 
+    for(const c of candidates){ const i=map.indexOf(c); if(i>=0) return i; } 
+    return -1; 
+}
+function parsePt(v){ 
+    if(v==null) return NaN; 
+    const s=String(v).trim(); 
+    return /,\d{1,}$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); 
+}
+function hav(a,b,c,d){ 
+    const R=6371000, x=(c-a)*Math.PI/180, y=(d-b)*Math.PI/180; 
+    const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; 
+    return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); 
 }
 
-function parseFloatBR(v) {
-    if(!v) return NaN;
-    let s = String(v).replace(/[^\d.,-]/g, '');
-    if(s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
-    else if(s.includes(',')) s = s.replace(',', '.');
-    return parseFloat(s);
-}
-
-// Carregamento de CSVs (SNV e Dados Nox)
-async function loadFiles() {
+/* ======= CARREGAMENTO DO CSV (LOGICA DO SEU INDEX) ======= */
+async function loadKMCSV(){
     try {
-        const [rKm, rNox] = await Promise.all([
-            fetch('SNVBR116SPRJ.csv').then(r => r.text()),
-            fetch('Dados_Completos_Grupo_2_all.csv').then(r => r.text())
-        ]);
+        const resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
+        if(!resp.ok) throw new Error("CSV não encontrado");
+
+        let text = await resp.text();
+        if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
+        const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+        const head = lines.shift().split(';');
         
-        kmBase = rKm.split('\n').slice(1).filter(l => l.trim()).map(line => {
-            const c = line.split(';');
-            return { km: c, lat: parseFloatBR(c || c), lon: parseFloatBR(c || c) };
-        }).filter(p => !isNaN(p.lat));
+        const iKm  = findColumnIndex(head, ['km']);
+        const iLat = findColumnIndex(head, ['lat','latitude']);
+        const iLon = findColumnIndex(head, ['lon','long','longitude']);
 
-        noxBase = rNox.split('\n').slice(1).filter(l => l.trim()).map(line => {
-            const c = line.split(';');
-            return { id: c, lat: parseFloatBR(c), lon: parseFloatBR(c) };
-        }).filter(p => !isNaN(p.lat));
+        if(iKm < 0 || iLat < 0 || iLon < 0){
+            document.getElementById('stCsv').textContent = "CSV: ERRO CABEÇALHO";
+            document.getElementById('stCsv').classList.add('err');
+            return;
+        }
 
-        document.getElementById('stCsv').textContent = "CSV: OK";
+        kmDataset = lines.map(l=>{
+            const r = l.split(';');
+            return { km: r[iKm], lat: parsePt(r[iLat]), lon: parsePt(r[iLon]) };
+        }).filter(p => p.km && Number.isFinite(p.lat) && Number.isFinite(p.lon));
+
+        document.getElementById('stCsv').textContent = "CSV: OK (" + kmDataset.length + ")";
         document.getElementById('stCsv').classList.add('ok');
-    } catch (e) { console.error("Erro nos arquivos:", e); }
-}
-
-// GPS e Câmera
-async function init() {
-    await loadFiles();
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: 1920 }, audio: false });
-    document.getElementById('vid').srcObject = stream;
-    document.getElementById('stCam').textContent = "CAM: OK";
-    document.getElementById('stCam').classList.add('ok');
-
-    navigator.geolocation.watchPosition(p => {
-        gps = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy };
-        document.getElementById('stGps').textContent = `GPS: ±${Math.round(gps.acc)}m`;
-        document.getElementById('stGps').classList.add('ok');
-        updateKMLive();
-    }, null, { enableHighAccuracy: true });
-}
-
-function updateKMLive() {
-    if(!gps || !kmBase.length) return;
-    let closest = null, dMin = Infinity;
-    kmBase.forEach(p => {
-        const d = getDist(gps.lat, gps.lon, p.lat, p.lon);
-        if(d < dMin) { dMin = d; closest = p; }
-    });
-    if(closest) document.getElementById('kmTop').textContent = "KM " + closest.km;
-}
-
-// Captura e Marca d'água Profissional
-async function capture() {
-    if(!gps) return;
-    const vid = document.getElementById('vid');
-    canvas.width = vid.videoWidth;
-    canvas.height = vid.videoHeight;
-    ctx.drawImage(vid, 0, 0);
-
-    // Tarja de Auditoria
-    const h = canvas.height;
-    const w = canvas.width;
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(0, h - 140, w, 140);
-    
-    // Dados do KM e ID
-    let closestNox = null, dNoxMin = Infinity;
-    noxBase.forEach(p => {
-        const d = getDist(gps.lat, gps.lon, p.lat, p.lon);
-        if(d < dNoxMin) { dNoxMin = d; closestNox = p; }
-    });
-
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 45px sans-serif";
-    const kmText = document.getElementById('kmTop').textContent;
-    ctx.fillText(kmText, 30, h - 85);
-    
-    ctx.font = "30px sans-serif";
-    ctx.fillText(`ID: ${closestNox ? closestNox.id : 'N/A'}`, 30, h - 35);
-    ctx.fillText(`${gps.lat.toFixed(6)}, ${gps.lon.toFixed(6)}`, w - 400, h - 35);
-    ctx.fillText(new Date().toLocaleString(), w - 400, h - 85);
-
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-    const photoRec = { url: dataUrl, km: kmText, id: closestNox?closestNox.id:'N/A', ts: new Date().toLocaleString() };
-    photos.push(photoRec);
-
-    // Galeria rápida
-    const div = document.createElement('div');
-    div.className = 'thumb';
-    div.innerHTML = `<img src="${dataUrl}"><div class="meta">${kmText}</div>`;
-    document.getElementById('gal').prepend(div);
-    document.getElementById('stFotos').textContent = "FOTOS: " + photos.length;
-}
-
-// Botões
-document.getElementById('btnAuto').onclick = function() {
-    isAuto = !isAuto;
-    this.textContent = isAuto ? "PARAR AUTO" : "MODO AUTO (2s)";
-    this.style.background = isAuto ? "#ef4444" : "";
-    if(isAuto) autoTimer = setInterval(capture, 2000);
-    else clearInterval(autoTimer);
-};
-
-document.getElementById('btnClear').onclick = () => {
-    if(confirm("Limpar sessão?")) {
-        photos = [];
-        document.getElementById('gal').innerHTML = "";
-        document.getElementById('stFotos').textContent = "FOTOS: 0";
+    } catch(e) {
+        document.getElementById('stCsv').textContent = "CSV: ERRO CARGA";
+        document.getElementById('stCsv').classList.add('err');
     }
-};
+}
 
-// Gerador de PDF Robusto (Processa lotes de 200+)
-document.getElementById('btnPdf').onclick = async function() {
-    if(!photos.length) return alert("Tire fotos primeiro");
+/* ======= ATUALIZAÇÃO DO KM (LÓGICA DO SEU INDEX) ======= */
+function updateKMDisplay() {
+    if(!lastPos || !kmDataset.length) return;
+
+    let best = null, bd = Infinity;
+    const lat = lastPos.lat;
+    const lon = lastPos.lon;
+
+    for(const p of kmDataset){
+        const d = hav(lat, lon, p.lat, p.lon);
+        if(d < bd){ bd = d; best = p; }
+    }
+
+    if(best) {
+        // Formata o KM para o estilo 000+000 ou o valor bruto do seu CSV
+        document.getElementById('kmPlaque').textContent = "KM " + best.km;
+    }
+}
+
+/* ======= CAPTURA E PDF ======= */
+async function savePDF() {
+    if (activeBuffer.length === 0) return;
+    const batch = [...activeBuffer];
+    activeBuffer = [];
+    pdfCount++;
+    document.getElementById('txtPdfs').textContent = pdfCount;
+    document.getElementById('txtBuffer').textContent = "0/200";
+
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text("Relatório Técnico de Inspeção Rodoviária", 15, 20);
-    doc.setFontSize(10);
-    doc.text(`Total de registros: ${photos.length} | Gerado em: ${new Date().toLocaleString()}`, 15, 28);
+    const doc = new jsPDF('l', 'mm', 'a4');
 
-    let y = 35;
-    for(let i=0; i < photos.length; i++) {
-        if(y > 240) { doc.addPage(); y = 20; }
-        
-        const p = photos[i];
-        // Adiciona imagem comprimida para não estourar o PDF
-        doc.addImage(p.url, 'JPEG', 15, y, 60, 35);
-        doc.setFontSize(9);
-        doc.text(`Foto #${i+1}`, 80, y + 5);
-        doc.text(`Referência: ${p.km}`, 80, y + 12);
-        doc.text(`Equipamento ID: ${p.id}`, 80, y + 19);
-        doc.text(`Data/Hora: ${p.ts}`, 80, y + 26);
-        y += 45;
-    }
-    
-    doc.save(`INSPECAO_${Date.now()}.pdf`);
-};
+    batch.forEach((item, i) => {
+        if (i > 0) doc.addPage();
+        doc.setFillColor(0, 0, 0); doc.rect(0, 0, 297, 20, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.text(`KM: ${item.km} | GPS: ${item.lat}, ${item.lon} | DATA: ${item.ts}`, 10, 12);
+        doc.addImage(item.img, 'JPEG', 10, 25, 277, 170);
+    });
 
-// Início
+    doc.save(`INSPECAO_LOTE_${pdfCount}.pdf`);
+}
+
+function captureLoop() {
+    if (!isRecording) return;
+
+    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    const imgData = can.toDataURL('image/jpeg', 0.5);
+    const currentKm = document.getElementById('kmPlaque').textContent.replace('KM ', '');
+
+    activeBuffer.push({
+        img: imgData,
+        km: currentKm,
+        lat: lastPos ? lastPos.lat.toFixed(6) : "0",
+        lon: lastPos ? lastPos.lon.toFixed(6) : "0",
+        ts: new Date().toLocaleString('pt-BR')
+    });
+
+    photoCount++;
+    document.getElementById('txtTotal').textContent = photoCount;
+    document.getElementById('txtBuffer').textContent = `${activeBuffer.length}/200`;
+
+    if (activeBuffer.length >= 200) savePDF();
+    setTimeout(captureLoop, 200); // 5 fotos por segundo
+}
+
+/* ======= INICIALIZAÇÃO ======= */
 document.getElementById('btnStart').onclick = () => {
-    document.getElementById('splash').style.opacity = '0';
-    setTimeout(() => {
-        document.getElementById('splash').remove();
-        init();
-    }, 600);
+    isRecording = true;
+    document.getElementById('btnStart').disabled = true;
+    document.getElementById('btnStop').disabled = false;
+    captureLoop();
 };
-</script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+document.getElementById('btnStop').onclick = () => {
+    isRecording = false;
+    document.getElementById('btnStart').disabled = false;
+    document.getElementById('btnStop').disabled = true;
+    savePDF();
+};
+
+document.getElementById('btnSaveManual').onclick = () => savePDF();
+
+async function init() {
+    // 1. Carrega o CSV usando a sua lógica exata
+    await loadKMCSV();
+
+    // 2. Inicia Câmera
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: 1280, height: 720 },
+            audio: false
+        });
+        vid.srcObject = stream;
+        vid.onloadedmetadata = () => {
+            can.width = vid.videoWidth;
+            can.height = vid.videoHeight;
+        };
+    } catch (e) { alert("Erro ao acessar câmera!"); }
+
+    // 3. Inicia GPS e Loop de KM
+    navigator.geolocation.watchPosition(pos => {
+        lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        document.getElementById('stGps').textContent = "GPS: OK";
+        document.getElementById('stGps').classList.add('ok');
+        updateKMDisplay();
+    }, err => {
+        document.getElementById('stGps').textContent = "GPS: ERRO";
+        document.getElementById('stGps').classList.add('err');
+    }, { enableHighAccuracy: true, maximumAge: 0 });
+}
+
+init();
+</script>
 </body>
 </html>
