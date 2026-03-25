@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V5 - MODO ENGENHARIA AUTOMÁTICO</title>
+    <title>INSPEÇÃO PRO V5 - MODO ENGENHARIA</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --highway-green: #056b3c; --panel-bg: #0b1224; --accent: #00d9ff; --gold: #ffd700; }
@@ -66,11 +66,20 @@
         #btnStart { background: #00ff66; color: #000; }
         #btnStop { background: #ff3333; color: #fff; }
 
+        /* Alerta de seleção de pasta */
+        #folder-toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--accent); color: #000; padding: 12px 20px;
+            border-radius: 30px; font-weight: bold; z-index: 3000;
+            display: none; box-shadow: 0 4px 15px rgba(0,217,255,0.4);
+        }
+
         canvas { display: none; }
     </style>
 </head>
 <body>
 
+<div id="folder-toast">📂 ESCOLHA A PASTA DE DESTINO DO RELATÓRIO E FOTOS</div>
 <div id="settings-trigger" onclick="toggleSettings()">⚙️</div>
 
 <div id="settings-panel">
@@ -141,7 +150,7 @@
             <button id="btnStart" class="action">INICIAR</button>
             <button id="btnStop" class="action" disabled>PARAR</button>
         </div>
-        <div style="font-size:0.6rem; text-align:center; color:#555; padding:5px">RIVERSIDE WORKSTATION v5.0 AUTO-SAVE</div>
+        <div style="font-size:0.6rem; text-align:center; color:#555; padding:5px">RIVERSIDE WORKSTATION v5.0 AUTO-ENGINEERING</div>
     </div>
 </div>
 
@@ -156,24 +165,31 @@ let photoCount = 0, pdfCount = 0, activeBuffer = [];
 const vid = document.getElementById('vid');
 const can = document.getElementById('can');
 const ctx = can.getContext('2d');
+const toast = document.getElementById('folder-toast');
 
-// Helper para escolher pasta (File System API)
+// Escolher pasta com nome personalizado na ação
 async function getDirectoryPermission() {
+    toast.style.display = 'block'; // Mostra instrução visual
     try {
         if ('showDirectoryPicker' in window) {
-            directoryHandle = await window.showDirectoryPicker();
+            // A API de pastas não permite mudar o texto interno da janela do sistema,
+            // mas exibimos o aviso visual antes para orientar o usuário.
+            directoryHandle = await window.showDirectoryPicker({
+                mode: 'readwrite'
+            });
+            toast.style.display = 'none';
             return true;
         } else {
-            console.warn("API de Pasta não disponível. Usando pasta Downloads padrão.");
-            return true; 
+            toast.style.display = 'none';
+            return true; // Navegador sem suporte, usa download padrão
         }
     } catch (err) {
-        console.error("Usuário cancelou seleção de pasta.");
+        toast.style.display = 'none';
         return false;
     }
 }
 
-// CSV e GPS (Mantido conforme original)
+// Funções de Cálculo (Mantidas)
 function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
 function findColumnIndex(headers, candidates){ 
     const map=headers.map(h=>normalizeStr(h)); 
@@ -224,7 +240,7 @@ async function savePDF() {
     if(!activeBuffer.length) return;
     
     const batch = [...activeBuffer]; 
-    activeBuffer = []; // Limpa imediato para não duplicar dados
+    activeBuffer = []; 
     pdfCount++; 
     document.getElementById('txtPdfs').textContent = pdfCount;
     
@@ -255,16 +271,15 @@ async function savePDF() {
             await writable.write(doc.output('blob'));
             await writable.close();
         } catch (e) {
-            doc.save(fileName); // Fallback caso perca permissão
+            doc.save(fileName);
         }
     } else {
-        doc.save(fileName); // Download padrão sem confirmação
+        doc.save(fileName);
     }
 }
 
-/* ======= INTERFACE & CAPTURA ======= */
+/* ======= INTERFACE & CAMERA ======= */
 function toggleSettings() { document.getElementById('settings-panel').classList.toggle('active'); }
-
 function openTab(evt, tabName) {
     const groups = document.getElementsByClassName("setting-group");
     for (let i = 0; i < groups.length; i++) groups[i].className = groups[i].className.replace(" active", "");
@@ -341,7 +356,7 @@ function captureLoop() {
 
 /* ======= EVENTOS DE BOTÃO ======= */
 document.getElementById('btnStart').onclick = async () => {
-    // Primeiro clique: pergunta onde salvar
+    // Ação: Escolher pasta de destino
     if (!directoryHandle && 'showDirectoryPicker' in window) {
         const ok = await getDirectoryPermission();
         if (!ok) return; 
