@@ -3,13 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V5 - MODO ENGENHARIA</title>
+    <title>INSPEÇÃO PRO V5 - MODO ENGENHARIA AUTOMÁTICO</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --highway-green: #056b3c; --panel-bg: #0b1224; --accent: #00d9ff; --gold: #ffd700; }
         body { margin: 0; background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        /* Layout Adaptável (Modo Direção Horizontal) */
         #main-container { display: flex; flex-direction: column; height: 100%; transition: 0.3s; }
         @media (orientation: landscape) {
             #main-container { flex-direction: row; }
@@ -29,7 +28,6 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
-        /* Botão Engrenagem Discreta */
         #settings-trigger {
             position: absolute; top: 10px; right: 10px; z-index: 1000;
             background: rgba(0,0,0,0.5); border-radius: 50%; width: 32px; height: 32px;
@@ -37,7 +35,6 @@
             border: 1px solid rgba(255,255,255,0.3); font-size: 18px;
         }
 
-        /* Super Painel de Configurações */
         #settings-panel {
             position: fixed; top: 0; right: -100%; width: 90%; height: 100%;
             background: rgba(10, 15, 28, 0.98); z-index: 2000; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -137,21 +134,22 @@
         <div class="dashboard">
             <div class="card">FOTOS<span id="txtTotal" class="val">0</span></div>
             <div class="card">LOTE<span id="txtBuffer" class="val">0/200</span></div>
-            <div id="btnSaveManual" class="card" style="background:#1e3a8a; cursor:pointer">GERAR PDF<span id="txtPdfs" class="val">0</span></div>
+            <div id="btnSaveManual" class="card" style="background:#1e3a8a; cursor:pointer">PDF MANUAL<span id="txtPdfs" class="val">0</span></div>
         </div>
 
         <div class="btn-row">
             <button id="btnStart" class="action">INICIAR</button>
             <button id="btnStop" class="action" disabled>PARAR</button>
         </div>
-        <div style="font-size:0.6rem; text-align:center; color:#555; padding:5px">RIVERSIDE WORKSTATION v5.0</div>
+        <div style="font-size:0.6rem; text-align:center; color:#555; padding:5px">RIVERSIDE WORKSTATION v5.0 AUTO-SAVE</div>
     </div>
 </div>
 
 <canvas id="can"></canvas>
 
 <script>
-/* ======= CORE: LÓGICA DA BASE (KM & GPS) ======= */
+/* ======= CORE: LÓGICA DA BASE E DIRETÓRIO ======= */
+let directoryHandle = null;
 let kmDataset = [], lastPos = null, isRecording = false;
 let photoCount = 0, pdfCount = 0, activeBuffer = [];
 
@@ -159,7 +157,23 @@ const vid = document.getElementById('vid');
 const can = document.getElementById('can');
 const ctx = can.getContext('2d');
 
-// Lógica Haversine e Normalização (Idêntico à Base)
+// Helper para escolher pasta (File System API)
+async function getDirectoryPermission() {
+    try {
+        if ('showDirectoryPicker' in window) {
+            directoryHandle = await window.showDirectoryPicker();
+            return true;
+        } else {
+            console.warn("API de Pasta não disponível. Usando pasta Downloads padrão.");
+            return true; 
+        }
+    } catch (err) {
+        console.error("Usuário cancelou seleção de pasta.");
+        return false;
+    }
+}
+
+// CSV e GPS (Mantido conforme original)
 function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
 function findColumnIndex(headers, candidates){ 
     const map=headers.map(h=>normalizeStr(h)); 
@@ -205,70 +219,15 @@ function updateKM() {
     if(best) document.getElementById('kmPlaque').textContent = "KM " + best.km;
 }
 
-/* ======= INTERFACE & CONFIGURAÇÕES ======= */
-function toggleSettings() { document.getElementById('settings-panel').classList.toggle('active'); }
-function openTab(evt, tabName) {
-    const groups = document.getElementsByClassName("setting-group");
-    for (let i = 0; i < groups.length; i++) groups[i].className = groups[i].className.replace(" active", "");
-    const btns = document.getElementsByClassName("tab-btn");
-    for (let i = 0; i < btns.length; i++) btns[i].className = btns[i].className.replace(" active", "");
-    document.getElementById(tabName).className += " active";
-    evt.currentTarget.className += " active";
-}
-
-async function initCamera() {
-    const mode = document.getElementById('cfgCam').value;
-    const res = document.getElementById('cfgRes').value;
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: mode, width: {ideal: 1280}, height: {ideal: 720} },
-            audio: false
-        });
-        vid.srcObject = stream;
-        vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-    } catch(e) { alert("Erro na câmera"); }
-}
-
-/* ======= MOTOR DE RELATÓRIO (ESTAMPA) ======= */
-function drawStamp(item) {
-    const w = can.width, h = can.height;
-    const fontSize = parseInt(document.getElementById('cfgFontSize').value) * (h/720);
-    const font = document.getElementById('cfgFont').value;
-    const color = document.getElementById('cfgColor').value;
-    const stripeColor = document.getElementById('cfgStripeColor').value;
-    const alpha = document.getElementById('cfgAlpha').value / 100;
-
-    // Tarja
-    ctx.save();
-    const sH = h * 0.18;
-    ctx.fillStyle = hexToRgba(stripeColor, alpha);
-    ctx.fillRect(0, h - sH, w, sH);
-
-    // Texto KM
-    ctx.fillStyle = color;
-    ctx.font = `bold ${fontSize}px ${font}`;
-    if(document.getElementById('cfgShadow').checked) {
-        ctx.shadowColor = "black"; ctx.shadowBlur = 10;
-    }
-    ctx.fillText("KM " + item.km, 40, h - (sH/2));
-
-    // GPS e Data
-    if(document.getElementById('cfgShowGps').checked) {
-        ctx.font = `${fontSize/3}px Arial`;
-        ctx.fillText(`${item.ts} | LAT: ${item.lat} LON: ${item.lon}`, 40, h - 20);
-    }
-    ctx.restore();
-}
-
-function hexToRgba(hex, a) {
-    const r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
-    return `rgba(${r},${g},${b},${a})`;
-}
-
+/* ======= MOTOR DE PDF SILENCIOSO ======= */
 async function savePDF() {
     if(!activeBuffer.length) return;
-    const batch = [...activeBuffer]; activeBuffer = [];
-    pdfCount++; document.getElementById('txtPdfs').textContent = pdfCount;
+    
+    const batch = [...activeBuffer]; 
+    activeBuffer = []; // Limpa imediato para não duplicar dados
+    pdfCount++; 
+    document.getElementById('txtPdfs').textContent = pdfCount;
+    
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
 
@@ -286,7 +245,77 @@ async function savePDF() {
             img.src = batch[i].img;
         });
     }
-    doc.save(`INSPECAO_LOTE_${pdfCount}.pdf`);
+
+    const fileName = `INSPECAO_LOTE_${pdfCount}.pdf`;
+
+    if (directoryHandle) {
+        try {
+            const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(doc.output('blob'));
+            await writable.close();
+        } catch (e) {
+            doc.save(fileName); // Fallback caso perca permissão
+        }
+    } else {
+        doc.save(fileName); // Download padrão sem confirmação
+    }
+}
+
+/* ======= INTERFACE & CAPTURA ======= */
+function toggleSettings() { document.getElementById('settings-panel').classList.toggle('active'); }
+
+function openTab(evt, tabName) {
+    const groups = document.getElementsByClassName("setting-group");
+    for (let i = 0; i < groups.length; i++) groups[i].className = groups[i].className.replace(" active", "");
+    const btns = document.getElementsByClassName("tab-btn");
+    for (let i = 0; i < btns.length; i++) btns[i].className = btns[i].className.replace(" active", "");
+    document.getElementById(tabName).className += " active";
+    evt.currentTarget.className += " active";
+}
+
+async function initCamera() {
+    const mode = document.getElementById('cfgCam').value;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: mode, width: {ideal: 1280}, height: {ideal: 720} },
+            audio: false
+        });
+        vid.srcObject = stream;
+        vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
+    } catch(e) { console.error("Erro câmera"); }
+}
+
+function drawStamp(item) {
+    const w = can.width, h = can.height;
+    const fontSize = parseInt(document.getElementById('cfgFontSize').value) * (h/720);
+    const font = document.getElementById('cfgFont').value;
+    const color = document.getElementById('cfgColor').value;
+    const stripeColor = document.getElementById('cfgStripeColor').value;
+    const alpha = document.getElementById('cfgAlpha').value / 100;
+
+    ctx.save();
+    const sH = h * 0.18;
+    ctx.fillStyle = hexToRgba(stripeColor, alpha);
+    ctx.fillRect(0, h - sH, w, sH);
+
+    ctx.fillStyle = color;
+    ctx.font = `bold ${fontSize}px ${font}`;
+    if(document.getElementById('cfgShadow').checked) {
+        ctx.shadowColor = "black"; ctx.shadowBlur = 10;
+    }
+    ctx.fillText("KM " + item.km, 40, h - (sH/2));
+
+    if(document.getElementById('cfgShowGps').checked) {
+        ctx.font = `${fontSize/3}px Arial`;
+        ctx.fillText(`${item.ts} | LAT: ${item.lat} LON: ${item.lon}`, 40, h - 20);
+    }
+    ctx.restore();
+}
+
+function hexToRgba(hex, a) {
+    const r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
+    return `rgba(${r},${g},${b},${a})`;
 }
 
 function captureLoop() {
@@ -299,17 +328,38 @@ function captureLoop() {
         lon: lastPos?.lon.toFixed(6) || "0",
         ts: new Date().toLocaleString()
     });
+    
     photoCount++;
     document.getElementById('txtTotal').textContent = photoCount;
     document.getElementById('txtBuffer').textContent = `${activeBuffer.length}/${document.getElementById('cfgBatch').value}`;
     
-    if(activeBuffer.length >= parseInt(document.getElementById('cfgBatch').value)) savePDF();
+    if(activeBuffer.length >= parseInt(document.getElementById('cfgBatch').value)) {
+        savePDF();
+    }
     setTimeout(captureLoop, parseInt(document.getElementById('cfgDelay').value));
 }
 
-/* ======= BOTÕES E GPS ======= */
-document.getElementById('btnStart').onclick = () => { isRecording = true; captureLoop(); document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false; };
-document.getElementById('btnStop').onclick = () => { isRecording = false; savePDF(); document.getElementById('btnStart').disabled = false; document.getElementById('btnStop').disabled = true; };
+/* ======= EVENTOS DE BOTÃO ======= */
+document.getElementById('btnStart').onclick = async () => {
+    // Primeiro clique: pergunta onde salvar
+    if (!directoryHandle && 'showDirectoryPicker' in window) {
+        const ok = await getDirectoryPermission();
+        if (!ok) return; 
+    }
+    
+    isRecording = true; 
+    captureLoop(); 
+    document.getElementById('btnStart').disabled = true; 
+    document.getElementById('btnStop').disabled = false; 
+};
+
+document.getElementById('btnStop').onclick = () => { 
+    isRecording = false; 
+    savePDF(); 
+    document.getElementById('btnStart').disabled = false; 
+    document.getElementById('btnStop').disabled = true; 
+};
+
 document.getElementById('btnSaveManual').onclick = savePDF;
 
 navigator.geolocation.watchPosition(p => {
@@ -319,7 +369,8 @@ navigator.geolocation.watchPosition(p => {
     updateKM();
 }, null, {enableHighAccuracy:true});
 
-loadKMCSV(); initCamera();
+loadKMCSV(); 
+initCamera();
 </script>
 </body>
 </html>
