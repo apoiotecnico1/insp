@@ -3,133 +3,135 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V6.1 - FIXED LAYOUT</title>
+    <title>INSPEÇÃO RODOVIÁRIA V6.3</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --highway-green: #056b3c; --accent: #00d9ff; --dark-bg: #000; --panel-bg: rgba(10, 15, 25, 0.98); }
-        body { margin: 0; background: var(--dark-bg); color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        :root { --highway-green: #056b3c; --accent: #00d9ff; --dark-bg: #0a0a0a; --card-bg: #161618; }
+        body { margin: 0; background: var(--dark-bg); color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        #viewport { position: relative; width: 100vw; height: 60vh; background: #000; flex-shrink: 0; border-bottom: 2px solid var(--accent); overflow: hidden; }
+        #viewport { position: relative; width: 100vw; height: 60vh; background: #000; flex-shrink: 0; border-bottom: 2px solid var(--accent); }
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* PLACA KM - AJUSTADA PARA LINHA ÚNICA */
+        /* PLACA KM CORRIGIDA - LINHA ÚNICA SEMPRE VISÍVEL */
         #kmPlaque { 
-            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); z-index: 5;
+            position: absolute; bottom: 20px; z-index: 10;
             background: linear-gradient(180deg, #0a8a4d, #056b3c); color: white; text-align: center; 
-            padding: 8px 15px; font-size: 1.8rem; font-weight: 900; border: 3px solid #fff;
-            border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
-            white-space: nowrap; display: inline-block; min-width: 180px;
+            padding: 10px 20px; font-size: 1.5rem; font-weight: 900; border: 3px solid #fff;
+            border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+            white-space: nowrap; display: flex; align-items: center; justify-content: center;
+            min-width: fit-content; transition: 0.3s;
         }
+        .pos-center { left: 50%; transform: translateX(-50%); }
+        .pos-left { left: 20px; transform: none; }
+        .pos-right { right: 20px; transform: none; }
 
+        /* MENU DE CONFIGURAÇÕES REFINADO */
         #settings-panel { 
             position: fixed; top: 0; right: -100%; width: 90%; height: 100%; 
-            background: var(--panel-bg); z-index: 2000; transition: 0.4s; 
-            padding: 20px; overflow-y: auto; border-left: 2px solid var(--accent);
+            background: rgba(10, 10, 12, 0.98); z-index: 5000; transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1); 
+            padding: 20px; overflow-y: auto; backdrop-filter: blur(20px);
         }
         #settings-panel.active { right: 0; }
         
-        .tab-content { display: none; margin-top: 15px; }
-        .tab-content.active { display: block; }
-        .tab-nav { display: flex; gap: 5px; border-bottom: 1px solid #333; padding-bottom: 10px; overflow-x: auto; }
-        .tab-btn { background: #1a1a1a; color: #777; border: 1px solid #333; padding: 8px 12px; border-radius: 5px; font-size: 0.7rem; white-space: nowrap; }
-        .tab-btn.active { background: var(--accent); color: #000; font-weight: bold; }
+        .tab-nav { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px; }
+        .tab-btn { background: #222; border: none; color: #888; padding: 10px 15px; border-radius: 8px; font-size: 0.7rem; font-weight: bold; white-space: nowrap; }
+        .tab-btn.active { background: var(--accent); color: #000; }
 
-        .group { margin-bottom: 20px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; }
-        .group h4 { margin: 0 0 10px 0; font-size: 0.8rem; color: var(--accent); border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .config-card { background: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #222; }
+        .config-label { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.85rem; font-weight: 500; }
+        .val-tag { color: var(--accent); font-weight: bold; }
         
-        label { display: block; font-size: 0.7rem; margin-bottom: 5px; color: #ccc; }
-        input, select { width: 100%; padding: 10px; background: #111; border: 1px solid #333; color: #fff; border-radius: 5px; margin-bottom: 10px; font-size: 0.9rem; }
-        input[type="range"] { accent-color: var(--accent); margin-bottom: 15px; }
+        input[type="range"] { width: 100%; accent-color: var(--accent); height: 5px; }
+        input[type="text"], select { width: 100%; padding: 12px; background: #000; border: 1px solid #333; color: #fff; border-radius: 8px; margin-top: 5px; }
 
-        #controls { flex-grow: 1; background: #000; display: flex; flex-direction: column; justify-content: space-between; }
+        #controls { flex-grow: 1; background: #000; display: flex; flex-direction: column; }
         .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #222; }
         .card { background: #000; padding: 10px 2px; text-align: center; }
-        .card label { font-size: 0.5rem; color: #555; }
-        .val { font-size: 1.1rem; font-weight: bold; color: var(--accent); }
+        .card label { font-size: 0.5rem; color: #555; text-transform: uppercase; }
+        .val { font-size: 1.1rem; font-weight: bold; color: var(--accent); display: block; }
 
-        .btn-row { display: grid; grid-template-columns: 1fr 1fr; }
-        button.main-action { height: 80px; border: none; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; cursor: pointer; }
-        #btnStart { background: #00ff66; color: #000; }
-        #btnStop { background: #ff3333; color: #fff; }
+        .btn-row { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; }
+        button.main-action { border: none; font-weight: 900; font-size: 1.2rem; text-transform: uppercase; }
+        #btnStart { background: #00d96d; color: #000; }
+        #btnStop { background: #ff3b3b; color: #fff; }
 
-        .icon-top { position: absolute; top: 15px; right: 15px; z-index: 1500; background: rgba(0,0,0,0.6); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border: 1px solid #fff; }
-        #save-toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--highway-green); padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; display: none; z-index: 3000; }
+        .icon-cfg { position: absolute; top: 15px; right: 15px; z-index: 2000; background: rgba(0,0,0,0.5); border-radius: 10px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2); font-size: 20px; }
+        #save-status { position: fixed; top: 20px; left: 20px; background: var(--highway-green); padding: 8px 15px; border-radius: 8px; font-size: 0.7rem; font-weight: bold; display: none; z-index: 6000; border: 1px solid #fff; }
     </style>
 </head>
 <body>
 
-<div id="save-toast">PROCESSSANDO PDF...</div>
-<div class="icon-top" onclick="toggleSettings()">⚙️</div>
+<div id="save-status">💾 GERANDO PDF...</div>
+<div class="icon-cfg" onclick="toggleSettings()">⚙️</div>
 
 <div id="settings-panel">
-    <h2 style="margin:0; font-size: 1.2rem; color:var(--accent)">PAINEL MASTER</h2>
-    
     <div class="tab-nav">
-        <button class="tab-btn active" onclick="openTab(event, 'tab-cam')">CÂMERA</button>
-        <button class="tab-btn" onclick="openTab(event, 'tab-img')">IMAGEM</button>
-        <button class="tab-btn" onclick="openTab(event, 'tab-pdf')">RELATÓRIO</button>
+        <button class="tab-btn active" onclick="showTab('t-capt')">CAPTURA</button>
+        <button class="tab-btn" onclick="showTab('t-cam')">CÂMERA</button>
+        <button class="tab-btn" onclick="showTab('t-pdf')">PDF/PAGINA</button>
     </div>
 
-    <div id="tab-cam" class="tab-content active">
-        <div class="group">
-            <h4>HARDWARE</h4>
-            <label>Lente Disponível</label>
-            <select id="cfgCam" onchange="switchCamera()"></select>
-            <button onclick="toggleTorch()" style="width:100%; padding:10px; background:#333; color:#fff; border:none; border-radius:5px">LIGAR/DESLIGAR LANTERNA</button>
+    <div id="t-capt" class="tab-pane">
+        <div class="config-card">
+            <div class="config-label">Velocidade: <span id="v-delay" class="val-tag">0.2s</span></div>
+            <input type="range" id="c-delay" min="100" max="5000" step="100" value="200" oninput="uDisp()">
         </div>
-        <div class="group">
-            <h4>CAPTURA</h4>
-            <label>Intervalo (ms)</label>
-            <input type="number" id="cfgDelay" value="200">
-            <label>Fotos por Lote PDF</label>
-            <input type="number" id="cfgBatch" value="200">
+        <div class="config-card">
+            <div class="config-label">Fotos por PDF: <span id="v-batch" class="val-tag">200</span></div>
+            <input type="range" id="c-batch" min="10" max="500" step="10" value="200" oninput="uDisp()">
         </div>
-    </div>
-
-    <div id="tab-img" class="tab-content">
-        <div class="group">
-            <h4>FILTROS DE CAMPO</h4>
-            <label>Brilho (Noturno)</label>
-            <input type="range" id="fBright" min="50" max="250" value="100" oninput="applyFilters()">
-            <label>Contraste</label>
-            <input type="range" id="fContrast" min="50" max="200" value="100" oninput="applyFilters()">
-            <label>Saturação</label>
-            <input type="range" id="fSat" min="0" max="200" value="100" oninput="applyFilters()">
-            <button onclick="resetFilters()" style="width:100%; padding:8px; background:#444; color:#fff; border:none; border-radius:5px; font-size:0.7rem">RESETAR FILTROS</button>
+        <div class="config-card">
+            <label style="font-size:0.8rem">Posição da Placa KM</label>
+            <select id="c-pos" onchange="uPos()">
+                <option value="pos-center">Centro (Padrão)</option>
+                <option value="pos-left">Esquerda</option>
+                <option value="pos-right">Direita</option>
+            </select>
         </div>
     </div>
 
-    <div id="tab-pdf" class="tab-content">
-        <div class="group">
-            <h4>CABEÇALHO</h4>
-            <label>Título Relatório</label>
-            <input type="text" id="pdfTitle" value="INSPEÇÃO TÉCNICA RODOVIÁRIA">
-            <label>Inspetor</label>
-            <input type="text" id="pdfAuthor" value="Engenharia de Campo">
-            <label>Prefixo Arquivo</label>
-            <input type="text" id="pdfPrefix" value="INSP_RODOVIA">
+    <div id="t-cam" class="tab-pane" style="display:none">
+        <div class="config-card">
+            <label style="font-size:0.8rem">Escolher Lente</label>
+            <div id="cam-list"></div>
+        </div>
+        <div class="config-card">
+            <div class="config-label">Brilho (Imagem): <span id="v-br" class="val-tag">100%</span></div>
+            <input type="range" id="c-br" min="50" max="250" value="100" oninput="uDisp()">
         </div>
     </div>
 
-    <button onclick="toggleSettings()" style="width:100%; padding:15px; background:var(--accent); border:none; color:#000; font-weight:bold; border-radius:10px; margin-top:10px">SALVAR E VOLTAR</button>
+    <div id="t-pdf" class="tab-pane" style="display:none">
+        <div class="config-card">
+            <label style="font-size:0.8rem">Prefixo do Arquivo</label>
+            <input type="text" id="pdf-prefix" value="INSP_RODOVIA">
+        </div>
+        <div class="config-card">
+            <div class="config-label">Qualidade Imagem: <span id="v-qual" class="val-tag">70%</span></div>
+            <input type="range" id="pdf-qual" min="10" max="100" value="70" oninput="uDisp()">
+        </div>
+    </div>
+
+    <button onclick="toggleSettings()" style="width:100%; padding:20px; background:var(--accent); border:none; color:#000; font-weight:900; border-radius:12px; margin-top:20px">FECHAR E SALVAR</button>
 </div>
 
-<div id="main-container">
+<div id="main-container" style="flex-grow:1; display:flex; flex-direction:column">
     <div id="viewport">
-        <div id="kmPlaque">KM --+---</div>
+        <div id="kmPlaque" class="pos-center">KM --+---</div>
         <video id="vid" autoplay playsinline muted></video>
     </div>
 
     <div id="controls">
-        <div style="display:flex; justify-content:space-around; background:#111; padding:5px; font-size:0.6rem; color:#888">
-            <span id="stCsv">CSV: ...</span> <span id="stGps">GPS: ...</span> <span id="txtTimer">00:00</span>
+        <div style="display:flex; justify-content:space-between; background:#111; padding:5px 15px; font-size:0.6rem; color:#666">
+            <span id="stGps">GPS: BUSCANDO...</span> 
+            <span id="txtTimer" style="color:var(--accent)">00:00</span>
         </div>
         
         <div class="dashboard">
             <div class="card"><label>TOTAL</label><span id="txtTotal" class="val">0</span></div>
             <div class="card"><label>LOTE</label><span id="txtBuffer" class="val">0</span></div>
             <div class="card"><label>PDFS</label><span id="txtPdfs" class="val">0</span></div>
-            <div class="card btn-snap" onclick="takeSinglePhoto()" style="cursor:pointer"><span style="font-size:1.1rem">📸</span><label style="color:var(--accent)">AVULSA</label></div>
+            <div class="card" onclick="takeSinglePhoto()" style="cursor:pointer; background:#1a1a1a;">📸<label style="color:var(--accent); display:block">FOTO</label></div>
         </div>
 
         <div class="btn-row">
@@ -139,57 +141,58 @@
     </div>
 </div>
 
-<canvas id="can"></canvas>
+<canvas id="can" style="display:none"></canvas>
 
 <script>
 let directoryHandle = null, kmDataset = [], lastPos = null, isRecording = false;
 let photoCount = 0, pdfCount = 0, activeBuffer = [], startTime = 0, timerInterval;
 const vid = document.getElementById('vid'), can = document.getElementById('can'), ctx = can.getContext('2d');
 
-function openTab(evt, tabId) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+function showTab(id) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    evt.currentTarget.classList.add('active');
+    document.getElementById(id).style.display = 'block';
+    event.currentTarget.classList.add('active');
+}
+
+function uDisp() {
+    document.getElementById('v-delay').textContent = (document.getElementById('c-delay').value/1000).toFixed(1) + 's';
+    document.getElementById('v-batch').textContent = document.getElementById('c-batch').value;
+    document.getElementById('v-br').textContent = document.getElementById('c-br').value + '%';
+    document.getElementById('v-qual').textContent = document.getElementById('pdf-qual').value + '%';
+    vid.style.filter = `brightness(${document.getElementById('c-br').value}%)`;
+}
+
+function uPos() {
+    const p = document.getElementById('kmPlaque');
+    p.className = ''; 
+    p.id = 'kmPlaque'; // Garante o ID
+    p.classList.add(document.getElementById('c-pos').value);
 }
 
 async function scanCameras() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(d => d.kind === 'videoinput');
-    const select = document.getElementById('cfgCam');
+    const container = document.getElementById('cam-list');
+    container.innerHTML = '';
     videoDevices.forEach((device, index) => {
-        const option = document.createElement('option');
-        option.value = device.deviceId;
-        option.text = device.label || `Câmera ${index + 1}`;
-        select.appendChild(option);
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn';
+        btn.style.width = '100%'; btn.style.marginBottom = '5px';
+        btn.innerHTML = `📷 ${device.label || 'Lente ' + (index+1)}`;
+        btn.onclick = () => switchCamera(device.deviceId);
+        container.appendChild(btn);
     });
-    if (videoDevices.length > 0) switchCamera();
+    if (videoDevices.length > 0) switchCamera(videoDevices.deviceId);
 }
 
-async function switchCamera() {
+async function switchCamera(id) {
+    if(vid.srcObject) vid.srcObject.getTracks().forEach(t => t.stop());
     const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { deviceId: { exact: document.getElementById('cfgCam').value }, width: 1920, height: 1080 } 
+        video: { deviceId: { exact: id }, width: 1920, height: 1080 } 
     });
     vid.srcObject = stream;
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-}
-
-async function toggleTorch() {
-    const track = vid.srcObject.getVideoTracks();
-    try {
-        await track.applyConstraints({ advanced: [{ torch: !track.getSettings().torch }] });
-    } catch(e) { alert("Lanterna não disponível nesta lente."); }
-}
-
-function applyFilters() {
-    vid.style.filter = `brightness(${document.getElementById('fBright').value}%) contrast(${document.getElementById('fContrast').value}%) saturate(${document.getElementById('fSat').value}%)`;
-}
-
-function resetFilters() {
-    document.getElementById('fBright').value = 100;
-    document.getElementById('fContrast').value = 100;
-    document.getElementById('fSat').value = 100;
-    applyFilters();
 }
 
 async function checkFolder() {
@@ -203,9 +206,10 @@ async function savePDF(manualBuffer = null) {
     if(!buffer.length) return;
     if(!manualBuffer) activeBuffer = []; 
 
-    document.getElementById('save-toast').style.display = 'block';
+    document.getElementById('save-status').style.display = 'block';
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
+    const qual = parseInt(document.getElementById('pdf-qual').value) / 100;
 
     for(let i=0; i<buffer.length; i++){
         if(i > 0) doc.addPage();
@@ -215,7 +219,7 @@ async function savePDF(manualBuffer = null) {
                 ctx.filter = vid.style.filter;
                 ctx.drawImage(img, 0, 0);
                 drawStamp(buffer[i]);
-                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, 297, 210);
+                doc.addImage(can.toDataURL('image/jpeg', qual), 'JPEG', 0, 0, 297, 210);
                 res();
             };
             img.src = buffer[i].img;
@@ -223,23 +227,23 @@ async function savePDF(manualBuffer = null) {
         URL.revokeObjectURL(buffer[i].img);
     }
 
-    const fileName = `${document.getElementById('pdfPrefix').value}_${Date.now()}.pdf`;
-    const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
-    const writable = await fileHandle.createWritable();
+    const name = `${document.getElementById('pdf-prefix').value}_${Date.now()}.pdf`;
+    const file = await directoryHandle.getFileHandle(name, { create: true });
+    const writable = await file.createWritable();
     await writable.write(doc.output('blob'));
     await writable.close();
     
     if(!manualBuffer) { pdfCount++; document.getElementById('txtPdfs').textContent = pdfCount; }
-    document.getElementById('save-toast').style.display = 'none';
+    document.getElementById('save-status').style.display = 'none';
 }
 
 function drawStamp(item) {
-    ctx.font = `bold 70px Arial Black`;
-    ctx.fillStyle = "white"; ctx.strokeStyle = "black"; ctx.lineWidth = 4;
+    ctx.font = `bold 75px Arial Black`;
+    ctx.fillStyle = "white"; ctx.strokeStyle = "black"; ctx.lineWidth = 5;
     ctx.strokeText("KM " + item.km, 50, can.height - 150);
     ctx.fillText("KM " + item.km, 50, can.height - 150);
-    ctx.font = "30px Arial";
-    ctx.fillText(`${item.ts} | ${document.getElementById('pdfAuthor').value}`, 50, can.height - 50);
+    ctx.font = "35px Arial";
+    ctx.fillText(`${item.ts} | Coord: ${item.coords}`, 50, can.height - 60);
 }
 
 function captureLoop() {
@@ -248,14 +252,14 @@ function captureLoop() {
     activeBuffer.push({
         img: can.toDataURL('image/jpeg', 0.4),
         km: document.getElementById('kmPlaque').textContent.replace('KM ', ''),
+        coords: lastPos ? `${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)}` : "Sem GPS",
         ts: new Date().toLocaleString()
     });
     photoCount++;
     document.getElementById('txtTotal').textContent = photoCount;
     document.getElementById('txtBuffer').textContent = activeBuffer.length;
-    
-    if(activeBuffer.length >= parseInt(document.getElementById('cfgBatch').value)) savePDF();
-    setTimeout(captureLoop, parseInt(document.getElementById('cfgDelay').value));
+    if(activeBuffer.length >= parseInt(document.getElementById('c-batch').value)) savePDF();
+    setTimeout(captureLoop, parseInt(document.getElementById('c-delay').value));
 }
 
 async function takeSinglePhoto() {
@@ -264,6 +268,7 @@ async function takeSinglePhoto() {
         const snap = [{
             img: can.toDataURL('image/jpeg', 0.8),
             km: document.getElementById('kmPlaque').textContent.replace('KM ', ''),
+            coords: lastPos ? `${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)}` : "Sem GPS",
             ts: new Date().toLocaleString()
         }];
         savePDF(snap);
@@ -298,7 +303,6 @@ async function loadCSV(){
             const c = row.split(';');
             return { km: c, lat: parseFloat(c?.replace(',','.')), lon: parseFloat(c?.replace(',','.')) };
         });
-        document.getElementById('stCsv').textContent = "CSV: OK";
     } catch(e) {}
 }
 
@@ -317,8 +321,7 @@ navigator.geolocation.watchPosition(p => {
 
 function toggleSettings() { document.getElementById('settings-panel').classList.toggle('active'); }
 
-scanCameras();
-loadCSV();
+scanCameras(); loadCSV(); uDisp();
 </script>
 </body>
 </html>
