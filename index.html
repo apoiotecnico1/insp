@@ -8,65 +8,31 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-:root { --green:#056b3c; }
-body { margin:0; background:#000; color:#fff; font-family:'Segoe UI',sans-serif; overflow:hidden }
+body{margin:0;background:#000;color:#fff;font-family:Segoe UI,sans-serif;overflow:hidden}
+#viewport{width:100vw;height:40vh}
+video{width:100%;height:100%;object-fit:cover}
 
-#viewport { width:100vw; height:40vh; background:#000; }
-video { width:100%; height:100%; object-fit:cover }
-
-/* PLACA KM */
-#kmPlaque {
-    background:linear-gradient(180deg,#0a8a4d,#056b3c);
-    color:#fff;
-    text-align:center;
-    padding:12px;
-    font-size:3.4rem;
-    font-weight:900;
-    border:5px solid #fff;
-    margin:10px;
-    border-radius:15px;
-    box-shadow:0 10px 30px rgba(0,0,0,.8);
+#kmPlaque{
+background:linear-gradient(#0a8a4d,#056b3c);
+color:#fff;
+padding:12px;
+font-size:3.2rem;
+font-weight:900;
+border:5px solid #fff;
+margin:10px;
+border-radius:15px;
 }
 
-/* DASH */
-.dashboard {
-    display:grid;
-    grid-template-columns:1fr 1fr 1fr;
-    gap:10px;
-    padding:10px;
-}
-.card {
-    background:#111;
-    padding:12px;
-    border-radius:10px;
-    text-align:center;
-    border:1px solid #222;
-}
-.val {
-    display:block;
-    font-size:1.4rem;
-    font-weight:bold;
-    color:#00d9ff;
-}
+.dashboard{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:10px}
+.card{background:#111;padding:12px;border-radius:10px;text-align:center;border:1px solid #222}
+.val{font-size:1.4rem;font-weight:bold;color:#00d9ff;display:block}
 
-.btn-row {
-    padding:10px;
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-}
-button {
-    padding:20px;
-    border-radius:12px;
-    border:none;
-    font-weight:900;
-    font-size:1.1rem;
-    cursor:pointer;
-}
-#btnStart { background:#00ff66; color:#000 }
-#btnStop  { background:#ff3333; color:#fff }
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+button{padding:18px;border:none;border-radius:12px;font-size:1.1rem;font-weight:900}
+#btnStart{background:#00ff66;color:#000}
+#btnStop{background:#ff3333;color:#fff}
 
-canvas { display:none }
+canvas{display:none}
 </style>
 </head>
 
@@ -81,209 +47,149 @@ canvas { display:none }
 <div class="dashboard">
     <div class="card">FOTOS<span id="txtTotal" class="val">0</span></div>
     <div class="card">LOTE<span id="txtBuffer" class="val">0/200</span></div>
-    <div id="btnSaveManual" class="card" style="background:#1e3a8a;cursor:pointer">
-        GERAR PDF<span id="txtPdfs" class="val">0</span>
+    <div class="card" id="btnSaveManual" style="background:#1e3a8a;cursor:pointer">
+        PDF<span id="txtPdfs" class="val">0</span>
     </div>
 </div>
 
 <div class="btn-row">
-    <button id="btnStart">Iniciar Inspeção</button>
-    <button id="btnStop" disabled>Parar e Salvar</button>
+    <button id="btnStart">INICIAR</button>
+    <button id="btnStop" disabled>PARAR</button>
 </div>
 
 <canvas id="can"></canvas>
 
 <script>
-/* =========================================================
-   VARIÁVEIS (IGUAL AO PRIMEIRO)
-========================================================= */
-let kmDataset = [];
-let lastPos = null;
-let isRecording = false;
-let photoCount = 0;
-let pdfCount = 0;
-let activeBuffer = [];
+/* ===== VARIÁVEIS ===== */
+let kmDataset=[], lastPos=null;
+let isRecording=false, photoCount=0, pdfCount=0;
+let activeBuffer=[];
 
-const vid = document.getElementById('vid');
-const can = document.getElementById('can');
-const ctx = can.getContext('2d', { alpha:false });
+const vid=document.getElementById("vid");
+const can=document.getElementById("can");
+const ctx=can.getContext("2d",{alpha:false});
 
-/* =========================================================
-   FUNÇÕES ORIGINAIS (SEM MUDAR)
-========================================================= */
+/* ===== FUNÇÕES ORIGINAL ===== */
 function normalizeStr(s){
-    return String(s||'').trim().toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-        .replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' ');
+return String(s||'').trim().toLowerCase()
+.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+.replace(/[^a-z0-9 ]+/g,' ');
 }
-function findColumnIndex(headers,candidates){
-    const map=headers.map(h=>normalizeStr(h));
-    for(const c of candidates){
-        const i=map.indexOf(c);
-        if(i>=0) return i;
-    }
-    return -1;
+function findColumnIndex(h,c){
+const m=h.map(x=>normalizeStr(x));
+for(const k of c){const i=m.indexOf(k);if(i>=0)return i;}
+return-1;
 }
 function parsePt(v){
-    if(v==null) return NaN;
-    const s=String(v).trim();
-    return /,\d{1,}$/.test(s)
-        ? Number(s.replace(/\./g,'').replace(',','.'))
-        : Number(s);
+const s=String(v||'').trim();
+return /,\d+$/.test(s)?Number(s.replace(/\./g,'').replace(',','.')):Number(s);
 }
 function hav(a,b,c,d){
-    const R=6371000;
-    const x=(c-a)*Math.PI/180;
-    const y=(d-b)*Math.PI/180;
-    const u=Math.sin(x/2)**2 +
-        Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180) *
-        Math.sin(y/2)**2;
-    return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
+const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;
+const u=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
 
-/* =========================================================
-   CSV — LÓGICA DO PRIMEIRO + CORREÇÃO LAT/LON
-========================================================= */
+/* ===== CSV ===== */
 async function loadKMCSV(){
-    const resp = await fetch('SNVBR116SPRJ.csv?v='+Date.now(),{cache:'no-store'});
-    let text = await resp.text();
-    if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+const r=await fetch("SNVBR116SPRJ.csv?v="+Date.now(),{cache:"no-store"});
+let t=await r.text(); if(t.charCodeAt(0)===0xFEFF)t=t.slice(1);
+const L=t.split(/\r?\n/).filter(l=>l.trim());
+const h=L.shift().split(";");
+const iKm=findColumnIndex(h,["km"]);
+const iLat=findColumnIndex(h,["lat","latitude"]);
+const iLon=findColumnIndex(h,["lon","longitude"]);
 
-    const lines=text.split(/\r?\n/).filter(l=>l.trim());
-    const head=lines.shift().split(';');
-
-    const iKm = findColumnIndex(head,['km']);
-    const iLat= findColumnIndex(head,['lat','latitude']);
-    const iLon= findColumnIndex(head,['lon','long','longitude']);
-
-    kmDataset = lines.map(l=>{
-        const r=l.split(';');
-
-        let lat=parsePt(r[iLat]);
-        let lon=parsePt(r[iLon]);
-
-        // AUTO‑CORREÇÃO SE INVERTIDO
-        if(Math.abs(lat)>90 && Math.abs(lon)<=90){
-            const tmp=lat; lat=lon; lon=tmp;
-        }
-
-        return { km:r[iKm], lat, lon };
-    }).filter(p=>p.km && Number.isFinite(p.lat) && Number.isFinite(p.lon));
+kmDataset=L.map(l=>{
+const r=l.split(";");
+let lat=parsePt(r[iLat]);
+let lon=parsePt(r[iLon]);
+if(Math.abs(lat)>90&&Math.abs(lon)<=90){const tmp=lat;lat=lon;lon=tmp;}
+return{km:r[iKm],lat,lon};
+}).filter(p=>p.km&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
 }
 
-/* =========================================================
-   ATUALIZAÇÃO KM (IDÊNTICA AO PRIMEIRO)
-========================================================= */
-function updateKMDisplay(){
-    if(!lastPos || !kmDataset.length) return;
-
-    let best=null, bd=Infinity;
-    for(const p of kmDataset){
-        const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
-        if(d<bd){ bd=d; best=p; }
-    }
-    if(best) kmPlaque.textContent="KM "+best.km;
+/* ===== KM ===== */
+function updateKM(){
+if(!lastPos||!kmDataset.length)return;
+let best=null,d0=Infinity;
+for(const p of kmDataset){
+const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
+if(d<d0){d0=d;best=p;}
+}
+if(best) kmPlaque.textContent="KM "+best.km;
 }
 
-/* =========================================================
-   CAPTURA (GARANTE KM CORRETO NO BUFFER)
-========================================================= */
+/* ===== QUEIMA KM + DATA NA FOTO ===== */
+function drawOverlay(km,ts){
+ctx.fillStyle="rgba(0,0,0,.6)";
+ctx.fillRect(20,can.height-120,420,90);
+
+ctx.strokeStyle="#fff";
+ctx.lineWidth=4;
+ctx.strokeRect(20,can.height-120,420,90);
+
+ctx.fillStyle="#fff";
+ctx.font="bold 42px Segoe UI";
+ctx.fillText("KM "+km,40,can.height-70);
+
+ctx.font="20px Segoe UI";
+ctx.fillText(ts,40,can.height-40);
+}
+
+/* ===== CAPTURA ===== */
 function captureLoop(){
-    if(!isRecording) return;
+if(!isRecording)return;
 
-    ctx.drawImage(vid,0,0,can.width,can.height);
+ctx.drawImage(vid,0,0,can.width,can.height);
 
-    const kmAtual = kmPlaque.textContent.replace("KM","").trim();
+const kmAtual=kmPlaque.textContent.replace("KM","").trim();
+const ts=new Date().toLocaleString("pt-BR");
 
-    activeBuffer.push({
-        img: can.toDataURL("image/jpeg",0.6),
-        km: kmAtual,
-        lat: lastPos ? lastPos.lat.toFixed(6) : "0",
-        lon: lastPos ? lastPos.lon.toFixed(6) : "0",
-        ts: new Date().toLocaleString("pt-BR")
-    });
+drawOverlay(kmAtual,ts);
 
-    photoCount++;
-    txtTotal.textContent=photoCount;
-    txtBuffer.textContent=activeBuffer.length+"/200";
+activeBuffer.push({
+img:can.toDataURL("image/jpeg",0.7)
+});
 
-    if(activeBuffer.length>=200) savePDF();
-    setTimeout(captureLoop,200);
+photoCount++; txtTotal.textContent=photoCount;
+txtBuffer.textContent=activeBuffer.length+"/200";
+
+if(activeBuffer.length>=200) savePDF();
+setTimeout(captureLoop,200);
 }
 
-/* =========================================================
-   PDF — LAYOUT ATUAL (PLACA DE RODOVIA)
-========================================================= */
+/* ===== PDF (APENAS FOTO) ===== */
 function savePDF(){
-    if(!activeBuffer.length) return;
+if(!activeBuffer.length)return;
+const {jsPDF}=window.jspdf;
+const doc=new jsPDF("l","mm","a4");
+pdfCount++; txtPdfs.textContent=pdfCount;
 
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF('l','mm','a4');
-    pdfCount++; txtPdfs.textContent=pdfCount;
+activeBuffer.forEach((p,i)=>{
+if(i)doc.addPage();
+doc.addImage(p.img,"JPEG",10,10,277,190);
+});
 
-    activeBuffer.forEach((item,i)=>{
-        if(i) doc.addPage();
-
-        doc.setFillColor(0,70,160);
-        doc.roundedRect(10,8,277,30,5,5,'F');
-
-        doc.setTextColor(255,255,255);
-        doc.setFont("helvetica","bold");
-        doc.setFontSize(20);
-        doc.text("RELATÓRIO DE INSPEÇÃO RODOVIÁRIA",148,22,{align:"center"});
-
-        doc.setFontSize(16);
-        doc.text("KM "+item.km,285,22,{align:"right"});
-
-        doc.setFont("helvetica","normal");
-        doc.setFontSize(10);
-        doc.text("Data: "+item.ts,12,44);
-        doc.text("GPS: "+item.lat+", "+item.lon,200,44);
-
-        doc.addImage(item.img,"JPEG",10,48,277,145);
-    });
-
-    activeBuffer=[];
-    doc.save("INSPECAO_LOTE_"+pdfCount+".pdf");
+activeBuffer=[];
+doc.save("INSPECAO_"+pdfCount+".pdf");
 }
 
-/* =========================================================
-   CONTROLES
-========================================================= */
-btnStart.onclick=()=>{
-    isRecording=true;
-    btnStart.disabled=true;
-    btnStop.disabled=false;
-    captureLoop();
-};
-btnStop.onclick=()=>{
-    isRecording=false;
-    btnStart.disabled=false;
-    btnStop.disabled=true;
-    savePDF();
-};
+/* ===== CONTROLES ===== */
+btnStart.onclick=()=>{isRecording=true;btnStart.disabled=true;btnStop.disabled=false;captureLoop();}
+btnStop.onclick=()=>{isRecording=false;btnStart.disabled=false;btnStop.disabled=true;savePDF();}
 btnSaveManual.onclick=savePDF;
 
-/* =========================================================
-   INIT
-========================================================= */
+/* ===== INIT ===== */
 (async()=>{
-    await loadKMCSV();
-
-    const stream = await navigator.mediaDevices.getUserMedia({
-        video:{ facingMode:'environment', width:1280, height:720 },
-        audio:false
-    });
-    vid.srcObject=stream;
-    vid.onloadedmetadata=()=>{
-        can.width=vid.videoWidth;
-        can.height=vid.videoHeight;
-    };
-
-    navigator.geolocation.watchPosition(pos=>{
-        lastPos={ lat:pos.coords.latitude, lon:pos.coords.longitude };
-        updateKMDisplay();
-    },null,{ enableHighAccuracy:true, maximumAge:0 });
+await loadKMCSV();
+const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+vid.srcObject=s;
+vid.onloadedmetadata=()=>{can.width=vid.videoWidth;can.height=vid.videoHeight;}
+navigator.geolocation.watchPosition(p=>{
+lastPos={lat:p.coords.latitude,lon:p.coords.longitude};
+updateKM();
+},{},{enableHighAccuracy:true});
 })();
 </script>
 
