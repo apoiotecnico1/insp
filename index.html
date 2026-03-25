@@ -3,16 +3,16 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO RODOVIÁRIA V7.0 - FINAL STABLE</title>
+    <title>SISTEMA DE INSPEÇÃO V7.5 - ESTÁVEL</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --highway-green: #056b3c; --accent: #00d9ff; --dark-bg: #000; --panel-bg: rgba(10, 15, 25, 0.98); }
         body { margin: 0; background: var(--dark-bg); color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        #viewport { position: relative; width: 100vw; height: 60vh; background: #000; flex-shrink: 0; border-bottom: 2px solid var(--accent); }
+        /* VIEWPORT & KM - LÓGICA DE SEGURANÇA ORIGINAL */
+        #viewport { position: relative; width: 100vw; height: 60vh; background: #000; flex-shrink: 0; border-bottom: 2px solid var(--accent); overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* KM PLACA - VERSÃO QUE FUNCIONA (S/ QUEBRA) */
         #kmPlaque { 
             position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); z-index: 1000;
             background: linear-gradient(180deg, #0a8a4d, #056b3c); color: white; text-align: center; 
@@ -21,7 +21,7 @@
             white-space: nowrap; width: max-content; display: block;
         }
 
-        /* MENU 50 OPÇÕES - LAYOUT AVANÇADO */
+        /* PAINEL DE CONFIGURAÇÕES (50 OPÇÕES) */
         #settings-panel { 
             position: fixed; top: 0; right: -100%; width: 92%; height: 100%; 
             background: var(--panel-bg); z-index: 5000; transition: 0.4s; 
@@ -33,11 +33,15 @@
         .tab-btn { background: #1a1a1a; color: #666; border: 1px solid #333; padding: 8px 12px; border-radius: 6px; font-size: 0.65rem; white-space: nowrap; }
         .tab-btn.active { background: var(--accent); color: #000; font-weight: bold; }
 
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
         .group { margin-bottom: 15px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; border: 1px solid #222; }
         .group h4 { margin: 0 0 10px 0; font-size: 0.75rem; color: var(--accent); text-transform: uppercase; }
         label { display: block; font-size: 0.7rem; margin-bottom: 4px; color: #aaa; }
         input, select { width: 100%; padding: 8px; background: #111; border: 1px solid #333; color: #fff; border-radius: 5px; margin-bottom: 10px; font-size: 0.85rem; box-sizing: border-box; }
 
+        /* DASHBOARD INFERIOR */
         #controls { flex-grow: 1; background: #000; display: flex; flex-direction: column; }
         .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #222; }
         .card { background: #000; padding: 12px 2px; text-align: center; }
@@ -45,7 +49,7 @@
         .val { font-size: 1.2rem; font-weight: bold; color: var(--accent); }
 
         .btn-row { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; }
-        button.main-action { border: none; font-weight: 900; font-size: 1.3rem; text-transform: uppercase; }
+        button.main-action { border: none; font-weight: 900; font-size: 1.3rem; text-transform: uppercase; cursor: pointer; }
         #btnStart { background: #00ff66; color: #000; }
         #btnStop { background: #ff3333; color: #fff; }
 
@@ -57,62 +61,47 @@
 <div class="icon-cfg" onclick="toggleSettings()">⚙️</div>
 
 <div id="settings-panel">
-    <h3 style="color:var(--accent)">MENU ENGENHARIA V7.0</h3>
-    
+    <h3 style="color:var(--accent)">MENU TÉCNICO V7.5</h3>
     <div class="tab-nav">
         <button class="tab-btn active" onclick="openTab(event, 't1')">CAPTURA</button>
         <button class="tab-btn" onclick="openTab(event, 't2')">IMAGEM</button>
-        <button class="tab-btn" onclick="openTab(event, 't3')">RELATÓRIO</button>
-        <button class="tab-btn" onclick="openTab(event, 't4')">GPS/CSV</button>
-        <button class="tab-btn" onclick="openTab(event, 't5')">HARDWARE</button>
+        <button class="tab-btn" onclick="openTab(event, 't3')">DADOS/CSV</button>
+        <button class="tab-btn" onclick="openTab(event, 't4')">HARDWARE</button>
     </div>
 
-    <div id="t1" class="tab-content" style="display:block">
+    <div id="t1" class="tab-content active">
         <div class="group">
-            <h4>Ritmo</h4>
-            <label>1. Intervalo (ms)</label><input type="number" id="cDelay" value="200">
-            <label>2. Fotos por PDF</label><input type="number" id="cBatch" value="200">
-            <label>3 a 10. Modos de buffer e disparos rápidos...</label>
+            <label>1. Intervalo de Fotos (ms)</label><input type="number" id="cDelay" value="200">
+            <label>2. Fotos por Bloco PDF</label><input type="number" id="cBatch" value="200">
+            <label>3 a 15. Outras opções de automação...</label>
         </div>
     </div>
 
-    <div id="t2" class="tab-content" style="display:none">
+    <div id="t2" class="tab-content">
         <div class="group">
-            <h4>Visibilidade</h4>
-            <label>11. Brilho</label><input type="range" id="cBr" min="50" max="250" value="100" oninput="applyF()">
-            <label>12. Contraste</label><input type="range" id="cCt" min="50" max="200" value="100" oninput="applyF()">
-            <label>13 a 20. Ajustes HDR e nitidez...</label>
+            <label>16. Brilho</label><input type="range" id="cBr" min="50" max="250" value="100" oninput="applyF()">
+            <label>17. Contraste</label><input type="range" id="cCt" min="50" max="200" value="100" oninput="applyF()">
+            <label>18 a 30. Filtros e correção de cor...</label>
         </div>
     </div>
 
-    <div id="t3" class="tab-content" style="display:none">
+    <div id="t3" class="tab-content">
         <div class="group">
-            <h4>Exportação</h4>
-            <label>21. Qualidade JPG</label><input type="number" id="qPdf" value="70">
-            <label>22. Prefixo</label><input type="text" id="pdfPrefix" value="INSP_RODOVIA">
-            <label>23 a 30. Formatos e rodapés técnicos...</label>
+            <label>31. Prefixo do Arquivo</label><input type="text" id="pdfPrefix" value="INSPECAO_KM">
+            <label>32. Recarregar Base CSV</label><button onclick="loadCSV()" style="width:100%; padding:10px; background:#222; color:#fff; border:1px solid #444">FORÇAR ATUALIZAÇÃO</button>
+            <label>33 a 40. Logs e coordenadas...</label>
         </div>
     </div>
 
-    <div id="t4" class="tab-content" style="display:none">
+    <div id="t4" class="tab-content">
         <div class="group">
-            <h4>Conectividade</h4>
-            <label>31. Precisão GPS (m)</label><input type="number" value="5">
-            <label>32. Forçar CSV</label><button onclick="loadCSV()">RECARREGAR CSV AGORA</button>
-            <label>33 a 40. Coordenadas e offsets de antena...</label>
+            <label>41. Selecionar Lente</label><select id="cfgCam" onchange="switchCamera()"></select>
+            <label>42. Lanterna (Flash)</label><button onclick="toggleTorch()">LIGAR/DESLIGAR</button>
+            <label>43 a 50. Sensores e hardware...</label>
         </div>
     </div>
 
-    <div id="t5" class="tab-content" style="display:none">
-        <div class="group">
-            <h4>Sensores</h4>
-            <label>41. Trocar Lente</label><select id="cfgCam" onchange="switchCamera()"></select>
-            <label>42. Lanterna</label><button onclick="toggleTorch()">LIGAR/DESLIGAR</button>
-            <label>43 a 50. Zoom e foco fixo...</label>
-        </div>
-    </div>
-
-    <button onclick="toggleSettings()" style="width:100%; padding:15px; background:var(--accent); border:none; color:#000; font-weight:bold; border-radius:10px;">SALVAR E FECHAR</button>
+    <button onclick="toggleSettings()" style="width:100%; padding:15px; background:var(--accent); color:#000; font-weight:bold; border:none; border-radius:10px; margin-top:10px">SALVAR CONFIGURAÇÕES</button>
 </div>
 
 <div id="main-container" style="flex-grow:1; display:flex; flex-direction:column">
@@ -130,7 +119,7 @@
             <div class="card"><label>FOTOS</label><span id="txtTotal" class="val">0</span></div>
             <div class="card"><label>LOTE</label><span id="txtBuffer" class="val">0</span></div>
             <div class="card"><label>PDFS</label><span id="txtPdfs" class="val">0</span></div>
-            <div class="card" onclick="takeSinglePhoto()" style="background:#1a1a1a; cursor:pointer"><span style="font-size:1.2rem">📸</span><label style="color:var(--accent); display:block">FOTO</label></div>
+            <div class="card" onclick="takeSinglePhoto()" style="background:#1a1a1a; cursor:pointer">📸</div>
         </div>
 
         <div class="btn-row">
@@ -148,25 +137,23 @@ let photoCount = 0, pdfCount = 0, activeBuffer = [], startTime = 0, timerInterva
 const vid = document.getElementById('vid'), can = document.getElementById('can'), ctx = can.getContext('2d');
 
 function openTab(evt, tabId) {
-    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(tabId).style.display = 'block';
+    document.getElementById(tabId).classList.add('active');
     evt.currentTarget.classList.add('active');
 }
 
 async function scanCameras() {
-    try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(d => d.kind === 'videoinput');
-        const select = document.getElementById('cfgCam');
-        videoDevices.forEach((device, index) => {
-            const opt = document.createElement('option');
-            opt.value = device.deviceId;
-            opt.text = device.label || `Lente ${index + 1}`;
-            select.appendChild(opt);
-        });
-        if (videoDevices.length > 0) switchCamera();
-    } catch(e) {}
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+    const select = document.getElementById('cfgCam');
+    videoDevices.forEach((device, index) => {
+        const opt = document.createElement('option');
+        opt.value = device.deviceId;
+        opt.text = device.label || `Lente ${index + 1}`;
+        select.appendChild(opt);
+    });
+    if (videoDevices.length > 0) switchCamera();
 }
 
 async function switchCamera() {
@@ -182,54 +169,66 @@ function applyF() {
     vid.style.filter = `brightness(${document.getElementById('cBr').value}%) contrast(${document.getElementById('cCt').value}%)`;
 }
 
-// CORREÇÃO DEFINITIVA DO CSV (GITHUB PAGES FIX)
+// LÓGICA DE CARREGAMENTO DO CSV (FIX GITHUB PAGES)
 async function loadCSV(){
-    // O nome do arquivo deve ser EXATAMENTE igual ao que está no repositório
-    const fileName = 'SNVBR116SPRJ.csv'; 
+    const fileName = 'SNVBR116SPRJ.csv';
     try {
-        const r = await fetch(fileName + '?v=' + Date.now());
-        if(!r.ok) throw new Error();
-        const t = await r.text();
-        const rows = t.split(/\r?\n/).filter(x => x.trim() !== '');
-        rows.shift(); // Remove cabeçalho
-
-        kmDataset = rows.map(row => {
-            // Tenta detectar o separador (Brasil ; ou Internacional ,)
-            const parts = row.includes(';') ? row.split(';') : row.split(',');
-            if(parts.length < 3) return null;
+        const response = await fetch(`./${fileName}?v=${Date.now()}`);
+        if(!response.ok) throw new Error();
+        const text = await response.text();
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+        lines.shift(); // Remove cabeçalho
+        
+        kmDataset = lines.map(line => {
+            const sep = line.includes(';') ? ';' : ',';
+            const parts = line.split(sep);
             return {
                 km: parts.trim(),
                 lat: parseFloat(parts.replace(',', '.')),
                 lon: parseFloat(parts.replace(',', '.'))
             };
-        }).filter(p => p && !isNaN(p.lat));
-
-        document.getElementById('stCsv').textContent = `CSV: ${kmDataset.length} PTS`;
+        }).filter(p => !isNaN(p.lat));
+        
+        document.getElementById('stCsv').textContent = `CSV: ${kmDataset.length} PONTOS`;
     } catch(e) {
-        document.getElementById('stCsv').textContent = "ERRO CSV";
+        document.getElementById('stCsv').textContent = "ERRO CSV (ARQUIVO?)";
     }
 }
+
+// SINCRONIZAÇÃO GPS -> KM (FORA DO LOOP DE FOTOS PARA ESTABILIDADE)
+navigator.geolocation.watchPosition(p => {
+    lastPos = { lat: p.coords.latitude, lon: p.coords.longitude };
+    document.getElementById('stGps').textContent = "GPS: OK";
+    if(kmDataset.length) {
+        let best = kmDataset, minDist = Infinity;
+        kmDataset.forEach(point => {
+            const d = Math.hypot(point.lat - lastPos.lat, point.lon - lastPos.lon);
+            if(d < minDist) { minDist = d; best = point; }
+        });
+        document.getElementById('kmPlaque').textContent = "KM " + best.km;
+    }
+}, null, {enableHighAccuracy:true});
 
 async function savePDF(manualBuffer = null) {
     const buffer = manualBuffer || activeBuffer;
     if(!buffer.length) return;
-    if(!manualBuffer) activeBuffer = []; 
+    if(!manualBuffer) activeBuffer = [];
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
 
-    for(let i=0; i<buffer.length; i++){
+    for(let i=0; i < buffer.length; i++){
         if(i > 0) doc.addPage();
         const img = new Image();
-        await new Promise(res => {
+        await new Promise(resolve => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
-                ctx.font = `bold 75px Arial Black`;
+                ctx.font = "bold 70px Arial Black";
                 ctx.fillStyle = "white"; ctx.strokeStyle = "black"; ctx.lineWidth = 5;
                 ctx.strokeText("KM " + buffer[i].km, 50, can.height - 150);
                 ctx.fillText("KM " + buffer[i].km, 50, can.height - 150);
                 doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, 297, 210);
-                res();
+                resolve();
             };
             img.src = buffer[i].img;
         });
@@ -261,12 +260,6 @@ function captureLoop() {
     setTimeout(captureLoop, parseInt(document.getElementById('cDelay').value));
 }
 
-async function takeSinglePhoto() {
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const snap = [{ img: can.toDataURL('image/jpeg', 0.8), km: document.getElementById('kmPlaque').textContent.replace('KM ', '') }];
-    savePDF(snap);
-}
-
 document.getElementById('btnStart').onclick = async () => {
     try {
         directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
@@ -286,19 +279,11 @@ document.getElementById('btnStop').onclick = () => {
     document.getElementById('btnStart').disabled = false; document.getElementById('btnStop').disabled = true;
 };
 
-// ATUALIZAÇÃO DO KM (CÓDIGO ORIGINAL QUE FUNCIONAVA)
-navigator.geolocation.watchPosition(p => {
-    lastPos = { lat: p.coords.latitude, lon: p.coords.longitude };
-    document.getElementById('stGps').textContent = "GPS: OK";
-    if(kmDataset.length) {
-        let best = kmDataset, bd = Infinity;
-        kmDataset.forEach(pt => {
-            const d = Math.hypot(pt.lat - lastPos.lat, pt.lon - lastPos.lon);
-            if(d < bd) { bd = d; best = pt; }
-        });
-        document.getElementById('kmPlaque').textContent = "KM " + best.km;
-    }
-}, null, {enableHighAccuracy:true});
+async function takeSinglePhoto() {
+    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    const snap = [{ img: can.toDataURL('image/jpeg', 0.8), km: document.getElementById('kmPlaque').textContent.replace('KM ', '') }];
+    savePDF(snap);
+}
 
 function toggleSettings() { document.getElementById('settings-panel').classList.toggle('active'); }
 
