@@ -8,63 +8,30 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-:root { --green:#056b3c; --panel:#0b1224; }
-body { margin:0; background:#000; color:#fff; font-family:Segoe UI,sans-serif; overflow:hidden }
+:root { --green:#056b3c; }
+body{margin:0;background:#000;color:#fff;font-family:Segoe UI,sans-serif;overflow:hidden}
 
-#viewport { width:100vw; height:40vh }
-video { width:100%; height:100%; object-fit:cover }
+#viewport{width:100vw;height:40vh}
+video{width:100%;height:100%;object-fit:cover}
 
-#kmPlaque {
-    background:linear-gradient(#0a8a4d,#056b3c);
-    color:#fff;
-    text-align:center;
-    padding:12px;
-    font-size:3.5rem;
-    font-weight:900;
-    border:5px solid #fff;
-    margin:10px;
-    border-radius:15px;
-    box-shadow:0 10px 30px rgba(0,0,0,.8);
+#kmPlaque{
+background:linear-gradient(#0a8a4d,#056b3c);
+color:#fff;padding:12px;font-size:3.5rem;
+font-weight:900;border:5px solid #fff;
+margin:10px;border-radius:15px;
+box-shadow:0 10px 30px rgba(0,0,0,.8);
 }
 
-.dashboard {
-    display:grid;
-    grid-template-columns:1fr 1fr 1fr;
-    gap:10px;
-    padding:10px;
-}
-.card {
-    background:#111;
-    padding:12px;
-    border-radius:10px;
-    text-align:center;
-    border:1px solid #222;
-}
-.val {
-    display:block;
-    font-size:1.4rem;
-    font-weight:bold;
-    color:#00d9ff;
-}
+.dashboard{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:10px}
+.card{background:#111;padding:12px;border-radius:10px;text-align:center;border:1px solid #222}
+.val{display:block;font-size:1.4rem;font-weight:bold;color:#00d9ff}
 
-.btn-row {
-    padding:10px;
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-}
-button {
-    padding:20px;
-    border-radius:12px;
-    border:none;
-    font-weight:900;
-    font-size:1.1rem;
-    cursor:pointer;
-}
-#btnStart { background:#00ff66; color:#000 }
-#btnStop { background:#ff3333; color:#fff }
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+button{padding:20px;border-radius:12px;border:none;font-weight:900;font-size:1.1rem}
+#btnStart{background:#00ff66;color:#000}
+#btnStop{background:#ff3333;color:#fff}
 
-canvas { display:none }
+canvas{display:none}
 </style>
 </head>
 
@@ -101,115 +68,121 @@ const vid=document.getElementById("vid");
 const can=document.getElementById("can");
 const ctx=can.getContext("2d",{alpha:false});
 
-/* ===== FUNÇÕES CSV / KM ===== */
+/* ===== FUNÇÕES ===== */
 function normalizeStr(s){
-    return String(s||'').trim().toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-        .replace(/[^a-z0-9 ]+/g,' ');
+return String(s||'').trim().toLowerCase()
+.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+.replace(/[^a-z0-9 ]+/g,' ');
 }
 function findColumnIndex(h,c){
-    const m=h.map(x=>normalizeStr(x));
-    for(const k of c){ const i=m.indexOf(k); if(i>=0) return i; }
-    return -1;
+const m=h.map(x=>normalizeStr(x));
+for(const k of c){const i=m.indexOf(k);if(i>=0)return i;}
+return-1;
 }
 function parsePt(v){
-    const s=String(v||"").trim();
-    return /,\d+$/.test(s)
-        ? Number(s.replace(/\./g,'').replace(',','.'))
-        : Number(s);
+const s=String(v||"").trim();
+return /,\d+$/.test(s)?Number(s.replace(/\./g,'').replace(',','.')):Number(s);
 }
 function hav(a,b,c,d){
-    const R=6371000;
-    const x=(c-a)*Math.PI/180;
-    const y=(d-b)*Math.PI/180;
-    const u=Math.sin(x/2)**2+
-        Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*
-        Math.sin(y/2)**2;
-    return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
+const R=6371000;
+const x=(c-a)*Math.PI/180, y=(d-b)*Math.PI/180;
+const u=Math.sin(x/2)**2+
+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
 
-/* ===== CSV ===== */
+/* ===== CSV COM AUTO-CORREÇÃO LAT/LON ===== */
 async function loadKMCSV(){
-    const r=await fetch("SNVBR116SPRJ.csv?v="+Date.now(),{cache:"no-store"});
-    let t=await r.text();
-    if(t.charCodeAt(0)===0xFEFF) t=t.slice(1);
-    const lines=t.split(/\r?\n/).filter(l=>l.trim());
-    const h=lines.shift().split(";");
-    const iKm=findColumnIndex(h,["km"]);
-    const iLat=findColumnIndex(h,["lat","latitude"]);
-    const iLon=findColumnIndex(h,["lon","longitude"]);
-    kmDataset=lines.map(l=>{
-        const r=l.split(";");
-        return{km:r[iKm],lat:parsePt(r[iLat]),lon:parsePt(r[iLon])};
-    }).filter(p=>p.km&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+const r=await fetch("SNVBR116SPRJ.csv?v="+Date.now(),{cache:"no-store"});
+let t=await r.text();
+if(t.charCodeAt(0)===0xFEFF)t=t.slice(1);
+
+const lines=t.split(/\r?\n/).filter(l=>l.trim());
+const h=lines.shift().split(";");
+const iKm=findColumnIndex(h,["km"]);
+const iLat=findColumnIndex(h,["lat","latitude"]);
+const iLon=findColumnIndex(h,["lon","longitude"]);
+
+kmDataset=lines.map(l=>{
+const r=l.split(";");
+
+let lat=parsePt(r[iLat]);
+let lon=parsePt(r[iLon]);
+
+// 🔥 AUTO-CORREÇÃO DE INVERSÃO
+if(Math.abs(lat)>90 && Math.abs(lon)<=90){
+const tmp=lat; lat=lon; lon=tmp;
 }
 
-/* ===== ATUALIZA KM ===== */
+return{km:r[iKm],lat,lon};
+}).filter(p=>p.km&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+}
+
+/* ===== KM REAL ===== */
 function updateKM(){
-    if(!lastPos||!kmDataset.length) return;
-    let best=null,bd=Infinity;
-    for(const p of kmDataset){
-        const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
-        if(d<bd){bd=d;best=p;}
-    }
-    if(best) kmPlaque.textContent="KM "+best.km;
+if(!lastPos||!kmDataset.length)return;
+let best=null,bd=Infinity;
+for(const p of kmDataset){
+const d=hav(lastPos.lat,lastPos.lon,p.lat,p.lon);
+if(d<bd){bd=d;best=p;}
+}
+if(best) kmPlaque.textContent="KM "+best.km;
 }
 
 /* ===== CAPTURA ===== */
 function captureLoop(){
-    if(!isRecording) return;
+if(!isRecording)return;
 
-    ctx.drawImage(vid,0,0,can.width,can.height);
+ctx.drawImage(vid,0,0,can.width,can.height);
 
-    const kmAtual = kmPlaque.textContent.replace("KM","").trim();
+const kmAtual=kmPlaque.textContent.replace("KM","").trim();
 
-    activeBuffer.push({
-        img: can.toDataURL("image/jpeg",0.6),
-        km: kmAtual,
-        lat: lastPos ? lastPos.lat.toFixed(6) : "0",
-        lon: lastPos ? lastPos.lon.toFixed(6) : "0",
-        ts: new Date().toLocaleString("pt-BR")
-    });
+activeBuffer.push({
+img:can.toDataURL("image/jpeg",0.6),
+km:kmAtual,
+lat:lastPos?lastPos.lat.toFixed(6):"0",
+lon:lastPos?lastPos.lon.toFixed(6):"0",
+ts:new Date().toLocaleString("pt-BR")
+});
 
-    photoCount++;
-    txtTotal.textContent=photoCount;
-    txtBuffer.textContent=activeBuffer.length+"/200";
+photoCount++; txtTotal.textContent=photoCount;
+txtBuffer.textContent=activeBuffer.length+"/200";
 
-    if(activeBuffer.length>=200) savePDF();
-    setTimeout(captureLoop,200);
+if(activeBuffer.length>=200) savePDF();
+setTimeout(captureLoop,200);
 }
 
-/* ===== PDF (PLACA DE RODOVIA) ===== */
+/* ===== PDF ESTILO PLACA ===== */
 function savePDF(){
-    if(!activeBuffer.length) return;
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF("l","mm","a4");
-    pdfCount++; txtPdfs.textContent=pdfCount;
+if(!activeBuffer.length)return;
+const {jsPDF}=window.jspdf;
+const doc=new jsPDF("l","mm","a4");
+pdfCount++; txtPdfs.textContent=pdfCount;
 
-    activeBuffer.forEach((item,i)=>{
-        if(i) doc.addPage();
+activeBuffer.forEach((item,i)=>{
+if(i)doc.addPage();
 
-        doc.setFillColor(0,70,160);
-        doc.roundedRect(10,8,277,30,5,5,'F');
+doc.setFillColor(0,70,160);
+doc.roundedRect(10,8,277,30,5,5,'F');
 
-        doc.setTextColor(255,255,255);
-        doc.setFont("helvetica","bold");
-        doc.setFontSize(20);
-        doc.text("RELATÓRIO DE INSPEÇÃO RODOVIÁRIA",148,22,{align:"center"});
+doc.setTextColor(255,255,255);
+doc.setFont("helvetica","bold");
+doc.setFontSize(20);
+doc.text("RELATÓRIO DE INSPEÇÃO RODOVIÁRIA",148,22,{align:"center"});
 
-        doc.setFontSize(16);
-        doc.text("KM "+item.km,285,22,{align:"right"});
+doc.setFontSize(16);
+doc.text("KM "+item.km,285,22,{align:"right"});
 
-        doc.setFontSize(10);
-        doc.setFont("helvetica","normal");
-        doc.text("Data: "+item.ts,12,44);
-        doc.text("GPS: "+item.lat+", "+item.lon,200,44);
+doc.setFontSize(10);
+doc.setFont("helvetica","normal");
+doc.text("Data: "+item.ts,12,44);
+doc.text("GPS: "+item.lat+", "+item.lon,200,44);
 
-        doc.addImage(item.img,"JPEG",10,48,277,145);
-    });
+doc.addImage(item.img,"JPEG",10,48,277,145);
+});
 
-    activeBuffer=[];
-    doc.save("INSPECAO_LOTE_"+pdfCount+".pdf");
+activeBuffer=[];
+doc.save("INSPECAO_LOTE_"+pdfCount+".pdf");
 }
 
 /* ===== CONTROLES ===== */
@@ -219,22 +192,19 @@ btnSaveManual.onclick=savePDF;
 
 /* ===== INIT ===== */
 (async()=>{
-    await loadKMCSV();
+await loadKMCSV();
 
-    const s=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:"environment",width:1280,height:720},
-        audio:false
-    });
-    vid.srcObject=s;
-    vid.onloadedmetadata=()=>{
-        can.width=vid.videoWidth;
-        can.height=vid.videoHeight;
-    };
+const s=await navigator.mediaDevices.getUserMedia({
+video:{facingMode:"environment",width:1280,height:720},
+audio:false
+});
+vid.srcObject=s;
+vid.onloadedmetadata=()=>{can.width=vid.videoWidth;can.height=vid.videoHeight};
 
-    navigator.geolocation.watchPosition(p=>{
-        lastPos={lat:p.coords.latitude,lon:p.coords.longitude};
-        updateKM();
-    },null,{enableHighAccuracy:true,maximumAge:0});
+navigator.geolocation.watchPosition(p=>{
+lastPos={lat:p.coords.latitude,lon:p.coords.longitude};
+updateKM();
+},null,{enableHighAccuracy:true,maximumAge:0});
 })();
 </script>
 
