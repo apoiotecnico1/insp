@@ -41,7 +41,7 @@
         #settings-panel.active { right: 0; }
         
         .setting-item { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; padding-bottom: 10px; border-bottom: 1px solid #222; }
-        select, input { background: #000; color: #fff; border: 1px solid var(--accent); padding: 8px; border-radius: 5px; font-size: 0.9rem; }
+        select, input { background: #000; color: #fff; border: 1px solid var(--accent); padding: 8px; border-radius: 5px; font-size: 0.9rem; width: 60%;}
         
         .status-bar { display: flex; justify-content: space-around; padding: 10px; background: #050a16; }
         .st { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; border: 1px solid #333; }
@@ -69,8 +69,8 @@
     <h2 style="color:var(--accent); margin-top:0">ENGENHARIA SETUP</h2>
     
     <div class="setting-item">
-        <span>Câmera Ativa:</span>
-        <select id="camSelect" onchange="changeCamera(this.value)" style="width:60%"></select>
+        <span>Dispositivo de Vídeo:</span>
+        <select id="camSelect" onchange="changeCamera(this.value)"></select>
     </div>
 
     <div class="setting-item">Brilho: <input type="range" id="cfgBright" min="50" max="150" value="100" oninput="saveCfg()"></div>
@@ -151,21 +151,28 @@ function resetConfigs() {
     location.reload();
 }
 
-// GESTÃO DE CÂMERAS
+// GESTÃO DE CÂMERAS (DEVICE 1, 2, 3...)
 async function listCameras() {
+    // Solicita permissão primeiro para obter os labels reais
+    try { await navigator.mediaDevices.getUserMedia({video: true}); } catch(e) {}
+    
     const devices = await navigator.mediaDevices.enumerateDevices();
     const cams = devices.filter(d => d.kind === 'videoinput');
     const select = document.getElementById('camSelect');
     select.innerHTML = '';
+    
     cams.forEach((c, i) => {
         const opt = document.createElement('option');
         opt.value = c.deviceId;
-        opt.text = c.label || `Câmera ${i + 1}`;
+        // Tenta usar o nome real, se não, numera como Device X
+        opt.text = c.label || `Device ${i + 1}`;
         select.appendChild(opt);
     });
     
     const lastCam = loadCfg();
-    if(lastCam) select.value = lastCam;
+    if(lastCam && cams.some(c => c.deviceId === lastCam)) {
+        select.value = lastCam;
+    }
     initCamera(select.value);
 }
 
@@ -184,36 +191,50 @@ async function initCamera(deviceId) {
 
 function changeCamera(id) { initCamera(id); }
 
-// MOTOR DE ESTAMPA (PLACA VERDE)
+// MOTOR DE ESTAMPA (PLACA RODOVIÁRIA REAL)
 function drawStamp(data) {
     const w = can.width, h = can.height;
-    const base = h / 1080; // Escala técnica baseada em Full HD
+    const base = h / 1080; // Escala baseada em Full HD
     
     ctx.save();
-    const pW = 450 * base, pH = 160 * base;
-    const pX = 30 * base, pY = h - pH - 30 * base;
+    
+    // Dimensões da Placa
+    const pW = 420 * base;
+    const pH = 140 * base;
+    const margin = 30 * base;
+    const pX = margin;
+    const pY = h - pH - margin;
     const corner = 15 * base;
 
-    // Placa Verde
+    // 1. SOMBRA DA PLACA (Efeito 3D)
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = 15 * base;
+    ctx.shadowOffsetY = 8 * base;
+
+    // 2. FUNDO VERDE OFICIAL (Arredondado)
     ctx.beginPath();
     ctx.roundRect(pX, pY, pW, pH, corner);
-    ctx.fillStyle = "#056b3c";
+    ctx.fillStyle = "#056b3c"; // Verde Rodoviário DNIT/DER
     ctx.fill();
     
-    // Borda Branca Dupla
-    ctx.strokeStyle = "white";
+    ctx.shadowBlur = 0; // Remove sombra para o friso e texto
+
+    // 3. FRISO BRANCO INTERNO (Moldura)
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
     ctx.lineWidth = 4 * base;
-    ctx.strokeRect(pX + (10 * base), pY + (10 * base), pW - (20 * base), pH - (20 * base));
+    ctx.strokeRect(pX + (12 * base), pY + (12 * base), pW - (24 * base), pH - (24 * base));
 
-    // Textos
+    // 4. TEXTO KM (Fonte de Elite, Clara)
     ctx.fillStyle = "white";
-    ctx.font = `bold ${65 * base}px Arial`;
-    ctx.fillText("KM " + data.km, pX + 35 * base, pY + 75 * base);
+    ctx.font = `bold ${62 * base}px Arial, sans-serif`;
+    ctx.fillText("KM " + data.km, pX + 40 * base, pY + 80 * base);
 
-    ctx.font = `bold ${22 * base}px monospace`;
-    ctx.fillText(`LAT: ${data.lat}`, pX + 35 * base, pY + 115 * base);
+    // 5. LEGENDA TÉCNICA (Compacta)
+    ctx.font = `bold ${20 * base}px 'Courier New', monospace`;
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fillText(`LAT: ${data.lat}`, pX + 40 * base, pY + 115 * base);
     ctx.fillText(`LON: ${data.lon}`, pX + 220 * base, pY + 115 * base);
-    ctx.fillText(`${data.ts}`, pX + 35 * base, pY + 140 * base);
+    ctx.fillText(`${data.ts}`, pX + 40 * base, pY + 138 * base);
 
     ctx.restore();
 }
@@ -257,7 +278,7 @@ async function savePDF() {
 
     for(let i=0; i < batch.length; i++) {
         if(i > 0) doc.addPage();
-        // REMOÇÃO DE MARGENS: 0,0 a 297,210 preenche o A4 totalmente
+        // Preenche o A4 totalmente (0,0 a 297,210)
         doc.addImage(batch[i].img, 'JPEG', 0, 0, 297, 210, undefined, 'FAST');
     }
 
