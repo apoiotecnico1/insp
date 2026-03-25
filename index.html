@@ -3,227 +3,137 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>INSPEÇÃO PRO V5 - MODO ENGENHARIA</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<title>INSPEÇÃO FOTOGRÁFICA V4</title>
 
 <style>
-:root{
-    --highway-green:#056b3c;
-    --panel-bg:#0b1224;
-    --accent:#00d9ff;
-    --gold:#ffd700;
+:root {
+    --highway-green: #056b3c;
+    --accent: #00ff66;
 }
 
-body{
-    margin:0;background:#000;color:#fff;font-family:'Segoe UI',Roboto,sans-serif;
-    height:100vh;overflow:hidden;display:flex;flex-direction:column;
+body {
+    margin: 0; background: #000; color: #fff;
+    font-family: sans-serif; height: 100vh; overflow: hidden;
+    display: flex; flex-direction: column;
 }
 
-#main-container{display:flex;flex-direction:column;height:100%}
-#viewport{height:42vh;background:#000}
-video{width:100%;height:100%;object-fit:cover}
-
-#controls{flex:1;overflow:auto;background:#050a16}
-
-#kmPlaque{
-    background:linear-gradient(180deg,#0a8a4d,#056b3c);
-    text-align:center;font-size:2.5rem;
-    margin:10px;padding:10px;
-    border:4px solid #fff;border-radius:12px;
+/* TELA DE BLOQUEIO (OBRIGAR PASTA) */
+#lockScreen {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+    z-index: 9999; display: flex; align-items: center; justify-content: center;
+}
+.lockBox {
+    background: #111; border: 2px solid var(--accent);
+    padding: 30px; border-radius: 15px; text-align: center;
+}
+.lockBox button {
+    padding: 15px 25px; background: var(--accent); border: none;
+    font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 15px;
 }
 
-.status-bar{display:flex;justify-content:space-around;font-size:.7rem}
-.st{border:1px solid #444;padding:4px 8px;border-radius:10px}
-.ok{border-color:#00ff66;color:#00ff66}
+/* INTERFACE PRINCIPAL */
+#viewport { height: 60vh; background: #000; position: relative; }
+video { width: 100%; height: 100%; object-fit: cover; }
 
-.dashboard{
-    display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:8px
-}
-.card{
-    border:1px solid #333;border-radius:8px;
-    background:#111;text-align:center;padding:10px
-}
-.val{color:var(--accent);font-size:1.2rem;font-weight:bold}
-
-.btn-row{
-    display:grid;grid-template-columns:1fr 1fr;
-    gap:10px;padding:10px
+#kmDisplay {
+    background: var(--highway-green); text-align: center;
+    font-size: 3rem; font-weight: 900; padding: 15px;
+    border-bottom: 4px solid #fff;
 }
 
-button.action{
-    padding:15px;font-weight:800;border:none;
-    border-radius:10px;cursor:pointer
+#controls {
+    flex: 1; display: grid; grid-template-columns: 1fr 1fr;
+    gap: 15px; padding: 15px; background: #111;
 }
 
-#dirSelector{
-    grid-column:span 2;
-    background:var(--gold);color:#000
-}
-#dirSelector.ready{
-    background:#00ff66;
+.btn {
+    border: none; border-radius: 12px; font-size: 1.2rem;
+    font-weight: bold; cursor: pointer;
 }
 
-#btnStart{background:#00ff66;color:#000}
-#btnStop{background:#ff3333;color:#fff}
+#btnStart { background: var(--accent); color: #000; }
+#btnStop { background: #ff3333; color: #fff; }
 
-/* ===== LOCK SCREEN ===== */
-#lockScreen{
-    position:fixed;inset:0;
-    background:rgba(0,0,0,.93);
-    z-index:9999;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-
-.lockBox{
-    background:#0b1224;
-    border:2px solid var(--accent);
-    padding:30px;
-    border-radius:14px;
-    max-width:320px;
-    text-align:center;
-    box-shadow:0 0 30px var(--accent);
-}
-
-.lockBox h2{color:var(--accent)}
-.lockBox button{
-    padding:15px 20px;
-    margin-top:20px;
-    background:#00ff66;
-    border:none;
-    font-weight:800;
-    border-radius:8px;
-    cursor:pointer;
-}
-
-canvas{display:none}
+canvas { display: none; }
 </style>
 </head>
 
 <body>
 
-<!-- BLOQUEIO INICIAL -->
 <div id="lockScreen">
     <div class="lockBox">
-        <h2>PASSO 1</h2>
-        <p>Selecione a pasta de destino<br>para começar a inspeção</p>
-        <button onclick="document.getElementById('dirSelector').click()">
-            SELECIONAR PASTA
-        </button>
+        <h2 style="color:var(--accent)">CONFIGURAÇÃO</h2>
+        <p>Primeiro, selecione a pasta<br>onde as fotos serão salvas.</p>
+        <button onclick="configurarPasta()">SELECIONAR PASTA</button>
     </div>
 </div>
 
-<div id="main-container">
+<div id="kmDisplay">KM --+---</div>
 
-    <div id="viewport">
-        <video id="vid" autoplay muted playsinline></video>
-    </div>
+<div id="viewport">
+    <video id="vid" autoplay muted playsinline></video>
+</div>
 
-    <div id="controls">
-        <div id="kmPlaque">KM --+---</div>
-
-        <div class="status-bar">
-            <div id="stCsv" class="st">CSV: ...</div>
-            <div id="stGps" class="st">GPS: ...</div>
-        </div>
-
-        <div class="dashboard">
-            <div class="card">FOTOS<span id="txtTotal" class="val">0</span></div>
-            <div class="card">LOTE<span id="txtBuffer" class="val">0/200</span></div>
-            <div id="btnSaveManual" class="card" style="background:#1e3a8a;cursor:pointer">
-                PDF<span id="txtPdfs" class="val">0</span>
-            </div>
-        </div>
-
-        <div class="btn-row">
-            <button id="dirSelector" class="action">1. DEFINIR PASTA</button>
-            <button id="btnStart" class="action" disabled>2. INICIAR</button>
-            <button id="btnStop" class="action" disabled>PARAR</button>
-        </div>
-
-        <div style="text-align:center;font-size:.6rem;color:#555">
-            INSPEÇÃO PRO V5 | AUTO-SAVE
-        </div>
-    </div>
+<div id="controls">
+    <button id="btnStart" class="btn" onclick="iniciar()" disabled>INICIAR</button>
+    <button id="btnStop" class="btn" onclick="parar()" disabled>PARAR</button>
 </div>
 
 <canvas id="can"></canvas>
 
 <script>
-let workspaceReady=false;
-let isRecording=false;
-let directoryHandle=null;
-let photoCount=0,pdfCount=0;
-let activeBuffer=[],lastPos=null;
+let handle = null;
+let gravando = false;
+const vid = document.getElementById('vid');
+const can = document.getElementById('can');
+const ctx = can.getContext('2d');
 
-const vid=document.getElementById("vid");
-const can=document.getElementById("can");
-const ctx=can.getContext("2d");
+// Ativa câmera
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    .then(s => vid.srcObject = s);
 
-/* CAMERA */
-navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-.then(s=>vid.srcObject=s);
-
-/* GPS */
-navigator.geolocation.watchPosition(p=>{
-    lastPos={lat:p.coords.latitude,lon:p.coords.longitude};
-    document.getElementById("stGps").textContent="GPS: OK";
-    document.getElementById("stGps").classList.add("ok");
-});
-
-/* DIRETÓRIO OBRIGATÓRIO */
-document.getElementById("dirSelector").onclick=async()=>{
-    try{
-        directoryHandle=await window.showDirectoryPicker({mode:"readwrite"});
-        workspaceReady=true;
-
-        document.getElementById("dirSelector").textContent="PASTA DEFINIDA ✓";
-        document.getElementById("dirSelector").classList.add("ready");
-        document.getElementById("btnStart").disabled=false;
-
-        document.getElementById("lockScreen").remove();
-    }catch{
-        alert("É obrigatório definir a pasta de destino.");
+// Função obrigatória para liberar o app
+async function configurarPasta() {
+    try {
+        handle = await window.showDirectoryPicker({ mode: "readwrite" });
+        document.getElementById('lockScreen').style.display = 'none';
+        document.getElementById('btnStart').disabled = false;
+    } catch (e) {
+        alert("A pasta é necessária para salvar as fotos.");
     }
-};
-
-/* CAPTURA */
-function captureLoop(){
-    if(!isRecording)return;
-
-    ctx.drawImage(vid,0,0,can.width,can.height);
-    activeBuffer.push({
-        img:can.toDataURL("image/jpeg",0.5),
-        ts:new Date().toLocaleString()
-    });
-
-    photoCount++;
-    document.getElementById("txtTotal").textContent=photoCount;
-    document.getElementById("txtBuffer").textContent=`${activeBuffer.length}/200`;
-
-    setTimeout(captureLoop,200);
 }
 
-/* START */
-document.getElementById("btnStart").onclick=()=>{
-    if(!workspaceReady){
-        alert("Defina a pasta antes!");
-        return;
-    }
-    isRecording=true;
-    captureLoop();
-    document.getElementById("btnStart").disabled=true;
-    document.getElementById("btnStop").disabled=false;
-};
+async function salvarFoto() {
+    if (!gravando) return;
 
-/* STOP */
-document.getElementById("btnStop").onclick=()=>{
-    isRecording=false;
-    document.getElementById("btnStop").disabled=true;
-    document.getElementById("btnStart").disabled=false;
-};
+    can.width = vid.videoWidth;
+    can.height = vid.videoHeight;
+    ctx.drawImage(vid, 0, 0);
+
+    const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.8));
+    const nome = `Foto_${Date.now()}.jpg`;
+    
+    const fileHandle = await handle.getFileHandle(nome, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+
+    // Loop de 1 segundo
+    if (gravando) setTimeout(salvarFoto, 1000);
+}
+
+function iniciar() {
+    gravando = true;
+    document.getElementById('btnStart').disabled = true;
+    document.getElementById('btnStop').disabled = false;
+    salvarFoto();
+}
+
+function parar() {
+    gravando = false;
+    document.getElementById('btnStart').disabled = false;
+    document.getElementById('btnStop').disabled = true;
+}
 </script>
 
 </body>
