@@ -12,6 +12,7 @@
         #viewport { position: relative; width: 100vw; height: 40vh; background: #000; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
+        /* Placa de KM idêntica à sinalização de rodovia */
         #kmPlaque { 
             background: linear-gradient(180deg, #0a8a4d, #056b3c);
             color: white; text-align: center; padding: 12px;
@@ -67,6 +68,7 @@
 <canvas id="can"></canvas>
 
 <script>
+/* ======= MOTOR DE BUSCA DO SEU INDEX ORIGINAL ======= */
 let kmDataset = [];
 let lastPos = null;
 let isRecording = false;
@@ -78,6 +80,7 @@ const vid = document.getElementById('vid');
 const can = document.getElementById('can');
 const ctx = can.getContext('2d', { alpha: false });
 
+// Funções de utilidade do seu código original
 function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
 function findColumnIndex(headers, candidates){ 
     const map=headers.map(h=>normalizeStr(h)); 
@@ -92,72 +95,81 @@ function parsePt(v){
 function hav(a,b,c,d){ 
     const R=6371000, x=(c-a)*Math.PI/180, y=(d-b)*Math.PI/180; 
     const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; 
-    return 2=R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); 
+    return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); 
 }
 
+/* ======= CARREGAMENTO DO CSV (LOGICA DO SEU INDEX) ======= */
 async function loadKMCSV(){
     try {
         const resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
         if(!resp.ok) throw new Error("CSV não encontrado");
+
         let text = await resp.text();
         if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
         const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
         const head = lines.shift().split(';');
+        
         const iKm  = findColumnIndex(head, ['km']);
         const iLat = findColumnIndex(head, ['lat','latitude']);
         const iLon = findColumnIndex(head, ['lon','long','longitude']);
-        if(iKm < 0 || iLat < 0 || iLon < 0) return;
+
+        if(iKm < 0 || iLat < 0 || iLon < 0){
+            document.getElementById('stCsv').textContent = "CSV: ERRO CABEÇALHO";
+            document.getElementById('stCsv').classList.add('err');
+            return;
+        }
+
         kmDataset = lines.map(l=>{
             const r = l.split(';');
             return { km: r[iKm], lat: parsePt(r[iLat]), lon: parsePt(r[iLon]) };
         }).filter(p => p.km && Number.isFinite(p.lat) && Number.isFinite(p.lon));
+
         document.getElementById('stCsv').textContent = "CSV: OK (" + kmDataset.length + ")";
         document.getElementById('stCsv').classList.add('ok');
-    } catch(e) { console.error(e); }
+    } catch(e) {
+        document.getElementById('stCsv').textContent = "CSV: ERRO CARGA";
+        document.getElementById('stCsv').classList.add('err');
+    }
 }
 
+/* ======= ATUALIZAÇÃO DO KM (LÓGICA DO SEU INDEX) ======= */
 function updateKMDisplay() {
     if(!lastPos || !kmDataset.length) return;
+
     let best = null, bd = Infinity;
+    const lat = lastPos.lat;
+    const lon = lastPos.lon;
+
     for(const p of kmDataset){
-        const d = hav(lastPos.lat, lastPos.lon, p.lat, p.lon);
+        const d = hav(lat, lon, p.lat, p.lon);
         if(d < bd){ bd = d; best = p; }
     }
-    if(best) document.getElementById('kmPlaque').textContent = "KM " + best.km;
+
+    if(best) {
+        // Formata o KM para o estilo 000+000 ou o valor bruto do seu CSV
+        document.getElementById('kmPlaque').textContent = "KM " + best.km;
+    }
 }
 
-// ATUALIZADO: Função para desenhar o carimbo ESTILO MODELO (Tarja Preta no fundo)
-function drawStamp(item) {
-    const w = can.width;
-    const h = can.height;
-
-    // Configurações de estilo baseadas na imagem de referência
-    const stripeHeight = h * 0.22; // Tarja ocupa cerca de 22% da altura da foto
-    const paddingLeft = w * 0.05; // 5% de margem à esquerda
-    const topTextSize = h * 0.08; // Fonte grande para o KM
-    const bottomTextSize = h * 0.045; // Fonte menor para data/hora
-
-    // 1. Tarja Inferior Preta Sólida (idêntica ao modelo)
-    ctx.fillStyle = 'rgba(0,0,0,0.85)'; // Preta com leve transparência para ver o fundo
-    ctx.fillRect(0, h - stripeHeight, w, stripeHeight);
-
-    // 2. Configuração de Texto (Branco e Negrito)
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-
-    // 3. Desenha KM (Texto Superior da tarja)
-    ctx.font = `bold ${topTextSize}px Arial, sans-serif`;
-    // Centraliza verticalmente o bloco de texto dentro da tarja
-    const textBlockHeight = topTextSize + bottomTextSize + (h * 0.02); // Altura total das duas linhas + pequeno espaçamento
-    const textStartY = h - stripeHeight + ((stripeHeight - textBlockHeight) / 2);
+/* ======= CAPTURA E PDF (MELHORADO VISUALMENTE) ======= */
+// Função auxiliar para desenhar o texto com sombra diretamente no canvas da foto
+function drawStampedText(context, text, x, y, fontSize) {
+    context.save();
+    context.font = `bold ${fontSize}px 'Segoe UI', Arial, sans-serif`;
+    context.textAlign = 'left';
+    context.textBaseline = 'bottom';
     
-    ctx.fillText("KM " + item.km, paddingLeft, textStartY);
-
-    // 4. Desenha Data e Hora (Texto Inferior da tarja)
-    ctx.font = `normal ${bottomTextSize}px Arial, sans-serif`;
-    // Adiciona a Data e Hora logo abaixo do KM, com um pequeno recuo
-    ctx.fillText(item.ts, paddingLeft, textStartY + topTextSize + (h * 0.01));
+    // Configuração da sombra para dar contraste em fundos claros
+    context.shadowColor = 'rgba(0, 0, 0, 1)';
+    context.shadowBlur = 10;
+    context.shadowOffsetX = 4;
+    context.shadowOffsetY = 4;
+    
+    // Cor do texto (Branco para destacar)
+    context.fillStyle = '#ffffff';
+    context.fillText(text, x, y);
+    context.restore();
 }
 
 async function savePDF() {
@@ -169,20 +181,42 @@ async function savePDF() {
     document.getElementById('txtBuffer').textContent = "0/200";
 
     const { jsPDF } = window.jspdf;
+    // Cria PDF em modo Paisagem (Landscape), A4
     const doc = new jsPDF('l', 'mm', 'a4');
+    
+    // Dimensões da página A4 em mm (Paisagem)
+    const pageWidth = 297;
+    const pageHeight = 210;
 
-    for(let i=0; i < batch.length; i++) {
+    for(let i = 0; i < batch.length; i++) {
         const item = batch[i];
         if (i > 0) doc.addPage();
-        
-        // Renderiza a estampa no canvas antes de converter para imagem do PDF
+
+        // Para desenhar o texto sobre a foto, precisamos trabalhar no canvas
         const tempImg = new Image();
         await new Promise(resolve => {
             tempImg.onload = () => {
+                // Define o tamanho do canvas igual ao da foto original (capturada do vídeo)
+                can.width = tempImg.width;
+                can.height = tempImg.height;
+                
+                // Desenha a foto original no canvas
                 ctx.drawImage(tempImg, 0, 0);
-                drawStamp(item);
-                const stampedImg = can.toDataURL('image/jpeg', 0.8);
-                doc.addImage(stampedImg, 'JPEG', 0, 0, 297, 210); // Foto ocupa a página inteira
+                
+                // Configurações do texto em relação à altura da foto
+                const relFontSize = Math.round(can.height * 0.1); // Letras grandes (10% da altura da foto)
+                const padding = Math.round(can.width * 0.03);    // Margem de 3%
+                const textX = padding;
+                const textY = can.height - padding; // Canto inferior
+                
+                // Desenha o KM grande no canto inferior esquerdo
+                drawStampedText(ctx, `KM ${item.km}`, textX, textY, relFontSize);
+                
+                // Converte o canvas "carimbado" em imagem JPEG
+                const stampedImgData = can.toDataURL('image/jpeg', 0.85); // Alta qualidade
+                
+                // Adiciona a imagem cobrindo a página inteira (Full Page)
+                doc.addImage(stampedImgData, 'JPEG', 0, 0, pageWidth, pageHeight);
                 resolve();
             };
             tempImg.src = item.img;
@@ -190,19 +224,23 @@ async function savePDF() {
     }
 
     doc.save(`INSPECAO_LOTE_${pdfCount}.pdf`);
+    
+    // Reseta o tamanho do canvas para o tamanho do vídeo para o loop de captura continuar
+    can.width = vid.videoWidth;
+    can.height = vid.videoHeight;
 }
 
 function captureLoop() {
     if (!isRecording) return;
+
     ctx.drawImage(vid, 0, 0, can.width, can.height);
+    // Captura a imagem crua do vídeo
     const imgData = can.toDataURL('image/jpeg', 0.5);
     const currentKm = document.getElementById('kmPlaque').textContent.replace('KM ', '');
 
     activeBuffer.push({
-        img: imgData,
+        img: imgData, // Imagem sem texto ainda
         km: currentKm,
-        lat: lastPos ? lastPos.lat.toFixed(6) : "0",
-        lon: lastPos ? lastPos.lon.toFixed(6) : "0",
         ts: new Date().toLocaleString('pt-BR')
     });
 
@@ -211,9 +249,10 @@ function captureLoop() {
     document.getElementById('txtBuffer').textContent = `${activeBuffer.length}/200`;
 
     if (activeBuffer.length >= 200) savePDF();
-    setTimeout(captureLoop, 200);
+    setTimeout(captureLoop, 200); // 5 fotos por segundo
 }
 
+/* ======= INICIALIZAÇÃO ======= */
 document.getElementById('btnStart').onclick = () => {
     isRecording = true;
     document.getElementById('btnStart').disabled = true;
@@ -231,7 +270,10 @@ document.getElementById('btnStop').onclick = () => {
 document.getElementById('btnSaveManual').onclick = () => savePDF();
 
 async function init() {
+    // 1. Carrega o CSV usando a sua lógica exata
     await loadKMCSV();
+
+    // 2. Inicia Câmera
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'environment', width: 1280, height: 720 },
@@ -244,12 +286,16 @@ async function init() {
         };
     } catch (e) { alert("Erro ao acessar câmera!"); }
 
+    // 3. Inicia GPS e Loop de KM
     navigator.geolocation.watchPosition(pos => {
         lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
         document.getElementById('stGps').textContent = "GPS: OK";
         document.getElementById('stGps').classList.add('ok');
         updateKMDisplay();
-    }, null, { enableHighAccuracy: true });
+    }, err => {
+        document.getElementById('stGps').textContent = "GPS: ERRO";
+        document.getElementById('stGps').classList.add('err');
+    }, { enableHighAccuracy: true, maximumAge: 0 });
 }
 
 init();
