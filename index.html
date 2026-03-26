@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V5.8 - DESIGN CLÁSSICO</title>
+    <title>INSPEÇÃO PRO V5.9 - KM VIA CSV</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --highway-green: #056b3c; --panel-bg: #0b1224; --accent: #00d9ff; --gold: #ffd700; }
@@ -130,7 +130,7 @@ const vid = document.getElementById('vid');
 const can = document.getElementById('can');
 const ctx = can.getContext('2d');
 
-// --- SISTEMA DE CÂMERAS DENTRO DA ENGRENAGEM ---
+// --- CÂMERAS ---
 async function setupCameras() {
     try {
         await navigator.mediaDevices.getUserMedia({video: true});
@@ -152,21 +152,17 @@ async function setupCameras() {
             uiList.appendChild(btn);
             if(i === 0) { btn.classList.add('active'); switchCamera(d.deviceId); }
         });
-        
         document.getElementById('stCam').textContent = "CAM: OK";
         document.getElementById('stCam').classList.add('ok');
-    } catch (e) { alert("Erro ao acessar câmeras."); }
+    } catch (e) { console.error(e); }
 }
 
 async function switchCamera(id) {
-    if (vid.srcObject) {
-        vid.srcObject.getTracks().forEach(t => t.stop());
-        vid.srcObject = null;
-    }
-    const isFullHD = document.getElementById('cfgRes').value === "1080";
+    if (vid.srcObject) { vid.srcObject.getTracks().forEach(t => t.stop()); vid.srcObject = null; }
+    const res = document.getElementById('cfgRes').value === "1080";
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { deviceId: { exact: id }, width: { ideal: isFullHD?1920:1280 }, height: { ideal: isFullHD?1080:720 } }
+            video: { deviceId: { exact: id }, width: { ideal: res?1920:1280 }, height: { ideal: res?1080:720 } }
         });
         vid.srcObject = stream;
         vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
@@ -181,7 +177,7 @@ function initDefaultCam() {
     if(active) active.click();
 }
 
-// --- LÓGICA KM/GPS ---
+// --- LÓGICA CSV E POSIÇÃO ---
 function hav(a,b,c,d){ 
     const R=6371000, x=(c-a)*Math.PI/180, y=(d-b)*Math.PI/180; 
     const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; 
@@ -193,14 +189,14 @@ async function loadKMCSV(){
         const resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now());
         const text = await resp.text();
         const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-        lines.shift(); // Remove header
+        lines.shift(); // Remove cabeçalho
         kmDataset = lines.map(l => {
             const r = l.split(';');
             return { km: r, lat: parseFloat(r.replace(',','.')), lon: parseFloat(r.replace(',','.')) };
         }).filter(p => !isNaN(p.lat));
         document.getElementById('stCsv').textContent = "CSV: OK";
         document.getElementById('stCsv').classList.add('ok');
-    } catch(e) {}
+    } catch(e) { document.getElementById('stCsv').textContent = "CSV: ERR"; }
 }
 
 function updateKM() {
@@ -213,7 +209,7 @@ function updateKM() {
     if(best) document.getElementById('kmPlaque').textContent = "KM " + best.km;
 }
 
-// --- DESIGN ANTERIOR (PLACA VERDE) ---
+// --- ESTAMPA (DESIGN VERDE) ---
 function drawHighwayStamp(item) {
     const w = can.width, h = can.height;
     const scale = h / 1080;
@@ -223,21 +219,16 @@ function drawHighwayStamp(item) {
     const radius = 22 * scale;
 
     ctx.save();
-    // Placa
     ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 15 * scale; ctx.shadowOffsetY = 8 * scale;
     ctx.fillStyle = "white";
     ctx.beginPath(); ctx.roundRect(margin, h - plateH - margin, plateW, plateH, radius); ctx.fill();
     ctx.shadowBlur = 0; ctx.fillStyle = "#056b3c";
     const pad = 8 * scale;
     ctx.beginPath(); ctx.roundRect(margin + pad, h - plateH - margin + pad, plateW - (pad*2), plateH - (pad*2), radius - (5*scale)); ctx.fill();
-    
-    // KM
     ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    let fSize = 85 * scale;
-    ctx.font = `900 ${fSize}px Arial Black, sans-serif`;
+    ctx.font = `900 ${85 * scale}px Arial Black, sans-serif`;
     ctx.fillText("KM " + item.km, margin + (plateW/2), h - margin - (plateH/2));
 
-    // GPS lateral
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
     const infoS = 25 * scale; ctx.font = `bold ${infoS}px monospace`;
     const infoX = margin + plateW + (30 * scale);
@@ -252,7 +243,7 @@ function drawHighwayStamp(item) {
     ctx.restore();
 }
 
-// --- MOTOR PDF ---
+// --- PDF ---
 async function savePDF() {
     if(!activeBuffer.length) return;
     const batch = [...activeBuffer]; activeBuffer = []; pdfCount++;
@@ -274,7 +265,7 @@ async function savePDF() {
             img.src = batch[i].raw;
         });
     }
-    const name = `INSPECAO_${Date.now()}.pdf`;
+    const name = `INSPECAO_LOTE_${pdfCount}.pdf`;
     if (directoryHandle) {
         const file = await directoryHandle.getFileHandle(name, { create: true });
         const stream = await file.createWritable();
