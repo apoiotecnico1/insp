@@ -3,215 +3,196 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V7.0</title>
+    <title>INSPEÇÃO PRO V7.5 - FULL SCREEN</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --green: #056b3c; --gold: #ffcc00; --danger: #cc0000; --dark: #0a0a0a; }
+        :root { --green: #056b3c; --gold: #ffcc00; --danger: #cc0000; --panel: #0a0a0a; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
         body { 
-            background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; 
+            background: #000; color: #fff; font-family: 'Arial', sans-serif; 
             overflow: hidden; height: 100vh; width: 100vw;
         }
 
-        /* Container Principal */
-        #app-container { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
+        /* Layout Dinâmico */
+        #main-app { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
 
-        /* Comportamento Horizontal */
         @media (orientation: landscape) {
-            #app-container { flex-direction: row; }
-            #camera-view { flex: 2.5; }
-            #controls-side { flex: 0.8; border-left: 2px solid #222; }
+            #main-app { flex-direction: row; }
+            #cam-area { flex: 3; }
+            #ui-area { flex: 0.8; border-left: 2px solid #222; }
         }
 
-        /* Comportamento Vertical */
         @media (orientation: portrait) {
-            #camera-view { height: 60vh; width: 100%; }
-            #controls-side { height: 40vh; width: 100%; border-top: 2px solid #222; }
+            #cam-area { height: 65vh; }
+            #ui-area { height: 35vh; border-top: 2px solid #222; }
         }
 
-        /* Área da Câmera */
-        #camera-view { position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        /* Área do Vídeo */
+        #cam-area { position: relative; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Placa de KM (Ao Vivo) */
-        #live-km { 
-            position: absolute; top: 15px; left: 15px; 
-            background: var(--green); padding: 8px 18px; border-radius: 10px;
-            border: 2px solid #fff; font-size: 1.8rem; font-weight: 900;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.8); z-index: 10;
+        /* Placa Km Ao Vivo (Grafia Correta: Km) */
+        #km-display { 
+            position: absolute; top: 20px; left: 20px; 
+            background: var(--green); padding: 12px 24px; border-radius: 12px;
+            border: 3px solid #fff; font-size: 2.2rem; font-weight: 900;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.9); z-index: 50;
         }
 
-        /* Engrenagem Minimalista */
-        #gear-icon {
-            position: absolute; top: 15px; right: 15px; z-index: 100;
-            background: rgba(0,0,0,0.3); width: 40px; height: 40px;
+        /* Botão Engrenagem Discreto */
+        #gear-btn {
+            position: absolute; top: 20px; right: 20px; z-index: 100;
+            background: rgba(50,50,50,0.7); width: 45px; height: 45px;
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            border: 1px solid rgba(255,255,255,0.2); cursor: pointer; color: #fff; font-size: 20px;
+            border: 1px solid rgba(255,255,255,0.3); cursor: pointer; color: #fff; font-size: 22px;
         }
 
-        /* Painel de Ajustes */
-        #settings-menu {
+        /* Menu de Configurações */
+        #side-menu {
             position: fixed; top: 0; right: -100%; width: 280px; height: 100%;
-            background: rgba(10, 10, 10, 0.95); z-index: 200; transition: 0.3s ease;
-            padding: 25px; border-left: 3px solid var(--gold); backdrop-filter: blur(10px);
+            background: rgba(15,15,15,0.98); z-index: 200; transition: 0.3s;
+            padding: 30px; border-left: 4px solid var(--gold);
         }
-        #settings-menu.open { right: 0; }
-        .option-group { margin-bottom: 20px; }
-        .option-group label { display: block; font-size: 11px; color: var(--gold); margin-bottom: 5px; text-transform: uppercase; }
-        select { width: 100%; padding: 10px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; }
+        #side-menu.open { right: 0; }
+        .config-box { margin-bottom: 25px; }
+        .config-box label { display: block; font-size: 11px; color: var(--gold); margin-bottom: 8px; font-weight: bold; }
+        select { width: 100%; padding: 12px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; }
 
-        /* Painel de Controles */
-        #controls-side { background: var(--dark); display: flex; flex-direction: column; padding: 15px; gap: 10px; justify-content: space-around; }
-        
-        .stat-box { background: #151515; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #222; }
-        .stat-box small { font-size: 10px; color: #777; display: block; }
-        .stat-box b { font-size: 1.5rem; color: #fff; }
+        /* Painel de Controle */
+        #ui-area { background: var(--panel); display: flex; flex-direction: column; padding: 15px; gap: 10px; justify-content: space-evenly; }
+        .stats { display: flex; gap: 10px; }
+        .stat-item { flex: 1; background: #1a1a1a; padding: 12px; border-radius: 10px; text-align: center; border: 1px solid #333; }
+        .stat-item b { font-size: 1.5rem; display: block; }
 
-        .btn { width: 100%; border: none; border-radius: 15px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
-        .btn-folder { background: var(--gold); color: #000; height: 50px; font-size: 0.8rem; }
-        .btn-start { background: var(--green); color: #fff; height: 80px; font-size: 1.2rem; }
-        .btn-stop { background: var(--danger); color: #fff; height: 80px; font-size: 1.2rem; }
-        button:disabled { opacity: 0.1; transform: scale(0.95); }
+        .btn { width: 100%; border: none; border-radius: 16px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
+        .btn-dir { background: var(--gold); color: #000; height: 50px; font-size: 0.8rem; }
+        .btn-on { background: var(--green); color: #fff; height: 75px; font-size: 1.2rem; }
+        .btn-off { background: var(--danger); color: #fff; height: 75px; font-size: 1.2rem; }
+        button:disabled { opacity: 0.1; transform: scale(0.98); }
 
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div id="gear-icon" onclick="toggleMenu()">⚙</div>
+<div id="gear-btn" onclick="toggleMenu()">⚙</div>
 
-<div id="settings-menu">
-    <h2 style="margin-bottom:25px; font-size: 18px; border-bottom: 1px solid #333; padding-bottom: 10px;">CONFIGURAÇÕES</h2>
-    <div class="option-group">
-        <label>Exibir Data no PDF</label>
-        <select id="cfg-date"><option value="sim">SIM</option><option value="nao">NÃO</option></select>
+<div id="side-menu">
+    <h3 style="margin-bottom:30px; border-bottom:1px solid #333; padding-bottom:10px;">AJUSTES</h3>
+    <div class="config-box">
+        <label>DATA NO RELATÓRIO</label>
+        <select id="set-date"><option value="sim">MOSTRAR</option><option value="nao">OCULTAR</option></select>
     </div>
-    <div class="option-group">
-        <label>Qualidade da Foto</label>
-        <select id="cfg-quality"><option value="0.8">ALTA (Padrão)</option><option value="0.5">MÉDIA (Econômica)</option></select>
+    <div class="config-box">
+        <label>TAMANHO DA LETRA KM</label>
+        <select id="set-font"><option value="80">GRANDE</option><option value="60">MÉDIA</option></select>
     </div>
-    <div class="option-group">
-        <label>Modo Noturno</label>
-        <select id="cfg-night"><option value="auto">AUTOMÁTICO</option><option value="off">DESLIGADO</option></select>
-    </div>
-    <button onclick="toggleMenu()" style="background:var(--danger); color:white; border:none; padding:10px; border-radius:8px; width:100%; margin-top:20px; font-weight:bold">FECHAR AJUSTES</button>
+    <button onclick="toggleMenu()" style="width:100%; padding:15px; background:var(--danger); color:white; border:none; border-radius:8px; font-weight:bold;">VOLTAR</button>
 </div>
 
-<div id="app-container">
-    <div id="camera-view">
-        <video id="webcam" autoplay playsinline muted></video>
-        <div id="live-km">Km ---+---</div>
+<div id="main-app">
+    <div id="cam-area">
+        <video id="v" autoplay playsinline muted></video>
+        <div id="km-display">Km ---+---</div>
     </div>
 
-    <div id="controls-side">
-        <div style="display: flex; gap: 10px;">
-            <div class="stat-box" style="flex:1"><small>LOTE</small><b id="txt-batch">0/50</b></div>
-            <div class="stat-box" style="flex:1"><small>TOTAL</small><b id="txt-total">0</b></div>
+    <div id="ui-area">
+        <div class="stats">
+            <div class="stat-item"><small style="color:#666">LOTE</small><b id="txt-lote">0/50</b></div>
+            <div class="stat-item"><small style="color:#666">TOTAL</small><b id="txt-total">0</b></div>
         </div>
-
-        <div id="status-info" style="font-size: 11px; text-align: center; color: #555;">Aguardando Pasta...</div>
-
-        <button id="btn-dir" class="btn btn-folder">📂 DEFINIR PASTA DO RELATÓRIO</button>
-        <button id="btn-start" class="btn btn-start" disabled>▶ INICIAR INSPEÇÃO</button>
-        <button id="btn-stop" class="btn btn-stop" disabled>■ FINALIZAR LOTE</button>
+        
+        <button id="btn-f" class="btn btn-dir">📂 1. DEFINIR PASTA</button>
+        <button id="btn-start" class="btn btn-on" disabled>▶ 2. INICIAR INSPEÇÃO</button>
+        <button id="btn-stop" class="btn btn-off" disabled>■ PARAR E GERAR PDF</button>
+        
+        <div id="msg" style="font-size:10px; color:#444; text-align:center">V7.5 | FULL IMMERSIVE MODE</div>
     </div>
 </div>
 
-<canvas id="proc-canvas"></canvas>
+<canvas id="c"></canvas>
 
 <script>
-let kmDataset = [], lastPos = null, recording = false;
-let photoBuffer = [], globalTotal = 0, batchCount = 0, folderHandle = null;
+let kmDB = [], pos = null, active = false, batch = [], total = 0, batchIdx = 0, hDir = null;
 
-const video = document.getElementById('webcam');
-const canvas = document.getElementById('proc-canvas');
-const ctx = canvas.getContext('2d');
+const v = document.getElementById('v'), c = document.getElementById('c'), ctx = c.getContext('2d');
 
-// Iniciar Câmera e GPS Imadiatamente
-window.onload = () => {
-    initCamera();
-    loadCSV();
-    initGPS();
-};
+// Iniciar componentes
+window.onload = () => { initCam(); loadCSV(); initGPS(); };
 
-async function initCamera() {
+// MONITOR DE ORIENTAÇÃO: Força FullScreen ao virar o celular
+window.screen.orientation.onchange = () => { if(active) goFull(); };
+
+async function goFull() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment", width: {ideal: 1920}, height: {ideal: 1080} }
-        });
-        video.srcObject = stream;
-        video.onloadedmetadata = () => {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            video.play();
-        };
-    } catch(e) { console.error("Falha ao abrir câmera traseira"); }
+        if (!document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+        }
+    } catch(e) { console.warn("Fullscreen negado pelo navegador"); }
+}
+
+async function initCam() {
+    const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: {ideal: 1920}, height: {ideal: 1080} }
+    });
+    v.srcObject = s;
+    v.onloadedmetadata = () => { c.width = v.videoWidth; c.height = v.videoHeight; v.play(); };
 }
 
 async function loadCSV() {
     try {
         const r = await fetch('SNVBR116SPRJ.csv?v=' + Date.now());
         const t = await r.text();
-        const lines = t.split('\n').filter(l => l.includes(';'));
-        const head = lines.shift().split(';').map(v => v.trim().toLowerCase());
-        const iK = head.indexOf('km'), iLat = head.findIndex(x => x.includes('lat')), iLon = head.findIndex(x => x.includes('lon'));
-        
-        kmDataset = lines.map(l => {
-            const c = l.split(';');
-            return { km: c[iK], lat: parseFloat(c[iLat].replace(',','.')), lon: parseFloat(c[iLon].replace(',','.')) };
-        }).filter(d => !isNaN(d.lat));
-    } catch(e) { document.getElementById('status-info').innerText = "Erro ao ler CSV!"; }
+        const rows = t.split('\n').filter(l => l.includes(';'));
+        const head = rows.shift().split(';').map(v => v.trim().toLowerCase());
+        const ik = head.indexOf('km'), ilt = head.findIndex(x => x.includes('lat')), iln = head.findIndex(x => x.includes('lon'));
+        kmDB = rows.map(r => {
+            const cols = r.split(';');
+            return { km: cols[ik], lt: parseFloat(cols[ilt].replace(',','.')), ln: parseFloat(cols[iln].replace(',','.')) };
+        }).filter(d => !isNaN(d.lt));
+    } catch(e) { document.getElementById('msg').innerText = "Erro CSV!"; }
 }
 
 function updateKM() {
-    if(!lastPos || !kmDataset.length) return;
-    let nearest = null, minDist = Infinity;
-    for(const p of kmDataset) {
-        const d = Math.hypot(p.lat - lastPos.lat, p.lon - lastPos.lon);
-        if(d < minDist) { minDist = d; nearest = p; }
+    if(!pos || !kmDB.length) return;
+    let near = null, dMin = Infinity;
+    for(const pt of kmDB) {
+        const d = Math.hypot(pt.lt - pos.lat, pt.ln - pos.lon);
+        if(d < dMin) { dMin = d; near = pt; }
     }
-    if(nearest) {
-        // Grafia solicitada: Km 000+000
-        document.getElementById('live-km').innerText = "Km " + nearest.km;
-    }
+    if(near) document.getElementById('km-display').innerText = "Km " + near.km;
 }
 
-// Estampa de Relatório Técnica
+/* ======= ESTAMPA DO RELATÓRIO (Km + ESPAÇO) ======= */
 function drawStamp(meta) {
-    const w = canvas.width, h = canvas.height;
+    const w = c.width, h = c.height;
     ctx.save();
-    
-    // Proporção Dinâmica (Timestamp Perícia)
     const barH = h * 0.12;
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillRect(0, h - barH, w, barH); // Faixa no rodapé
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillRect(0, h - barH, w, barH);
 
-    // Km (Destaque)
     ctx.fillStyle = "#ffffff";
     ctx.textAlign = "left";
-    const fontSizeKm = barH * 0.55;
-    ctx.font = `900 ${fontSizeKm}px Arial`;
-    ctx.fillText("Km " + meta.km, w * 0.05, h - (barH * 0.3));
+    const fontSize = parseInt(document.getElementById('set-font').value) || 80;
+    ctx.font = `900 ${fontSize}px Arial`;
+    // GRAFIA: Km (K maiúsculo)
+    ctx.fillText("Km " + meta.km, w * 0.05, h - (barH * 0.35));
 
-    // Data/Hora (Discreto)
-    if(document.getElementById('cfg-date').value === 'sim') {
+    if(document.getElementById('set-date').value === 'sim') {
         ctx.textAlign = "right";
-        ctx.font = `bold ${barH * 0.25}px monospace`;
-        ctx.fillText(meta.ts, w * 0.95, h - (barH * 0.4));
+        ctx.font = "bold 30px monospace";
+        ctx.fillText(meta.ts, w * 0.95, h - (barH * 0.45));
     }
     ctx.restore();
 }
 
-async function processAndSave() {
-    if(!photoBuffer.length || !folderHandle) return;
-    const items = [...photoBuffer]; photoBuffer = [];
-    batchCount++;
-    document.getElementById('status-info').innerText = `Gerando PDF Lote ${batchCount}...`;
+async function savePDF() {
+    if(!batch.length || !hDir) return;
+    const items = [...batch]; batch = []; batchIdx++;
+    document.getElementById('msg').innerText = `Processando Lote ${batchIdx}...`;
 
     const doc = new jspdf.jsPDF('l', 'mm', 'a4');
-    const quality = parseFloat(document.getElementById('cfg-quality').value);
-
     for(let i=0; i<items.length; i++){
         if(i > 0) doc.addPage();
         const img = new Image();
@@ -219,79 +200,60 @@ async function processAndSave() {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
                 drawStamp(items[i]);
-                
-                const ratio = canvas.width / canvas.height;
+                const ratio = c.width / c.height;
                 let dw = 297, dh = 297/ratio;
                 if(dh > 210) { dh = 210; dw = 210*ratio; }
-                
-                doc.addImage(canvas.toDataURL('image/jpeg', quality), 'JPEG', (297-dw)/2, (210-dh)/2, dw, dh);
+                doc.addImage(c.toDataURL('image/jpeg', 0.85), 'JPEG', (297-dw)/2, (210-dh)/2, dw, dh);
                 res();
             };
             img.src = items[i].raw;
         });
     }
-
-    try {
-        const file = await folderHandle.getFileHandle(`RELATORIO_LOTE_${batchCount}.pdf`, {create:true});
-        const stream = await file.createWritable();
-        await stream.write(doc.output('blob'));
-        await stream.close();
-        document.getElementById('status-info').innerText = `Lote ${batchCount} salvo com sucesso!`;
-    } catch(e) {
-        document.getElementById('status-info').innerText = "Erro ao salvar!";
-        doc.save(`Inspecao_Emergencia_${Date.now()}.pdf`);
-    }
+    const f = await hDir.getFileHandle(`INSPECAO_LOTE_${batchIdx}.pdf`, {create:true});
+    const s = await f.createWritable();
+    await s.write(doc.output('blob')); await s.close();
+    document.getElementById('msg').innerText = `Lote ${batchIdx} Salvo com Sucesso!`;
 }
 
-function capture() {
-    if(!recording) return;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    photoBuffer.push({
-        raw: canvas.toDataURL('image/jpeg', 0.5),
-        km: document.getElementById('live-km').innerText.replace("Km ", ""),
+function loop() {
+    if(!active) return;
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+    batch.push({
+        raw: c.toDataURL('image/jpeg', 0.6),
+        km: document.getElementById('km-display').innerText.replace("Km ", ""),
         ts: new Date().toLocaleString('pt-BR')
     });
-
-    globalTotal++;
-    document.getElementById('txt-total').innerText = globalTotal;
-    document.getElementById('txt-batch').innerText = `${photoBuffer.length}/50`;
-
-    if(photoBuffer.length >= 50) processAndSave();
-    setTimeout(capture, 700);
+    total++;
+    document.getElementById('txt-total').innerText = total;
+    document.getElementById('txt-lote').innerText = `${batch.length}/50`;
+    if(batch.length >= 50) savePDF();
+    setTimeout(loop, 750);
 }
 
-// Fullscreen e Comandos
-async function toggleFullScreen() {
-    if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen().catch(e => console.log(e));
-    }
-}
-
-document.getElementById('btn-dir').onclick = async () => {
-    folderHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-    document.getElementById('btn-dir').innerText = "PASTA PRONTA ✓";
+document.getElementById('btn-f').onclick = async () => {
+    hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+    document.getElementById('btn-f').innerText = "PASTA OK ✓";
     document.getElementById('btn-start').disabled = false;
-    video.play();
 };
 
 document.getElementById('btn-start').onclick = () => {
-    toggleFullScreen(); // Ativa modo imersivo ao começar
-    recording = true; capture();
+    goFull(); // Ativa FullScreen ao iniciar
+    active = true; loop();
     document.getElementById('btn-start').disabled = true;
     document.getElementById('btn-stop').disabled = false;
 };
 
 document.getElementById('btn-stop').onclick = () => {
-    recording = false; processAndSave();
+    active = false; savePDF();
     document.getElementById('btn-start').disabled = false;
     document.getElementById('btn-stop').disabled = true;
 };
 
-function toggleMenu() { document.getElementById('settings-menu').classList.toggle('open'); }
+function toggleMenu() { document.getElementById('side-menu').classList.toggle('open'); }
 
 function initGPS() {
     navigator.geolocation.watchPosition(p => {
-        lastPos = { lat: p.coords.latitude, lon: p.coords.longitude };
+        pos = { lat: p.coords.latitude, lon: p.coords.longitude };
         updateKM();
     }, null, {enableHighAccuracy:true});
 }
