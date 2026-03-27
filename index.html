@@ -3,246 +3,246 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V6.0 - ENGENHARIA</title>
+    <title>INSPEÇÃO PRO V6.5</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --highway-green: #056b3c; --gold: #ffcc00; --danger: #cc0000; --panel: #1a1a1a; }
+        :root { --highway-green: #056b3c; --gold: #ffcc00; --danger: #cc0000; --dark: #0f0f0f; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Arial', sans-serif; overflow: hidden; height: 100vh; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; height: 100vh; }
 
-        #container { display: flex; flex-direction: column; height: 100vh; padding: 10px; gap: 10px; }
+        #app { display: flex; flex-direction: column; height: 100vh; padding: 10px; gap: 10px; }
+        @media (orientation: landscape) { #app { flex-direction: row; } #view { flex: 2.2; } #side { flex: 0.8; } }
+
+        /* Moldura de Vídeo */
+        #view { background: #111; border-radius: 12px; position: relative; overflow: hidden; border: 2px solid #333; }
+        video { width: 100%; height: 100%; object-fit: cover; }
         
-        @media (orientation: landscape) {
-            #container { flex-direction: row; }
-            #monitor { flex: 2; border: 3px solid #333; border-radius: 12px; position: relative; overflow: hidden; }
-            #sidebar { flex: 0.7; display: flex; flex-direction: column; gap: 10px; }
-        }
+        #km-live { position: absolute; top: 15px; left: 15px; background: var(--highway-green); padding: 5px 15px; border-radius: 8px; border: 2px solid #fff; font-size: 1.5rem; font-weight: 900; }
+        #night-indicator { position: absolute; top: 15px; right: 60px; color: var(--gold); font-size: 0.7rem; display: none; }
 
-        /* Monitor de Vídeo */
-        #monitor { background: #111; display: flex; align-items: center; justify-content: center; position: relative; }
-        video { width: 100%; height: 100%; object-fit: contain; }
+        /* Botão Engrenagem */
+        #btn-gear { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #666; z-index: 100; cursor: pointer; }
 
-        /* KM Minimalista no Vídeo */
-        #live-overlay {
-            position: absolute; top: 15px; left: 15px; background: var(--highway-green);
-            padding: 8px 20px; border-radius: 8px; border: 2px solid #fff;
-            font-size: 1.8rem; font-weight: 900; box-shadow: 0 4px 10px #000;
-        }
+        /* Painel de Ajustes */
+        #settings { position: fixed; top: 0; right: -100%; width: 300px; height: 100%; background: var(--dark); z-index: 200; transition: 0.4s; padding: 20px; border-left: 2px solid var(--gold); }
+        #settings.open { right: 0; }
+        .set-item { margin-bottom: 20px; border-bottom: 1px solid #222; padding-bottom: 10px; }
+        label { display: block; font-size: 0.8rem; color: var(--gold); margin-bottom: 5px; }
+        select, input { width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 5px; }
 
-        /* Sidebar e Botões Clássicos */
-        .card { background: var(--panel); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #333; }
-        .card b { font-size: 1.5rem; color: var(--gold); }
-        
-        .btn { width: 100%; border: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
-        .btn-dir { background: var(--gold); color: #000; height: 55px; margin-top: auto; }
-        .btn-start { background: var(--highway-green); color: #fff; height: 75px; font-size: 1.2rem; }
-        .btn-stop { background: var(--danger); color: #fff; height: 75px; font-size: 1.2rem; }
-        
+        /* Controles Laterais */
+        #side { display: flex; flex-direction: column; gap: 10px; }
+        .info { background: #1a1a1a; padding: 10px; border-radius: 8px; text-align: center; border-bottom: 3px solid var(--gold); }
+        .btn { width: 100%; border: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
+        .btn-folder { background: var(--gold); color: #000; height: 50px; margin-top: auto; }
+        .btn-start { background: var(--highway-green); color: #fff; height: 70px; font-size: 1.1rem; }
+        .btn-stop { background: var(--danger); color: #fff; height: 70px; font-size: 1.1rem; }
         button:disabled { opacity: 0.2; }
-        #log { font-size: 0.7rem; color: #888; text-align: center; min-height: 20px; }
 
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div id="container">
-    <div id="monitor">
-        <video id="vid" autoplay playsinline muted></video>
-        <div id="live-overlay">KM ---+---</div>
+<div id="btn-gear" onclick="toggleSet()">⚙️</div>
+
+<div id="settings">
+    <h3 style="margin-bottom:20px">AJUSTES RÁPIDOS</h3>
+    
+    <div class="set-item">
+        <label>DATA E HORA NA FOTO</label>
+        <select id="set-data">
+            <option value="sim">MOSTRAR</option>
+            <option value="nao">OCULTAR</option>
+        </select>
     </div>
 
-    <div id="sidebar">
-        <div class="card">
-            <small>LOTE ATUAL</small><br>
-            <b id="count-batch">0/50</b>
-        </div>
+    <div class="set-item">
+        <label>POSIÇÃO DA DATA</label>
+        <select id="set-pos">
+            <option value="baixo">RODAPÉ (Padrão)</option>
+            <option value="cima">TOPO (Lado KM)</option>
+        </select>
+    </div>
+
+    <div class="set-item">
+        <label>TAMANHO DA LETRA</label>
+        <select id="set-fonte">
+            <option value="media">MÉDIA</option>
+            <option value="grande">GRANDE</option>
+        </select>
+    </div>
+
+    <div class="set-item">
+        <label>MODO NOTURNO</label>
+        <select id="set-night">
+            <option value="auto">AUTOMÁTICO</option>
+            <option value="off">DESLIGADO</option>
+        </select>
+    </div>
+
+    <button onclick="toggleSet()" style="background:var(--danger); color:#fff; padding:10px; width:100%; border:none; border-radius:5px;">FECHAR</button>
+</div>
+
+<div id="app">
+    <div id="view">
+        <video id="v" autoplay playsinline muted></video>
+        <div id="km-live">---</div>
+        <div id="night-indicator">🌙 MODO NOTURNO ATIVO</div>
+    </div>
+
+    <div id="side">
+        <div class="info"><small>LOTE</small><br><b id="txt-b">0/50</b></div>
+        <div class="info"><small>TOTAL</small><br><b id="txt-t">0</b></div>
+        <div id="log" style="font-size:10px; color:#666; text-align:center">Selecione a pasta para iniciar</div>
         
-        <div class="card">
-            <small>TOTAL GERAL</small><br>
-            <b id="count-total">0</b>
-        </div>
-
-        <div id="log">Aguardando definição de pasta...</div>
-
-        <button id="btn-dir" class="btn btn-dir">📁 SELECIONAR PASTA</button>
-        <button id="btn-start" class="btn btn-start" disabled>▶ INICIAR INSPEÇÃO</button>
-        <button id="btn-stop" class="btn btn-stop" disabled>■ FINALIZAR LOTE</button>
+        <button id="btn-f" class="btn btn-folder">📁 ESCOLHER PASTA</button>
+        <button id="btn-on" class="btn btn-start" disabled>▶ INICIAR</button>
+        <button id="btn-off" class="btn btn-stop" disabled>■ PARAR</button>
     </div>
 </div>
 
-<canvas id="can"></canvas>
+<canvas id="c"></canvas>
 
 <script>
-let kmData = [], pos = null, isRecording = false;
-let batch = [], totalPhotos = 0, batchIdx = 0, dir = null;
+let kmDB = [], gps = null, rec = false, batch = [], count = 0, batchCount = 0, hdl = null;
+let isDark = false;
 
-const vid = document.getElementById('vid');
-const can = document.getElementById('can');
-const ctx = can.getContext('2d');
+const v = document.getElementById('v'), c = document.getElementById('c'), ctx = c.getContext('2d');
 
-window.onload = () => {
-    startCam();
-    loadCSV();
-    startGPS();
-    // Heartbeat para garantir que a câmera não trave
-    setInterval(() => { if(vid.paused && !isRecording) vid.play(); }, 2000);
-};
+window.onload = () => { setup(); loadCSV(); initGPS(); };
 
-async function startCam() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment", width: {ideal: 1920}, height: {ideal: 1080} }
-        });
-        vid.srcObject = stream;
-        vid.onloadedmetadata = () => {
-            can.width = vid.videoWidth;
-            can.height = vid.videoHeight;
-            vid.play();
-        };
-    } catch(e) { alert("Erro ao acessar câmera traseira."); }
+async function setup() {
+    const s = await navigator.mediaDevices.getUserMedia({video: {facingMode:"environment", width:1920, height:1080}});
+    v.srcObject = s;
+    v.onloadedmetadata = () => { c.width = v.videoWidth; c.height = v.videoHeight; v.play(); };
+    setInterval(checkLight, 3000); // Checa luz a cada 3s
+}
+
+function checkLight() {
+    if(!rec) {
+        ctx.drawImage(v, 0, 0, 100, 100);
+        const data = ctx.getImageData(0,0,100,100).data;
+        let brightness = 0;
+        for(let i=0; i<data.length; i+=4) brightness += (data[i]+data[i+1]+data[i+2])/3;
+        brightness /= 10000;
+        isDark = brightness < 60; // Limiar de escuridão
+        document.getElementById('night-indicator').style.display = (isDark && document.getElementById('set-night').value === 'auto') ? 'block' : 'none';
+    }
 }
 
 async function loadCSV() {
-    try {
-        const r = await fetch('SNVBR116SPRJ.csv?v=' + Date.now());
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const iK = h.indexOf('km'), iLt = h.findIndex(x => x.includes('lat')), iLn = h.findIndex(x => x.includes('lon'));
-        
-        kmData = rows.map(r => {
-            const c = r.split(';');
-            return { k: c[iK], lt: parseFloat(c[iLt].replace(',','.')), ln: parseFloat(c[iLn].replace(',','.')) };
-        }).filter(d => !isNaN(d.lt));
-    } catch(e) { document.getElementById('log').innerText = "Erro SNV!"; }
+    const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
+    const t = await r.text();
+    const rows = t.split('\n').filter(l => l.includes(';'));
+    const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
+    const ik = h.indexOf('km'), ilt = h.findIndex(x => x.includes('lat')), iln = h.findIndex(x => x.includes('lon'));
+    kmDB = rows.map(r => {
+        const c = r.split(';');
+        return { k: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
+    }).filter(d => !isNaN(d.lt));
 }
 
-function updateKM() {
-    if(!pos || !kmData.length) return;
-    let near = null, dMin = Infinity;
-    for(const p of kmData) {
-        const d = Math.hypot(p.lt - pos.lat, p.ln - pos.lon);
-        if(d < dMin) { dMin = d; near = p; }
-    }
-    if(near) document.getElementById('live-overlay').innerText = near.k;
-}
-
-/* ======= ESTAMPA TÉCNICA (TOP-KM / BOTTOM-DATA) ======= */
-function stampPhoto(meta) {
-    const w = can.width, h = can.height;
+function stamp(meta) {
+    const w = c.width, h = c.height;
     ctx.save();
 
-    // 1. Moldura do KM no Topo (Estilo Placa de Regulamentação)
-    const pW = w * 0.22;
-    const pH = pW * 0.35;
-    const margin = 25;
-    
-    ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.roundRect(margin, margin, pW, pH, 12);
-    ctx.fill();
+    // Filtro Noturno (Aumenta brilho se estiver escuro)
+    if(isDark && document.getElementById('set-night').value === 'auto') {
+        ctx.filter = "brightness(1.4) contrast(1.2)";
+    }
 
-    ctx.fillStyle = "#056b3c";
-    ctx.beginPath();
-    ctx.roundRect(margin + 4, margin + 4, pW - 8, pH - 8, 8);
-    ctx.fill();
+    // KM (Sempre Fixo no Topo Esquerdo)
+    const pw = w * 0.22, ph = pw * 0.35, m = 25;
+    ctx.fillStyle = "white"; ctx.beginPath(); ctx.roundRect(m, m, pw, ph, 12); ctx.fill();
+    ctx.fillStyle = "#056b3c"; ctx.beginPath(); ctx.roundRect(m+4, m+4, pw-8, ph-8, 8); ctx.fill();
+    ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = `bold ${ph*0.6}px Arial`;
+    ctx.fillText(meta.km, m+(pw/2), m+(ph*0.72));
 
-    ctx.fillStyle = "white";
-    ctx.textAlign = "center";
-    ctx.font = `bold ${pH * 0.6}px Arial`;
-    ctx.fillText(meta.km, margin + (pW/2), margin + (pH * 0.72));
-
-    // 2. Data e Hora no Rodapé (Tarja sutil para não cobrir a pista)
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillRect(0, h - 60, w, 60);
-
-    ctx.fillStyle = "white";
-    ctx.textAlign = "right";
-    ctx.font = "bold 35px monospace";
-    ctx.fillText(meta.ts, w - 30, h - 20);
-
+    // Data e Hora (Opcional por Ajuste)
+    if(document.getElementById('set-data').value === 'sim') {
+        const pos = document.getElementById('set-pos').value;
+        const fSize = document.getElementById('set-fonte').value === 'grande' ? 45 : 30;
+        ctx.filter = "none"; 
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        
+        if(pos === 'baixo') {
+            ctx.fillRect(0, h-70, w, 70);
+            ctx.fillStyle = "white"; ctx.textAlign = "right"; ctx.font = `bold ${fSize}px monospace`;
+            ctx.fillText(meta.ts, w-30, h-25);
+        } else {
+            ctx.fillStyle = "white"; ctx.textAlign = "left"; ctx.font = `bold ${fSize}px monospace`;
+            ctx.fillText(meta.ts, m + pw + 20, m + (ph/2) + 10);
+        }
+    }
     ctx.restore();
 }
 
-async function savePDF() {
-    if(!batch.length || !dir) return;
-    const items = [...batch]; batch = [];
-    batchIdx++;
-    document.getElementById('log').innerText = `💾 SALVANDO LOTE ${batchIdx}...`;
-
+async function save() {
+    if(!batch.length || !hdl) return;
+    const items = [...batch]; batch = []; batchCount++;
+    document.getElementById('log').innerText = `Salvando Lote ${batchCount}...`;
     const doc = new jspdf.jsPDF('l', 'mm', 'a4');
-
     for(let i=0; i<items.length; i++){
         if(i > 0) doc.addPage();
         const img = new Image();
-        await new Promise(res => {
+        await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
-                stampPhoto(items[i]);
-                
-                const ratio = can.width / can.height;
+                stamp(items[i]);
+                const ratio = c.width / c.height;
                 let dw = 297, dh = 297/ratio;
                 if(dh > 210) { dh = 210; dw = 210*ratio; }
-                
-                doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', (297-dw)/2, (210-dh)/2, dw, dh);
-                res();
+                doc.addImage(c.toDataURL('image/jpeg', 0.8), 'JPEG', (297-dw)/2, (210-dh)/2, dw, dh);
+                r();
             };
             img.src = items[i].raw;
         });
     }
-
-    const file = await dir.getFileHandle(`INSPECAO_LOTE_${batchIdx}.pdf`, {create:true});
-    const stream = await file.createWritable();
-    await stream.write(doc.output('blob'));
-    await stream.close();
-    document.getElementById('log').innerText = `LOTE ${batchIdx} SALVO COM SUCESSO!`;
+    const f = await hdl.getFileHandle(`LOTE_${batchCount}.pdf`, {create:true});
+    const s = await f.createWritable();
+    await s.write(doc.output('blob')); await s.close();
+    document.getElementById('log').innerText = `Lote ${batchCount} OK!`;
 }
 
 function loop() {
-    if(!isRecording) return;
-    
-    // Captura o frame bruto para processar depois (evita lag no vídeo)
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    batch.push({
-        raw: can.toDataURL('image/jpeg', 0.6),
-        km: document.getElementById('live-overlay').innerText,
-        ts: new Date().toLocaleString('pt-BR')
-    });
-
-    totalPhotos++;
-    document.getElementById('count-total').innerText = totalPhotos;
-    document.getElementById('count-batch').innerText = `${batch.length}/50`;
-
-    if(batch.length >= 50) savePDF();
+    if(!rec) return;
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+    batch.push({ raw: c.toDataURL('image/jpeg', 0.6), km: document.getElementById('km-live').innerText, ts: getFullDate() });
+    count++;
+    document.getElementById('txt-t').innerText = count;
+    document.getElementById('txt-b').innerText = `${batch.length}/50`;
+    if(batch.length >= 50) save();
     setTimeout(loop, 700);
 }
 
-document.getElementById('btn-dir').onclick = async () => {
-    try {
-        dir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('btn-dir').innerText = "PASTA OK ✓";
-        document.getElementById('btn-start').disabled = false;
-        vid.play();
-    } catch(e) {}
+function getFullDate() {
+    const d = new Date();
+    const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+    return `${dias[d.getDay()]} ${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+}
+
+document.getElementById('btn-f').onclick = async () => {
+    hdl = await window.showDirectoryPicker({ mode: 'readwrite' });
+    document.getElementById('btn-f').innerText = "PASTA OK ✓";
+    document.getElementById('btn-on').disabled = false;
 };
 
-document.getElementById('btn-start').onclick = () => {
-    isRecording = true; loop();
-    document.getElementById('btn-start').disabled = true;
-    document.getElementById('btn-stop').disabled = false;
-};
+document.getElementById('btn-on').onclick = () => { rec = true; loop(); document.getElementById('btn-on').disabled = true; document.getElementById('btn-off').disabled = false; };
+document.getElementById('btn-off').onclick = () => { rec = false; save(); document.getElementById('btn-on').disabled = false; document.getElementById('btn-off').disabled = true; };
+function toggleSet() { document.getElementById('settings').classList.toggle('open'); }
 
-document.getElementById('btn-stop').onclick = () => {
-    isRecording = false; savePDF();
-    document.getElementById('btn-start').disabled = false;
-    document.getElementById('btn-stop').disabled = true;
-};
-
-function startGPS() {
+function initGPS() {
     navigator.geolocation.watchPosition(p => {
-        pos = { lat: p.coords.latitude, lon: p.coords.longitude };
-        updateKM();
+        gps = { lat: p.coords.latitude, lon: p.coords.longitude };
+        if(kmDB.length) {
+            let best = null, dMin = Infinity;
+            for(const pt of kmDB) {
+                const d = Math.hypot(pt.lt - gps.lat, pt.ln - gps.lon);
+                if(d < dMin) { dMin = d; best = pt; }
+            }
+            if(best) document.getElementById('km-live').innerText = best.k;
+        }
     }, null, {enableHighAccuracy:true});
 }
 </script>
