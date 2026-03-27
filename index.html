@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V10.2 - HD FULL PAGE</title>
+    <title>INSPEÇÃO PRO V10.3 - FULL FUNCIONAL</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --green: #056b3c; --gold: #ffcc00; --danger: #cc0000; --bg: #000; }
@@ -22,7 +22,7 @@
 
         #set-panel { position: fixed; top: 0; right: -100%; width: 290px; height: 100%; background: #111; z-index: 200; transition: 0.3s; padding: 25px; border-left: 4px solid var(--gold); overflow-y: auto; }
         #set-panel.open { right: 0; }
-        #close-x { position: absolute; top: 10px; right: 10px; font-size: 12px; color: #888; cursor: pointer; padding: 5px; border: 1px solid #333; border-radius: 4px; font-family: sans-serif; }
+        #close-x { position: absolute; top: 10px; right: 10px; font-size: 11px; color: #888; cursor: pointer; padding: 5px; border: 1px solid #333; border-radius: 4px; font-family: sans-serif; text-transform: uppercase; }
         
         .set-row { margin-bottom: 18px; }
         label { font-size: 10px; color: var(--gold); display: block; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
@@ -47,21 +47,21 @@
 <div id="gear-btn" onclick="toggleS()">⚙️</div>
 
 <div id="set-panel">
-    <div id="close-x" onclick="toggleS()">FECHAR [X]</div>
-    <h3 style="margin: 20px 0 25px 0; font-size: 16px; border-bottom: 1px solid #333; padding-bottom: 10px;">AJUSTES V10.2</h3>
+    <div id="close-x" onclick="toggleS()">Fechar [X]</div>
+    <h3 style="margin: 20px 0 25px 0; font-size: 16px; border-bottom: 1px solid #333; padding-bottom: 10px;">AJUSTES V10.3</h3>
     
     <div class="set-row">
-        <label>CÂMERA ATIVA</label>
+        <label>Câmera Ativa</label>
         <select id="cfg-cam" onchange="switchCam(this.value)"></select>
     </div>
 
     <div class="set-row">
-        <label>INTERVALO (MS)</label>
+        <label>Intervalo (ms)</label>
         <input type="number" id="cfg-int" value="200">
     </div>
 
     <div class="set-row">
-        <label>FOTOS POR LOTE</label>
+        <label>Fotos por Lote</label>
         <input type="number" id="cfg-lote" value="200">
     </div>
 
@@ -103,7 +103,7 @@ async function listCams() {
         videoDevices.forEach((d, i) => {
             const opt = document.createElement('option');
             opt.value = d.deviceId;
-            opt.text = d.label || `Lente ${i + 1}`;
+            opt.text = d.label || `Câmera ${i + 1}`;
             sel.appendChild(opt);
         });
         if(videoDevices.length > 0) initC(videoDevices.deviceId);
@@ -131,7 +131,7 @@ async function loadCSV() {
             const c = r.split(';');
             return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) { console.error("CSV erro"); }
+    } catch(e) { console.error("Erro no CSV"); }
 }
 
 function updateKM() {
@@ -144,21 +144,20 @@ function updateKM() {
     if(n) document.getElementById('km-live').innerText = "Km " + n.km;
 }
 
-/* ======= ESTAMPA REFINADA (LETRAS MENORES) ======= */
+/* ======= ESTAMPA REFINADA (TEXTO DISCRETO HD) ======= */
 function drawS(m) {
     const w = can.width, h = can.height;
     ctx.save();
     
-    // Tarja mais fina
-    const barH = h * 0.10; 
+    const barH = h * 0.10; // Tarja 10% da altura
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.fillRect(0, h - barH, w, barH);
 
     ctx.lineJoin = "round";
-    ctx.shadowColor = "black"; ctx.shadowBlur = 8;
+    ctx.shadowColor = "black"; ctx.shadowBlur = 10;
     
-    // KM - Reduzido e Superior
-    const fK = barH * 0.40;
+    // KM - Linha Superior (Menor)
+    const fK = barH * 0.42;
     ctx.font = `900 ${fK}px Arial Black`;
     ctx.textAlign = "left";
     ctx.lineWidth = 6; ctx.strokeStyle = "black";
@@ -166,13 +165,13 @@ function drawS(m) {
     ctx.fillStyle = "white";
     ctx.fillText("Km " + m.km, w * 0.03, h - (barH * 0.5));
 
-    // DATA - Reduzido e Inferior
-    const fD = barH * 0.20;
+    // DATA - Linha Inferior (Menor)
+    const fD = barH * 0.22;
     ctx.font = `900 ${fD}px Arial`;
     ctx.textAlign = "right";
     ctx.lineWidth = 4; ctx.strokeStyle = "black";
-    ctx.strokeText(m.ts, w * 0.97, h - (barH * 0.2));
-    ctx.fillText(m.ts, w * 0.97, h - (barH * 0.2));
+    ctx.strokeText(m.ts, w * 0.97, h - (barH * 0.18));
+    ctx.fillText(m.ts, w * 0.97, h - (barH * 0.18));
     
     ctx.restore();
 }
@@ -180,9 +179,8 @@ function drawS(m) {
 async function save() {
     if(!buffer.length || !hDir) return;
     const items = [...buffer]; buffer = []; batchIdx++;
-    // PDF em modo Paisagem (Landscape)
     const doc = new jspdf.jsPDF('l', 'mm', 'a4');
-    const pw = 297, ph = 210; // Dimensões A4 em mm
+    const pw = 297, ph = 210; // Dimensões A4 paisagem
 
     for(let i=0; i<items.length; i++){
         if(i > 0) doc.addPage();
@@ -190,7 +188,7 @@ async function save() {
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0); drawS(items[i]);
-                // Foto preenchendo a página inteira (0, 0, 297, 210)
+                // Foto preenche 100% da página A4
                 doc.addImage(can.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, pw, ph); 
                 r();
             };
