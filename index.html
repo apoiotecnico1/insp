@@ -3,12 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V10.0</title>
+    <title>INSPEÇÃO PRO V10.1 - FULL CAM & HD TEXT</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --green: #056b3c; --gold: #ffcc00; --danger: #cc0000; --bg: #000; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; }
+        body { background: var(--bg); color: #fff; font-family: 'Arial Black', sans-serif; overflow: hidden; height: 100vh; }
 
         #app-shell { display: flex; flex-direction: column; height: 100vh; }
         @media (orientation: landscape) { #app-shell { flex-direction: row; } #cam-v { flex: 3; } #ui-p { flex: 0.9; } }
@@ -16,28 +16,29 @@
 
         #cam-v { position: relative; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         video { width: 100%; height: 100%; object-fit: cover; }
-        #km-live { position: absolute; top: 15px; left: 15px; background: var(--green); padding: 10px 20px; border: 2px solid #fff; border-radius: 8px; font-size: 1.8rem; font-weight: 900; z-index: 10; }
+        #km-live { position: absolute; top: 15px; left: 15px; background: var(--green); padding: 12px 24px; border: 2px solid #fff; border-radius: 10px; font-size: 2.2rem; font-weight: 900; z-index: 10; box-shadow: 0 5px 15px #000; }
 
-        #gear-btn { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #555; cursor: pointer; z-index: 100; font-size: 24px; }
+        #gear-btn { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.7); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid #666; cursor: pointer; z-index: 100; font-size: 26px; }
 
-        /* Menu de Ajustes */
-        #set-panel { position: fixed; top: 0; right: -100%; width: 280px; height: 100%; background: #111; z-index: 200; transition: 0.3s; padding: 25px; border-left: 3px solid var(--gold); overflow-y: auto; }
+        /* Painel de Ajustes */
+        #set-panel { position: fixed; top: 0; right: -100%; width: 290px; height: 100%; background: #111; z-index: 200; transition: 0.3s; padding: 25px; border-left: 4px solid var(--gold); overflow-y: auto; }
         #set-panel.open { right: 0; }
-        
-        #close-x { position: absolute; top: 10px; right: 10px; font-size: 14px; color: #666; cursor: pointer; padding: 5px; border: 1px solid #333; border-radius: 4px; line-height: 1; }
+        #close-x { position: absolute; top: 10px; right: 10px; font-size: 12px; color: #888; cursor: pointer; padding: 5px; border: 1px solid #333; border-radius: 4px; font-family: sans-serif; }
         
         .set-row { margin-bottom: 18px; }
         label { font-size: 10px; color: var(--gold); display: block; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
-        select, input { width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 10px; border-radius: 6px; font-size: 13px; }
+        select, input { width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 12px; border-radius: 8px; font-size: 13px; font-family: sans-serif; }
 
-        #ui-p { background: #0a0a0a; display: flex; flex-direction: column; padding: 15px; gap: 10px; justify-content: center; border-left: 1px solid #222; }
-        .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .stat { background: #151515; padding: 12px; border-radius: 10px; text-align: center; border: 1px solid #222; }
-        .btn { width: 100%; border: none; border-radius: 15px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
-        .btn-f { background: var(--gold); color: #000; height: 50px; font-size: 0.8rem; }
-        .btn-on { background: var(--green); color: #fff; height: 80px; font-size: 1.2rem; }
-        .btn-off { background: var(--danger); color: #fff; height: 80px; font-size: 1.2rem; }
-        button:disabled { opacity: 0.1; }
+        #ui-p { background: #0a0a0a; display: flex; flex-direction: column; padding: 20px; gap: 12px; justify-content: center; border-left: 1px solid #222; }
+        .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .stat { background: #181818; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #333; }
+        .stat b { font-size: 1.6rem; color: #fff; display: block; }
+
+        .btn { width: 100%; border: none; border-radius: 18px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
+        .btn-f { background: var(--gold); color: #000; height: 55px; font-size: 0.85rem; }
+        .btn-on { background: var(--green); color: #fff; height: 85px; font-size: 1.3rem; }
+        .btn-off { background: var(--danger); color: #fff; height: 85px; font-size: 1.3rem; }
+        button:disabled { opacity: 0.15; }
 
         canvas { display: none; }
     </style>
@@ -48,29 +49,29 @@
 
 <div id="set-panel">
     <div id="close-x" onclick="toggleS()">FECHAR [X]</div>
-    <h3 style="margin: 15px 0 25px 0; font-size: 16px;">AJUSTES V10</h3>
+    <h3 style="margin: 20px 0 25px 0; font-size: 16px; border-bottom: 1px solid #333; padding-bottom: 10px;">AJUSTES V10.1</h3>
     
     <div class="set-row">
-        <label>CÂMERA ATIVA</label>
+        <label>CÂMERA DO DISPOSITIVO</label>
         <select id="cfg-cam" onchange="switchCam(this.value)"></select>
     </div>
 
     <div class="set-row">
-        <label>INTERVALO (MS)</label>
+        <label>INTERVALO (PADRÃO 200MS)</label>
         <input type="number" id="cfg-int" value="200">
     </div>
 
     <div class="set-row">
-        <label>FOTOS POR PÁGINA</label>
-        <select id="cfg-grid"><option value="1">1 FOTO</option><option value="4">4 FOTOS</option></select>
+        <label>FOTOS POR PÁGINA NO PDF</label>
+        <select id="cfg-grid"><option value="1">1 FOTO (MÁXIMA)</option><option value="4">4 FOTOS</option></select>
     </div>
 
     <div class="set-row">
-        <label>LIMITE DO LOTE</label>
-        <input type="number" id="cfg-lote" value="500">
+        <label>TAMANHO DO LOTE</label>
+        <input type="number" id="cfg-lote" value="200">
     </div>
 
-    <button onclick="toggleS()" style="width:100%; padding:15px; background:var(--green); border:none; color:#fff; border-radius:8px; font-weight:bold; margin-top:10px">SALVAR CONFIGS</button>
+    <button onclick="toggleS()" style="width:100%; padding:18px; background:var(--green); border:none; color:#fff; border-radius:12px; font-weight:bold; margin-top:10px">SALVAR CONFIGURAÇÕES</button>
 </div>
 
 <div id="app-shell">
@@ -80,13 +81,12 @@
     </div>
     <div id="ui-p">
         <div class="grid-stats">
-            <div class="stat"><small>LOTE</small><b id="v-batch">0/500</b></div>
-            <div class="stat"><small>TOTAL</small><b id="v-total">0</b></div>
+            <div class="stat"><small style="color:#666">LOTE</small><b id="v-batch">0/200</b></div>
+            <div class="stat"><small style="color:#666">TOTAL</small><b id="v-total">0</b></div>
         </div>
-        <button id="btn-f" class="btn btn-f">📁 1. DEFINIR PASTA</button>
-        <button id="btn-on" class="btn btn-on" disabled>▶ 2. INICIAR</button>
-        <button id="btn-off" class="btn btn-off" disabled>■ PARAR</button>
-        <div id="st" style="font-size:10px; color:#444; text-align:center">CONTROLE MULTI-CAMERA V10</div>
+        <button id="btn-f" class="btn btn-f">📁 1. SELECIONAR PASTA</button>
+        <button id="btn-on" class="btn btn-on" disabled>▶ 2. INICIAR INSPEÇÃO</button>
+        <button id="btn-off" class="btn btn-off" disabled>■ PARAR E GERAR PDF</button>
     </div>
 </div>
 
@@ -101,7 +101,7 @@ window.onload = () => { listCams(); loadCSV(); initG(); };
 
 async function listCams() {
     try {
-        await navigator.mediaDevices.getUserMedia({ video: true }); // Solicita permissão
+        await navigator.mediaDevices.getUserMedia({ video: true });
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === 'videoinput');
         const sel = document.getElementById('cfg-cam');
@@ -109,11 +109,11 @@ async function listCams() {
         videoDevices.forEach((d, i) => {
             const opt = document.createElement('option');
             opt.value = d.deviceId;
-            opt.text = d.label || `Câmera ${i + 1}`;
+            opt.text = d.label || `Lente ${i + 1}`;
             sel.appendChild(opt);
         });
         if(videoDevices.length > 0) initC(videoDevices.deviceId);
-    } catch(e) { alert("Erro ao listar câmeras"); }
+    } catch(e) { console.error("Erro ao listar câmeras"); }
 }
 
 async function initC(id) {
@@ -137,14 +137,14 @@ async function loadCSV() {
             const c = r.split(';');
             return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) { document.getElementById('st').innerText = "Erro CSV"; }
+    } catch(e) { console.error("CSV não carregado"); }
 }
 
 function updateKM() {
     if(!gps || !kmDB.length) return;
     let n = null, dM = Infinity;
     for(const p of kmDB) {
-        const d = Math.hypot(p.lt - gps.lat, p.lon - gps.lon);
+        const d = Math.hypot(p.lt - gps.lat, p.ln - gps.lon);
         if(d < dM) { dM = d; n = p; }
     }
     if(n) document.getElementById('km-live').innerText = "Km " + n.km;
@@ -154,21 +154,26 @@ function drawS(m) {
     const w = can.width, h = can.height;
     ctx.save();
     const barH = h * 0.15;
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
     ctx.fillRect(0, h - barH, w, barH);
-    ctx.shadowColor = "black"; ctx.shadowBlur = 8; ctx.lineWidth = 5; ctx.strokeStyle = "black"; ctx.fillStyle = "white";
 
-    // Km - Linha Superior
-    const fK = barH * 0.45;
-    ctx.font = `900 ${fK}px Arial`;
+    ctx.lineJoin = "round";
+    ctx.shadowColor = "black"; ctx.shadowBlur = 12;
+    
+    // KM - Linha Superior
+    const fK = barH * 0.48;
+    ctx.font = `900 ${fK}px Arial Black`;
     ctx.textAlign = "left";
-    ctx.strokeText("Km " + m.km, w * 0.05, h - (barH * 0.5));
-    ctx.fillText("Km " + m.km, w * 0.05, h - (barH * 0.5));
+    ctx.lineWidth = 8; ctx.strokeStyle = "black";
+    ctx.strokeText("Km " + m.km, w * 0.05, h - (barH * 0.48));
+    ctx.fillStyle = "white";
+    ctx.fillText("Km " + m.km, w * 0.05, h - (barH * 0.48));
 
     // Data - Linha Inferior
     const fD = barH * 0.22;
-    ctx.font = `bold ${fD}px monospace`;
+    ctx.font = `900 ${fD}px Arial`;
     ctx.textAlign = "right";
+    ctx.lineWidth = 5; ctx.strokeStyle = "black";
     ctx.strokeText(m.ts, w * 0.95, h - (barH * 0.15));
     ctx.fillText(m.ts, w * 0.95, h - (barH * 0.15));
     ctx.restore();
@@ -177,11 +182,10 @@ function drawS(m) {
 async function save() {
     if(!buffer.length || !hDir) return;
     const items = [...buffer]; buffer = []; batchIdx++;
-    document.getElementById('st').innerText = `Salvando Lote ${batchIdx}...`;
     const doc = new jspdf.jsPDF('l', 'mm', 'a4');
     const grid = parseInt(document.getElementById('cfg-grid').value);
-    const cols = Math.sqrt(grid); const rows = cols;
-    const pw = 297, ph = 210, iw = pw / cols, ih = ph / rows;
+    const cols = Math.sqrt(grid); const pw = 297, ph = 210;
+    const iw = pw / cols, ih = ph / (grid/cols);
 
     for(let i=0; i<items.length; i++){
         const col = i % grid % cols; const row = Math.floor((i % grid) / cols);
@@ -190,7 +194,7 @@ async function save() {
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0); drawS(items[i]);
-                doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', col*iw, row*ih, iw, ih); r();
+                doc.addImage(can.toDataURL('image/jpeg', 0.85), 'JPEG', col*iw, row*ih, iw, ih); r();
             };
             img.src = items[i].raw;
         });
@@ -198,13 +202,12 @@ async function save() {
     const f = await hDir.getFileHandle(`LOTE_${batchIdx}.pdf`, {create:true});
     const s = await f.createWritable();
     await s.write(doc.output('blob')); await s.close();
-    document.getElementById('st').innerText = `Lote ${batchIdx} OK!`;
 }
 
 function loop() {
     if(!rec) return;
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
+    const limit = parseInt(document.getElementById('cfg-lote').value) || 200;
     buffer.push({
         raw: can.toDataURL('image/jpeg', 0.5),
         km: document.getElementById('km-live').innerText.replace("Km ", ""),
@@ -219,7 +222,7 @@ function loop() {
 
 document.getElementById('btn-f').onclick = async () => {
     hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-    document.getElementById('btn-f').innerText = "PASTA OK";
+    document.getElementById('btn-f').innerText = "PASTA OK ✓";
     document.getElementById('btn-on').disabled = false;
 };
 
