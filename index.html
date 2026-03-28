@@ -3,92 +3,134 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO FOTOGRÁFICA - COSMIC EDITION</title>
+    <title>GENESIS - INSPEÇÃO FOTOGRÁFICA</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --safety: #056b3c; --glass: rgba(5, 5, 5, 0.92); --cosmic: radial-gradient(circle, #1a1a1a 0%, #000 100%); }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
+        :root { 
+            --gold: #ffcc00; 
+            --emerald: #00ff88;
+            --void: #050505;
+            --glass-bg: rgba(10, 10, 10, 0.75);
+            --border-glow: rgba(255, 204, 0, 0.15);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; cursor: none !important; }
+        body { background: #000; color: #fff; font-family: 'Inter', -apple-system, sans-serif; overflow: hidden; height: 100vh; }
 
-        /* Splash Screen Hipnótico / Cinema */
-        #splash { position: fixed; inset: 0; background: var(--cosmic); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition: 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        /* SPLASH - ARQUITETURA CINEMATOGRÁFICA */
+        #splash { 
+            position: fixed; inset: 0; background: radial-gradient(circle at center, #111 0%, #000 100%); 
+            z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: 1.8s cubic-bezier(0.85, 0, 0.15, 1);
+        }
+        .nebula { position: absolute; width: 150%; height: 150%; background: radial-gradient(circle, rgba(255,204,0,0.03) 0%, transparent 50%); animation: drift 30s infinite alternate; }
+        @keyframes drift { from { transform: translate(-10%, -10%); } to { transform: translate(10%, 10%); } }
+
+        .title-container { text-align: center; z-index: 2; }
+        .title-top { font-size: 11px; letter-spacing: 18px; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 15px; }
+        .title-main { font-size: 42px; font-weight: 900; letter-spacing: -1px; background: linear-gradient(to bottom, #fff, #666); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        /* Partículas Magnéticas (Simuladas) */
-        .star { position: absolute; background: #fff; border-radius: 50%; opacity: 0.3; animation: float 20s infinite linear; }
-        @keyframes float { from { transform: translateY(0) rotate(0deg); } to { transform: translateY(-100vh) rotate(360deg); } }
+        .genesis-trigger { 
+            margin-top: 60px; width: 80px; height: 80px; border: 1px solid var(--border-glow); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; position: relative;
+            background: rgba(255,255,255,0.02); transition: 0.5s;
+        }
+        .genesis-trigger:hover { border-color: var(--gold); box-shadow: 0 0 40px var(--border-glow); }
+        .genesis-trigger span { font-size: 20px; color: var(--gold); }
 
-        /* Título Cinematográfico */
-        .cinema-title { font-size: 10px; font-weight: 200; letter-spacing: 15px; text-transform: uppercase; color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.5); animation: emerge 4s forwards; opacity: 0; text-align: center; line-height: 2; }
-        .cinema-title b { color: var(--accent); font-weight: 300; letter-spacing: 18px; }
-
-        @keyframes emerge { 0% { opacity: 0; transform: scale(0.8) translateZ(-100px); filter: blur(10px); } 100% { opacity: 1; transform: scale(1) translateZ(0); filter: blur(0); } }
-
-        /* Orbe de Atração Magnética */
-        .magnetic-orbe { width: 100px; height: 100px; border: 1px solid rgba(255,204,0,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: 50px; position: relative; transition: 0.5s; box-shadow: 0 0 30px rgba(255,204,0,0.1); }
-        .magnetic-orbe::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 1px solid var(--accent); opacity: 0.5; animation: ripple 2s infinite; }
-        @keyframes ripple { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(1.6); opacity: 0; } }
-        .magnetic-orbe span { font-size: 24px; color: var(--accent); filter: drop-shadow(0 0 5px var(--accent)); }
-
-        /* Interface Principal */
+        /* INTERFACE DE OPERAÇÃO - DESIGN UNIVERSAL */
         #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 2s; }
-        #cam-container { flex: 1; position: relative; background: #000; overflow: hidden; }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        #cam-layer { flex: 1; position: relative; overflow: hidden; }
+        video { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.05) brightness(1.05); }
 
-        /* UI de Operação */
-        #km-display { position: absolute; top: 30px; left: 30px; background: var(--safety); padding: 18px 35px; border-radius: 5px; border-left: 10px solid #fff; font-size: 2.5rem; font-weight: 900; z-index: 10; box-shadow: 0 25px 60px rgba(0,0,0,1); }
-        #gear-btn { position: absolute; top: 30px; right: 30px; width: 55px; height: 55px; background: var(--glass); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #222; z-index: 20; color: #444; }
+        /* ILHA DE COMANDO (SAP FIORI & APPLE INSPIRED) */
+        #km-card { 
+            position: absolute; top: 40px; left: 40px; 
+            background: var(--glass-bg); backdrop-filter: blur(25px);
+            padding: 20px 45px; border-radius: 4px;
+            border-left: 12px solid var(--gold);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+            z-index: 100;
+        }
+        #km-card h1 { font-size: 3.5rem; font-weight: 900; letter-spacing: -2px; }
+        #km-card small { font-size: 11px; letter-spacing: 5px; color: var(--gold); text-transform: uppercase; }
 
-        #bottom-ctrl { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 40px; width: 92%; max-width: 550px; background: var(--glass); padding: 18px 40px; border-radius: 80px; backdrop-filter: blur(30px); border: 1px solid #222; z-index: 20; justify-content: space-between; }
-        .stat-group b { font-size: 1.4rem; color: #fff; display: block; }
-        .stat-group small { font-size: 9px; color: var(--accent); text-transform: uppercase; font-weight: 800; letter-spacing: 2px; }
+        #action-bar { 
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            display: flex; align-items: center; gap: 50px;
+            background: var(--glass-bg); backdrop-filter: blur(30px);
+            padding: 20px 50px; border-radius: 100px;
+            border: 1px solid rgba(255,255,255,0.08);
+            z-index: 100; width: 95%; max-width: 650px;
+        }
+        .data-point { text-align: left; }
+        .data-point span { font-size: 10px; color: rgba(255,255,255,0.3); text-transform: uppercase; display: block; letter-spacing: 2px; }
+        .data-point b { font-size: 1.4rem; color: #fff; font-weight: 600; }
 
-        .btn-main { border: none; border-radius: 40px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 20px 50px; font-size: 12px; background: var(--accent); color: #000; letter-spacing: 2px; box-shadow: 0 10px 20px rgba(255,204,0,0.2); }
-        #btn-stop { background: #d00; color: #fff; display: none; }
+        .btn-genesis { 
+            background: var(--gold); color: #000; border: none;
+            padding: 20px 60px; border-radius: 100px;
+            font-weight: 900; text-transform: uppercase; letter-spacing: 2px;
+            font-size: 13px; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .btn-genesis:active { transform: scale(0.92); }
+        #btn-stop { background: #ff3b30; color: #fff; display: none; }
 
-        /* Menu Oculto */
-        #settings { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #050505; z-index: 500; transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1); padding: 60px 30px; border-left: 1px solid var(--accent); }
+        /* INDICADOR DE CAPTURA (VISUAL FEEDBACK) */
+        #flash-overlay { position: fixed; inset: 0; border: 0px solid var(--gold); pointer-events: none; z-index: 200; transition: 0.1s; }
+
+        /* CONFIGURAÇÕES MINIMALISTAS */
+        #settings { 
+            position: fixed; right: -400px; top: 0; width: 380px; height: 100%; 
+            background: rgba(5,5,5,0.98); z-index: 500; transition: 0.7s cubic-bezier(0.19, 1, 0.22, 1);
+            padding: 80px 50px; border-left: 1px solid rgba(255,255,255,0.05);
+        }
         #settings.open { right: 0; }
-        .set-row { margin-bottom: 30px; }
-        label { display: block; font-size: 9px; color: var(--accent); margin-bottom: 10px; font-weight: bold; letter-spacing: 2px; }
-        select, input { width: 100%; background: #0a0a0a; border: 1px solid #1a1a1a; color: #fff; padding: 15px; border-radius: 5px; }
+        #gear { position: absolute; top: 40px; right: 40px; color: #333; z-index: 100; transition: 0.3s; }
+        #gear:hover { color: var(--gold); }
+
+        .field { margin-bottom: 40px; }
+        .field label { font-size: 10px; color: var(--gold); letter-spacing: 3px; font-weight: bold; margin-bottom: 15px; display: block; }
+        select, input { width: 100%; background: #000; border: 1px solid #222; color: #fff; padding: 18px; border-radius: 8px; font-size: 14px; }
 
         canvas { display: none; }
-        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--glass); padding: 30px 50px; border-radius: 10px; border: 1px solid var(--accent); z-index: 2000; display: none; text-align: center; font-weight: 200; letter-spacing: 5px; text-transform: uppercase; }
+        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #000; padding: 30px 60px; border: 1px solid var(--gold); z-index: 2000; display: none; font-size: 12px; letter-spacing: 8px; font-weight: 200; }
     </style>
 </head>
-<body onclick="launchSystem()">
+<body onclick="launch()">
 
 <div id="splash">
-    <div id="stars-container"></div>
-    <div class="cinema-title">
-        INSPEÇÃO<br>
-        <b>FOTOGRÁFICA</b>
+    <div class="nebula"></div>
+    <div class="title-container">
+        <div class="title-top">Inspecção Técnica</div>
+        <div class="title-main">GENESIS</div>
     </div>
-    <div class="magnetic-orbe">
-        <span>✦</span>
-    </div>
-    <p style="color: #333; font-size: 9px; margin-top: 40px; letter-spacing: 4px; text-transform: uppercase;">Acesse o Infinito</p>
+    <div class="genesis-trigger"><span>✦</span></div>
 </div>
 
-<div id="toast">SINCRONIZANDO REPOSITÓRIO...</div>
+<div id="flash-overlay"></div>
+<div id="toast">ESTABELECENDO CANAL DE DADOS</div>
 
 <div id="settings">
-    <div onclick="toggleSet()" style="color:#333; cursor:pointer; margin-bottom:50px; font-size:10px; letter-spacing:2px;">[ VOLTAR AO VAZIO ]</div>
-    <div class="set-row"><label>CONEXÃO ÓPTICA</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="set-row"><label>FREQUÊNCIA DE CAPTURA</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="set-row"><label>VOLUME DO LOTE</label><input type="number" id="cfg-lote" value="200"></div>
+    <div onclick="toggleSet()" style="color:#222; cursor:pointer; margin-bottom:60px; font-size:10px; letter-spacing:4px;">[ CLOSE_MODULE ]</div>
+    <div class="field"><label>SISTEMA ÓPTICO</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="field"><label>FREQUÊNCIA (HZ)</label><input type="number" id="cfg-int" value="200"></div>
+    <div class="field"><label>CAPACIDADE LOTE</label><input type="number" id="cfg-lote" value="200"></div>
 </div>
 
 <div id="app-shell">
-    <div id="cam-container">
+    <div id="cam-layer">
         <video id="vid" autoplay playsinline muted></video>
-        <div id="km-display">Km ---+---</div>
-        <div id="gear-btn" onclick="toggleSet()">⚙️</div>
-        <div id="bottom-ctrl">
-            <div class="stat-group"><small>Fotos</small><b id="stat-batch">0</b></div>
-            <button id="btn-action" class="btn-main">Iniciar</button>
-            <button id="btn-stop" class="btn-main">Concluir</button>
-            <div class="stat-group"><small>Geral</small><b id="stat-total">0</b></div>
+        <div id="km-card">
+            <small>Localização SNV</small>
+            <h1 id="km-txt">Km ---+---</h1>
+        </div>
+        <div id="gear" onclick="toggleSet()">⚙️</div>
+
+        <div id="action-bar">
+            <div class="data-point"><span>Batch</span><b id="stat-batch">000</b></div>
+            <button id="btn-action" class="btn-genesis">Iniciar</button>
+            <button id="btn-stop" class="btn-genesis">Finalizar</button>
+            <div class="data-point"><span>Total</span><b id="stat-total">000</b></div>
         </div>
     </div>
 </div>
@@ -99,33 +141,16 @@
 let kmDB = [], gps = null, rec = false, buffer = [], total = 0, batchIdx = 0, hDir = null, currentStream = null;
 const vid = document.getElementById('vid'), can = document.getElementById('c'), ctx = can.getContext('2d');
 
-// Gerar estrelas magnéticas no Splash
-const starsContainer = document.getElementById('stars-container');
-for(let i=0; i<50; i++) {
-    const star = document.createElement('div');
-    star.className = 'star';
-    star.style.width = Math.random() * 3 + 'px';
-    star.style.height = star.style.width;
-    star.style.left = Math.random() * 100 + 'vw';
-    star.style.top = Math.random() * 100 + 'vh';
-    star.style.animationDuration = (Math.random() * 10 + 10) + 's';
-    starsContainer.appendChild(star);
-}
-
-async function launchSystem() {
-    if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {});
-    }
+async function launch() {
+    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
     const splash = document.getElementById('splash');
     if(splash) {
-        splash.style.transform = 'scale(2)';
-        splash.style.opacity = '0';
+        splash.style.opacity = '0'; splash.style.transform = 'scale(1.1)';
         setTimeout(() => {
             splash.remove();
             const shell = document.getElementById('app-shell');
-            shell.style.visibility = 'visible';
-            shell.style.opacity = '1';
-        }, 1500);
+            shell.style.visibility = 'visible'; shell.style.opacity = '1';
+        }, 1200);
     }
 }
 
@@ -141,8 +166,7 @@ async function listCams() {
         sel.innerHTML = "";
         videoDevices.forEach((d, i) => {
             const opt = document.createElement('option');
-            opt.value = d.deviceId;
-            opt.text = d.label || `Lente Pericial ${i + 1}`;
+            opt.value = d.deviceId; opt.text = d.label || `OPTIC_SENSOR_${i + 1}`;
             sel.appendChild(opt);
         });
         if(videoDevices.length > 0) initC(videoDevices.deviceId);
@@ -185,28 +209,31 @@ function updateKM() {
         const d = Math.hypot(p.lt - gps.lat, p.ln - gps.lon);
         if(d < dM) { dM = d; n = p; }
     }
-    if(n) document.getElementById('km-display').innerText = "Km " + n.km;
+    if(n) document.getElementById('km-txt').innerText = "Km " + n.km;
 }
 
 function drawS(m) {
     const w = can.width, h = can.height;
     ctx.save();
-    const barH = h * 0.15;
+    const barH = h * 0.16;
     const grd = ctx.createLinearGradient(0, h - barH, 0, h);
-    grd.addColorStop(0, "transparent");
-    grd.addColorStop(1, "rgba(0,0,0,0.9)");
+    grd.addColorStop(0, "transparent"); grd.addColorStop(1, "rgba(0,0,0,0.95)");
     ctx.fillStyle = grd; ctx.fillRect(0, h - barH, w, barH);
     ctx.lineJoin = "round"; ctx.textAlign = "left";
+    
+    // KM DESIGN - ALTA PRECISÃO
     const fK = barH * 0.45;
-    ctx.font = `900 ${fK}px Arial Black`;
-    ctx.lineWidth = 12; ctx.strokeStyle = "#000";
-    ctx.strokeText("Km " + m.km, 50, h - (barH * 0.55));
-    ctx.fillStyle = "#fff"; ctx.fillText("Km " + m.km, 50, h - (barH * 0.55));
-    const fD = barH * 0.22;
-    ctx.font = `bold ${fD}px Arial`;
+    ctx.font = `900 ${fK}px Inter, sans-serif`;
+    ctx.lineWidth = 14; ctx.strokeStyle = "#000";
+    ctx.strokeText("Km " + m.km, 60, h - (barH * 0.55));
+    ctx.fillStyle = "#fff"; ctx.fillText("Km " + m.km, 60, h - (barH * 0.55));
+    
+    // TIMESTAMP - DESIGN THIN
+    const fD = barH * 0.20;
+    ctx.font = `300 ${fD}px Inter, sans-serif`;
     ctx.lineWidth = 8; ctx.strokeStyle = "#000";
-    ctx.strokeText(m.ts, 50, h - (barH * 0.2));
-    ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillText(m.ts, 50, h - (barH * 0.2));
+    ctx.strokeText(m.ts, 60, h - (barH * 0.22));
+    ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.fillText(m.ts, 60, h - (barH * 0.22));
     ctx.restore();
 }
 
@@ -214,23 +241,22 @@ async function save() {
     if(!buffer.length || !hDir) return;
     const items = [...buffer]; buffer = []; batchIdx++;
     const isPortrait = can.width < can.height;
-    const orientation = isPortrait ? 'p' : 'l';
-    const doc = new jspdf.jsPDF(orientation, 'mm', 'a4');
+    const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
     for(let i=0; i<items.length; i++){
-        if(i > 0) doc.addPage(orientation);
+        if(i > 0) doc.addPage(isPortrait?'p':'l');
         const img = new Image();
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0); drawS(items[i]);
-                doc.addImage(can.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
+                doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
                 r();
             };
             img.src = items[i].raw;
         });
     }
-    const f = await hDir.getFileHandle(`INSPECAO_LOTE_${batchIdx}.pdf`, {create:true});
+    const f = await hDir.getFileHandle(`GENESIS_LOTE_${batchIdx}.pdf`, {create:true});
     const s = await f.createWritable();
     await s.write(doc.output('blob')); await s.close();
 }
@@ -238,11 +264,20 @@ async function save() {
 function loop() {
     if(!rec) return;
     if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
+        // Flash visual de captura
+        const flash = document.getElementById('flash-overlay');
+        flash.style.borderWidth = '4px';
+        setTimeout(() => flash.style.borderWidth = '0px', 50);
+
         ctx.drawImage(vid, 0, 0, can.width, can.height);
-        buffer.push({ raw: can.toDataURL('image/jpeg', 0.4), km: document.getElementById('km-display').innerText.replace("Km ", ""), ts: new Date().toLocaleString('pt-BR') });
+        buffer.push({ 
+            raw: can.toDataURL('image/jpeg', 0.4), 
+            km: document.getElementById('km-txt').innerText.replace("Km ", ""), 
+            ts: new Date().toLocaleString('pt-BR').toUpperCase() 
+        });
         total++;
-        document.getElementById('stat-total').innerText = total;
-        document.getElementById('stat-batch').innerText = buffer.length;
+        document.getElementById('stat-total').innerText = total.toString().padStart(3, '0');
+        document.getElementById('stat-batch').innerText = buffer.length.toString().padStart(3, '0');
         if(buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 200)) save();
     }
     setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
