@@ -2,188 +2,220 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <title>BACKUP REDUNDANTE - AUTO IP</title>
+    <title>INSPEÇÃO BACKUP V27 - VALIDATOR</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { background: #0a0a0a; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; }
-        #app { display: grid; grid-template-rows: 1fr auto; height: 100vh; }
-        #view { position: relative; background: #000; display: flex; align-items: center; justify-content: center; }
-        #stream-img { max-width: 100%; max-height: 100%; border: 2px solid #333; }
+        :root { --neon: #00f2ff; --safety: #2ecc71; --alert: #e74c3c; --dark: #0d0d0d; }
+        body { background: var(--dark); color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; overflow: hidden; }
         
-        .hud { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .tag { background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; border-left: 4px solid #00e5ff; font-size: 12px; }
-        .detect { border-left-color: #ff3b30; animation: blink 0.5s infinite; }
-
-        #panel { background: #1a1a1a; padding: 25px; display: flex; gap: 20px; align-items: flex-end; border-top: 1px solid #333; }
-        .field { display: flex; flex-direction: column; gap: 8px; flex: 1; }
-        input { background: #222; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 4px; }
+        #setup-screen { position: fixed; inset: 0; background: var(--dark); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.5s; }
+        .config-box { background: #1a1a1a; padding: 30px; border-radius: 10px; border: 1px solid #333; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         
-        button { background: #00e5ff; color: #000; border: none; padding: 12px 30px; font-weight: bold; border-radius: 4px; cursor: pointer; }
-        #btn-stop { background: #ff3b30; color: #fff; display: none; }
+        h2 { font-size: 14px; color: var(--neon); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+        .input-row { margin-bottom: 20px; }
+        label { display: block; font-size: 11px; color: #777; margin-bottom: 8px; }
+        input { width: 100%; background: #000; border: 1px solid #444; color: #0f0; padding: 12px; border-radius: 4px; font-family: monospace; outline: none; }
+        input:focus { border-color: var(--neon); }
 
-        @keyframes blink { 50% { opacity: 0.5; } }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 12px; transition: 0.3s; }
+        .btn-test { background: transparent; border: 1px solid var(--neon); color: var(--neon); margin-bottom: 10px; }
+        .btn-test:hover { background: var(--neon); color: #000; }
+        .btn-ready { background: var(--safety); color: #fff; display: none; }
+
+        #diag-msg { font-size: 11px; margin-top: 15px; padding: 10px; border-radius: 4px; display: none; background: rgba(0,0,0,0.3); }
+
+        /* MODO OPERACIONAL */
+        #main-app { display: grid; grid-template-rows: 1fr 80px; height: 100vh; visibility: hidden; }
+        #monitor { background: #000; position: relative; display: flex; align-items: center; justify-content: center; }
+        #cam-raw { max-width: 100%; max-height: 100%; border: 1px solid #222; }
+        
+        .hud { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 4px; border-left: 3px solid var(--safety); }
+        .hud p { margin: 0; font-size: 10px; color: #888; }
+        .hud b { font-size: 14px; color: #fff; display: block; }
+
+        #footer { background: #151515; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; border-top: 1px solid #333; }
+        .rec-dot { width: 12px; height: 12px; background: var(--alert); border-radius: 50%; animation: blink 1s infinite; display: inline-block; margin-right: 10px; }
+        @keyframes blink { 50% { opacity: 0; } }
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div id="app">
-    <div id="view">
-        <div class="hud">
-            <div id="st-ip" class="tag">AGUARDANDO IP...</div>
-            <div id="st-motion" class="tag">SENSOR: STANDBY</div>
-            <div id="st-count" class="tag">RELATÓRIO: 0 FOTOS</div>
+<div id="setup-screen">
+    <div class="config-box">
+        <h2>Target Cam Validator</h2>
+        <div class="input-row">
+            <label>IP DA CÂMERA NA REDE LOCAL</label>
+            <input type="text" id="target-ip" placeholder="Ex: 192.168.1.50" value="">
         </div>
-        <img id="stream-img" crossorigin="anonymous">
-    </div>
-
-    <div id="panel">
-        <div class="field">
-            <label>IP da Câmera (Ex: 192.168.1.50)</label>
-            <input type="text" id="ip-addr" placeholder="Digite apenas o IP">
+        <div class="input-row">
+            <label>PATH DO SNAPSHOT (OPCIONAL)</label>
+            <input type="text" id="target-path" placeholder="/cgi-bin/snapshot.cgi" value="/cgi-bin/snapshot.cgi">
         </div>
-        <button id="btn-start" onclick="startScanner()">CONECTAR E MONITORAR</button>
-        <button id="btn-stop" onclick="stopSystem()">PARAR E GERAR PDF</button>
+        
+        <button class="btn btn-test" onclick="validateCam()">Testar Conexão Local</button>
+        <button id="btn-ready" class="btn btn-ready" onclick="engageSystem()">Iniciar Sistema de Backup</button>
+        
+        <div id="diag-msg"></div>
     </div>
 </div>
 
-<canvas id="c-proc"></canvas>
+<div id="main-app">
+    <div id="monitor">
+        <div class="hud">
+            <p>ALVO FIXADO:</p>
+            <b id="hud-ip">0.0.0.0</b>
+            <p style="margin-top:10px">STATUS:</p>
+            <b id="hud-status" style="color:var(--safety)">MONITORANDO MOVIMENTO</b>
+            <p style="margin-top:10px">CAPTURED:</p>
+            <b id="hud-count">0 IMAGENS</b>
+        </div>
+        <img id="cam-raw" crossorigin="anonymous">
+        <div id="flash" style="position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none;"></div>
+    </div>
+    <div id="footer">
+        <div><span class="rec-dot"></span> <span id="clock">00:00:00</span></div>
+        <button class="btn" style="width:200px; background:var(--alert); color:#fff;" onclick="finishAndSave()">Encerrar e Gerar PDF</button>
+    </div>
+</div>
+
+<canvas id="proc"></canvas>
 
 <script>
-let lastData = null;
-let photos = [];
-let isRunning = false;
-let foundUrl = "";
+let lastImgData = null;
+let reportSet = [];
+let targetUrl = "";
+let isLive = false;
 let hDir = null;
 
-// Lista de sufixos comuns de fabricantes (Snapshot)
-const paths = [
-    "/onvif/snapshot",        // ONVIF Padrão
-    "/cgi-bin/snapshot.cgi",  // Intelbras / Dahua
-    "/Streaming/channels/1/picture", // Hikvision
-    "/image.jpg",             // Genéricas
-    "/snap.jpg",              // Mibo Smart / IP Cameras
-    "/tmpfs/auto.jpg"         // Foscam
-];
+// Carrega o último IP usado
+window.onload = () => {
+    const savedIP = localStorage.getItem('last_ip');
+    if(savedIP) document.getElementById('target-ip').value = savedIP;
+};
 
-async function startScanner() {
-    const ip = document.getElementById('ip-addr').value;
-    if(!ip) return alert("Digite o IP!");
+async function validateCam() {
+    const ip = document.getElementById('target-ip').value;
+    const path = document.getElementById('target-path').value;
+    const msg = document.getElementById('diag-msg');
+    
+    if(!ip) return alert("Insira o IP primeiro!");
+    
+    msg.style.display = "block";
+    msg.style.color = "#aaa";
+    msg.innerText = "Sincronizando com a câmera...";
+    
+    targetUrl = `http://${ip}${path}`;
+    const start = Date.now();
+    
+    const testImg = new Image();
+    testImg.crossOrigin = "anonymous";
+    
+    testImg.onload = () => {
+        const lat = Date.now() - start;
+        msg.style.color = "var(--safety)";
+        msg.innerText = `CONEXÃO OK! Latência: ${lat}ms | Resolução: ${testImg.width}x${testImg.height}`;
+        document.getElementById('btn-ready').style.display = "block";
+        localStorage.setItem('last_ip', ip);
+    };
+    
+    testImg.onerror = () => {
+        msg.style.color = "var(--alert)";
+        msg.innerText = "FALHA: Câmera offline ou URL de snapshot incorreta. Verifique o IP e o Path.";
+    };
+    
+    testImg.src = targetUrl + "?t=" + Date.now();
+}
 
+async function engageSystem() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('st-ip').innerText = `PROCURANDO CAMERA EM ${ip}...`;
-        
-        // Tenta encontrar qual o caminho da imagem funciona
-        for(let p of paths) {
-            let testUrl = `http://${ip}${p}`;
-            let ok = await testImage(testUrl);
-            if(ok) {
-                foundUrl = testUrl;
-                break;
-            }
-        }
-
-        if(foundUrl) {
-            isRunning = true;
-            document.getElementById('st-ip').innerText = `CONECTADO: ${foundUrl}`;
-            document.getElementById('btn-start').style.display = 'none';
-            document.getElementById('btn-stop').style.display = 'block';
-            monitor();
-        } else {
-            alert("Não foi possível capturar imagem desse IP. Verifique se a câmera tem snapshot HTTP habilitado.");
-        }
-    } catch(e) { console.error(e); }
+        document.getElementById('setup-screen').style.opacity = "0";
+        setTimeout(() => {
+            document.getElementById('setup-screen').style.display = "none";
+            document.getElementById('main-app').style.visibility = "visible";
+            document.getElementById('hud-ip').innerText = document.getElementById('target-ip').value;
+            isLive = true;
+            runLoop();
+        }, 500);
+    } catch(e) { alert("Permissão de pasta necessária para o backup."); }
 }
 
-function testImage(url) {
-    return new Promise(resolve => {
-        const t = new Image();
-        t.crossOrigin = "anonymous";
-        t.onload = () => resolve(true);
-        t.onerror = () => resolve(false);
-        t.src = url + "?t=" + Date.now();
-        setTimeout(() => resolve(false), 2000);
-    });
-}
-
-async function monitor() {
-    if(!isRunning) return;
-
-    const img = document.getElementById('stream-img');
+function runLoop() {
+    if(!isLive) return;
+    
+    const display = document.getElementById('cam-raw');
     const temp = new Image();
     temp.crossOrigin = "anonymous";
-    temp.src = foundUrl + "?t=" + Date.now();
-
+    temp.src = targetUrl + "?t=" + Date.now();
+    
     temp.onload = () => {
-        img.src = temp.src;
-        const can = document.getElementById('c-proc');
+        display.src = temp.src;
+        document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+        
+        const can = document.getElementById('proc');
         const ctx = can.getContext('2d');
-        can.width = temp.width;
-        can.height = temp.height;
+        can.width = temp.width; can.height = temp.height;
         ctx.drawImage(temp, 0, 0);
         
-        const current = ctx.getImageData(0,0, can.width, can.height);
+        const currentData = ctx.getImageData(0,0, can.width, can.height);
         
-        if(lastData) {
-            if(checkMotion(lastData, current)) {
-                saveToReport(temp);
+        if(lastImgData) {
+            if(detectMotion(lastImgData, currentData)) {
+                triggerBackup(temp);
             }
         }
-        lastData = current;
-        setTimeout(monitor, 400); // 2.5 FPS de monitoramento
+        lastImgData = currentData;
+        setTimeout(runLoop, 300); // 3 FPS para monitoramento de tráfego
     };
 }
 
-function checkMotion(d1, d2) {
+function detectMotion(oldD, newD) {
     let diff = 0;
-    const data1 = d1.data;
-    const data2 = d2.data;
-    for(let i=0; i<data1.length; i+=50) {
-        if(Math.abs(data1[i] - data2[i]) > 40) diff++;
+    const d1 = oldD.data;
+    const d2 = newD.data;
+    for(let i=0; i<d1.length; i+=100) { // Salto de 100 pixels para performance
+        if(Math.abs(d1[i] - d2[i]) > 50) diff++;
     }
-    return diff > (data1.length / 1000);
+    return diff > (d1.length / 2000); // Sensibilidade ajustada para carros
 }
 
-function saveToReport(imgObj) {
-    const st = document.getElementById('st-motion');
-    st.innerText = "MOVIMENTO DETECTADO!";
-    st.classList.add('detect');
+function triggerBackup(imgObj) {
+    const flash = document.getElementById('flash');
+    flash.style.opacity = "1";
+    setTimeout(() => flash.style.opacity = "0", 100);
 
-    const can = document.getElementById('c-proc');
+    const can = document.getElementById('proc');
     const ctx = can.getContext('2d');
     ctx.drawImage(imgObj, 0, 0);
     
-    // Carimbo
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(0, can.height - 40, can.width, 40);
-    ctx.fillStyle = "#fff";
-    ctx.font = "16px Arial";
-    ctx.fillText(new Date().toLocaleString() + " - BACKUP", 20, can.height - 15);
+    // Tarja de Auditoria
+    const h = can.height;
+    ctx.fillStyle = "rgba(0,0,0,0.8)";
+    ctx.fillRect(0, h - 60, can.width, 60);
+    ctx.fillStyle = "#0f0";
+    ctx.font = "bold 20px monospace";
+    ctx.fillText(`BACKUP LOG: ${new Date().toLocaleString()} | TARGET: ${document.getElementById('target-ip').value}`, 30, h - 25);
 
-    photos.push(can.toDataURL('image/jpeg', 0.5));
-    document.getElementById('st-count').innerText = `RELATÓRIO: ${photos.length} FOTOS`;
-
-    setTimeout(() => {
-        st.innerText = "SENSOR: STANDBY";
-        st.classList.remove('detect');
-    }, 1500);
+    reportSet.push(can.toDataURL('image/jpeg', 0.6));
+    document.getElementById('hud-count').innerText = `${reportSet.length} IMAGENS`;
 }
 
-async function stopSystem() {
-    isRunning = false;
-    if(photos.length > 0) {
-        const doc = new jspdf.jsPDF('l', 'mm', 'a4');
-        for(let i=0; i<photos.length; i++) {
-            if(i>0) doc.addPage('l');
-            doc.addImage(photos[i], 'JPEG', 0, 0, 297, 210);
-        }
-        const file = await hDir.getFileHandle(`BACKUP_${Date.now()}.pdf`, {create:true});
-        const stream = await file.createWritable();
-        await stream.write(doc.output('blob'));
-        await stream.close();
-        alert("Relatório salvo com sucesso!");
+async function finishAndSave() {
+    isLive = false;
+    if(reportSet.length === 0) return alert("Nenhum movimento registrado.");
+    
+    const doc = new jspdf.jsPDF('l', 'mm', 'a4');
+    for(let i=0; i<reportSet.length; i++) {
+        if(i > 0) doc.addPage('l');
+        doc.addImage(reportSet[i], 'JPEG', 0, 0, 297, 210);
     }
+    
+    const f = await hDir.getFileHandle(`BACKUP_TRAFEGO_${Date.now()}.pdf`, {create:true});
+    const s = await f.createWritable();
+    await s.write(doc.output('blob'));
+    await s.close();
+    alert("Relatório de Backup Finalizado!");
     location.reload();
 }
 </script>
