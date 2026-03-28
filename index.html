@@ -3,166 +3,133 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V20 - GUARDIAN</title>
+    <title>SISTEMA DE INSPEÇÃO V21</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --safety: #056b3c; --danger: #d00; --glass: rgba(10, 10, 10, 0.85); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* TELA DE SEGURANÇA E QUIZ */
-        #gate-screen { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px; transition: 0.6s; overflow-y: auto; }
-        .gate-box { background: #111; border: 1px solid #333; padding: 25px; border-radius: 12px; width: 100%; max-width: 480px; }
-        .gate-box h2 { color: var(--accent); font-size: 16px; margin-bottom: 20px; text-transform: uppercase; text-align: center; }
-        
-        .quiz-item { margin-bottom: 20px; background: #1a1a1a; padding: 15px; border-radius: 8px; border-left: 4px solid #333; }
-        .quiz-item.correct { border-left-color: var(--safety); }
-        .quiz-item p { font-size: 13px; margin-bottom: 10px; color: #bbb; }
-        .opt { display: block; margin: 8px 0; font-size: 12px; cursor: pointer; color: #888; }
-        .opt input { margin-right: 10px; accent-color: var(--accent); }
+        /* TELA DE ALERTA INICIAL */
+        #safety-gate { 
+            position: fixed; inset: 0; background: #000; z-index: 3000; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px;
+        }
+        .alert-box { 
+            border: 2px solid var(--accent); padding: 30px; border-radius: 15px; 
+            max-width: 500px; text-align: center; background: #0a0a0a;
+        }
+        .alert-box h2 { color: var(--accent); margin-bottom: 15px; font-size: 20px; text-transform: uppercase; }
+        .alert-box p { font-size: 14px; line-height: 1.6; color: #ccc; margin-bottom: 25px; }
+        .btn-aware { 
+            background: var(--accent); color: #000; border: none; padding: 15px 40px; 
+            font-weight: 900; border-radius: 30px; cursor: pointer; text-transform: uppercase;
+        }
 
-        #btn-gate { width: 100%; padding: 20px; border: none; border-radius: 8px; background: #222; color: #444; font-weight: 800; text-transform: uppercase; cursor: not-allowed; transition: 0.4s; }
-        #btn-gate.ready { background: var(--accent); color: #000; cursor: pointer; }
-
-        /* HUD E CAPTURA */
+        /* INTERFACE PRINCIPAL */
         #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
         #km-hud { position: absolute; top: 30px; left: 30px; background: var(--safety); padding: 12px 30px; border-radius: 4px; border-left: 10px solid #fff; z-index: 10; pointer-events: none; }
         #km-hud h1 { font-size: 3rem; font-weight: 900; }
 
-        #rec-indicator { position: absolute; top: 35px; right: 35px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; }
-        .dot { width: 8px; height: 8px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; }
-        #rec-indicator span { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; font-weight: 300; color: rgba(255,255,255,0.7); }
+        #rec-tag { position: absolute; top: 35px; right: 35px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 2px; text-transform: uppercase; }
+        .dot { width: 7px; height: 7px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* BOTÕES QUE SE AJUSTAM AO CENTRO */
-        #action-bar { 
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
-            display: flex; align-items: center; gap: 30px; width: 90%; max-width: 450px; 
-            background: var(--glass); padding: 20px 40px; border-radius: 100px; 
-            backdrop-filter: blur(10px); z-index: 100; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            opacity: 1; 
+        /* AJUSTES LATERAIS */
+        #settings-panel { 
+            position: fixed; right: -350px; top: 0; width: 300px; height: 100%; 
+            background: var(--glass); backdrop-filter: blur(15px); z-index: 2000; 
+            padding: 50px 25px; transition: 0.5s; border-left: 2px solid var(--accent);
         }
-        #action-bar.hidden { opacity: 0; bottom: 20px; pointer-events: none; transform: translateX(-50%) scale(0.9); }
-        
-        .btn-main { flex: 1; border: none; border-radius: 50px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px; font-size: 12px; background: var(--accent); color: #000; }
-        #btn-stop { background: var(--danger); color: #fff; }
+        #settings-panel.open { right: 0; }
+        .close-x { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #555; }
+        .field { margin-bottom: 25px; }
+        .field label { font-size: 10px; color: var(--accent); display: block; margin-bottom: 8px; text-transform: uppercase; font-weight: 800; }
+        select, input { width: 100%; background: #222; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; }
 
-        #settings-btn { position: absolute; bottom: 120px; right: 50px; font-size: 24px; color: #444; cursor: pointer; transition: 0.5s; }
-        #settings-btn.hidden { opacity: 0; }
+        /* CONTROLES FLUTUANTES */
+        #ui-controls { 
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
+            display: flex; align-items: center; gap: 20px; transition: 0.5s; z-index: 100;
+        }
+        .ui-hidden { opacity: 0; bottom: 20px; pointer-events: none; }
+        .btn-round { border: none; border-radius: 50px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px 40px; font-size: 12px; background: var(--accent); color: #000; }
+        #gear-btn { width: 50px; height: 50px; border-radius: 50%; background: var(--glass); border: 1px solid #333; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
         canvas { display: none; }
     </style>
 </head>
-<body onclick="showControls()">
+<body onclick="wakeUI()">
 
-<div id="gate-screen">
-    <div class="gate-box" id="quiz-container">
-        <h2>Consciência de Segurança</h2>
-        <div id="questions-area"></div>
-        <button id="btn-gate" disabled onclick="handleGateClick()">Validar Respostas</button>
+<div id="safety-gate">
+    <div class="alert-box">
+        <h2>⚠ AVISO DE SEGURANÇA</h2>
+        <p>Este sistema captura imagens automaticamente para relatórios de inspeção. <br><br>
+        <b>Mantenha as mãos no volante.</b> O manuseio do celular em movimento é proibido e perigoso. A responsabilidade pela condução segura é exclusiva do motorista.</p>
+        <button class="btn-aware" onclick="acceptSafety()">Estou Ciente e Seguro</button>
     </div>
+</div>
+
+<div id="settings-panel">
+    <div class="close-x" onclick="toggleSet()">×</div>
+    <div class="field"><label>Câmera Disponível</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="field"><label>Tempo da Foto (ms)</label><input type="number" id="cfg-int" value="200"></div>
+    <div class="field"><label>Fotos por Lote</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
-    
-    <div id="km-hud">
-        <h1 id="km-txt">Km ---+---</h1>
-    </div>
+    <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
+    <div id="rec-tag"><span>Captura Automática</span><div class="dot"></div></div>
 
-    <div id="rec-indicator">
-        <span>Capturando</span>
-        <div class="dot"></div>
-    </div>
-
-    <div id="settings-btn" onclick="toggleSet()">⚙</div>
-
-    <div id="action-bar">
-        <button id="btn-action" class="btn-main" onclick="startRec()">Iniciar</button>
-        <button id="btn-stop" class="btn-main" style="display:none;" onclick="stopRec()">Concluir</button>
+    <div id="ui-controls">
+        <div id="gear-btn" onclick="toggleSet()">⚙</div>
+        <button id="btn-start" class="btn-round" onclick="initCapture()">Iniciar Inspeção</button>
+        <button id="btn-stop" class="btn-round" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Parar e Salvar</button>
     </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], gps=null, rec=false, buffer=[], total=0, hDir=null, currentStream=null, hideTimer;
+let kmDB=[], gps=null, rec=false, buffer=[], hDir=null, currentStream=null, uiTimer;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-const pool = [
-    { q: "Uso de celular ao volante é permitido?", a: "Nunca, apenas no suporte e sem toque manual.", o: ["Apenas em retas", "Nunca, apenas no suporte e sem toque manual.", "Sim, com uma mão"] },
-    { q: "Qual a distância segura do veículo à frente?", a: "No mínimo 2 segundos de tempo.", o: ["Colado para ver melhor", "No mínimo 2 segundos de tempo.", "10 metros fixos"] },
-    { q: "Ao caminhar na rodovia, qual EPI é vital?", a: "Colete Refletivo.", o: ["Apenas boné", "Colete Refletivo.", "Luvas de couro"] },
-    { q: "Sua atenção principal deve estar em:", a: "Na via e no tráfego ao redor.", o: ["No Km da tela", "Na via e no tráfego ao redor.", "No rádio"] },
-    { q: "Ao notar neblina forte, você deve:", a: "Reduzir e buscar local seguro.", o: ["Aumentar a luz alta", "Reduzir e buscar local seguro.", "Parar no acostamento"] }
-];
-
-function initQuiz() {
-    const area = document.getElementById('questions-area');
-    const shuffled = pool.sort(() => 0.5 - Math.random()).slice(0, 4);
-    area.innerHTML = shuffled.map((item, i) => `
-        <div class="quiz-item" id="q${i}">
-            <p>${item.q}</p>
-            ${item.o.map(opt => `<label class="opt"><input type="radio" name="r${i}" value="${opt}" onchange="checkQuiz()"> ${opt}</label>`).join('')}
-        </div>
-    `).join('');
-    window.currentQuestions = shuffled;
-}
-
-function checkQuiz() {
-    const btn = document.getElementById('btn-gate');
-    let corrects = 0;
-    window.currentQuestions.forEach((item, i) => {
-        const sel = document.querySelector(`input[name="r${i}"]:checked`);
-        if(sel && sel.value === item.a) {
-            corrects++;
-            document.getElementById(`q${i}`).classList.add('correct');
-        }
-    });
-    if(corrects === window.currentQuestions.length) {
-        btn.disabled = false;
-        btn.classList.add('ready');
-    }
-}
-
-async function handleGateClick() {
-    const btn = document.getElementById('btn-gate');
-    if(btn.innerText === "VALIDAR RESPOSTAS") {
-        btn.innerText = "DEFINIR PASTA DE DESTINO";
-        return;
-    }
+async function acceptSafety() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('gate-screen').style.opacity = '0';
+        document.getElementById('safety-gate').style.opacity = '0';
         setTimeout(() => {
-            document.getElementById('gate-screen').remove();
+            document.getElementById('safety-gate').remove();
             document.getElementById('app-shell').style.visibility = 'visible';
             document.getElementById('app-shell').style.opacity = '1';
             listCams();
             if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+            wakeUI();
         }, 600);
-    } catch(e) {}
+    } catch(e) { alert("É necessário selecionar uma pasta para continuar."); }
 }
 
-function showControls() {
-    document.getElementById('action-bar').classList.remove('hidden');
-    document.getElementById('settings-btn').classList.remove('hidden');
-    clearTimeout(hideTimer);
-    if(rec) {
-        hideTimer = setTimeout(() => {
-            document.getElementById('action-bar').classList.add('hidden');
-            document.getElementById('settings-btn').classList.add('hidden');
-        }, 5000);
-    }
+function wakeUI() {
+    document.getElementById('ui-controls').classList.remove('ui-hidden');
+    clearTimeout(uiTimer);
+    if(rec) uiTimer = setTimeout(() => document.getElementById('ui-controls').classList.add('ui-hidden'), 4000);
 }
 
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(d => d.kind === 'videoinput');
-    const backCam = videoDevices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('traseira')) || videoDevices;
-    initC(backCam.deviceId);
+    const sel = document.getElementById('cam-select');
+    sel.innerHTML = "";
+    videoDevices.forEach((d, i) => {
+        const opt = document.createElement('option');
+        opt.value = d.deviceId; opt.text = `Lente ${i + 1}`;
+        sel.appendChild(opt);
+    });
+    const back = videoDevices.find(d => d.label.toLowerCase().includes('back')) || videoDevices;
+    if(back) { sel.value = back.deviceId; initC(back.deviceId); }
 }
 
 async function initC(id) {
@@ -172,21 +139,24 @@ async function initC(id) {
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; vid.play(); };
 }
 
-async function startRec() {
+function switchCam(id) { initC(id); }
+function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+
+async function initCapture() {
     rec = true;
-    document.getElementById('btn-action').style.display = 'none';
+    document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'inline-block';
-    document.getElementById('rec-indicator').style.opacity = '1';
-    showControls();
+    document.getElementById('rec-tag').style.opacity = '1';
+    wakeUI();
     loop();
 }
 
-function stopRec() {
+function stopCapture() {
     rec = false;
-    save();
-    document.getElementById('btn-action').style.display = 'inline-block';
+    savePDF();
+    document.getElementById('btn-start').style.display = 'inline-block';
     document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-indicator').style.opacity = '0';
+    document.getElementById('rec-tag').style.opacity = '0';
 }
 
 function loop() {
@@ -198,12 +168,12 @@ function loop() {
             km: document.getElementById('km-txt').innerText.replace("Km ", ""), 
             ts: new Date().toLocaleString('pt-BR').toUpperCase() 
         });
-        if(buffer.length >= 50) save();
+        if(buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 50)) savePDF();
     }
-    setTimeout(loop, 200);
+    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
-async function save() {
+async function savePDF() {
     if(!buffer.length || !hDir) return;
     const items = [...buffer]; buffer = [];
     const isPortrait = can.width < can.height;
@@ -215,25 +185,22 @@ async function save() {
         const img = new Image();
         await new Promise(r => {
             img.onload = () => {
-                ctx.drawImage(img, 0, 0); drawS(items[i]);
+                ctx.drawImage(img, 0, 0);
+                const barH = can.height * 0.16;
+                ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, can.height-barH, can.width, barH);
+                ctx.fillStyle = "#fff"; ctx.font = `bold ${barH * 0.4}px Arial`;
+                ctx.fillText("Km " + items[i].km, 60, can.height-(barH*0.5));
+                ctx.font = `${barH * 0.18}px Arial`;
+                ctx.fillText(items[i].ts, 60, can.height-(barH*0.25));
                 doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
                 r();
             };
             img.src = items[i].raw;
         });
     }
-    const f = await hDir.getFileHandle(`LOTE_${Date.now()}.pdf`, {create:true});
+    const f = await hDir.getFileHandle(`INSPECAO_${Date.now()}.pdf`, {create:true});
     const s = await f.createWritable();
     await s.write(doc.output('blob')); await s.close();
-}
-
-function drawS(m) {
-    const w = can.width, h = can.height, barH = h * 0.16;
-    ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, h-barH, w, barH);
-    ctx.fillStyle = "#fff"; ctx.font = `900 ${barH * 0.4}px Inter`;
-    ctx.fillText("Km " + m.km, 60, h-(barH*0.5));
-    ctx.font = `300 ${barH * 0.18}px Inter`;
-    ctx.fillText(m.ts, 60, h-(barH*0.25));
 }
 
 async function loadCSV() {
@@ -241,27 +208,26 @@ async function loadCSV() {
         const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
         const t = await r.text();
         const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ik=h.indexOf('km'), ilt=h.findIndex(x=>x.includes('lat')), iln=h.findIndex(x=>x.includes('lon'));
-        kmDB = rows.map(r => {
+        kmDB = rows.slice(1).map(r => {
             const c = r.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
+            return { km: c, lt: parseFloat(c.replace(',','.')), ln: parseFloat(c.replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
     } catch(e) {}
 }
 
-function updateKM() {
-    if(!gps || !kmDB.length) return;
-    let n = null, dM = Infinity;
-    for(const p of kmDB) {
-        const d = Math.hypot(p.lt - gps.lat, p.ln - gps.lon);
-        if(d < dM) { dM = d; n = p; }
-    }
-    if(n) document.getElementById('km-txt').innerText = "Km " + n.km;
+function initG() { 
+    navigator.geolocation.watchPosition(p => {
+        if(!kmDB.length) return;
+        let n = null, dM = Infinity;
+        for(const pt of kmDB) {
+            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
+            if(d < dM) { dM = d; n = pt; }
+        }
+        if(n) document.getElementById('km-txt').innerText = "Km " + n.km;
+    }, null, {enableHighAccuracy:true});
 }
 
-function initG() { navigator.geolocation.watchPosition(p => { gps = { lat: p.coords.latitude, lon: p.coords.longitude }; updateKM(); }, null, {enableHighAccuracy:true}); }
-window.onload = () => { initQuiz(); loadCSV(); initG(); };
+window.onload = () => { loadCSV(); initG(); };
 </script>
 </body>
 </html>
