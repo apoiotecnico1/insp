@@ -3,64 +3,46 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V23 - AI Voice</title>
+    <title>INSPEÇÃO PRO V25 - DVR Mode</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #d00; --ai-blue: #00e5ff; --glass: rgba(15, 15, 15, 0.9); }
+        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #d00; --glass: rgba(15, 15, 15, 0.9); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* TELA DE ALERTA */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
         .alert-box { border: 1px solid #333; padding: 35px; border-radius: 12px; max-width: 450px; text-align: center; background: #080808; }
-        .alert-box h2 { color: var(--accent); margin-bottom: 15px; font-size: 18px; letter-spacing: 1px; }
+        .alert-box h2 { color: var(--accent); margin-bottom: 15px; font-size: 18px; }
         .alert-box p { font-size: 13px; line-height: 1.6; color: #999; margin-bottom: 25px; }
         .btn-aware { background: var(--accent); color: #000; border: none; padding: 16px 45px; font-weight: 800; border-radius: 4px; cursor: pointer; text-transform: uppercase; font-size: 12px; }
 
-        /* INTERFACE PRINCIPAL */
         #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
+        
+        /* A TELA INTEIRA É UM BOTÃO GIGANTE */
+        #video-container { width: 100%; height: 100%; position: absolute; z-index: 1; cursor: pointer; }
         video { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* FLASH EFFECT */
+        #flash-overlay { position: absolute; inset: 0; background: white; opacity: 0; z-index: 2000; pointer-events: none; transition: opacity 0.1s; }
 
-        /* PLACA DE KM */
-        #km-hud { 
-            position: absolute; top: 25px; left: 25px; 
-            background: var(--placa-verde); padding: 8px 20px; 
-            border: 2px solid #fff; border-radius: 6px; 
-            box-shadow: 0 8px 15px rgba(0,0,0,0.4); z-index: 10; pointer-events: none;
-        }
+        #km-hud { position: absolute; top: 25px; left: 25px; background: var(--placa-verde); padding: 8px 20px; border: 2px solid #fff; border-radius: 6px; z-index: 10; pointer-events: none;}
         #km-hud h1 { font-size: 1.8rem; font-weight: 800; color: #fff; letter-spacing: -1px; }
-
-        /* STATUS DA IA DE VOZ */
-        #ai-voice-status {
-            position: absolute; top: 90px; left: 25px;
-            background: rgba(0, 0, 0, 0.6); padding: 5px 12px;
-            border-radius: 4px; font-size: 11px; color: var(--ai-blue);
-            display: flex; align-items: center; gap: 8px; z-index: 10;
-            border: 1px solid var(--ai-blue);
-        }
-        .mic-dot { width: 6px; height: 6px; background: var(--ai-blue); border-radius: 50%; animation: blink 1.5s infinite; }
 
         #rec-tag { position: absolute; top: 30px; right: 30px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 9px; color: rgba(255,255,255,0.5); letter-spacing: 1px; }
         .dot { width: 6px; height: 6px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* MENU DE AJUSTES */
-        #settings-panel { 
-            position: fixed; right: -350px; top: 0; width: 300px; height: 100%; 
-            background: var(--glass); backdrop-filter: blur(20px); z-index: 2000; 
-            padding: 60px 25px; transition: 0.5s; border-left: 1px solid #333;
-        }
+        /* INFORMAÇÕES DO BUFFER */
+        #buffer-status { position: absolute; bottom: 20px; left: 25px; font-size: 10px; color: #888; z-index: 10; pointer-events: none;}
+
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 2000; padding: 60px 25px; transition: 0.5s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
         .close-x { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; color: #444; }
         .field { margin-bottom: 25px; }
         .field label { font-size: 11px; color: #777; display: block; margin-bottom: 8px; font-weight: 500; }
         select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 4px; font-size: 13px; }
 
-        /* CONTROLES */
-        #ui-controls { 
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
-            display: flex; align-items: center; gap: 20px; transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1); z-index: 100;
-        }
+        #ui-controls { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1); z-index: 100; }
         .ui-hidden { opacity: 0; bottom: 15px; pointer-events: none; }
         .btn-round { border: none; border-radius: 4px; font-weight: 800; cursor: pointer; text-transform: uppercase; padding: 18px 40px; font-size: 11px; background: var(--accent); color: #000; letter-spacing: 1px; }
         #gear-btn { width: 48px; height: 48px; border-radius: 4px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -72,41 +54,66 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2>Consciência Operacional</h2>
-        <p>Este sistema possui comandos de voz por IA. Mantenha foco total na via. Fale a ocorrência em voz alta para registrar.</p>
-        <button class="btn-aware" onclick="acceptSafety()">Estou Ciente</button>
+        <h2>Modo DVR (Gatilho Manual)</h2>
+        <p>O sistema vai filmar continuamente. Para registrar um poste apagado, <b>toque em qualquer lugar da tela</b> ou use um <b>controle Bluetooth</b> (Volume +).</p>
+        <button class="btn-aware" onclick="acceptSafety()">Iniciar</button>
     </div>
 </div>
 
 <div id="settings-panel">
     <div class="close-x" onclick="toggleSet()">×</div>
     <div class="field"><label>Câmera do dispositivo</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Tempo da foto (Ms)</label><input type="number" id="cfg-int" value="5000"></div>
-    <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50"></div>
+    <div class="field"><label>Frames guardados no Buffer</label><input type="number" id="cfg-buffer" value="3"></div>
 </div>
 
 <div id="app-shell">
-    <video id="vid" autoplay playsinline muted></video>
+    <div id="flash-overlay"></div>
+    <div id="video-container" onclick="triggerEvent()">
+        <video id="vid" autoplay playsinline muted></video>
+    </div>
+    
     <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
-    <div id="ai-voice-status" style="display:none;"><div class="mic-dot"></div><span id="voice-lbl">IA Ouvindo...</span></div>
-    <div id="rec-tag"><span>Captura Ativa</span><div class="dot"></div></div>
+    <div id="rec-tag"><span>DVR Ativo</span><div class="dot"></div></div>
+    <div id="buffer-status">Fotos no Relatório: 0</div>
 
     <div id="ui-controls">
-        <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-round" onclick="initCapture()">Iniciar Inspeção</button>
-        <button id="btn-stop" class="btn-round" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Encerrar Relatório</button>
+        <div id="gear-btn" onclick="toggleSet(event)">⚙</div>
+        <button id="btn-start" class="btn-round" onclick="initCapture(event)">Iniciar Patrulha</button>
+        <button id="btn-stop" class="btn-round" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture(event)">Gerar PDF Limpo</button>
     </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], gps=null, rec=false, buffer=[], hDir=null, currentStream=null, uiTimer;
-let recognition = null; // Instância da IA de voz
+let kmDB=[], gps=null, rec=false, reportBuffer=[], ringBuffer=[], hDir=null, currentStream=null, uiTimer;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
+let wakeLock = null;
 
-// Palavras-chave que forçam a foto e carimbam o PDF
-const gatilhosVoz = ["lâmpada apagada", "cabo rompido", "buraco", "placa danificada", "acidente", "vegetação alta", "caixa de emenda"];
+// GERA BEEP DE ÁUDIO SINTÉTICO (Sem precisar de arquivo mp3)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playBeep() {
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); // Frequência do Beep
+    gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.3);
+}
+
+// ESCUTA O CONTROLE BLUETOOTH / TECLADO
+window.addEventListener('keydown', function(e) {
+    // Tecla Espaço, Enter, ou botões de mídia (VolumeUp é muito comum em controles BT de foto)
+    if (e.code === 'Space' || e.code === 'Enter' || e.key === 'AudioVolumeUp') {
+        e.preventDefault();
+        triggerEvent();
+    }
+});
 
 async function acceptSafety() {
     try {
@@ -117,11 +124,19 @@ async function acceptSafety() {
             document.getElementById('app-shell').style.visibility = 'visible';
             document.getElementById('app-shell').style.opacity = '1';
             listCams();
-            setupVoiceAI(); // Inicializa a IA de Voz
             if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+            requestWakeLock();
             wakeUI();
         }, 600);
     } catch(e) { alert("Selecione uma pasta para salvar os relatórios."); }
+}
+
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+        }
+    } catch (err) { console.log("Wake Lock falhou", err); }
 }
 
 function wakeUI() {
@@ -129,43 +144,6 @@ function wakeUI() {
     clearTimeout(uiTimer);
     if(rec) uiTimer = setTimeout(() => document.getElementById('ui-controls').classList.add('ui-hidden'), 4000);
 }
-
-// ---- MÓDULO DE IA DE VOZ ----
-function setupVoiceAI() {
-    window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!window.SpeechRecognition) {
-        console.warn("Navegador não suporta IA de voz nativa.");
-        return;
-    }
-    
-    recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.lang = 'pt-BR';
-
-    recognition.onresult = (event) => {
-        if(!rec) return;
-        const transcript = event.results[event.results.length - 1].transcript.toLowerCase().trim();
-        
-        // Verifica se o que foi dito contém alguma das palavras-chave
-        const tagEncontrada = gatilhosVoz.find(gatilho => transcript.includes(gatilho));
-        
-        if(tagEncontrada) {
-            document.getElementById('voice-lbl').innerText = `Evento: ${tagEncontrada.toUpperCase()}`;
-            document.getElementById('voice-lbl').style.color = "#ffcc00";
-            setTimeout(() => { 
-                document.getElementById('voice-lbl').innerText = "IA Ouvindo..."; 
-                document.getElementById('voice-lbl').style.color = "var(--ai-blue)";
-            }, 3000);
-            
-            // Força a captura imediata com a tag de voz
-            captureFrame(tagEncontrada.toUpperCase());
-        }
-    };
-
-    recognition.onend = () => { if(rec) recognition.start(); }; // Mantém rodando
-}
-// -----------------------------
 
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -189,59 +167,81 @@ async function initC(id) {
 }
 
 function switchCam(id) { initC(id); }
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+function toggleSet(e) { if(e) e.stopPropagation(); document.getElementById('settings-panel').classList.toggle('open'); }
 
-async function initCapture() {
+function initCapture(e) {
+    if(e) e.stopPropagation();
     rec = true;
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'inline-block';
     document.getElementById('rec-tag').style.opacity = '1';
-    
-    if(recognition) {
-        document.getElementById('ai-voice-status').style.display = 'flex';
-        try { recognition.start(); } catch(e){}
-    }
     wakeUI();
-    loop();
+    dvrLoop();
 }
 
-function stopCapture() {
+function stopCapture(e) {
+    if(e) e.stopPropagation();
     rec = false;
     savePDF();
     document.getElementById('btn-start').style.display = 'inline-block';
     document.getElementById('btn-stop').style.display = 'none';
     document.getElementById('rec-tag').style.opacity = '0';
-    document.getElementById('ai-voice-status').style.display = 'none';
-    if(recognition) recognition.stop();
+    if(wakeLock !== null) wakeLock.release();
 }
 
-function captureFrame(voiceTag = "") {
+// O LOOP CONSTANTE QUE SÓ SALVA NA RAM
+function dvrLoop() {
+    if(!rec) return;
     if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
         ctx.drawImage(vid, 0, 0, can.width, can.height);
-        buffer.push({ 
+        const maxFrames = parseInt(document.getElementById('cfg-buffer').value) || 3;
+        
+        // Empurra para a memória temporária
+        ringBuffer.push({ 
             raw: can.toDataURL('image/jpeg', 0.45), 
             km: document.getElementById('km-txt').innerText.replace("Km ", ""), 
-            ts: new Date().toLocaleString('pt-BR').toUpperCase(),
-            tag: voiceTag // Salva a tag de voz, se houver
+            ts: new Date().toLocaleString('pt-BR').toUpperCase() 
         });
-        const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
-        if(buffer.length >= limit) savePDF();
+
+        // Remove o frame mais antigo se passar do limite
+        if(ringBuffer.length > maxFrames) { ringBuffer.shift(); }
+    }
+    setTimeout(dvrLoop, 1000); // 1 frame por segundo para economizar CPU
+}
+
+// O GATILHO QUE TRANSFERE DA RAM PARA O RELATÓRIO
+function triggerEvent() {
+    if(!rec) return;
+    playBeep();
+    
+    // Efeito de Flash na tela
+    const flash = document.getElementById('flash-overlay');
+    flash.style.opacity = '1';
+    setTimeout(() => { flash.style.opacity = '0'; }, 100);
+
+    // Pega o frame exato do buffer circular e joga pro relatório final
+    if(ringBuffer.length > 0) {
+        const frameAprovado = ringBuffer[ringBuffer.length - 1]; // Pega o mais recente
+        reportBuffer.push({
+            raw: frameAprovado.raw,
+            km: frameAprovado.km,
+            ts: frameAprovado.ts,
+            tag: "PONTO APAGADO"
+        });
+        document.getElementById('buffer-status').innerText = `Fotos no Relatório: ${reportBuffer.length}`;
     }
 }
 
-function loop() {
-    if(!rec) return;
-    captureFrame(); // Captura padrão por tempo
-    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 5000); // Mudei padrão para 5s para não travar
-}
-
 async function savePDF() {
-    if(!buffer.length || !hDir) return;
-    const items = [...buffer]; buffer = [];
+    if(!reportBuffer.length || !hDir) { alert("Nenhum defeito registrado."); return; }
+    const items = [...reportBuffer]; reportBuffer = [];
+    document.getElementById('buffer-status').innerText = `Gerando PDF...`;
+    
     const isPortrait = can.width < can.height;
     const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
+    
     for(let i=0; i<items.length; i++){
         if(i > 0) doc.addPage(isPortrait?'p':'l');
         const img = new Image();
@@ -250,29 +250,25 @@ async function savePDF() {
                 ctx.drawImage(img, 0, 0);
                 const barH = can.height * 0.16;
                 ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, can.height-barH, can.width, barH);
-                
-                // Texto KM e Data
                 ctx.fillStyle = "#fff"; ctx.font = `bold ${barH * 0.4}px Arial`;
                 ctx.fillText("Km " + items[i].km, 60, can.height-(barH*0.5));
                 ctx.font = `${barH * 0.18}px Arial`;
                 ctx.fillText(items[i].ts, 60, can.height-(barH*0.22));
-
-                // Se houver comando de voz, carimba em destaque
-                if(items[i].tag) {
-                    ctx.fillStyle = "var(--accent)";
-                    ctx.font = `bold ${barH * 0.3}px Arial`;
-                    ctx.fillText("⚠️ " + items[i].tag, can.width * 0.5, can.height-(barH*0.4));
-                }
-
+                
+                ctx.fillStyle = "var(--danger)";
+                ctx.font = `bold ${barH * 0.3}px Arial`;
+                ctx.fillText("⚠️ " + items[i].tag, can.width * 0.5, can.height-(barH*0.4));
+                
                 doc.addImage(can.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
                 r();
             };
             img.src = items[i].raw;
         });
     }
-    const f = await hDir.getFileHandle(`RELATORIO_${Date.now()}.pdf`, {create:true});
+    const f = await hDir.getFileHandle(`INSPECAO_LIMPA_${Date.now()}.pdf`, {create:true});
     const s = await f.createWritable();
     await s.write(doc.output('blob')); await s.close();
+    document.getElementById('buffer-status').innerText = `Fotos no Relatório: 0`;
 }
 
 async function loadCSV() {
