@@ -3,111 +3,122 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>SISTEMA DE INSPEÇÃO - PADRÃO MOTIVA</title>
+    <title>INSPEÇÃO PRO V19 - SAFETY EDITION</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { 
-            --motiva-blue: #003366; 
-            --motiva-orange: #f26522;
-            --asfalto: #1a1a1a;
-            --glass: rgba(0, 51, 102, 0.85);
-        }
+        :root { --accent: #ffcc00; --safety: #056b3c; --danger: #d00; --glass: rgba(10, 10, 10, 0.95); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; overflow: hidden; height: 100vh; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* Splash Institucional */
-        #splash { position: fixed; inset: 0; background: var(--motiva-blue); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1); border-bottom: 8px solid var(--motiva-orange); }
-        .logo-box { text-align: center; border: 2px solid rgba(255,255,255,0.2); padding: 30px; border-radius: 2px; }
-        .title-main { font-size: 24px; font-weight: 300; letter-spacing: 6px; text-transform: uppercase; color: #fff; }
-        .title-main b { color: var(--motiva-orange); font-weight: 800; }
-        .start-hint { margin-top: 40px; font-size: 10px; letter-spacing: 4px; color: rgba(255,255,255,0.5); text-transform: uppercase; }
+        /* TELA DE SEGURANÇA (Obrigatória) */
+        #safety-screen { 
+            position: fixed; inset: 0; background: #000; z-index: 2000; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 30px; transition: 0.8s;
+        }
+        .safety-box { 
+            background: #111; border: 2px solid var(--accent); padding: 30px; 
+            border-radius: 8px; width: 100%; max-width: 450px; 
+        }
+        .safety-box h2 { color: var(--accent); font-size: 18px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
+        
+        .check-item { 
+            display: flex; align-items: center; gap: 15px; margin-bottom: 20px; 
+            padding: 15px; background: #1a1a1a; border-radius: 5px; cursor: pointer;
+            transition: 0.3s; border: 1px solid transparent;
+        }
+        .check-item input { width: 22px; height: 22px; cursor: pointer; accent-color: var(--accent); }
+        .check-item span { font-size: 14px; line-height: 1.4; color: #ddd; }
+        .check-item:active { background: #222; }
+
+        #btn-unlock { 
+            width: 100%; padding: 20px; border: none; border-radius: 5px; 
+            background: #333; color: #666; font-weight: 900; 
+            text-transform: uppercase; letter-spacing: 2px; cursor: not-allowed;
+            margin-top: 10px; transition: 0.5s;
+        }
+        #btn-unlock.ready { background: var(--accent); color: #000; cursor: pointer; box-shadow: 0 0 30px rgba(255,204,0,0.2); }
 
         /* Layout Principal */
-        #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 0.8s; }
+        #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD KM - Estilo Placa de Rodovia */
-        #km-hud { 
-            position: absolute; top: 25px; left: 25px; 
-            background: var(--motiva-blue); padding: 12px 30px; 
-            border-radius: 6px; border: 2px solid #fff;
-            z-index: 10; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        #km-hud small { font-size: 10px; color: var(--motiva-orange); text-transform: uppercase; font-weight: 800; letter-spacing: 2px; display: block; margin-bottom: 2px; }
-        #km-hud h1 { font-size: 2.8rem; font-weight: 900; color: #fff; line-height: 1; }
+        #km-hud { position: absolute; top: 30px; left: 30px; background: var(--safety); padding: 15px 35px; border-radius: 4px; border-left: 10px solid #fff; z-index: 10; }
+        #km-hud h1 { font-size: 3.2rem; font-weight: 900; }
         
-        #gear-btn { position: absolute; top: 25px; right: 25px; width: 45px; height: 45px; background: var(--glass); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #fff; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); z-index: 20; opacity: 0.6; }
-
-        /* Barra de Controle Slim */
         #action-bar { 
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
-            display: flex; align-items: center; gap: 30px; width: 90%; max-width: 550px; 
-            background: var(--glass); padding: 12px 35px; border-radius: 4px; 
-            backdrop-filter: blur(15px); border-bottom: 4px solid var(--motiva-orange); z-index: 100; justify-content: space-between;
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); 
+            display: flex; align-items: center; gap: 40px; width: 92%; max-width: 550px; 
+            background: var(--glass); padding: 15px 40px; border-radius: 80px; 
+            border: 1px solid #222; z-index: 100; justify-content: space-between;
         }
-        .stat-group { border-left: 1px solid rgba(255,255,255,0.1); padding-left: 15px; }
-        .stat-group b { font-size: 1.2rem; color: #fff; display: block; }
-        .stat-group small { font-size: 8px; color: var(--motiva-orange); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
+        .stat-group b { font-size: 1.4rem; color: #fff; display: block; }
+        .stat-group small { font-size: 9px; color: var(--accent); text-transform: uppercase; font-weight: bold; }
+        .btn-main { border: none; border-radius: 40px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px 45px; font-size: 13px; background: var(--accent); color: #000; }
 
-        .btn-motiva { 
-            border: none; border-radius: 2px; font-weight: 800; cursor: pointer; 
-            text-transform: uppercase; padding: 15px 40px; font-size: 11px; 
-            background: var(--motiva-orange); color: #fff; letter-spacing: 1px;
-            transition: 0.3s;
-        }
-        .btn-motiva:active { transform: translateY(2px); filter: brightness(1.2); }
-
-        /* Ajustes Estilo SAP/Corporate */
-        #settings { 
-            position: fixed; right: -350px; top: 0; width: 320px; height: 100%; 
-            background: #f4f4f4; z-index: 500; transition: 0.4s; padding: 50px 25px; 
-            color: #333; border-left: 5px solid var(--motiva-blue);
-        }
+        #settings { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #080808; z-index: 500; transition: 0.5s; padding: 60px 30px; border-left: 1px solid var(--accent); }
         #settings.open { right: 0; }
-        .close-x { position: absolute; top: 15px; right: 20px; font-size: 24px; color: #ccc; cursor: pointer; font-weight: 200; }
-        .close-x:hover { color: var(--motiva-orange); }
+        .close-x { position: absolute; top: 20px; right: 20px; font-size: 28px; color: #444; cursor: pointer; }
         
-        .field { margin-bottom: 25px; }
-        .field label { font-size: 9px; color: var(--motiva-blue); margin-bottom: 6px; font-weight: 800; display: block; text-transform: uppercase; }
-        select, input { width: 100%; background: #fff; border: 1px solid #ddd; color: #333; padding: 12px; border-radius: 2px; font-size: 13px; outline: none; }
-        select:focus, input:focus { border-color: var(--motiva-orange); }
+        .field { margin-bottom: 30px; }
+        .field label { font-size: 10px; color: var(--accent); margin-bottom: 8px; font-weight: bold; display: block; text-transform: uppercase; }
+        select, input { width: 100%; background: #111; border: 1px solid #222; color: #fff; padding: 15px; border-radius: 8px; }
 
         canvas { display: none; }
     </style>
 </head>
-<body onclick="launch()">
+<body>
 
-<div id="splash">
-    <div class="logo-box">
-        <div class="title-main">INSPEÇÃO <b>FOTOGRÁFICA</b></div>
-        <p style="color: rgba(255,255,255,0.4); font-size: 9px; margin-top: 5px; letter-spacing: 2px;">PADRÃO MOTIVA RODOVIAS</p>
+<div id="safety-screen">
+    <div class="safety-box">
+        <h2>Checklist de Segurança</h2>
+        
+        <label class="check-item">
+            <input type="checkbox" class="safety-check">
+            <span>Utilizando cinto de segurança corretamente.</span>
+        </label>
+        
+        <label class="check-item">
+            <input type="checkbox" class="safety-check">
+            <span>Celular fixado no suporte (Proibido manuseio manual).</span>
+        </label>
+        
+        <label class="check-item">
+            <input type="checkbox" class="safety-check">
+            <span>Retrovisores ajustados e visibilidade limpa.</span>
+        </label>
+        
+        <label class="check-item">
+            <input type="checkbox" class="safety-check">
+            <span>Luzes do veículo (Giroflex/Faróis) operacionais.</span>
+        </label>
+        
+        <label class="check-item">
+            <input type="checkbox" class="safety-check">
+            <span>Ciente que a vida vale mais que a foto.</span>
+        </label>
+
+        <button id="btn-unlock" disabled onclick="validateSafety()">Liberar Sistema</button>
     </div>
-    <div class="start-hint">Toque para iniciar operação</div>
+    <p style="margin-top: 30px; font-size: 10px; color: #444; letter-spacing: 2px;">PROTOCOLO OPERACIONAL OBRIGATÓRIO</p>
 </div>
 
 <div id="settings">
     <div class="close-x" onclick="toggleSet()">×</div>
-    <h3 style="margin-bottom:30px; font-size:14px; color:var(--motiva-blue); letter-spacing:1px;">CONFIGURAÇÕES TÉCNICAS</h3>
-    <div class="field"><label>Seletor de Lente</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Intervalo (Milissegundos)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="field"><label>Quantidade / Lote</label><input type="number" id="cfg-lote" value="50"></div>
+    <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
+    <div class="field"><label>Fotos/Lote</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
-    
-    <div id="km-hud">
-        <small>Identificação KM</small>
-        <h1 id="km-txt">Km ---+---</h1>
-    </div>
-
-    <div id="gear-btn" onclick="toggleSet()">⚙</div>
-
+    <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
+    <div id="gear-btn" style="position:absolute; top:30px; right:30px; color:#555; cursor:pointer; font-size:24px;" onclick="toggleSet()">⚙</div>
     <div id="action-bar">
-        <div class="stat-group"><small>Fotos/Lote</small><b id="stat-batch">00</b></div>
-        <button id="btn-action" class="btn-motiva" onclick="startRec()">Iniciar Inspeção</button>
-        <button id="btn-stop" class="btn-motiva" style="display:none; background:#b00;" onclick="stopRec()">Concluir Lote</button>
-        <div class="stat-group"><small>Total Geral</small><b id="stat-total">0000</b></div>
+        <div class="stat-group"><small>Lote</small><b id="stat-batch">0</b></div>
+        <button id="btn-action" class="btn-main" onclick="startRec()">Iniciar</button>
+        <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopRec()">Concluir</button>
+        <div class="stat-group"><small>Geral</small><b id="stat-total">0</b></div>
     </div>
 </div>
 
@@ -117,25 +128,39 @@
 let kmDB=[], gps=null, rec=false, buffer=[], total=0, batchIdx=0, hDir=null, currentStream=null;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-async function launch() {
+// Lógica de Validação de Segurança
+const checks = document.querySelectorAll('.safety-check');
+const btnUnlock = document.getElementById('btn-unlock');
+
+checks.forEach(check => {
+    check.addEventListener('change', () => {
+        const allChecked = Array.from(checks).every(c => c.checked);
+        if(allChecked) {
+            btnUnlock.disabled = false;
+            btnUnlock.classList.add('ready');
+        } else {
+            btnUnlock.disabled = true;
+            btnUnlock.classList.remove('ready');
+        }
+    });
+});
+
+async function validateSafety() {
     if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
-    const s = document.getElementById('splash'); 
-    if(s) { 
-        s.style.opacity='0'; 
-        setTimeout(()=>{
-            s.remove(); 
-            document.getElementById('app-shell').style.visibility='visible'; 
-            document.getElementById('app-shell').style.opacity='1';
-        }, 600); 
-    }
+    const s = document.getElementById('safety-screen');
+    s.style.opacity = '0';
+    setTimeout(() => {
+        s.remove();
+        document.getElementById('app-shell').style.visibility = 'visible';
+        document.getElementById('app-shell').style.opacity = '1';
+        listCams(); // Inicia câmeras só após segurança
+    }, 800);
 }
 
-window.onload = () => { loadCSV(); initG(); listCams(); };
+window.onload = () => { loadCSV(); initG(); };
 
 async function listCams() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        stream.getTracks().forEach(t => t.stop());
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === 'videoinput');
         const sel = document.getElementById('cam-select');
@@ -193,23 +218,19 @@ function drawS(m) {
     ctx.save();
     const barH = h * 0.16;
     const grd = ctx.createLinearGradient(0, h-barH, 0, h);
-    grd.addColorStop(0, "transparent"); grd.addColorStop(1, "rgba(0,51,102,0.95)");
+    grd.addColorStop(0, "transparent"); grd.addColorStop(1, "rgba(0,0,0,0.9)");
     ctx.fillStyle = grd; ctx.fillRect(0, h-barH, w, barH);
-    
-    // Borda laranja inferior do relatório
-    ctx.fillStyle = "#f26522"; ctx.fillRect(0, h-5, w, 5);
-
     ctx.textAlign = "left";
     const fK = barH * 0.45;
-    ctx.font = `bold ${fK}px Arial`;
-    ctx.lineWidth = 10; ctx.strokeStyle = "#000";
-    ctx.strokeText("Km " + m.km, 60, h-(barH*0.52));
-    ctx.fillStyle = "#fff"; ctx.fillText("Km " + m.km, 60, h-(barH*0.52));
-    
-    const fD = barH * 0.18;
-    ctx.font = `normal ${fD}px Arial`;
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
-    ctx.fillText(m.ts + " | MOTIVA RODOVIAS", 60, h-(barH*0.22));
+    ctx.font = `900 ${fK}px Inter, sans-serif`;
+    ctx.lineWidth = 14; ctx.strokeStyle = "#000";
+    ctx.strokeText("Km " + m.km, 60, h-(barH*0.55));
+    ctx.fillStyle = "#fff"; ctx.fillText("Km " + m.km, 60, h-(barH*0.55));
+    const fD = barH * 0.22;
+    ctx.font = `500 ${fD}px Inter, sans-serif`;
+    ctx.lineWidth = 8; ctx.strokeStyle = "#000";
+    ctx.strokeText(m.ts, 60, h-(barH*0.2));
+    ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillText(m.ts, 60, h-(barH*0.2));
     ctx.restore();
 }
 
@@ -232,7 +253,7 @@ async function save() {
             img.src = items[i].raw;
         });
     }
-    const f = await hDir.getFileHandle(`INSPECAO_MOTIVA_LOTE_${batchIdx}.pdf`, {create:true});
+    const f = await hDir.getFileHandle(`LOTE_${batchIdx}.pdf`, {create:true});
     const s = await f.createWritable();
     await s.write(doc.output('blob')); await s.close();
 }
@@ -243,8 +264,8 @@ function loop() {
         ctx.drawImage(vid, 0, 0, can.width, can.height);
         buffer.push({ raw: can.toDataURL('image/jpeg', 0.45), km: document.getElementById('km-txt').innerText.replace("Km ", ""), ts: new Date().toLocaleString('pt-BR').toUpperCase() });
         total++;
-        document.getElementById('stat-total').innerText = total.toString().padStart(4, '0');
-        document.getElementById('stat-batch').innerText = buffer.length.toString().padStart(2, '0');
+        document.getElementById('stat-total').innerText = total;
+        document.getElementById('stat-batch').innerText = buffer.length;
         if(buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 50)) save();
     }
     setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
