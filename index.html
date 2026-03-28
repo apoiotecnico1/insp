@@ -3,57 +3,59 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V13 - ULTRA-FILL</title>
+    <title>INSPEÇÃO PRO V13.5 - STEALTH FS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --safety: #056b3c; --glass: rgba(10, 10, 10, 0.85); }
+        :root { --accent: #ffcc00; --safety: #056b3c; --glass: rgba(10, 10, 10, 0.9); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* Splash Screen */
-        #splash { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.8s; }
-        .loader { width: 40px; height: 40px; border: 2px solid #222; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Splash Interativo (Gatilho de Full Screen) */
+        #splash { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; }
+        .pulse-btn { width: 80px; height: 80px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-size: 30px; margin-bottom: 20px; box-shadow: 0 0 20px var(--accent); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.8; } 70% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.8; } }
 
-        #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; }
-        #cam-container { flex: 1; position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; }
+        #cam-container { flex: 1; position: relative; background: #000; overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* UI Elementos */
-        #km-display { position: absolute; top: 25px; left: 25px; background: var(--safety); padding: 15px 30px; border-radius: 8px; border-left: 8px solid #fff; font-size: 2.2rem; font-weight: 900; z-index: 10; box-shadow: 0 15px 40px rgba(0,0,0,0.9); }
-        #gear-btn { position: absolute; top: 25px; right: 25px; width: 50px; height: 50px; background: var(--glass); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #333; z-index: 20; cursor: pointer; }
+        /* Elementos UI Premium */
+        #km-display { position: absolute; top: 25px; left: 25px; background: var(--safety); padding: 15px 30px; border-radius: 10px; border-left: 8px solid #fff; font-size: 2.2rem; font-weight: 900; z-index: 10; box-shadow: 0 20px 50px rgba(0,0,0,1); }
+        #gear-btn { position: absolute; top: 25px; right: 25px; width: 50px; height: 50px; background: var(--glass); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #333; z-index: 20; color: #777; }
 
-        #bottom-ctrl { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 25px; width: 92%; max-width: 500px; background: var(--glass); padding: 12px 30px; border-radius: 60px; backdrop-filter: blur(15px); border: 1px solid #222; z-index: 20; justify-content: space-between; }
-        .stat-group b { font-size: 1.2rem; color: var(--accent); display: block; }
-        .stat-group small { font-size: 9px; color: #666; text-transform: uppercase; }
+        #bottom-ctrl { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 30px; width: 92%; max-width: 500px; background: var(--glass); padding: 15px 35px; border-radius: 60px; backdrop-filter: blur(20px); border: 1px solid #222; z-index: 20; justify-content: space-between; }
+        .stat-group b { font-size: 1.3rem; color: #fff; display: block; }
+        .stat-group small { font-size: 10px; color: var(--accent); text-transform: uppercase; font-weight: bold; }
 
-        .btn-main { border: none; border-radius: 35px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 16px 40px; font-size: 13px; transition: 0.3s; background: var(--accent); color: #000; }
+        .btn-main { border: none; border-radius: 40px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px 45px; font-size: 13px; background: var(--accent); color: #000; transition: 0.3s; }
         #btn-stop { background: #cc0000; color: #fff; display: none; }
 
-        #settings { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #080808; z-index: 500; transition: 0.5s; padding: 40px 30px; border-left: 2px solid var(--accent); }
+        /* Menu de Configuração */
+        #settings { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #080808; z-index: 500; transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1); padding: 50px 30px; border-left: 2px solid var(--accent); }
         #settings.open { right: 0; }
         .set-row { margin-bottom: 25px; }
-        label { display: block; font-size: 10px; color: var(--accent); margin-bottom: 8px; font-weight: bold; }
-        select, input { width: 100%; background: #111; border: 1px solid #222; color: #fff; padding: 12px; border-radius: 10px; }
+        label { display: block; font-size: 10px; color: var(--accent); margin-bottom: 8px; font-weight: bold; letter-spacing: 1px; }
+        select, input { width: 100%; background: #111; border: 1px solid #222; color: #fff; padding: 14px; border-radius: 12px; }
 
         canvas { display: none; }
-        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--glass); padding: 25px; border-radius: 15px; border: 1px solid var(--accent); z-index: 2000; display: none; text-align: center; font-weight: bold; }
+        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--glass); padding: 25px; border-radius: 20px; border: 2px solid var(--accent); z-index: 2000; display: none; text-align: center; font-weight: 900; letter-spacing: 1px; }
     </style>
 </head>
-<body>
+<body onclick="enableFS()">
 
 <div id="splash">
-    <div class="loader"></div>
-    <h2 style="margin-top:20px; font-weight: 200; letter-spacing: 5px;">INSPEÇÃO<b style="color:var(--accent)">PRO</b></h2>
+    <div class="pulse-btn">▶</div>
+    <h2 style="letter-spacing: 8px; font-weight: 200;">INSPEÇÃO<b style="color:var(--accent)">PRO</b></h2>
+    <p style="color: #444; font-size: 12px; margin-top: 15px; text-transform: uppercase;">Toque para Iniciar em Tela Cheia</p>
 </div>
 
-<div id="toast">INICIALIZANDO REPOSITÓRIO...</div>
+<div id="toast">CONFIGURANDO REPOSITÓRIO...</div>
 
 <div id="settings">
-    <div onclick="toggleSet()" style="color:#444; cursor:pointer; margin-bottom:30px; font-size:11px;">[ VOLTAR ]</div>
-    <div class="set-row"><label>CÂMERA</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="set-row"><label>CAPTURA (MS)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="set-row"><label>LIMITE LOTE</label><input type="number" id="cfg-lote" value="200"></div>
+    <div onclick="toggleSet()" style="color:#444; cursor:pointer; margin-bottom:40px; font-size:11px;">[ VOLTAR AO MONITOR ]</div>
+    <div class="set-row"><label>SISTEMA ÓPTICO</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="set-row"><label>CICLO DE CAPTURA (MS)</label><input type="number" id="cfg-int" value="200"></div>
+    <div class="set-row"><label>CAPACIDADE DO LOTE</label><input type="number" id="cfg-lote" value="200"></div>
 </div>
 
 <div id="app-shell">
@@ -62,7 +64,7 @@
         <div id="km-display">Km ---+---</div>
         <div id="gear-btn" onclick="toggleSet()">⚙️</div>
         <div id="bottom-ctrl">
-            <div class="stat-group"><small>Lote</small><b id="stat-batch">0</b></div>
+            <div class="stat-group"><small>Fotos</small><b id="stat-batch">0</b></div>
             <button id="btn-action" class="btn-main">Iniciar</button>
             <button id="btn-stop" class="btn-main">Parar</button>
             <div class="stat-group"><small>Total</small><b id="stat-total">0</b></div>
@@ -76,11 +78,22 @@
 let kmDB = [], gps = null, rec = false, buffer = [], total = 0, batchIdx = 0, hDir = null, currentStream = null;
 const vid = document.getElementById('vid'), can = document.getElementById('c'), ctx = can.getContext('2d');
 
-window.onload = () => {
-    setTimeout(() => { document.getElementById('splash').style.opacity = '0'; 
-    setTimeout(() => document.getElementById('splash').remove(), 800); }, 1500);
-    listCams(); loadCSV(); initG();
-};
+async function enableFS() {
+    // Esta função cumpre a exigência de interação do navegador
+    if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    }
+    const splash = document.getElementById('splash');
+    if(splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => {
+            splash.remove();
+            document.getElementById('app-shell').style.visibility = 'visible';
+        }, 500);
+    }
+}
+
+window.onload = () => { loadCSV(); initG(); listCams(); };
 
 async function listCams() {
     try {
@@ -93,7 +106,7 @@ async function listCams() {
         videoDevices.forEach((d, i) => {
             const opt = document.createElement('option');
             opt.value = d.deviceId;
-            opt.text = d.label || `Lente ${i + 1}`;
+            opt.text = d.label || `Lente Pericial ${i + 1}`;
             sel.appendChild(opt);
         });
         if(videoDevices.length > 0) initC(videoDevices.deviceId);
@@ -139,60 +152,49 @@ function updateKM() {
     if(n) document.getElementById('km-display').innerText = "Km " + n.km;
 }
 
-/* ESTAMPA DE ALTA VISIBILIDADE TÉCNICA */
 function drawS(m) {
     const w = can.width, h = can.height;
     ctx.save();
     const barH = h * 0.15;
     const grd = ctx.createLinearGradient(0, h - barH, 0, h);
     grd.addColorStop(0, "transparent");
-    grd.addColorStop(1, "rgba(0,0,0,0.85)");
+    grd.addColorStop(1, "rgba(0,0,0,0.9)");
     ctx.fillStyle = grd; ctx.fillRect(0, h - barH, w, barH);
     ctx.lineJoin = "round"; ctx.textAlign = "left";
-    
-    // KM SUPER VISÍVEL
-    const fK = barH * 0.42;
+    const fK = barH * 0.45;
     ctx.font = `900 ${fK}px Arial Black`;
     ctx.lineWidth = 12; ctx.strokeStyle = "#000";
-    ctx.strokeText("Km " + m.km, 40, h - (barH * 0.55));
-    ctx.fillStyle = "#fff"; ctx.fillText("Km " + m.km, 40, h - (barH * 0.55));
-    
-    // DATA/HORA
-    const fD = barH * 0.20;
+    ctx.strokeText("Km " + m.km, 50, h - (barH * 0.55));
+    ctx.fillStyle = "#fff"; ctx.fillText("Km " + m.km, 50, h - (barH * 0.55));
+    const fD = barH * 0.22;
     ctx.font = `bold ${fD}px Arial`;
     ctx.lineWidth = 8; ctx.strokeStyle = "#000";
-    ctx.strokeText(m.ts, 40, h - (barH * 0.22));
-    ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillText(m.ts, 40, h - (barH * 0.22));
+    ctx.strokeText(m.ts, 50, h - (barH * 0.2));
+    ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillText(m.ts, 50, h - (barH * 0.2));
     ctx.restore();
 }
 
 async function save() {
     if(!buffer.length || !hDir) return;
     const items = [...buffer]; buffer = []; batchIdx++;
-    
-    // DETECÇÃO DE ORIENTAÇÃO PARA O PDF
-    // Se a largura da foto for menor que a altura, o PDF será Retrato ('p')
     const isPortrait = can.width < can.height;
     const orientation = isPortrait ? 'p' : 'l';
-    
     const doc = new jspdf.jsPDF(orientation, 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
-
     for(let i=0; i<items.length; i++){
         if(i > 0) doc.addPage(orientation);
         const img = new Image();
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0); drawS(items[i]);
-                // Imagem ocupa 100% da página PDF sem margens
                 doc.addImage(can.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
                 r();
             };
             img.src = items[i].raw;
         });
     }
-    const f = await hDir.getFileHandle(`INSPECAO_V13_LOTE_${batchIdx}.pdf`, {create:true});
+    const f = await hDir.getFileHandle(`LOTE_${batchIdx}.pdf`, {create:true});
     const s = await f.createWritable();
     await s.write(doc.output('blob')); await s.close();
 }
@@ -201,11 +203,7 @@ function loop() {
     if(!rec) return;
     if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
         ctx.drawImage(vid, 0, 0, can.width, can.height);
-        buffer.push({ 
-            raw: can.toDataURL('image/jpeg', 0.45), 
-            km: document.getElementById('km-display').innerText.replace("Km ", ""), 
-            ts: new Date().toLocaleString('pt-BR') 
-        });
+        buffer.push({ raw: can.toDataURL('image/jpeg', 0.4), km: document.getElementById('km-display').innerText.replace("Km ", ""), ts: new Date().toLocaleString('pt-BR') });
         total++;
         document.getElementById('stat-total').innerText = total;
         document.getElementById('stat-batch').innerText = buffer.length;
@@ -215,9 +213,8 @@ function loop() {
 }
 
 document.getElementById('btn-action').onclick = async () => {
-    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
     const t = document.getElementById('toast');
-    t.style.display = 'block'; t.innerText = "ESCOLHA A PASTA DE SALVAMENTO";
+    t.style.display = 'block'; t.innerText = "SELECIONE A PASTA PARA SALVAR";
     setTimeout(async () => {
         try {
             hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
@@ -225,7 +222,7 @@ document.getElementById('btn-action').onclick = async () => {
             document.getElementById('btn-action').style.display = 'none';
             document.getElementById('btn-stop').style.display = 'inline-block';
         } catch(e) { t.style.display = 'none'; }
-    }, 1500);
+    }, 1200);
 };
 
 document.getElementById('btn-stop').onclick = () => { rec = false; save(); document.getElementById('btn-action').style.display = 'inline-block'; document.getElementById('btn-stop').style.display = 'none'; };
