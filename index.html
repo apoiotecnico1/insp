@@ -3,73 +3,63 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V22</title>
+    <title>INSPEÇÃO PRO V24 - KM INTELLIGENT</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #d00; --glass: rgba(15, 15, 15, 0.9); }
+        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #d00; --glass: rgba(10, 10, 10, 0.95); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* TELA DE ALERTA */
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
-        .alert-box { border: 1px solid #333; padding: 35px; border-radius: 12px; max-width: 450px; text-align: center; background: #080808; }
-        .alert-box h2 { color: var(--accent); margin-bottom: 15px; font-size: 18px; letter-spacing: 1px; }
-        .alert-box p { font-size: 13px; line-height: 1.6; color: #999; margin-bottom: 25px; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 16px 45px; font-weight: 800; border-radius: 4px; cursor: pointer; text-transform: uppercase; font-size: 12px; }
+        /* SPLASH DDS */
+        #splash-dds { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; transition: opacity 0.8s ease; }
+        .dds-card { text-align: center; max-width: 400px; border-top: 4px solid var(--accent); padding-top: 30px; }
+        .dds-icon { font-size: 50px; margin-bottom: 20px; color: var(--accent); }
+        .dds-title { font-size: 12px; letter-spacing: 4px; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; font-weight: 800; }
+        .dds-msg { font-size: 18px; line-height: 1.5; font-weight: 300; color: #fff; margin-bottom: 30px; }
+        .btn-dds { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 15px 40px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; border-radius: 2px; }
 
         /* INTERFACE PRINCIPAL */
         #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* PLACA DE KM ESTILO RODOVIA */
-        #km-hud { 
-            position: absolute; top: 25px; left: 25px; 
-            background: var(--placa-verde); padding: 8px 20px; 
-            border: 2px solid #fff; border-radius: 6px; 
-            box-shadow: 0 8px 15px rgba(0,0,0,0.4); z-index: 10; pointer-events: none;
-        }
-        #km-hud h1 { font-size: 1.8rem; font-weight: 800; color: #fff; letter-spacing: -1px; }
+        /* PLACA DE KM */
+        #km-hud { position: absolute; top: 25px; left: 25px; background: var(--placa-verde); padding: 8px 18px; border: 2px solid #fff; border-radius: 5px; z-index: 10; pointer-events: none; }
+        #km-hud h1 { font-size: 1.6rem; font-weight: 800; color: #fff; }
 
-        #rec-tag { position: absolute; top: 30px; right: 30px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 9px; color: rgba(255,255,255,0.5); letter-spacing: 1px; }
+        /* INDICADOR DE CAPTURA */
+        #rec-tag { position: absolute; top: 30px; right: 30px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; }
         .dot { width: 6px; height: 6px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* MENU DE AJUSTES */
-        #settings-panel { 
-            position: fixed; right: -350px; top: 0; width: 300px; height: 100%; 
-            background: var(--glass); backdrop-filter: blur(20px); z-index: 2000; 
-            padding: 60px 25px; transition: 0.5s; border-left: 1px solid #333;
-        }
-        #settings-panel.open { right: 0; }
-        .close-x { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; color: #444; }
-        .field { margin-bottom: 25px; }
-        .field label { font-size: 11px; color: #777; display: block; margin-bottom: 8px; font-weight: 500; }
-        select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 4px; font-size: 13px; }
-
         /* CONTROLES */
-        #ui-controls { 
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
-            display: flex; align-items: center; gap: 20px; transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1); z-index: 100;
-        }
+        #ui-controls { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; transition: 0.6s; z-index: 100; }
         .ui-hidden { opacity: 0; bottom: 15px; pointer-events: none; }
-        .btn-round { border: none; border-radius: 4px; font-weight: 800; cursor: pointer; text-transform: uppercase; padding: 18px 40px; font-size: 11px; background: var(--accent); color: #000; letter-spacing: 1px; }
-        #gear-btn { width: 48px; height: 48px; border-radius: 4px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .btn-ui { border: none; border-radius: 4px; font-weight: 800; cursor: pointer; text-transform: uppercase; padding: 18px 45px; font-size: 11px; background: var(--accent); color: #000; }
+        #gear-btn { width: 48px; height: 48px; border-radius: 4px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+        /* MENU LATERAL */
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 2000; padding: 60px 25px; transition: 0.5s; border-left: 1px solid #333; }
+        #settings-panel.open { right: 0; }
+        .field { margin-bottom: 25px; }
+        .field label { font-size: 11px; color: #777; display: block; margin-bottom: 8px; }
+        select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 4px; }
 
         canvas { display: none; }
     </style>
 </head>
 <body onclick="wakeUI()">
 
-<div id="safety-gate">
-    <div class="alert-box">
-        <h2>Consciência Operacional</h2>
-        <p>Este sistema é um suporte à inspeção. Mantenha foco total na via e utilize o suporte de celular. Sua segurança é prioridade.</p>
-        <button class="btn-aware" onclick="acceptSafety()">Estou Ciente</button>
+<div id="splash-dds">
+    <div class="dds-card">
+        <div class="dds-icon">⚠</div>
+        <div class="dds-title">DDS Operacional</div>
+        <p class="dds-msg">A inspeção é importante, mas a sua <b>vida</b> é essencial. Nunca manuseie o celular fora do suporte.</p>
+        <button class="btn-dds" onclick="startApp()">Estou ciente e seguro</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <div class="close-x" onclick="toggleSet()">×</div>
+    <div style="text-align:right; margin-bottom:20px; cursor:pointer;" onclick="toggleSet()">FECHAR ×</div>
     <div class="field"><label>Câmera do dispositivo</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
     <div class="field"><label>Tempo da foto (Milissegundos)</label><input type="number" id="cfg-int" value="200"></div>
     <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50"></div>
@@ -78,12 +68,12 @@
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
     <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
-    <div id="rec-tag"><span>Captura Ativa</span><div class="dot"></div></div>
+    <div id="rec-tag"><span>Capturando</span><div class="dot"></div></div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-round" onclick="initCapture()">Iniciar Inspeção</button>
-        <button id="btn-stop" class="btn-round" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Encerrar Relatório</button>
+        <button id="btn-start" class="btn-ui" onclick="initCapture()">Iniciar Inspeção</button>
+        <button id="btn-stop" class="btn-ui" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Finalizar Relatório</button>
     </div>
 </div>
 
@@ -93,19 +83,19 @@
 let kmDB=[], gps=null, rec=false, buffer=[], hDir=null, currentStream=null, uiTimer;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-async function acceptSafety() {
+async function startApp() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').style.opacity = '0';
+        document.getElementById('splash-dds').style.opacity = '0';
         setTimeout(() => {
-            document.getElementById('safety-gate').remove();
+            document.getElementById('splash-dds').remove();
             document.getElementById('app-shell').style.visibility = 'visible';
             document.getElementById('app-shell').style.opacity = '1';
             listCams();
             if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
             wakeUI();
-        }, 600);
-    } catch(e) { alert("Selecione uma pasta para salvar os relatórios."); }
+        }, 800);
+    } catch(e) { alert("A seleção da pasta é obrigatória."); }
 }
 
 function wakeUI() {
@@ -135,8 +125,8 @@ async function initC(id) {
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; vid.play(); };
 }
 
-function switchCam(id) { initC(id); }
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+function switchCam(id) { initC(id); }
 
 async function initCapture() {
     rec = true;
@@ -172,11 +162,19 @@ function loop() {
 
 async function savePDF() {
     if(!buffer.length || !hDir) return;
-    const items = [...buffer]; buffer = [];
+    
+    const items = [...buffer]; 
+    buffer = [];
+    
+    // Captura o Km da primeira e da última foto do relatório
+    const kmInicial = items.km;
+    const kmFinal = items[items.length - 1].km;
+    
     const isPortrait = can.width < can.height;
     const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
+
     for(let i=0; i<items.length; i++){
         if(i > 0) doc.addPage(isPortrait?'p':'l');
         const img = new Image();
@@ -195,9 +193,16 @@ async function savePDF() {
             img.src = items[i].raw;
         });
     }
-    const f = await hDir.getFileHandle(`RELATORIO_${Date.now()}.pdf`, {create:true});
-    const s = await f.createWritable();
-    await s.write(doc.output('blob')); await s.close();
+
+    // Nome conforme solicitado: Relatorio_Km_[INICIAL]_Km_[FINAL]
+    const nomeArquivo = `Relatorio_Km_${kmInicial}_Km_${kmFinal}_${Date.now()}.pdf`;
+    
+    try {
+        const f = await hDir.getFileHandle(nomeArquivo, {create:true});
+        const s = await f.createWritable();
+        await s.write(doc.output('blob')); 
+        await s.close();
+    } catch(e) { console.error("Erro ao salvar arquivo:", e); }
 }
 
 async function loadCSV() {
@@ -211,7 +216,7 @@ async function loadCSV() {
             const c = r.split(';');
             return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) { console.error("Erro CSV:", e); }
+    } catch(e) {}
 }
 
 function initG() { 
