@@ -3,329 +3,276 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO: THE MOVIE</title>
+    <title>INSPEÇÃO PRO - HIGH VISIBILITY</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa: #007934; --danger: #ff4444; }
+        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; --glass: rgba(5, 5, 5, 0.96); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* --- SPLASH CINEMATOGRÁFICO E IRÔNICO --- */
-        #splash-screen {
-            position: fixed; inset: 0; background: #050505; z-index: 10000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 1s ease;
+        /* CHECKLIST INICIAL DE SEGURANÇA */
+        #safety-gate { 
+            position: fixed; inset: 0; background: #000; z-index: 5000; 
+            display: flex; align-items: center; justify-content: center; padding: 20px; 
+        }
+        .alert-box { 
+            border: 1px solid #333; padding: 30px; border-radius: 12px; 
+            max-width: 500px; background: #080808; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+        .alert-box h2 { color: var(--accent); font-size: 18px; margin-bottom: 20px; text-align: center; letter-spacing: 1px; text-transform: uppercase; }
+        
+        .checklist { margin-bottom: 30px; }
+        .item { margin-bottom: 15px; display: flex; align-items: flex-start; gap: 12px; line-height: 1.5; font-size: 14px; color: #ddd; }
+        .item b { color: var(--accent); min-width: 20px; }
+
+        .btn-aware { 
+            background: var(--accent); color: #000; border: none; padding: 18px; 
+            font-weight: 800; border-radius: 6px; cursor: pointer; text-transform: uppercase; 
+            font-size: 13px; width: 100%; transition: 0.3s;
         }
 
-        .highway {
-            position: relative; width: 300px; height: 150px;
-            background: #222; transform: perspective(100px) rotateX(45deg);
-            overflow: hidden; border: 4px solid #333;
-        }
-        .road-marks {
-            position: absolute; width: 100%; height: 200%;
-            background: repeating-linear-gradient(to top, transparent 0, transparent 40px, #fff 40px, #fff 80px);
-            animation: moveRoad 0.8s linear infinite;
-        }
-        @keyframes moveRoad { from { top: -80px; } to { top: 0; } }
-
-        .car-emoji {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%) rotateX(-45deg);
-            font-size: 50px; filter: drop-shadow(0 0 15px var(--accent));
-            animation: shake 0.2s infinite;
-        }
-        @keyframes shake { 0%, 100% { margin-left: 0; } 50% { margin-left: 3px; } }
-
-        .loading-msg { margin-top: 40px; font-weight: bold; color: var(--accent); text-align: center; height: 30px; }
-        .joke { font-size: 10px; color: #666; margin-top: 10px; font-style: italic; }
-
-        /* --- INTERFACE PRINCIPAL --- */
-        #main-app { visibility: hidden; position: relative; width: 100vw; height: 100vh; }
+        /* INTERFACE PRINCIPAL */
+        #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 0.8s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        #km-display { 
-            position: absolute; top: 40px; left: 20px; 
-            background: var(--placa); padding: 12px 25px; 
-            border: 3px solid #fff; border-radius: 12px; z-index: 100;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        /* PLACA DE KM ESTILO RODOVIA */
+        #km-hud { 
+            position: absolute; top: 25px; left: 25px; 
+            background: var(--placa-verde); padding: 8px 18px; 
+            border: 2px solid #fff; border-radius: 5px; z-index: 10; pointer-events: none; 
         }
-        #km-val { font-size: 2.2rem; font-weight: 900; color: #fff; text-shadow: 2px 2px 0 #000; }
+        #km-hud h1 { font-size: 1.7rem; font-weight: 800; color: #fff; letter-spacing: -1px; }
 
-        /* OVERLAY "RAIO" (FANTASMA) */
-        #ui-overlay {
-            position: absolute; inset: 0; display: flex; flex-direction: column; 
-            justify-content: space-between; padding: 40px 30px;
-            pointer-events: none; opacity: 0; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        /* NOVO INDICADOR DE ALTA VISIBILIDADE */
+        #rec-tag { 
+            position: absolute; top: 25px; right: 25px; 
+            display: flex; align-items: center; gap: 12px; 
+            z-index: 10; opacity: 0; transition: 0.5s; 
+            background: var(--glass); padding: 10px 20px; 
+            border-radius: 8px; border: 2px solid var(--accent);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            pointer-events: none;
         }
-        #ui-overlay.active { opacity: 1; pointer-events: auto; }
-
-        #status-pill { 
-            align-self: flex-end; background: rgba(0,0,0,0.8); 
-            padding: 15px; border-radius: 15px; border: 1px solid #444; backdrop-filter: blur(10px);
+        #rec-tag span { 
+            font-size: 12px; font-weight: 700; color: #fff; 
+            text-transform: uppercase; letter-spacing: 1.5px; 
         }
-        .rec-indicator { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 14px; }
-        .dot { width: 12px; height: 12px; border-radius: 50%; background: #555; }
-        .dot.on { background: var(--danger); box-shadow: 0 0 15px var(--danger); animation: blink 0.8s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
-
-        .btn-box { display: flex; align-items: center; justify-content: center; gap: 20px; }
-        .btn { 
-            border: none; border-radius: 50px; font-weight: 900; padding: 22px 50px; 
-            background: var(--accent); color: #000; text-transform: uppercase; 
-            font-size: 14px; cursor: pointer;
+        .dot { 
+            width: 14px; height: 14px; background: var(--danger); 
+            border-radius: 50%; border: 2px solid #fff;
+            animation: pulse-red 1.5s infinite; 
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
         }
-        #btn-stop { background: var(--danger); color: #fff; }
-        #gear { background: rgba(255,255,255,0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 25px; }
+        @keyframes pulse-red {
+            0% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px rgba(255, 0, 0, 0.7); }
+            50% { transform: scale(1.1); opacity: 0.8; box-shadow: 0 0 20px rgba(255, 0, 0, 0.9); }
+            100% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px rgba(255, 0, 0, 0.7); }
+        }
 
-        #gate { position: fixed; inset: 0; background: #000; z-index: 9000; display: none; align-items: center; justify-content: center; text-align: center; }
-        #panel { position: fixed; right: -320px; top: 0; width: 300px; height: 100%; background: #111; z-index: 11000; padding: 40px; transition: 0.4s; }
-        #panel.open { right: 0; }
+        /* CONTROLES COM AUTO-HIDE */
+        #ui-controls { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; transition: 0.6s; z-index: 100; }
+        .ui-hidden { opacity: 0; bottom: 15px; pointer-events: none; }
+        
+        .btn-ui { border: none; border-radius: 4px; font-weight: 800; cursor: pointer; text-transform: uppercase; padding: 18px 45px; font-size: 11px; background: var(--accent); color: #000; }
+        #gear-btn { width: 48px; height: 48px; border-radius: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; }
+
+        /* PAINEL LATERAL */
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 2000; padding: 60px 25px; transition: 0.5s; border-left: 1px solid #333; }
+        #settings-panel.open { right: 0; }
+        .field { margin-bottom: 25px; }
+        .field label { font-size: 11px; color: #777; display: block; margin-bottom: 8px; }
+        select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 4px; font-size: 13px; }
+
         canvas { display: none; }
     </style>
 </head>
 <body onclick="wakeUI()">
 
-    <div id="splash-screen">
-        <div class="highway"><div class="road-marks"></div><div class="car-emoji">🚗</div></div>
-        <div class="loading-msg" id="msg">INICIALIZANDO MOTORES...</div>
-        <div class="joke" id="joke">"Calma, o estagiário está organizando as pastas..."</div>
-    </div>
-
-    <div id="gate">
-        <div>
-            <h1 style="color:var(--accent); margin-bottom:20px;">DIRETÓRIO PRONTO?</h1>
-            <button class="btn" onclick="openSys()">SELECIONAR PASTA E VOAR</button>
+<div id="safety-gate">
+    <div class="alert-box">
+        <h2>Protocolo de Inspeção Segura</h2>
+        <div class="checklist">
+            <div class="item"><b>1.</b> Configuração Estacionária: Realize todos os ajustes de sistema apenas com o veículo parado.</div>
+            <div class="item"><b>2.</b> Mãos Livres: O celular deve estar obrigatoriamente acoplado ao suporte; não manuseie em movimento.</div>
+            <div class="item"><b>3.</b> Foco na Via: O sistema é autônomo. Mantenha 100% da sua atenção na condução e no trânsito.</div>
+            <div class="item"><b>4.</b> Intervenção Técnica: Caso precise ajustar qualquer parâmetro, estacione em local seguro antes de tocar na tela.</div>
+            <div class="item"><b>5.</b> Finalização Segura: Encerre o relatório e salve os arquivos somente após a imobilização total da viatura.</div>
         </div>
+        <button class="btn-aware" onclick="acceptSafety()">Estou de acordo e ciente</button>
+    </div>
+</div>
+
+<div id="settings-panel">
+    <div style="text-align:right; margin-bottom:20px; cursor:pointer; color:#777;" onclick="toggleSet()">FECHAR ×</div>
+    <div class="field"><label>Câmera do dispositivo</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="field"><label>Tempo da foto (Milissegundos)</label><input type="number" id="cfg-int" value="200"></div>
+    <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50"></div>
+</div>
+
+<div id="app-shell">
+    <video id="vid" autoplay playsinline muted></video>
+    <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
+    
+    <div id="rec-tag">
+        <div class="dot"></div>
+        <span>INSPEÇÃO EM ANDAMENTO</span>
     </div>
 
-    <div id="main-app">
-        <video id="v" autoplay playsinline muted></video>
-        <div id="km-display"><h1 id="km-val">Km 000+000</h1></div>
-
-        <div id="ui-overlay">
-            <div id="status-pill">
-                <div class="rec-indicator">
-                    <div id="dot" class="dot"></div>
-                    <span id="state-txt">SISTEMA EM STANDBY</span>
-                </div>
-                <div style="font-size: 10px; margin-top: 8px; color: #888;">PDFS GERADOS: <b id="count-pdf" style="color:var(--accent)">0</b></div>
-            </div>
-
-            <div class="btn-box">
-                <div id="gear" onclick="toggleSettings(event)">⚙️</div>
-                <button id="btn-start" class="btn" onclick="startCapturing(event)">Iniciar Captura</button>
-                <button id="btn-stop" class="btn" style="display:none;" onclick="stopCapturing(event)">Finalizar PDF</button>
-            </div>
-        </div>
+    <div id="ui-controls">
+        <div id="gear-btn" onclick="toggleSet()">⚙</div>
+        <button id="btn-start" class="btn-ui" onclick="initCapture()">Iniciar Inspeção</button>
+        <button id="btn-stop" class="btn-ui" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Finalizar Relatório</button>
     </div>
+</div>
 
-    <div id="panel">
-        <h2 style="margin-bottom:20px;">Ajustes</h2>
-        <label style="font-size: 10px;">LIMITE DO LOTE</label>
-        <input type="number" id="lote-size" value="50" style="width:100%; padding:15px; background:#222; color:#fff; border:none; margin-bottom:20px;">
-        <label style="font-size: 10px;">CÂMERA</label>
-        <select id="cam-sel" onchange="changeCamera(this.value)" style="width:100%; padding:15px; background:#222; color:#fff; border:none;"></select>
-        <button class="btn" style="margin-top:40px; width:100%" onclick="toggleSettings()">Fechar</button>
-    </div>
-
-    <canvas id="c"></canvas>
+<canvas id="c"></canvas>
 
 <script>
-let kmDB=[], isRec=false, buffer=[], folderHandle=null, uiTimer, activeStream=null, pdfCount=0;
-const messages = [
-    "CONTAMINANDO O PDF COM DADOS...",
-    "CONVENCENDO O GPS A NÃO DAR ERRO...",
-    "LIMPANDO A LENTE VIRTUAL...",
-    "SAY CHEESE! PREPARANDO AS FOTOS...",
-    "ORGANIZANDO A BAGUNÇA DO ESTAGIÁRIO..."
-];
+let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, uiTimer;
+const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-const video=document.getElementById('v'), canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
-
-// --- FLUXO DE ENTRADA ---
-window.onload = () => {
-    let mIdx = 0;
-    const interval = setInterval(() => {
-        document.getElementById('msg').innerText = messages[mIdx % messages.length];
-        mIdx++;
-    }, 2000);
-
-    setTimeout(() => {
-        clearInterval(interval);
-        document.getElementById('splash-screen').style.opacity = '0';
+async function acceptSafety() {
+    try {
+        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('safety-gate').style.opacity = '0';
         setTimeout(() => {
-            document.getElementById('splash-screen').remove();
-            document.getElementById('gate').style.display = 'flex';
-        }, 1000);
-    }, 10000); // 10 segundos de splash realista
-    loadCSV();
-};
-
-async function openSys() {
-    try {
-        folderHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('gate').remove();
-        document.getElementById('main-app').style.visibility = 'visible';
-        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-        setupCams();
-        startGPS();
-        wakeUI();
-    } catch(e) { alert("Sem pasta, sem PDF. Escolha uma pasta!"); }
+            document.getElementById('safety-gate').remove();
+            document.getElementById('app-shell').style.visibility = 'visible';
+            document.getElementById('app-shell').style.opacity = '1';
+            listCams();
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+            wakeUI();
+        }, 600);
+    } catch(e) { alert("Selecione uma pasta para salvar os relatórios."); }
 }
 
-// --- LÓGICA DE INTERFACE "RAIO" ---
 function wakeUI() {
-    const ui = document.getElementById('ui-overlay');
-    ui.classList.add('active');
+    document.getElementById('ui-controls').classList.remove('ui-hidden');
     clearTimeout(uiTimer);
-    uiTimer = setTimeout(() => {
-        if(!document.getElementById('panel').classList.contains('open')) {
-            ui.classList.remove('active');
-        }
-    }, 4000);
+    if(rec) uiTimer = setTimeout(() => document.getElementById('ui-controls').classList.add('ui-hidden'), 4000);
 }
 
-// --- CORREÇÃO DO KM (DEFINITIVA) ---
-async function loadCSV() {
-    try {
-        const r = await fetch('SNVBR116SPRJ.csv');
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.trim().length > 0);
-        const header = rows.toLowerCase().split(';');
-        
-        // Encontra os índices corrigindo possíveis espaços
-        const idxKm = header.findIndex(h => h.includes('km'));
-        const idxLat = header.findIndex(h => h.includes('lat'));
-        const idxLon = header.findIndex(h => h.includes('lon'));
-
-        kmDB = rows.slice(1).map(row => {
-            const cols = row.split(';');
-            return {
-                km: cols[idxKm] ? cols[idxKm].trim() : "000+000",
-                lat: parseFloat(cols[idxLat].replace(',', '.')),
-                lon: parseFloat(cols[idxLon].replace(',', '.'))
-            };
-        }).filter(d => !isNaN(d.lat));
-        console.log("Base de KM carregada:", kmDB.length);
-    } catch(e) { console.error("Erro ao ler CSV:", e); }
+async function listCams() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+    const sel = document.getElementById('cam-select');
+    sel.innerHTML = "";
+    videoDevices.forEach((d, i) => {
+        const opt = document.createElement('option');
+        opt.value = d.deviceId; opt.text = `Lente ${i + 1}`;
+        sel.appendChild(opt);
+    });
+    const back = videoDevices.find(d => d.label.toLowerCase().includes('back')) || videoDevices;
+    if(back) { sel.value = back.deviceId; initC(back.deviceId); }
 }
 
-function startGPS() {
-    navigator.geolocation.watchPosition(pos => {
-        if(kmDB.length === 0) return;
-        let closest = null, minD = Infinity;
-        for(const p of kmDB) {
-            const d = Math.hypot(p.lat - pos.coords.latitude, p.lon - pos.coords.longitude);
-            if(d < minD) { minD = d; closest = p; }
-        }
-        if(closest) {
-            document.getElementById('km-val').innerText = "Km " + closest.km;
-        }
-    }, err => console.error(err), { enableHighAccuracy: true });
+async function initC(id) {
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+    currentStream = stream; vid.srcObject = stream;
+    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; vid.play(); };
 }
 
-// --- CAPTURA E PDF ---
-async function startCapturing(e) {
-    if(e) e.stopPropagation();
-    isRec = true;
+function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+function switchCam(id) { initC(id); }
+
+async function initCapture() {
+    rec = true;
     document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('dot').classList.add('on');
-    document.getElementById('state-txt').innerText = "CAPTURANDO FOTOS...";
-    captureLoop();
+    document.getElementById('btn-stop').style.display = 'inline-block';
+    document.getElementById('rec-tag').style.opacity = '1';
+    wakeUI();
+    loop();
 }
 
-async function stopCapturing(e) {
-    if(e) e.stopPropagation();
-    isRec = false;
-    document.getElementById('state-txt').innerText = "GERANDO PDF FINAL...";
-    if(buffer.length > 0) await saveToPDF();
-    
-    document.getElementById('btn-start').style.display = 'block';
+function stopCapture() {
+    rec = false;
+    savePDF();
+    document.getElementById('btn-start').style.display = 'inline-block';
     document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('dot').classList.remove('on');
-    document.getElementById('state-txt').innerText = "SISTEMA EM STANDBY";
+    document.getElementById('rec-tag').style.opacity = '0';
 }
 
-function captureLoop() {
-    if(!isRec) return;
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+function loop() {
+    if(!rec) return;
+    if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
+        ctx.drawImage(vid, 0, 0, can.width, can.height);
         buffer.push({ 
-            img: canvas.toDataURL('image/jpeg', 0.5), 
-            km: document.getElementById('km-val').innerText.replace("Km ", ""),
-            time: new Date().toLocaleTimeString('pt-BR')
+            raw: can.toDataURL('image/jpeg', 0.45), 
+            km: document.getElementById('km-txt').innerText.replace("Km ", ""), 
+            ts: new Date().toLocaleString('pt-BR').toUpperCase() 
         });
-        
-        const max = parseInt(document.getElementById('lote-size').value) || 50;
-        if(buffer.length >= max) saveToPDF();
+        const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
+        if(buffer.length >= limit) savePDF();
     }
-    setTimeout(captureLoop, 400); 
+    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
-async function saveToPDF() {
-    if(!buffer.length) return;
-    const data = [...buffer]; 
-    buffer = []; 
+async function savePDF() {
+    if(!buffer.length || !hDir) return;
+    const items = [...buffer]; buffer = [];
+    const kmI = items.km;
+    const kmF = items[items.length - 1].km;
     
-    const kStart = data.km.replace('+', '_');
-    const isPortrait = window.innerHeight > window.innerWidth;
-    const doc = new jspdf.jsPDF(isPortrait ? 'p' : 'l', 'mm', 'a4');
+    const isPortrait = can.width < can.height;
+    const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
 
-    for(let i=0; i < data.length; i++) {
-        if(i > 0) doc.addPage();
+    for(let i=0; i<items.length; i++){
+        if(i > 0) doc.addPage(isPortrait?'p':'l');
         const img = new Image();
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
-                const bh = canvas.height * 0.15;
-                ctx.fillStyle = "rgba(0,0,0,0.8)"; 
-                ctx.fillRect(0, canvas.height-bh, canvas.width, bh);
-                ctx.fillStyle = "#fff"; 
-                ctx.font = `bold ${bh * 0.4}px Arial`;
-                ctx.fillText("Km " + data[i].km, 50, canvas.height-(bh*0.45));
-                ctx.font = `${bh * 0.15}px Arial`;
-                ctx.fillText(data[i].time + " | INSPEÇÃO AUTOMÁTICA", 50, canvas.height-(bh*0.15));
-                doc.addImage(canvas.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
+                const barH = can.height * 0.16;
+                ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, can.height-barH, can.width, barH);
+                ctx.fillStyle = "#fff"; ctx.font = `bold ${barH * 0.4}px Arial`;
+                ctx.fillText("Km " + items[i].km, 60, can.height-(barH*0.5));
+                ctx.font = `${barH * 0.18}px Arial`;
+                ctx.fillText(items[i].ts, 60, can.height-(barH*0.22));
+                doc.addImage(can.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
                 r();
             };
-            img.src = data[i].img;
+            img.src = items[i].raw;
         });
     }
 
+    const nome = `Relatorio_Km_${kmI}_Km_${kmF}_${Date.now()}.pdf`;
     try {
-        const fileHandle = await folderHandle.getFileHandle(`Inspeção_Km_${kStart}_${Date.now()}.pdf`, {create:true});
-        const writable = await fileHandle.createWritable();
-        await writable.write(doc.output('blob')); 
-        await writable.close();
-        pdfCount++;
-        document.getElementById('count-pdf').innerText = pdfCount;
-    } catch(err) { console.error("Erro ao salvar arquivo:", err); }
+        const f = await hDir.getFileHandle(nome, {create:true});
+        const s = await f.createWritable();
+        await s.write(doc.output('blob')); await s.close();
+    } catch(e) {}
 }
 
-// --- HARDWARE ---
-async function setupCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-sel');
-    videoDevices.forEach((d, i) => {
-        const opt = document.createElement('option');
-        opt.value = d.deviceId; opt.text = d.label || `Lente ${i+1}`;
-        sel.appendChild(opt);
-    });
-    changeCamera(videoDevices[videoDevices.length-1].deviceId);
+async function loadCSV() {
+    try {
+        const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
+        const t = await r.text();
+        const rows = t.split('\n').filter(l => l.includes(';'));
+        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
+        const ik = h.indexOf('km'), ilt = h.findIndex(x=>x.includes('lat')), iln = h.findIndex(x=>x.includes('lon'));
+        kmDB = rows.map(r => {
+            const c = r.split(';');
+            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
+        }).filter(d => !isNaN(d.lt));
+    } catch(e) {}
 }
 
-async function changeCamera(id) {
-    if (activeStream) activeStream.getTracks().forEach(t => t.stop());
-    activeStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1280, height: 720 } });
-    video.srcObject = activeStream;
-    video.onloadedmetadata = () => { canvas.width = video.videoWidth; canvas.height = video.videoHeight; };
+function initG() { 
+    navigator.geolocation.watchPosition(p => {
+        if(!kmDB.length) return;
+        let n = null, dM = Infinity;
+        for(const pt of kmDB) {
+            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
+            if(d < dM) { dM = d; n = pt; }
+        }
+        if(n) document.getElementById('km-txt').innerText = "Km " + n.km;
+    }, null, {enableHighAccuracy:true});
 }
 
-function toggleSettings(e) { if(e) e.stopPropagation(); document.getElementById('panel').classList.toggle('open'); }
+window.onload = () => { loadCSV(); initG(); };
 </script>
 </body>
 </html>
