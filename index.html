@@ -3,60 +3,74 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO FOTOGRÁFICA</title>
+    <title>INSPEÇÃO FOTOGRÁFICA PRO</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; touch-action: manipulation; }
 
-        /* SPLASH */
+        /* SPLASH RÁPIDO */
         #splash-hypnos { 
             position: fixed; inset: 0; background: #000; z-index: 7000; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 0.6s;
+            transition: opacity 0.5s;
         }
-        .vortex { width: 80px; height: 80px; border: 3px solid var(--accent); border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; animation: rot 2s linear infinite; }
+        .vortex { width: 60px; height: 60px; border: 3px solid var(--accent); border-radius: 50%; border-top-color: transparent; animation: rot 1s linear infinite; }
         @keyframes rot { 100% { transform: rotate(360deg); } }
 
-        /* SEGURANÇA */
+        /* GATE DE PASTA */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
         .alert-box { border: 1px solid #333; padding: 25px; border-radius: 15px; max-width: 400px; background: #0a0a0a; text-align: center; }
         .btn-aware { background: var(--accent); color: #000; border: none; padding: 18px; font-weight: 800; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 20px; text-transform: uppercase; }
 
-        /* UI MOBILE OPTIMIZED */
+        /* INTERFACE PRINCIPAL */
         #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD KM - SEMPRE VISÍVEL */
+        /* HUD KM - FIXO E SEMPRE VISÍVEL */
         #km-hud { 
             position: absolute; top: 40px; left: 20px; 
-            background: var(--placa-verde); padding: 10px 20px; 
-            border: 2px solid #fff; border-radius: 8px; z-index: 10;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            background: var(--placa-verde); padding: 12px 24px; 
+            border: 2px solid #fff; border-radius: 10px; z-index: 10;
         }
-        #km-txt { font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; }
+        #km-txt { font-size: 2rem; font-weight: 900; letter-spacing: -1px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
 
-        /* STATUS E CONTROLES - OCULTOS POR PADRÃO */
+        /* OVERLAY DE STATUS - SOBE E DESCE COM O TOQUE */
         #ui-overlay {
             position: absolute; inset: 0; 
             display: flex; flex-direction: column; 
             justify-content: space-between; padding: 40px 20px;
-            pointer-events: none; opacity: 0; transition: opacity 0.3s ease; z-index: 100;
+            pointer-events: none; opacity: 0; 
+            transform: translateY(10px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            z-index: 100;
         }
-        #ui-overlay.active { opacity: 1; pointer-events: auto; }
+        #ui-overlay.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
-        #status-hud { align-self: flex-end; text-align: right; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; backdrop-filter: blur(5px); }
-        .stats-row { font-size: 12px; font-weight: bold; color: #fff; text-transform: uppercase; }
-        .stats-row b { color: var(--accent); font-size: 14px; }
+        /* STATUS HUD NO TOPO DIREITO */
+        #status-hud { 
+            align-self: flex-end; text-align: right; 
+            background: rgba(0,0,0,0.7); padding: 15px; 
+            border-radius: 12px; backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .stats-row { font-size: 11px; font-weight: 700; color: #fff; text-transform: uppercase; margin-bottom: 3px; }
+        .stats-row b { color: var(--accent); font-size: 15px; }
+        .pdf-count-box { border-top: 1px solid #444; margin-top: 8px; padding-top: 8px; color: #00ff88; }
 
-        #ui-controls { display: flex; align-items: center; justify-content: center; gap: 20px; width: 100%; }
-        .btn-ui { border: none; border-radius: 50px; font-weight: 800; cursor: pointer; padding: 20px 40px; background: var(--accent); color: #000; text-transform: uppercase; font-size: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+        /* CONTROLES NO RODAPÉ */
+        #ui-controls { display: flex; align-items: center; justify-content: center; gap: 25px; width: 100%; }
+        .btn-ui { 
+            border: none; border-radius: 50px; font-weight: 900; cursor: pointer; 
+            padding: 22px 50px; background: var(--accent); color: #000; 
+            text-transform: uppercase; font-size: 13px; 
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+        }
         #btn-stop { background: var(--danger); color: #fff; }
+        #gear-btn { background: rgba(255,255,255,0.15); width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; pointer-events: auto; }
 
-        #gear-btn { background: rgba(255,255,255,0.2); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-
-        #settings-panel { position: fixed; right: -300px; top: 0; width: 280px; height: 100%; background: rgba(10,10,10,0.95); backdrop-filter: blur(15px); z-index: 2000; padding: 40px 20px; transition: 0.4s; border-left: 1px solid #333; }
+        #settings-panel { position: fixed; right: -300px; top: 0; width: 280px; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; padding: 40px 20px; transition: 0.4s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
         
         canvas { display: none; }
@@ -66,14 +80,14 @@
 
 <div id="splash-hypnos">
     <div class="vortex"></div>
-    <h1 style="margin-top:20px; font-size: 1rem; letter-spacing: 4px;">INSPEÇÃO FOTOGRÁFICA</h1>
+    <h1 style="margin-top:20px; font-size: 0.9rem; letter-spacing: 5px; font-weight: 300;">INSPEÇÃO FOTOGRÁFICA</h1>
 </div>
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2 style="color:var(--accent); margin-bottom:10px;">DESTINO DOS ARQUIVOS</h2>
-        <p style="font-size:14px; color:#ccc; margin-bottom:20px;">Selecione a pasta onde os relatórios PDF serão salvos automaticamente.</p>
-        <button class="btn-aware" onclick="requestFolder()">Selecionar Pasta</button>
+        <h2 style="color:var(--accent); margin-bottom:15px; letter-spacing: 1px;">PASTA DE DESTINO</h2>
+        <p style="font-size:14px; color:#bbb; margin-bottom:25px; line-height: 1.4;">Selecione onde os relatórios serão salvos.<br>O salvamento é automático a cada lote.</p>
+        <button class="btn-aware" onclick="requestFolder()">DEFINIR PASTA</button>
     </div>
 </div>
 
@@ -84,36 +98,37 @@
 
     <div id="ui-overlay">
         <div id="status-hud">
-            <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-bottom:5px;">
-                <div id="rec-dot" style="width:10px; height:10px; background:var(--danger); border-radius:50%; display:none;"></div>
-                <span id="rec-status" style="font-size:10px; font-weight:800;">AGUARDANDO</span>
+            <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-bottom:10px;">
+                <div id="rec-dot" style="width:10px; height:10px; background:var(--danger); border-radius:50%; display:none; animation: pulse 1s infinite;"></div>
+                <span id="rec-status" style="font-size:11px; font-weight:900; letter-spacing:1px;">AGUARDANDO</span>
             </div>
-            <div class="stats-row">FOTOS: <b id="stat-total">0</b></div>
-            <div class="stats-row">PDFs: <b id="stat-pdfs">0</b></div>
-            <div class="stats-row" style="font-size:9px; margin-top:5px; opacity:0.7;">LOTE: <span id="stat-lote">0</span> / <span id="max-lote">50</span></div>
+            <div class="stats-row">FOTOS NESTA SESSÃO: <b id="stat-total">0</b></div>
+            <div class="stats-row">NO LOTE ATUAL: <b id="stat-lote">0</b> / <span id="max-lote-display">50</span></div>
+            <div class="stats-row pdf-count-box">PDFS GERADOS HOJE: <b id="stat-pdfs">0</b></div>
         </div>
 
         <div id="ui-controls">
-            <div id="gear-btn" onclick="toggleSet()">⚙️</div>
+            <div id="gear-btn" onclick="toggleSet(event)">⚙️</div>
             <button id="btn-start" class="btn-ui" onclick="initCapture(event)">Iniciar</button>
-            <button id="btn-stop" class="btn-ui" style="display:none;" onclick="stopCapture(event)">Finalizar PDF</button>
+            <button id="btn-stop" class="btn-ui" style="display:none;" onclick="stopCapture(event)">Finalizar e Salvar</button>
         </div>
     </div>
 </div>
 
 <div id="settings-panel">
-    <div style="text-align:right; margin-bottom:30px; font-weight:bold; color:var(--accent);" onclick="toggleSet()">FECHAR ×</div>
-    <label style="font-size:10px; color:#666;">CÂMERA</label>
-    <select id="cam-select" onchange="switchCam(this.value)" style="width:100%; padding:12px; background:#222; color:#fff; border:none; margin-bottom:20px;"></select>
-    <label style="font-size:10px; color:#666;">FOTOS POR PDF</label>
-    <input type="number" id="cfg-lote" value="50" onchange="document.getElementById('max-lote').innerText=this.value" style="width:100%; padding:12px; background:#222; color:#fff; border:none;">
+    <div style="text-align:right; margin-bottom:40px; color:var(--accent); font-weight:bold;" onclick="toggleSet(event)">FECHAR ×</div>
+    <label style="font-size:10px; color:#777; letter-spacing:1px;">CÂMERA DO DISPOSITIVO</label>
+    <select id="cam-select" onchange="switchCam(this.value)" style="width:100%; padding:15px; background:#111; color:#fff; border:1px solid #333; margin:10px 0 30px 0; border-radius:5px;"></select>
+    
+    <label style="font-size:10px; color:#777; letter-spacing:1px;">FOTOS POR RELATÓRIO</label>
+    <input type="number" id="cfg-lote" value="50" onchange="updateLoteConfig()" style="width:100%; padding:15px; background:#111; color:#fff; border:1px solid #333; margin-top:10px; border-radius:5px;">
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
 let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, uiTimer;
-let countTotal = 0, countPDFs = 0;
+let countTotal = 0, countPDFs = 0; // Contadores da sessão (página aberta)
 
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
@@ -123,8 +138,8 @@ window.onload = () => {
         setTimeout(() => {
             document.getElementById('splash-hypnos').remove();
             document.getElementById('safety-gate').style.display = 'flex';
-        }, 600);
-    }, 2000);
+        }, 500);
+    }, 1800);
     loadCSV();
 };
 
@@ -135,16 +150,24 @@ async function requestFolder() {
         document.getElementById('app-shell').style.visibility = 'visible';
         listCams();
         initG();
-    } catch(e) { alert("Acesso à pasta é obrigatório."); }
+    } catch(e) { alert("Acesso à pasta negado."); }
 }
 
 function wakeUI() {
     const ui = document.getElementById('ui-overlay');
     ui.classList.add('active');
     clearTimeout(uiTimer);
+    // Tempo de exibição aumentado para 3.5 segundos conforme solicitado
     uiTimer = setTimeout(() => {
-        ui.classList.remove('active');
-    }, 2500); // Some após 2.5 segundos
+        if (!document.getElementById('settings-panel').classList.contains('open')) {
+            ui.classList.remove('active');
+        }
+    }, 3500);
+}
+
+function updateLoteConfig() {
+    const val = document.getElementById('cfg-lote').value;
+    document.getElementById('max-lote-display').innerText = val;
 }
 
 function updateStats() {
@@ -161,21 +184,25 @@ async function initCapture(e) {
     document.getElementById('rec-dot').style.display = 'block';
     document.getElementById('rec-status').innerText = "CAPTURANDO";
     document.getElementById('rec-status').style.color = "var(--danger)";
+    updateStats();
     loop();
 }
 
 async function stopCapture(e) {
     if(e) e.stopPropagation();
     rec = false;
-    document.getElementById('rec-status').innerText = "GERANDO PDF...";
-    document.getElementById('rec-status').style.color = "#fff";
     
-    await savePDF(); // Força salvar o que tiver no buffer
+    // Salva o que restou no buffer (mesmo que não tenha completado o lote)
+    if(buffer.length > 0) {
+        document.getElementById('rec-status').innerText = "SALVANDO SOBRAS...";
+        await savePDF();
+    }
     
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
     document.getElementById('rec-dot').style.display = 'none';
     document.getElementById('rec-status').innerText = "AGUARDANDO";
+    document.getElementById('rec-status').style.color = "#fff";
     updateStats();
 }
 
@@ -191,22 +218,27 @@ function loop() {
         countTotal++;
         updateStats();
         
+        // Lógica de Lote Automático: atingiu o limite, já gera o PDF e continua
         const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
-        if(buffer.length >= limit) savePDF();
+        if(buffer.length >= limit) {
+            savePDF(); 
+        }
     }
-    setTimeout(loop, 250); // Ajuste de tempo para não travar o mobile
+    setTimeout(loop, 250); 
 }
 
 async function savePDF() {
     if(!buffer.length) return;
     
+    // Clonamos e limpamos o buffer imediatamente para o loop continuar capturando
     const items = [...buffer]; 
-    buffer = []; // Limpa imediato para evitar duplicidade
+    buffer = []; 
+    updateStats();
     
     const kmI = items.km.replace(/\+/g, '_');
     const kmF = items[items.length - 1].km.replace(/\+/g, '_');
     const d = new Date();
-    const dataStr = `${d.getDate()}-${d.getMonth()+1}`;
+    const dataStr = `${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
 
     const isPortrait = can.width < can.height;
     const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
@@ -221,7 +253,7 @@ async function savePDF() {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
                 const barH = can.height * 0.15;
-                ctx.fillStyle = "rgba(0,0,0,0.8)"; 
+                ctx.fillStyle = "rgba(0,0,0,0.85)"; 
                 ctx.fillRect(0, can.height-barH, can.width, barH);
                 ctx.fillStyle = "#fff"; 
                 ctx.font = `bold ${barH * 0.4}px Arial`;
@@ -235,17 +267,18 @@ async function savePDF() {
         });
     }
 
-    const nome = `Relatorio_Km_${kmI}_ao_${kmF}_${dataStr}_${Date.now()}.pdf`;
+    const nome = `Relatorio_Km_${kmI}_ao_${kmF}_Data_${dataStr}_ID_${Date.now()}.pdf`;
     try {
         const f = await hDir.getFileHandle(nome, {create:true});
         const s = await f.createWritable();
         await s.write(doc.output('blob')); 
         await s.close();
-        countPDFs++;
+        countPDFs++; // Incrementa PDFs da sessão
         updateStats();
-    } catch(e) { console.error("Erro no FileSystem:", e); }
+    } catch(e) { console.error("Falha ao gravar arquivo:", e); }
 }
 
+// GESTÃO DE HARDWARE
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(d => d.kind === 'videoinput');
@@ -255,7 +288,6 @@ async function listCams() {
         opt.value = d.deviceId; opt.text = d.label || `Lente ${i + 1}`;
         sel.appendChild(opt);
     });
-    // Seleciona a última (geralmente a traseira melhor)
     initC(videoDevices[videoDevices.length-1].deviceId);
 }
 
@@ -268,7 +300,11 @@ async function initC(id) {
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+function toggleSet(e) { 
+    if(e) e.stopPropagation();
+    document.getElementById('settings-panel').classList.toggle('open'); 
+}
+
 function switchCam(id) { initC(id); }
 
 async function loadCSV() {
