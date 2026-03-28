@@ -3,59 +3,80 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V13.5 - STEALTH FS</title>
+    <title>INSPEÇÃO FOTOGRÁFICA - COSMIC EDITION</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --safety: #056b3c; --glass: rgba(10, 10, 10, 0.9); }
+        :root { --accent: #ffcc00; --safety: #056b3c; --glass: rgba(5, 5, 5, 0.92); --cosmic: radial-gradient(circle, #1a1a1a 0%, #000 100%); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* Splash Interativo (Gatilho de Full Screen) */
-        #splash { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; }
-        .pulse-btn { width: 80px; height: 80px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-size: 30px; margin-bottom: 20px; box-shadow: 0 0 20px var(--accent); animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.8; } 70% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.8; } }
+        /* Splash Screen Hipnótico / Cinema */
+        #splash { position: fixed; inset: 0; background: var(--cosmic); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition: 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        /* Partículas Magnéticas (Simuladas) */
+        .star { position: absolute; background: #fff; border-radius: 50%; opacity: 0.3; animation: float 20s infinite linear; }
+        @keyframes float { from { transform: translateY(0) rotate(0deg); } to { transform: translateY(-100vh) rotate(360deg); } }
 
-        #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; }
+        /* Título Cinematográfico */
+        .cinema-title { font-size: 10px; font-weight: 200; letter-spacing: 15px; text-transform: uppercase; color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.5); animation: emerge 4s forwards; opacity: 0; text-align: center; line-height: 2; }
+        .cinema-title b { color: var(--accent); font-weight: 300; letter-spacing: 18px; }
+
+        @keyframes emerge { 0% { opacity: 0; transform: scale(0.8) translateZ(-100px); filter: blur(10px); } 100% { opacity: 1; transform: scale(1) translateZ(0); filter: blur(0); } }
+
+        /* Orbe de Atração Magnética */
+        .magnetic-orbe { width: 100px; height: 100px; border: 1px solid rgba(255,204,0,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: 50px; position: relative; transition: 0.5s; box-shadow: 0 0 30px rgba(255,204,0,0.1); }
+        .magnetic-orbe::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 1px solid var(--accent); opacity: 0.5; animation: ripple 2s infinite; }
+        @keyframes ripple { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(1.6); opacity: 0; } }
+        .magnetic-orbe span { font-size: 24px; color: var(--accent); filter: drop-shadow(0 0 5px var(--accent)); }
+
+        /* Interface Principal */
+        #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 2s; }
         #cam-container { flex: 1; position: relative; background: #000; overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Elementos UI Premium */
-        #km-display { position: absolute; top: 25px; left: 25px; background: var(--safety); padding: 15px 30px; border-radius: 10px; border-left: 8px solid #fff; font-size: 2.2rem; font-weight: 900; z-index: 10; box-shadow: 0 20px 50px rgba(0,0,0,1); }
-        #gear-btn { position: absolute; top: 25px; right: 25px; width: 50px; height: 50px; background: var(--glass); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #333; z-index: 20; color: #777; }
+        /* UI de Operação */
+        #km-display { position: absolute; top: 30px; left: 30px; background: var(--safety); padding: 18px 35px; border-radius: 5px; border-left: 10px solid #fff; font-size: 2.5rem; font-weight: 900; z-index: 10; box-shadow: 0 25px 60px rgba(0,0,0,1); }
+        #gear-btn { position: absolute; top: 30px; right: 30px; width: 55px; height: 55px; background: var(--glass); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #222; z-index: 20; color: #444; }
 
-        #bottom-ctrl { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 30px; width: 92%; max-width: 500px; background: var(--glass); padding: 15px 35px; border-radius: 60px; backdrop-filter: blur(20px); border: 1px solid #222; z-index: 20; justify-content: space-between; }
-        .stat-group b { font-size: 1.3rem; color: #fff; display: block; }
-        .stat-group small { font-size: 10px; color: var(--accent); text-transform: uppercase; font-weight: bold; }
+        #bottom-ctrl { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 40px; width: 92%; max-width: 550px; background: var(--glass); padding: 18px 40px; border-radius: 80px; backdrop-filter: blur(30px); border: 1px solid #222; z-index: 20; justify-content: space-between; }
+        .stat-group b { font-size: 1.4rem; color: #fff; display: block; }
+        .stat-group small { font-size: 9px; color: var(--accent); text-transform: uppercase; font-weight: 800; letter-spacing: 2px; }
 
-        .btn-main { border: none; border-radius: 40px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px 45px; font-size: 13px; background: var(--accent); color: #000; transition: 0.3s; }
-        #btn-stop { background: #cc0000; color: #fff; display: none; }
+        .btn-main { border: none; border-radius: 40px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 20px 50px; font-size: 12px; background: var(--accent); color: #000; letter-spacing: 2px; box-shadow: 0 10px 20px rgba(255,204,0,0.2); }
+        #btn-stop { background: #d00; color: #fff; display: none; }
 
-        /* Menu de Configuração */
-        #settings { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #080808; z-index: 500; transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1); padding: 50px 30px; border-left: 2px solid var(--accent); }
+        /* Menu Oculto */
+        #settings { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #050505; z-index: 500; transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1); padding: 60px 30px; border-left: 1px solid var(--accent); }
         #settings.open { right: 0; }
-        .set-row { margin-bottom: 25px; }
-        label { display: block; font-size: 10px; color: var(--accent); margin-bottom: 8px; font-weight: bold; letter-spacing: 1px; }
-        select, input { width: 100%; background: #111; border: 1px solid #222; color: #fff; padding: 14px; border-radius: 12px; }
+        .set-row { margin-bottom: 30px; }
+        label { display: block; font-size: 9px; color: var(--accent); margin-bottom: 10px; font-weight: bold; letter-spacing: 2px; }
+        select, input { width: 100%; background: #0a0a0a; border: 1px solid #1a1a1a; color: #fff; padding: 15px; border-radius: 5px; }
 
         canvas { display: none; }
-        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--glass); padding: 25px; border-radius: 20px; border: 2px solid var(--accent); z-index: 2000; display: none; text-align: center; font-weight: 900; letter-spacing: 1px; }
+        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--glass); padding: 30px 50px; border-radius: 10px; border: 1px solid var(--accent); z-index: 2000; display: none; text-align: center; font-weight: 200; letter-spacing: 5px; text-transform: uppercase; }
     </style>
 </head>
-<body onclick="enableFS()">
+<body onclick="launchSystem()">
 
 <div id="splash">
-    <div class="pulse-btn">▶</div>
-    <h2 style="letter-spacing: 8px; font-weight: 200;">INSPEÇÃO<b style="color:var(--accent)">PRO</b></h2>
-    <p style="color: #444; font-size: 12px; margin-top: 15px; text-transform: uppercase;">Toque para Iniciar em Tela Cheia</p>
+    <div id="stars-container"></div>
+    <div class="cinema-title">
+        INSPEÇÃO<br>
+        <b>FOTOGRÁFICA</b>
+    </div>
+    <div class="magnetic-orbe">
+        <span>✦</span>
+    </div>
+    <p style="color: #333; font-size: 9px; margin-top: 40px; letter-spacing: 4px; text-transform: uppercase;">Acesse o Infinito</p>
 </div>
 
-<div id="toast">CONFIGURANDO REPOSITÓRIO...</div>
+<div id="toast">SINCRONIZANDO REPOSITÓRIO...</div>
 
 <div id="settings">
-    <div onclick="toggleSet()" style="color:#444; cursor:pointer; margin-bottom:40px; font-size:11px;">[ VOLTAR AO MONITOR ]</div>
-    <div class="set-row"><label>SISTEMA ÓPTICO</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="set-row"><label>CICLO DE CAPTURA (MS)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="set-row"><label>CAPACIDADE DO LOTE</label><input type="number" id="cfg-lote" value="200"></div>
+    <div onclick="toggleSet()" style="color:#333; cursor:pointer; margin-bottom:50px; font-size:10px; letter-spacing:2px;">[ VOLTAR AO VAZIO ]</div>
+    <div class="set-row"><label>CONEXÃO ÓPTICA</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="set-row"><label>FREQUÊNCIA DE CAPTURA</label><input type="number" id="cfg-int" value="200"></div>
+    <div class="set-row"><label>VOLUME DO LOTE</label><input type="number" id="cfg-lote" value="200"></div>
 </div>
 
 <div id="app-shell">
@@ -66,8 +87,8 @@
         <div id="bottom-ctrl">
             <div class="stat-group"><small>Fotos</small><b id="stat-batch">0</b></div>
             <button id="btn-action" class="btn-main">Iniciar</button>
-            <button id="btn-stop" class="btn-main">Parar</button>
-            <div class="stat-group"><small>Total</small><b id="stat-total">0</b></div>
+            <button id="btn-stop" class="btn-main">Concluir</button>
+            <div class="stat-group"><small>Geral</small><b id="stat-total">0</b></div>
         </div>
     </div>
 </div>
@@ -78,18 +99,33 @@
 let kmDB = [], gps = null, rec = false, buffer = [], total = 0, batchIdx = 0, hDir = null, currentStream = null;
 const vid = document.getElementById('vid'), can = document.getElementById('c'), ctx = can.getContext('2d');
 
-async function enableFS() {
-    // Esta função cumpre a exigência de interação do navegador
+// Gerar estrelas magnéticas no Splash
+const starsContainer = document.getElementById('stars-container');
+for(let i=0; i<50; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.width = Math.random() * 3 + 'px';
+    star.style.height = star.style.width;
+    star.style.left = Math.random() * 100 + 'vw';
+    star.style.top = Math.random() * 100 + 'vh';
+    star.style.animationDuration = (Math.random() * 10 + 10) + 's';
+    starsContainer.appendChild(star);
+}
+
+async function launchSystem() {
     if (document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(() => {});
     }
     const splash = document.getElementById('splash');
     if(splash) {
+        splash.style.transform = 'scale(2)';
         splash.style.opacity = '0';
         setTimeout(() => {
             splash.remove();
-            document.getElementById('app-shell').style.visibility = 'visible';
-        }, 500);
+            const shell = document.getElementById('app-shell');
+            shell.style.visibility = 'visible';
+            shell.style.opacity = '1';
+        }, 1500);
     }
 }
 
@@ -194,7 +230,7 @@ async function save() {
             img.src = items[i].raw;
         });
     }
-    const f = await hDir.getFileHandle(`LOTE_${batchIdx}.pdf`, {create:true});
+    const f = await hDir.getFileHandle(`INSPECAO_LOTE_${batchIdx}.pdf`, {create:true});
     const s = await f.createWritable();
     await s.write(doc.output('blob')); await s.close();
 }
@@ -214,7 +250,7 @@ function loop() {
 
 document.getElementById('btn-action').onclick = async () => {
     const t = document.getElementById('toast');
-    t.style.display = 'block'; t.innerText = "SELECIONE A PASTA PARA SALVAR";
+    t.style.display = 'block';
     setTimeout(async () => {
         try {
             hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
@@ -222,7 +258,7 @@ document.getElementById('btn-action').onclick = async () => {
             document.getElementById('btn-action').style.display = 'none';
             document.getElementById('btn-stop').style.display = 'inline-block';
         } catch(e) { t.style.display = 'none'; }
-    }, 1200);
+    }, 1000);
 };
 
 document.getElementById('btn-stop').onclick = () => { rec = false; save(); document.getElementById('btn-action').style.display = 'inline-block'; document.getElementById('btn-stop').style.display = 'none'; };
