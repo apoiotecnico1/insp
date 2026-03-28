@@ -2,213 +2,189 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BACKUP DE TRÁFEGO - SENSOR DE MOVIMENTO</title>
+    <title>BACKUP REDUNDANTE - AUTO IP</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --record: #ff3b30; --bg: #0a0a0a; }
-        body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; overflow: hidden; }
+        body { background: #0a0a0a; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        #app { display: grid; grid-template-rows: 1fr auto; height: 100vh; }
+        #view { position: relative; background: #000; display: flex; align-items: center; justify-content: center; }
+        #stream-img { max-width: 100%; max-height: 100%; border: 2px solid #333; }
         
-        #main-container { display: flex; flex-direction: column; height: 100vh; }
+        .hud { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .tag { background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; border-left: 4px solid #00e5ff; font-size: 12px; }
+        .detect { border-left-color: #ff3b30; animation: blink 0.5s infinite; }
+
+        #panel { background: #1a1a1a; padding: 25px; display: flex; gap: 20px; align-items: flex-end; border-top: 1px solid #333; }
+        .field { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        input { background: #222; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 4px; }
         
-        /* ÁREA DO MONITOR */
-        #monitor { position: relative; flex: 1; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        img#camera-stream { max-width: 100%; max-height: 100%; object-fit: contain; }
-        
-        /* OVERLAYS */
-        #status-bar { position: absolute; top: 20px; left: 20px; display: flex; gap: 15px; z-index: 10; }
-        .badge { background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 4px; font-size: 12px; border: 1px solid #333; }
-        .rec-active { color: var(--record); font-weight: bold; animation: blink 1s infinite; }
-        
-        /* CONTROLES */
-        #controls { background: #151515; padding: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; border-top: 1px solid #333; }
-        .input-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 10px; color: #888; text-transform: uppercase; }
-        input { background: #222; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 4px; }
-        
-        #log-panel { position: absolute; right: 20px; top: 70px; width: 250px; height: 300px; background: rgba(0,0,0,0.8); border: 1px solid #333; font-size: 10px; padding: 10px; overflow-y: auto; color: #0f0; }
-        
-        @keyframes blink { 50% { opacity: 0.3; } }
+        button { background: #00e5ff; color: #000; border: none; padding: 12px 30px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        #btn-stop { background: #ff3b30; color: #fff; display: none; }
+
+        @keyframes blink { 50% { opacity: 0.5; } }
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div id="main-container">
-    <div id="monitor">
-        <div id="status-bar">
-            <div id="rec-status" class="badge">STANDBY</div>
-            <div id="gps-status" class="badge">COORD: --.---, --.---</div>
-            <div id="count-status" class="badge">CAPTURAS: 0</div>
+<div id="app">
+    <div id="view">
+        <div class="hud">
+            <div id="st-ip" class="tag">AGUARDANDO IP...</div>
+            <div id="st-motion" class="tag">SENSOR: STANDBY</div>
+            <div id="st-count" class="tag">RELATÓRIO: 0 FOTOS</div>
         </div>
-        
-        <div id="log-panel">SISTEMA INICIADO... AGUARDANDO COMANDO.</div>
-        
-        <img id="camera-stream" crossorigin="anonymous">
-        
-        <div id="flash" style="position:absolute; inset:0; background:white; opacity:0; pointer-events:none;"></div>
+        <img id="stream-img" crossorigin="anonymous">
     </div>
 
-    <div id="controls">
-        <div class="input-group">
-            <label>URL do Snapshot da Câmera (JPEG)</label>
-            <input type="text" id="cam-url" placeholder="http://192.168.1.100/snap.jpg">
+    <div id="panel">
+        <div class="field">
+            <label>IP da Câmera (Ex: 192.168.1.50)</label>
+            <input type="text" id="ip-addr" placeholder="Digite apenas o IP">
         </div>
-        <div class="input-group">
-            <label>Sensibilidade de Movimento (Menor = Mais Sensível)</label>
-            <input type="range" id="sens-range" min="10" max="100" value="40">
-        </div>
-        <button id="master-btn" onclick="toggleSystem()" style="background:var(--record); color:white; border:none; font-weight:bold; cursor:pointer; border-radius:4px;">INICIAR BACKUP</button>
+        <button id="btn-start" onclick="startScanner()">CONECTAR E MONITORAR</button>
+        <button id="btn-stop" onclick="stopSystem()">PARAR E GERAR PDF</button>
     </div>
 </div>
 
-<canvas id="motion-canvas"></canvas>
-<canvas id="save-canvas"></canvas>
+<canvas id="c-proc"></canvas>
 
 <script>
-let running = false;
-let lastFrameData = null;
-let reportImages = [];
-let coords = "N/A";
+let lastData = null;
+let photos = [];
+let isRunning = false;
+let foundUrl = "";
 let hDir = null;
 
-const img = document.getElementById('camera-stream');
-const mCanvas = document.getElementById('motion-canvas');
-const sCanvas = document.getElementById('save-canvas');
-const mCtx = mCanvas.getContext('2d');
-const sCtx = sCanvas.getContext('2d');
-const logPanel = document.getElementById('log-panel');
+// Lista de sufixos comuns de fabricantes (Snapshot)
+const paths = [
+    "/onvif/snapshot",        // ONVIF Padrão
+    "/cgi-bin/snapshot.cgi",  // Intelbras / Dahua
+    "/Streaming/channels/1/picture", // Hikvision
+    "/image.jpg",             // Genéricas
+    "/snap.jpg",              // Mibo Smart / IP Cameras
+    "/tmpfs/auto.jpg"         // Foscam
+];
 
-// Geolocalização para o relatório
-navigator.geolocation.watchPosition(p => {
-    coords = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`;
-    document.getElementById('gps-status').innerText = `COORD: ${coords}`;
-}, null, {enableHighAccuracy: true});
+async function startScanner() {
+    const ip = document.getElementById('ip-addr').value;
+    if(!ip) return alert("Digite o IP!");
 
-async function toggleSystem() {
-    if(!running) {
-        try {
-            hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-            running = true;
-            document.getElementById('master-btn').innerText = "GERAR RELATÓRIO E PARAR";
-            document.getElementById('master-btn').style.background = "#555";
-            addLog("Monitoramento Iniciado...");
-            processFrame();
-        } catch(e) { alert("Selecione a pasta de destino."); }
-    } else {
-        running = false;
-        generatePDF();
-        document.getElementById('master-btn').innerText = "INICIAR BACKUP";
-        document.getElementById('master-btn').style.background = "var(--record)";
-    }
-}
-
-function addLog(msg) {
-    const time = new Date().toLocaleTimeString();
-    logPanel.innerHTML = `[${time}] ${msg}<br>` + logPanel.innerHTML;
-}
-
-async function processFrame() {
-    if(!running) return;
-
-    const url = document.getElementById('cam-url').value;
-    if(!url) return;
-
-    // Criar nova imagem para evitar cache
-    const tempImg = new Image();
-    tempImg.crossOrigin = "Anonymous";
-    tempImg.src = url + "?t=" + Date.now();
-
-    tempImg.onload = function() {
-        img.src = tempImg.src;
+    try {
+        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('st-ip').innerText = `PROCURANDO CAMERA EM ${ip}...`;
         
-        mCanvas.width = tempImg.width;
-        mCanvas.height = tempImg.height;
-        sCanvas.width = tempImg.width;
-        sCanvas.height = tempImg.height;
-
-        mCtx.drawImage(tempImg, 0, 0);
-        const currentFrame = mCtx.getImageData(0, 0, mCanvas.width, mCanvas.height);
-
-        if(lastFrameData) {
-            if(detectMotion(lastFrameData, currentFrame)) {
-                captureEvent(tempImg);
+        // Tenta encontrar qual o caminho da imagem funciona
+        for(let p of paths) {
+            let testUrl = `http://${ip}${p}`;
+            let ok = await testImage(testUrl);
+            if(ok) {
+                foundUrl = testUrl;
+                break;
             }
         }
-        lastFrameData = currentFrame;
-        
-        // Intervalo de captura (ex: 500ms para monitorar o fluxo)
-        setTimeout(processFrame, 500); 
-    };
 
-    tempImg.onerror = () => setTimeout(processFrame, 2000);
+        if(foundUrl) {
+            isRunning = true;
+            document.getElementById('st-ip').innerText = `CONECTADO: ${foundUrl}`;
+            document.getElementById('btn-start').style.display = 'none';
+            document.getElementById('btn-stop').style.display = 'block';
+            monitor();
+        } else {
+            alert("Não foi possível capturar imagem desse IP. Verifique se a câmera tem snapshot HTTP habilitado.");
+        }
+    } catch(e) { console.error(e); }
 }
 
-function detectMotion(oldFrame, newFrame) {
-    const data1 = oldFrame.data;
-    const data2 = newFrame.data;
-    const sens = document.getElementById('sens-range').value;
-    let diff = 0;
-
-    // Compara pixels (pula de 10 em 10 para performance)
-    for(let i=0; i < data1.length; i += 40) {
-        const rDiff = Math.abs(data1[i] - data2[i]);
-        if(rDiff > sens) diff++;
-    }
-
-    // Se mais de 1% da imagem mudou, houve movimento relevante
-    const threshold = (mCanvas.width * mCanvas.height) / 1000;
-    return diff > threshold;
-}
-
-function captureEvent(imageObj) {
-    document.getElementById('rec-status').innerText = "DETECTADO!";
-    document.getElementById('rec-status').classList.add('rec-active');
-    
-    sCtx.drawImage(imageObj, 0, 0);
-    
-    // Carimbo de backup
-    const barH = sCanvas.height * 0.1;
-    sCtx.fillStyle = "rgba(0,0,0,0.7)";
-    sCtx.fillRect(0, sCanvas.height - barH, sCanvas.width, barH);
-    sCtx.fillStyle = "#fff";
-    sCtx.font = "20px Arial";
-    const info = `${new Date().toLocaleString()} | GPS: ${coords}`;
-    sCtx.fillText(info, 20, sCanvas.height - (barH/2) + 7);
-
-    reportImages.push({
-        data: sCanvas.toDataURL('image/jpeg', 0.6),
-        time: new Date().toLocaleTimeString()
+function testImage(url) {
+    return new Promise(resolve => {
+        const t = new Image();
+        t.crossOrigin = "anonymous";
+        t.onload = () => resolve(true);
+        t.onerror = () => resolve(false);
+        t.src = url + "?t=" + Date.now();
+        setTimeout(() => resolve(false), 2000);
     });
+}
 
-    document.getElementById('count-status').innerText = `CAPTURAS: ${reportImages.length}`;
-    addLog("Veículo capturado!");
+async function monitor() {
+    if(!isRunning) return;
+
+    const img = document.getElementById('stream-img');
+    const temp = new Image();
+    temp.crossOrigin = "anonymous";
+    temp.src = foundUrl + "?t=" + Date.now();
+
+    temp.onload = () => {
+        img.src = temp.src;
+        const can = document.getElementById('c-proc');
+        const ctx = can.getContext('2d');
+        can.width = temp.width;
+        can.height = temp.height;
+        ctx.drawImage(temp, 0, 0);
+        
+        const current = ctx.getImageData(0,0, can.width, can.height);
+        
+        if(lastData) {
+            if(checkMotion(lastData, current)) {
+                saveToReport(temp);
+            }
+        }
+        lastData = current;
+        setTimeout(monitor, 400); // 2.5 FPS de monitoramento
+    };
+}
+
+function checkMotion(d1, d2) {
+    let diff = 0;
+    const data1 = d1.data;
+    const data2 = d2.data;
+    for(let i=0; i<data1.length; i+=50) {
+        if(Math.abs(data1[i] - data2[i]) > 40) diff++;
+    }
+    return diff > (data1.length / 1000);
+}
+
+function saveToReport(imgObj) {
+    const st = document.getElementById('st-motion');
+    st.innerText = "MOVIMENTO DETECTADO!";
+    st.classList.add('detect');
+
+    const can = document.getElementById('c-proc');
+    const ctx = can.getContext('2d');
+    ctx.drawImage(imgObj, 0, 0);
+    
+    // Carimbo
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(0, can.height - 40, can.width, 40);
+    ctx.fillStyle = "#fff";
+    ctx.font = "16px Arial";
+    ctx.fillText(new Date().toLocaleString() + " - BACKUP", 20, can.height - 15);
+
+    photos.push(can.toDataURL('image/jpeg', 0.5));
+    document.getElementById('st-count').innerText = `RELATÓRIO: ${photos.length} FOTOS`;
 
     setTimeout(() => {
-        document.getElementById('rec-status').innerText = "STANDBY";
-        document.getElementById('rec-status').classList.remove('rec-active');
-    }, 2000);
+        st.innerText = "SENSOR: STANDBY";
+        st.classList.remove('detect');
+    }, 1500);
 }
 
-async function generatePDF() {
-    if(reportImages.length === 0) return;
-    addLog("Gerando PDF de Backup...");
-    
-    const doc = new jspdf.jsPDF('l', 'mm', 'a4');
-    for(let i=0; i < reportImages.length; i++) {
-        if(i > 0) doc.addPage('l');
-        doc.addImage(reportImages[i].data, 'JPEG', 0, 0, 297, 210);
+async function stopSystem() {
+    isRunning = false;
+    if(photos.length > 0) {
+        const doc = new jspdf.jsPDF('l', 'mm', 'a4');
+        for(let i=0; i<photos.length; i++) {
+            if(i>0) doc.addPage('l');
+            doc.addImage(photos[i], 'JPEG', 0, 0, 297, 210);
+        }
+        const file = await hDir.getFileHandle(`BACKUP_${Date.now()}.pdf`, {create:true});
+        const stream = await file.createWritable();
+        await stream.write(doc.output('blob'));
+        await stream.close();
+        alert("Relatório salvo com sucesso!");
     }
-
-    const fileName = `BACKUP_TRAFEGO_${Date.now()}.pdf`;
-    const f = await hDir.getFileHandle(fileName, {create:true});
-    const s = await f.createWritable();
-    await s.write(doc.output('blob'));
-    await s.close();
-    
-    addLog("Relatório Salvo!");
-    reportImages = [];
-    document.getElementById('count-status').innerText = `CAPTURAS: 0`;
+    location.reload();
 }
 </script>
 </body>
