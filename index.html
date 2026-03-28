@@ -1,254 +1,8 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO - DATA & KM</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; --glass: rgba(10, 10, 10, 0.96); }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
-
-        /* SPLASH HYPNOS - ILUSÃO E FOCO */
-        #splash-hypnos { 
-            position: fixed; inset: 0; background: #000; z-index: 7000; 
-            display: flex; align-items: center; justify-content: center; overflow: hidden;
-            transition: opacity 0.8s;
-        }
-        .hypno-circle {
-            position: absolute; border: 2px solid var(--accent); border-radius: 50%;
-            animation: expand 3s infinite ease-in-out; opacity: 0;
-        }
-        .vortex {
-            width: 200px; height: 200px; border: 4px solid #fff; border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-            animation: rotate-vortex 4s linear infinite, morph 6s ease-in-out infinite alternate;
-            box-shadow: 0 0 50px var(--accent);
-        }
-        #splash-txt {
-            position: absolute; bottom: 20%; letter-spacing: 5px; font-weight: 200; 
-            text-transform: uppercase; text-align: center; width: 100%; transition: 0.5s;
-        }
-        @keyframes expand { 0% { width: 0; height: 0; opacity: 1; } 100% { width: 150vw; height: 150vw; opacity: 0; } }
-        @keyframes rotate-vortex { 100% { transform: rotate(360deg); } }
-        @keyframes morph { 0% { border-radius: 40% 60% 70% 30%; } 100% { border-radius: 70% 30% 30% 70%; } }
-
-        /* CHECKLIST INICIAL DE SEGURANÇA */
-        #safety-gate { 
-            position: fixed; inset: 0; background: #000; z-index: 5000; 
-            display: none; align-items: center; justify-content: center; padding: 20px; 
-        }
-        .alert-box { 
-            border: 1px solid #333; padding: 30px; border-radius: 12px; 
-            max-width: 500px; background: #080808; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-        }
-        .alert-box h2 { color: var(--accent); font-size: 18px; margin-bottom: 20px; text-align: center; letter-spacing: 1px; text-transform: uppercase; }
-        .checklist { margin-bottom: 30px; }
-        .item { margin-bottom: 15px; display: flex; align-items: flex-start; gap: 12px; line-height: 1.5; font-size: 14px; color: #ddd; }
-        .item b { color: var(--accent); min-width: 20px; }
-        .btn-aware { 
-            background: var(--accent); color: #000; border: none; padding: 18px; 
-            font-weight: 800; border-radius: 6px; cursor: pointer; text-transform: uppercase; 
-            font-size: 13px; width: 100%; transition: 0.3s;
-        }
-
-        /* INTERFACE PRINCIPAL */
-        #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 0.8s; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-
-        #km-hud { 
-            position: absolute; top: 25px; left: 25px; 
-            background: var(--placa-verde); padding: 8px 18px; 
-            border: 2px solid #fff; border-radius: 5px; z-index: 10; pointer-events: none; 
-        }
-        #km-hud h1 { font-size: 1.7rem; font-weight: 800; color: #fff; letter-spacing: -1px; }
-
-        #rec-tag { 
-            position: absolute; top: 25px; right: 25px; 
-            display: flex; align-items: center; gap: 8px; 
-            z-index: 10; opacity: 0; transition: 0.5s; 
-            pointer-events: none;
-        }
-        #rec-tag span { font-size: 11px; font-weight: 300; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 2px; }
-        .dot { 
-            width: 10px; height: 10px; background: transparent;
-            border-radius: 50%; border: 1px solid #fff;
-            animation: pulse-on-off 2s infinite cubic-bezier(0.4, 0, 0.6, 1); 
-        }
-        @keyframes pulse-on-off {
-            0% { background-color: transparent; box-shadow: 0 0 0px rgba(255, 0, 0, 0); }
-            50% { background-color: var(--danger); box-shadow: 0 0 10px rgba(255, 0, 0, 0.8); }
-            100% { background-color: transparent; box-shadow: 0 0 0px rgba(255, 0, 0, 0); }
-        }
-
-        #ui-controls { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; transition: 0.6s; z-index: 100; }
-        .ui-hidden { opacity: 0; bottom: 15px; pointer-events: none; }
-        .btn-ui { border: none; border-radius: 4px; font-weight: 800; cursor: pointer; text-transform: uppercase; padding: 18px 45px; font-size: 11px; background: var(--accent); color: #000; }
-        #gear-btn { width: 48px; height: 48px; border-radius: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; }
-
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 2000; padding: 60px 25px; transition: 0.5s; border-left: 1px solid #333; }
-        #settings-panel.open { right: 0; }
-        .field { margin-bottom: 25px; }
-        .field label { font-size: 11px; color: #777; display: block; margin-bottom: 8px; }
-        select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 4px; font-size: 13px; }
-
-        canvas { display: none; }
-    </style>
-</head>
-<body onclick="wakeUI()">
-
-<div id="splash-hypnos">
-    <div class="hypno-circle" style="animation-delay: 0s"></div>
-    <div class="hypno-circle" style="animation-delay: 1s"></div>
-    <div class="hypno-circle" style="animation-delay: 2s"></div>
-    <div class="vortex"></div>
-    <h1 id="splash-txt">FOCO TOTAL</h1>
-</div>
-
-<div id="safety-gate">
-    <div class="alert-box">
-        <h2>Protocolo de Inspeção Segura</h2>
-        <div class="checklist">
-            <div class="item"><b>1.</b> Configuração Estacionária: Realize todos os ajustes de sistema apenas com o veículo parado.</div>
-            <div class="item"><b>2.</b> Mãos Livres: O celular deve estar obrigatoriamente acoplado ao suporte.</div>
-            <div class="item"><b>3.</b> Foco na Via: Mantenha 100% da sua atenção na condução.</div>
-            <div class="item"><b>4.</b> Intervenção Técnica: Estacione em local seguro antes de tocar na tela.</div>
-            <div class="item"><b>5.</b> Finalização Segura: Salve os arquivos somente após imobilização total.</div>
-        </div>
-        <button class="btn-aware" onclick="acceptSafety()">Estou de acordo e ciente</button>
-    </div>
-</div>
-
-<div id="settings-panel">
-    <div style="text-align:right; margin-bottom:20px; cursor:pointer; color:#777;" onclick="toggleSet()">FECHAR ×</div>
-    <div class="field"><label>Câmera do dispositivo</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Tempo da foto (Milissegundos)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50"></div>
-</div>
-
-<div id="app-shell">
-    <video id="vid" autoplay playsinline muted></video>
-    <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
-    <div id="rec-tag"><span>Capturando</span><div class="dot"></div></div>
-    <div id="ui-controls">
-        <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-ui" onclick="initCapture()">Iniciar Inspeção</button>
-        <button id="btn-stop" class="btn-ui" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Finalizar Relatório</button>
-    </div>
-</div>
-
-<canvas id="c"></canvas>
-
-<script>
-let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, uiTimer;
-const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
-
-// Gerenciador de Abertura
-window.onload = () => {
-    const splash = document.getElementById('splash-hypnos');
-    const txt = document.getElementById('splash-txt');
-    
-    // Troca de texto durante a animação
-    setTimeout(() => { txt.innerText = "Inspeção Fotográfica"; }, 1500);
-    
-    // Encerra splash e mostra segurança
-    setTimeout(() => {
-        splash.style.opacity = '0';
-        setTimeout(() => {
-            splash.remove();
-            document.getElementById('safety-gate').style.display = 'flex';
-        }, 800);
-    }, 3500);
-
-    loadCSV(); 
-    initG(); 
-};
-
-async function acceptSafety() {
-    try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').style.opacity = '0';
-        setTimeout(() => {
-            document.getElementById('safety-gate').remove();
-            document.getElementById('app-shell').style.visibility = 'visible';
-            document.getElementById('app-shell').style.opacity = '1';
-            listCams();
-            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-            wakeUI();
-        }, 600);
-    } catch(e) { alert("Selecione uma pasta para salvar os relatórios."); }
-}
-
-// --- RESTANTE DO SEU CÓDIGO ORIGINAL INTEGRAL ---
-
-function wakeUI() {
-    document.getElementById('ui-controls').classList.remove('ui-hidden');
-    clearTimeout(uiTimer);
-    if(rec) uiTimer = setTimeout(() => document.getElementById('ui-controls').classList.add('ui-hidden'), 4000);
-}
-
-async function listCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-select');
-    sel.innerHTML = "";
-    videoDevices.forEach((d, i) => {
-        const opt = document.createElement('option');
-        opt.value = d.deviceId; opt.text = `Lente ${i + 1}`;
-        sel.appendChild(opt);
-    });
-    const back = videoDevices.find(d => d.label.toLowerCase().includes('back')) || videoDevices;
-    if(back) { sel.value = back.deviceId; initC(back.deviceId); }
-}
-
-async function initC(id) {
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: { ideal: 1920 }, height: { ideal: 1080 } } });
-    currentStream = stream; vid.srcObject = stream;
-    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; vid.play(); };
-}
-
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
-function switchCam(id) { initC(id); }
-
-async function initCapture() {
-    rec = true;
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'inline-block';
-    document.getElementById('rec-tag').style.opacity = '1';
-    wakeUI();
-    loop();
-}
-
-function stopCapture() {
-    rec = false;
-    savePDF();
-    document.getElementById('btn-start').style.display = 'inline-block';
-    document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-tag').style.opacity = '0';
-}
-
-function loop() {
-    if(!rec) return;
-    if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
-        ctx.drawImage(vid, 0, 0, can.width, can.height);
-        buffer.push({ 
-            raw: can.toDataURL('image/jpeg', 0.45), 
-            km: document.getElementById('km-txt').innerText.replace("Km ", ""), 
-            ts: new Date().toLocaleString('pt-BR').toUpperCase() 
-        });
-        const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
-        if(buffer.length >= limit) savePDF();
-    }
-    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
-}
-
 async function savePDF() {
     if(!buffer.length || !hDir) return;
     const items = [...buffer]; 
     buffer = [];
     
-    // Nomenclatura Inteligente Conforme Solicitado
     const kmI = items.km.replace(/\+/g, '_');
     const kmF = items[items.length - 1].km.replace(/\+/g, '_');
     const d = new Date();
@@ -265,52 +19,50 @@ async function savePDF() {
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
-                const barH = can.height * 0.16;
-                ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, can.height-barH, can.width, barH);
-                ctx.fillStyle = "#fff"; ctx.font = `bold ${barH * 0.4}px Arial`;
-                ctx.fillText("Km " + items[i].km, 60, can.height-(barH*0.5));
-                ctx.font = `${barH * 0.18}px Arial`;
-                ctx.fillText(items[i].ts, 60, can.height-(barH*0.22));
-                doc.addImage(can.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
+                
+                // --- DESIGN DA MOLDURA TÉCNICA ---
+                const borderSize = 20; // Espessura da moldura
+                ctx.strokeStyle = "rgba(255, 204, 0, 0.8)"; // Amarelo Inspeção
+                ctx.lineWidth = borderSize;
+                ctx.strokeRect(0, 0, can.width, can.height);
+
+                // --- DESIGN DO TEXTO (SEM BARRA PRETA) ---
+                const fontSizeKm = (can.height * 0.08); // +25% que o anterior
+                const fontSizeTs = (can.height * 0.035);
+                
+                ctx.textAlign = "left";
+                ctx.lineJoin = "round";
+                ctx.miterLimit = 2;
+
+                // 1. KM (Com contorno para máxima leitura)
+                ctx.font = `black ${fontSizeKm}px Arial Black, Gadget, sans-serif`;
+                // Sombra/Contorno
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 12;
+                ctx.strokeText("KM " + items[i].km, 80, can.height - 100);
+                // Preenchimento
+                ctx.fillStyle = "#ffcc00";
+                ctx.fillText("KM " + items[i].km, 80, can.height - 100);
+
+                // 2. DATA/HORA
+                ctx.font = `bold ${fontSizeTs}px Arial`;
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 6;
+                ctx.strokeText(items[i].ts, 80, can.height - 50);
+                ctx.fillStyle = "#ffffff";
+                ctx.fillText(items[i].ts, 80, can.height - 50);
+
+                doc.addImage(can.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
                 r();
             };
             img.src = items[i].raw;
         });
     }
 
-    const nome = `Relatorio_Km_${kmI}_ao_Km_${kmF}_Data_${dataStr}.pdf`;
+    const nome = `INSPECAO_Km_${kmI}_ao_${kmF}_DATA_${dataStr}.pdf`;
     try {
         const f = await hDir.getFileHandle(nome, {create:true});
         const s = await f.createWritable();
         await s.write(doc.output('blob')); await s.close();
-    } catch(e) {}
+    } catch(e) { console.error("Erro ao salvar PDF", e); }
 }
-
-async function loadCSV() {
-    try {
-        const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ik = h.indexOf('km'), ilt = h.findIndex(x=>x.includes('lat')), iln = h.findIndex(x=>x.includes('lon'));
-        kmDB = rows.map(r => {
-            const c = r.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
-        }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
-}
-
-function initG() { 
-    navigator.geolocation.watchPosition(p => {
-        if(!kmDB.length) return;
-        let n = null, dM = Infinity;
-        for(const pt of kmDB) {
-            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if(d < dM) { dM = d; n = pt; }
-        }
-        if(n) document.getElementById('km-txt').innerText = "Km " + n.km;
-    }, null, {enableHighAccuracy:true});
-}
-</script>
-</body>
-</html>
