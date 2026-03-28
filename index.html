@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO - DATA & KM</title>
+    <title>INSPEÇÃO PRO - AUDIO FLASH</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; --glass: rgba(10, 10, 10, 0.96); }
@@ -43,7 +43,7 @@
         }
         #km-hud h1 { font-size: 1.7rem; font-weight: 800; color: #fff; letter-spacing: -1px; }
 
-        /* INDICADOR REFEITO: PULSAÇÃO ON/OFF */
+        /* INDICADOR PULSANTE */
         #rec-tag { 
             position: absolute; top: 25px; right: 25px; 
             display: flex; align-items: center; gap: 8px; 
@@ -104,6 +104,7 @@
     <div class="field"><label>Câmera do dispositivo</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
     <div class="field"><label>Tempo da foto (Milissegundos)</label><input type="number" id="cfg-int" value="200"></div>
     <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50"></div>
+    <div class="field"><label>Volume do Click</label><input type="range" id="cfg-vol" min="0" max="1" step="0.1" value="0.3"></div>
 </div>
 
 <div id="app-shell">
@@ -128,9 +129,35 @@
 let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, uiTimer;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
+// Gerador de Som Sintético de Obturador (Flash)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playShutterSound() {
+    const vol = parseFloat(document.getElementById('cfg-vol').value);
+    if(vol <= 0) return;
+    
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+
+    gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.1);
+}
+
 async function acceptSafety() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        // Ativa o contexto de áudio após interação do usuário
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
         document.getElementById('safety-gate').style.opacity = '0';
         setTimeout(() => {
             document.getElementById('safety-gate').remove();
@@ -194,6 +221,7 @@ function loop() {
     if(!rec) return;
     if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
         ctx.drawImage(vid, 0, 0, can.width, can.height);
+        playShutterSound(); // Dispara o som a cada foto
         buffer.push({ 
             raw: can.toDataURL('image/jpeg', 0.45), 
             km: document.getElementById('km-txt').innerText.replace("Km ", ""), 
@@ -209,12 +237,8 @@ async function savePDF() {
     if(!buffer.length || !hDir) return;
     const items = [...buffer]; 
     buffer = [];
-    
-    // Captura o KM do início e final do lote
     const kmI = items.km.replace(/\+/g, '_');
     const kmF = items[items.length - 1].km.replace(/\+/g, '_');
-    
-    // Gera a data atual para o nome do arquivo
     const d = new Date();
     const dataStr = d.getDate().toString().padStart(2, '0') + '_' + (d.getMonth() + 1).toString().padStart(2, '0') + '_' + d.getFullYear();
     
@@ -242,7 +266,6 @@ async function savePDF() {
         });
     }
 
-    // Nome Inteligente: Relatorio_Km_116_200_ao_Km_116_800_Data_27_03_2026
     const nome = `Relatorio_Km_${kmI}_ao_Km_${kmF}_Data_${dataStr}.pdf`;
     try {
         const f = await hDir.getFileHandle(nome, {create:true});
