@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>SISTEMA DE INSPEÇÃO VEICULAR</title>
+    <title>INSPEÇÃO PRO - PROTOCOLO DE SEGURANÇA</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #d00; --glass: rgba(10, 10, 10, 0.96); }
@@ -30,24 +30,31 @@
             font-weight: 800; border-radius: 6px; cursor: pointer; text-transform: uppercase; 
             font-size: 13px; width: 100%; transition: 0.3s;
         }
-        .btn-aware:active { transform: scale(0.98); background: #e6b800; }
 
-        /* INTERFACE PRINCIPAL */
+        /* INTERFACE PRINCIPAL (SISTEMA QUE FUNCIONAVA 100%) */
         #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 0.8s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        #km-hud { position: absolute; top: 25px; left: 25px; background: var(--placa-verde); padding: 8px 18px; border: 2px solid #fff; border-radius: 5px; z-index: 10; pointer-events: none; }
-        #km-hud h1 { font-size: 1.7rem; font-weight: 800; color: #fff; }
+        /* PLACA DE KM ESTILO RODOVIA */
+        #km-hud { 
+            position: absolute; top: 25px; left: 25px; 
+            background: var(--placa-verde); padding: 8px 18px; 
+            border: 2px solid #fff; border-radius: 5px; z-index: 10; pointer-events: none; 
+        }
+        #km-hud h1 { font-size: 1.7rem; font-weight: 800; color: #fff; letter-spacing: -1px; }
 
         #rec-tag { position: absolute; top: 30px; right: 30px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; }
         .dot { width: 6px; height: 6px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
+        /* CONTROLES COM AUTO-HIDE */
         #ui-controls { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; transition: 0.6s; z-index: 100; }
         .ui-hidden { opacity: 0; bottom: 15px; pointer-events: none; }
+        
         .btn-ui { border: none; border-radius: 4px; font-weight: 800; cursor: pointer; text-transform: uppercase; padding: 18px 45px; font-size: 11px; background: var(--accent); color: #000; }
         #gear-btn { width: 48px; height: 48px; border-radius: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; }
 
+        /* PAINEL LATERAL */
         #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 2000; padding: 60px 25px; transition: 0.5s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
         .field { margin-bottom: 25px; }
@@ -62,15 +69,13 @@
 <div id="safety-gate">
     <div class="alert-box">
         <h2>Protocolo de Inspeção Segura</h2>
-        
         <div class="checklist">
-            <div class="item"><b>1.</b> Configuração Estacionária: Realize todos os ajustes de câmera e sistema apenas com o veículo parado.</div>
+            <div class="item"><b>1.</b> Configuração Estacionária: Realize todos os ajustes de sistema apenas com o veículo parado.</div>
             <div class="item"><b>2.</b> Mãos Livres: O celular deve estar obrigatoriamente acoplado ao suporte; não manuseie em movimento.</div>
-            <div class="item"><b>3.</b> Foco na Via: O sistema é totalmente autônomo. Mantenha 100% da sua atenção na condução e no trânsito.</div>
+            <div class="item"><b>3.</b> Foco na Via: O sistema é autônomo. Mantenha 100% da sua atenção na condução e no trânsito.</div>
             <div class="item"><b>4.</b> Intervenção Técnica: Caso precise ajustar qualquer parâmetro, estacione em local seguro antes de tocar na tela.</div>
             <div class="item"><b>5.</b> Finalização Segura: Encerre o relatório e salve os arquivos somente após a imobilização total da viatura.</div>
         </div>
-
         <button class="btn-aware" onclick="acceptSafety()">Estou de acordo e ciente</button>
     </div>
 </div>
@@ -112,7 +117,7 @@ async function acceptSafety() {
             if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
             wakeUI();
         }, 600);
-    } catch(e) { alert("A seleção da pasta de destino é obrigatória para prosseguir."); }
+    } catch(e) { alert("Selecione uma pasta para salvar os relatórios."); }
 }
 
 function wakeUI() {
@@ -207,6 +212,7 @@ async function savePDF() {
         });
     }
 
+    // Nomenclatura conforme solicitado: Relatorio_Km_[INICIAL]_Km_[FINAL]
     const nome = `Relatorio_Km_${kmI}_Km_${kmF}_${Date.now()}.pdf`;
     try {
         const f = await hDir.getFileHandle(nome, {create:true});
@@ -226,4 +232,22 @@ async function loadCSV() {
             const c = r.split(';');
             return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    }
+    } catch(e) {}
+}
+
+function initG() { 
+    navigator.geolocation.watchPosition(p => {
+        if(!kmDB.length) return;
+        let n = null, dM = Infinity;
+        for(const pt of kmDB) {
+            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
+            if(d < dM) { dM = d; n = pt; }
+        }
+        if(n) document.getElementById('km-txt').innerText = "Km " + n.km;
+    }, null, {enableHighAccuracy:true});
+}
+
+window.onload = () => { loadCSV(); initG(); };
+</script>
+</body>
+</html>
