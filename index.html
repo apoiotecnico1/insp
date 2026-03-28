@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO - SMART NAMING</title>
+    <title>INSPEÇÃO PRO - DATA & KM</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; --glass: rgba(10, 10, 10, 0.96); }
@@ -43,7 +43,7 @@
         }
         #km-hud h1 { font-size: 1.7rem; font-weight: 800; color: #fff; letter-spacing: -1px; }
 
-        /* INDICADOR REFEITO */
+        /* INDICADOR REFEITO: PULSAÇÃO ON/OFF */
         #rec-tag { 
             position: absolute; top: 25px; right: 25px; 
             display: flex; align-items: center; gap: 8px; 
@@ -210,9 +210,13 @@ async function savePDF() {
     const items = [...buffer]; 
     buffer = [];
     
-    // Captura o KM do início do lote e do final do lote (Ex: 116+200 ao 116+800)
+    // Captura o KM do início e final do lote
     const kmI = items.km.replace(/\+/g, '_');
     const kmF = items[items.length - 1].km.replace(/\+/g, '_');
+    
+    // Gera a data atual para o nome do arquivo
+    const d = new Date();
+    const dataStr = d.getDate().toString().padStart(2, '0') + '_' + (d.getMonth() + 1).toString().padStart(2, '0') + '_' + d.getFullYear();
     
     const isPortrait = can.width < can.height;
     const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
@@ -238,8 +242,8 @@ async function savePDF() {
         });
     }
 
-    // Nome Inteligente: Relatorio_Km_116_200_ao_Km_116_800
-    const nome = `Relatorio_Km_${kmI}_ao_Km_${kmF}.pdf`;
+    // Nome Inteligente: Relatorio_Km_116_200_ao_Km_116_800_Data_27_03_2026
+    const nome = `Relatorio_Km_${kmI}_ao_Km_${kmF}_Data_${dataStr}.pdf`;
     try {
         const f = await hDir.getFileHandle(nome, {create:true});
         const s = await f.createWritable();
@@ -253,4 +257,27 @@ async function loadCSV() {
         const t = await r.text();
         const rows = t.split('\n').filter(l => l.includes(';'));
         const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ik = h.indexOf('km'), ilt = h.findIndex(x=>x.includes('lat')), iln = h.findIndex(x=>x.
+        const ik = h.indexOf('km'), ilt = h.findIndex(x=>x.includes('lat')), iln = h.findIndex(x=>x.includes('lon'));
+        kmDB = rows.map(r => {
+            const c = r.split(';');
+            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
+        }).filter(d => !isNaN(d.lt));
+    } catch(e) {}
+}
+
+function initG() { 
+    navigator.geolocation.watchPosition(p => {
+        if(!kmDB.length) return;
+        let n = null, dM = Infinity;
+        for(const pt of kmDB) {
+            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
+            if(d < dM) { dM = d; n = pt; }
+        }
+        if(n) document.getElementById('km-txt').innerText = "Km " + n.km;
+    }, null, {enableHighAccuracy:true});
+}
+
+window.onload = () => { loadCSV(); initG(); };
+</script>
+</body>
+</html>
