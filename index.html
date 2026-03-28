@@ -3,154 +3,88 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>GENESIS - INSPEÇÃO FOTOGRÁFICA</title>
+    <title>INSPEÇÃO FOTOGRÁFICA V17</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { 
-            --gold: #ffcc00; 
-            --emerald: #00ff88;
-            --void: #050505;
-            --glass-bg: rgba(10, 10, 10, 0.75);
-            --border-glow: rgba(255, 204, 0, 0.15);
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; cursor: none !important; }
-        body { background: #000; color: #fff; font-family: 'Inter', -apple-system, sans-serif; overflow: hidden; height: 100vh; }
+        :root { --accent: #ffcc00; --safety: #056b3c; --glass: rgba(5, 5, 5, 0.9); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* SPLASH - ARQUITETURA CINEMATOGRÁFICA */
-        #splash { 
-            position: fixed; inset: 0; background: radial-gradient(circle at center, #111 0%, #000 100%); 
-            z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: 1.8s cubic-bezier(0.85, 0, 0.15, 1);
-        }
-        .nebula { position: absolute; width: 150%; height: 150%; background: radial-gradient(circle, rgba(255,204,0,0.03) 0%, transparent 50%); animation: drift 30s infinite alternate; }
-        @keyframes drift { from { transform: translate(-10%, -10%); } to { transform: translate(10%, 10%); } }
+        /* Splash */
+        #splash { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.8s; }
+        .title-main { font-size: 28px; font-weight: 900; letter-spacing: 5px; text-transform: uppercase; }
+        .title-main b { color: var(--accent); }
+        .orbe { width: 50px; height: 50px; border: 1px solid var(--accent); border-radius: 50%; margin-top: 30px; display: flex; align-items: center; justify-content: center; color: var(--accent); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.4; } 100% { opacity: 1; transform: scale(1.1); } }
 
-        .title-container { text-align: center; z-index: 2; }
-        .title-top { font-size: 11px; letter-spacing: 18px; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 15px; }
-        .title-main { font-size: 42px; font-weight: 900; letter-spacing: -1px; background: linear-gradient(to bottom, #fff, #666); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        /* Interface */
+        #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        #km-hud { position: absolute; top: 30px; left: 30px; background: var(--safety); padding: 15px 35px; border-radius: 4px; border-left: 10px solid #fff; z-index: 10; box-shadow: 0 20px 50px #000; }
+        #km-hud h1 { font-size: 3rem; font-weight: 900; }
         
-        .genesis-trigger { 
-            margin-top: 60px; width: 80px; height: 80px; border: 1px solid var(--border-glow); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; position: relative;
-            background: rgba(255,255,255,0.02); transition: 0.5s;
-        }
-        .genesis-trigger:hover { border-color: var(--gold); box-shadow: 0 0 40px var(--border-glow); }
-        .genesis-trigger span { font-size: 20px; color: var(--gold); }
+        #gear-btn { position: absolute; top: 30px; right: 30px; width: 50px; height: 50px; background: var(--glass); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #555; cursor: pointer; border: 1px solid #222; z-index: 20; }
 
-        /* INTERFACE DE OPERAÇÃO - DESIGN UNIVERSAL */
-        #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 2s; }
-        #cam-layer { flex: 1; position: relative; overflow: hidden; }
-        video { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.05) brightness(1.05); }
+        #action-bar { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 40px; width: 92%; max-width: 500px; background: var(--glass); padding: 15px 40px; border-radius: 80px; backdrop-filter: blur(20px); border: 1px solid #222; z-index: 100; justify-content: space-between; }
+        .stat-group b { font-size: 1.3rem; color: #fff; display: block; }
+        .stat-group small { font-size: 9px; color: var(--accent); text-transform: uppercase; font-weight: bold; }
+        .btn-main { border: none; border-radius: 40px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px 45px; font-size: 13px; background: var(--accent); color: #000; }
 
-        /* ILHA DE COMANDO (SAP FIORI & APPLE INSPIRED) */
-        #km-card { 
-            position: absolute; top: 40px; left: 40px; 
-            background: var(--glass-bg); backdrop-filter: blur(25px);
-            padding: 20px 45px; border-radius: 4px;
-            border-left: 12px solid var(--gold);
-            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
-            z-index: 100;
-        }
-        #km-card h1 { font-size: 3.5rem; font-weight: 900; letter-spacing: -2px; }
-        #km-card small { font-size: 11px; letter-spacing: 5px; color: var(--gold); text-transform: uppercase; }
-
-        #action-bar { 
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
-            display: flex; align-items: center; gap: 50px;
-            background: var(--glass-bg); backdrop-filter: blur(30px);
-            padding: 20px 50px; border-radius: 100px;
-            border: 1px solid rgba(255,255,255,0.08);
-            z-index: 100; width: 95%; max-width: 650px;
-        }
-        .data-point { text-align: left; }
-        .data-point span { font-size: 10px; color: rgba(255,255,255,0.3); text-transform: uppercase; display: block; letter-spacing: 2px; }
-        .data-point b { font-size: 1.4rem; color: #fff; font-weight: 600; }
-
-        .btn-genesis { 
-            background: var(--gold); color: #000; border: none;
-            padding: 20px 60px; border-radius: 100px;
-            font-weight: 900; text-transform: uppercase; letter-spacing: 2px;
-            font-size: 13px; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .btn-genesis:active { transform: scale(0.92); }
-        #btn-stop { background: #ff3b30; color: #fff; display: none; }
-
-        /* INDICADOR DE CAPTURA (VISUAL FEEDBACK) */
-        #flash-overlay { position: fixed; inset: 0; border: 0px solid var(--gold); pointer-events: none; z-index: 200; transition: 0.1s; }
-
-        /* CONFIGURAÇÕES MINIMALISTAS */
-        #settings { 
-            position: fixed; right: -400px; top: 0; width: 380px; height: 100%; 
-            background: rgba(5,5,5,0.98); z-index: 500; transition: 0.7s cubic-bezier(0.19, 1, 0.22, 1);
-            padding: 80px 50px; border-left: 1px solid rgba(255,255,255,0.05);
-        }
+        /* Ajustes */
+        #settings { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #080808; z-index: 500; transition: 0.5s; padding: 60px 30px; border-left: 1px solid var(--accent); }
         #settings.open { right: 0; }
-        #gear { position: absolute; top: 40px; right: 40px; color: #333; z-index: 100; transition: 0.3s; }
-        #gear:hover { color: var(--gold); }
-
-        .field { margin-bottom: 40px; }
-        .field label { font-size: 10px; color: var(--gold); letter-spacing: 3px; font-weight: bold; margin-bottom: 15px; display: block; }
-        select, input { width: 100%; background: #000; border: 1px solid #222; color: #fff; padding: 18px; border-radius: 8px; font-size: 14px; }
+        .close-x { position: absolute; top: 20px; right: 20px; font-size: 28px; color: #444; cursor: pointer; line-height: 1; }
+        
+        .field { margin-bottom: 30px; }
+        .field label { font-size: 10px; color: var(--accent); margin-bottom: 8px; font-weight: bold; display: block; text-transform: uppercase; }
+        select, input { width: 100%; background: #111; border: 1px solid #222; color: #fff; padding: 15px; border-radius: 8px; font-size: 14px; }
 
         canvas { display: none; }
-        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #000; padding: 30px 60px; border: 1px solid var(--gold); z-index: 2000; display: none; font-size: 12px; letter-spacing: 8px; font-weight: 200; }
     </style>
 </head>
 <body onclick="launch()">
 
 <div id="splash">
-    <div class="nebula"></div>
-    <div class="title-container">
-        <div class="title-top">Inspecção Técnica</div>
-        <div class="title-main">GENESIS</div>
-    </div>
-    <div class="genesis-trigger"><span>✦</span></div>
+    <div class="title-main">INSPEÇÃO <b>FOTOGRÁFICA</b></div>
+    <div class="orbe">✦</div>
 </div>
 
-<div id="flash-overlay"></div>
-<div id="toast">ESTABELECENDO CANAL DE DADOS</div>
-
 <div id="settings">
-    <div onclick="toggleSet()" style="color:#222; cursor:pointer; margin-bottom:60px; font-size:10px; letter-spacing:4px;">[ CLOSE_MODULE ]</div>
-    <div class="field"><label>SISTEMA ÓPTICO</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>FREQUÊNCIA (HZ)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="field"><label>CAPACIDADE LOTE</label><input type="number" id="cfg-lote" value="200"></div>
+    <div class="close-x" onclick="toggleSet()">×</div>
+    <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
+    <div class="field"><label>Fotos/Lote</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
-    <div id="cam-layer">
-        <video id="vid" autoplay playsinline muted></video>
-        <div id="km-card">
-            <small>Localização SNV</small>
-            <h1 id="km-txt">Km ---+---</h1>
-        </div>
-        <div id="gear" onclick="toggleSet()">⚙️</div>
-
-        <div id="action-bar">
-            <div class="data-point"><span>Batch</span><b id="stat-batch">000</b></div>
-            <button id="btn-action" class="btn-genesis">Iniciar</button>
-            <button id="btn-stop" class="btn-genesis">Finalizar</button>
-            <div class="data-point"><span>Total</span><b id="stat-total">000</b></div>
-        </div>
+    <video id="vid" autoplay playsinline muted></video>
+    <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
+    <div id="gear-btn" onclick="toggleSet()">⚙️</div>
+    <div id="action-bar">
+        <div class="stat-group"><small>Lote</small><b id="stat-batch">0</b></div>
+        <button id="btn-action" class="btn-main" onclick="startRec()">Iniciar</button>
+        <button id="btn-stop" class="btn-main" style="display:none; background:#d00; color:#fff;" onclick="stopRec()">Concluir</button>
+        <div class="stat-group"><small>Geral</small><b id="stat-total">0</b></div>
     </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB = [], gps = null, rec = false, buffer = [], total = 0, batchIdx = 0, hDir = null, currentStream = null;
-const vid = document.getElementById('vid'), can = document.getElementById('c'), ctx = can.getContext('2d');
+let kmDB=[], gps=null, rec=false, buffer=[], total=0, batchIdx=0, hDir=null, currentStream=null;
+const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
 async function launch() {
     if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
-    const splash = document.getElementById('splash');
-    if(splash) {
-        splash.style.opacity = '0'; splash.style.transform = 'scale(1.1)';
-        setTimeout(() => {
-            splash.remove();
-            const shell = document.getElementById('app-shell');
-            shell.style.visibility = 'visible'; shell.style.opacity = '1';
-        }, 1200);
+    const s = document.getElementById('splash'); 
+    if(s) { 
+        s.style.opacity='0'; 
+        setTimeout(()=>{
+            s.remove(); 
+            document.getElementById('app-shell').style.visibility='visible'; 
+            document.getElementById('app-shell').style.opacity='1';
+        }, 800); 
     }
 }
 
@@ -158,7 +92,7 @@ window.onload = () => { loadCSV(); initG(); listCams(); };
 
 async function listCams() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         stream.getTracks().forEach(t => t.stop());
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === 'videoinput');
@@ -166,22 +100,27 @@ async function listCams() {
         sel.innerHTML = "";
         videoDevices.forEach((d, i) => {
             const opt = document.createElement('option');
-            opt.value = d.deviceId; opt.text = d.label || `OPTIC_SENSOR_${i + 1}`;
+            opt.value = d.deviceId; opt.text = `Lente ${i + 1}`;
             sel.appendChild(opt);
         });
-        if(videoDevices.length > 0) initC(videoDevices.deviceId);
+        // Inicia automaticamente com a câmera traseira se disponível
+        const backCam = videoDevices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('traseira')) || videoDevices;
+        if(backCam) {
+            sel.value = backCam.deviceId;
+            initC(backCam.deviceId);
+        }
     } catch(e) {}
 }
 
 async function initC(id) {
-    if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
     const constraints = { video: { deviceId: id ? { exact: id } : undefined, width: { ideal: 1920 }, height: { ideal: 1080 } } };
     try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         currentStream = stream; vid.srcObject = stream;
         vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; vid.play(); };
     } catch (err) {
-        const fallback = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id } });
+        const fallback = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         currentStream = fallback; vid.srcObject = fallback;
     }
 }
@@ -216,24 +155,20 @@ function drawS(m) {
     const w = can.width, h = can.height;
     ctx.save();
     const barH = h * 0.16;
-    const grd = ctx.createLinearGradient(0, h - barH, 0, h);
-    grd.addColorStop(0, "transparent"); grd.addColorStop(1, "rgba(0,0,0,0.95)");
-    ctx.fillStyle = grd; ctx.fillRect(0, h - barH, w, barH);
+    const grd = ctx.createLinearGradient(0, h-barH, 0, h);
+    grd.addColorStop(0, "transparent"); grd.addColorStop(1, "rgba(0,0,0,0.9)");
+    ctx.fillStyle = grd; ctx.fillRect(0, h-barH, w, barH);
     ctx.lineJoin = "round"; ctx.textAlign = "left";
-    
-    // KM DESIGN - ALTA PRECISÃO
     const fK = barH * 0.45;
     ctx.font = `900 ${fK}px Inter, sans-serif`;
     ctx.lineWidth = 14; ctx.strokeStyle = "#000";
-    ctx.strokeText("Km " + m.km, 60, h - (barH * 0.55));
-    ctx.fillStyle = "#fff"; ctx.fillText("Km " + m.km, 60, h - (barH * 0.55));
-    
-    // TIMESTAMP - DESIGN THIN
-    const fD = barH * 0.20;
-    ctx.font = `300 ${fD}px Inter, sans-serif`;
+    ctx.strokeText("Km " + m.km, 60, h-(barH*0.55));
+    ctx.fillStyle = "#fff"; ctx.fillText("Km " + m.km, 60, h-(barH*0.55));
+    const fD = barH * 0.22;
+    ctx.font = `500 ${fD}px Inter, sans-serif`;
     ctx.lineWidth = 8; ctx.strokeStyle = "#000";
-    ctx.strokeText(m.ts, 60, h - (barH * 0.22));
-    ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.fillText(m.ts, 60, h - (barH * 0.22));
+    ctx.strokeText(m.ts, 60, h-(barH*0.2));
+    ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillText(m.ts, 60, h-(barH*0.2));
     ctx.restore();
 }
 
@@ -256,7 +191,7 @@ async function save() {
             img.src = items[i].raw;
         });
     }
-    const f = await hDir.getFileHandle(`GENESIS_LOTE_${batchIdx}.pdf`, {create:true});
+    const f = await hDir.getFileHandle(`LOTE_${batchIdx}.pdf`, {create:true});
     const s = await f.createWritable();
     await s.write(doc.output('blob')); await s.close();
 }
@@ -264,39 +199,31 @@ async function save() {
 function loop() {
     if(!rec) return;
     if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
-        // Flash visual de captura
-        const flash = document.getElementById('flash-overlay');
-        flash.style.borderWidth = '4px';
-        setTimeout(() => flash.style.borderWidth = '0px', 50);
-
         ctx.drawImage(vid, 0, 0, can.width, can.height);
-        buffer.push({ 
-            raw: can.toDataURL('image/jpeg', 0.4), 
-            km: document.getElementById('km-txt').innerText.replace("Km ", ""), 
-            ts: new Date().toLocaleString('pt-BR').toUpperCase() 
-        });
+        buffer.push({ raw: can.toDataURL('image/jpeg', 0.45), km: document.getElementById('km-txt').innerText.replace("Km ", ""), ts: new Date().toLocaleString('pt-BR').toUpperCase() });
         total++;
-        document.getElementById('stat-total').innerText = total.toString().padStart(3, '0');
-        document.getElementById('stat-batch').innerText = buffer.length.toString().padStart(3, '0');
-        if(buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 200)) save();
+        document.getElementById('stat-total').innerText = total;
+        document.getElementById('stat-batch').innerText = buffer.length;
+        if(buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 50)) save();
     }
     setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
-document.getElementById('btn-action').onclick = async () => {
-    const t = document.getElementById('toast');
-    t.style.display = 'block';
-    setTimeout(async () => {
-        try {
-            hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-            t.style.display = 'none'; rec = true; loop();
-            document.getElementById('btn-action').style.display = 'none';
-            document.getElementById('btn-stop').style.display = 'inline-block';
-        } catch(e) { t.style.display = 'none'; }
-    }, 1000);
-};
+async function startRec() {
+    try {
+        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        rec = true; loop();
+        document.getElementById('btn-action').style.display = 'none';
+        document.getElementById('btn-stop').style.display = 'inline-block';
+    } catch(e) {}
+}
 
-document.getElementById('btn-stop').onclick = () => { rec = false; save(); document.getElementById('btn-action').style.display = 'inline-block'; document.getElementById('btn-stop').style.display = 'none'; };
+function stopRec() {
+    rec = false; save();
+    document.getElementById('btn-action').style.display = 'inline-block';
+    document.getElementById('btn-stop').style.display = 'none';
+}
+
 function toggleSet() { document.getElementById('settings').classList.toggle('open'); }
 function initG() { navigator.geolocation.watchPosition(p => { gps = { lat: p.coords.latitude, lon: p.coords.longitude }; updateKM(); }, null, {enableHighAccuracy:true}); }
 </script>
