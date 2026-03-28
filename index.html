@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO - REFINEMENT</title>
+    <title>INSPEÇÃO PRO - SMART NAMING</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; --glass: rgba(10, 10, 10, 0.96); }
@@ -43,7 +43,7 @@
         }
         #km-hud h1 { font-size: 1.7rem; font-weight: 800; color: #fff; letter-spacing: -1px; }
 
-        /* NOVO INDICADOR REFINADO */
+        /* INDICADOR REFEITO */
         #rec-tag { 
             position: absolute; top: 25px; right: 25px; 
             display: flex; align-items: center; gap: 8px; 
@@ -80,15 +80,6 @@
         .field label { font-size: 11px; color: #777; display: block; margin-bottom: 8px; }
         select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 4px; font-size: 13px; }
 
-        /* ÍCONE DE FECHAR (SAIR FULLSCREEN) */
-        #close-fullscreen {
-            position: absolute; bottom: 25px; right: 25px;
-            width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
-            color: rgba(255,255,255,0.3); font-size: 24px; cursor: pointer; z-index: 10;
-            transition: 0.3s; pointer-events: auto;
-        }
-        #close-fullscreen:hover { color: var(--accent); }
-
         canvas { display: none; }
     </style>
 </head>
@@ -124,8 +115,6 @@
         <div class="dot"></div>
     </div>
 
-    <div id="close-fullscreen" onclick="exitFullscreen()">×</div>
-
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
         <button id="btn-start" class="btn-ui" onclick="initCapture()">Iniciar Inspeção</button>
@@ -156,23 +145,8 @@ async function acceptSafety() {
 
 function wakeUI() {
     document.getElementById('ui-controls').classList.remove('ui-hidden');
-    document.getElementById('close-fullscreen').style.opacity = '1';
     clearTimeout(uiTimer);
-    if(rec) {
-        uiTimer = setTimeout(() => {
-            document.getElementById('ui-controls').classList.add('ui-hidden');
-            document.getElementById('close-fullscreen').style.opacity = '0.3'; // Fica semi-transparente
-        }, 4000);
-    }
-}
-
-function exitFullscreen() {
-    if (document.exitFullscreen) {
-        document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-    }
-    // Ao sair do fullscreen, o navegador mostra os menus do Android automaticamente.
+    if(rec) uiTimer = setTimeout(() => document.getElementById('ui-controls').classList.add('ui-hidden'), 4000);
 }
 
 async function listCams() {
@@ -233,9 +207,12 @@ function loop() {
 
 async function savePDF() {
     if(!buffer.length || !hDir) return;
-    const items = [...buffer]; buffer = [];
-    const kmI = items.km;
-    const kmF = items[items.length - 1].km;
+    const items = [...buffer]; 
+    buffer = [];
+    
+    // Captura o KM do início do lote e do final do lote (Ex: 116+200 ao 116+800)
+    const kmI = items.km.replace(/\+/g, '_');
+    const kmF = items[items.length - 1].km.replace(/\+/g, '_');
     
     const isPortrait = can.width < can.height;
     const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
@@ -261,7 +238,8 @@ async function savePDF() {
         });
     }
 
-    const nome = `Relatorio_Km_${kmI}_Km_${kmF}_${Date.now()}.pdf`;
+    // Nome Inteligente: Relatorio_Km_116_200_ao_Km_116_800
+    const nome = `Relatorio_Km_${kmI}_ao_Km_${kmF}.pdf`;
     try {
         const f = await hDir.getFileHandle(nome, {create:true});
         const s = await f.createWritable();
@@ -275,27 +253,4 @@ async function loadCSV() {
         const t = await r.text();
         const rows = t.split('\n').filter(l => l.includes(';'));
         const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ik = h.indexOf('km'), ilt = h.findIndex(x=>x.includes('lat')), iln = h.findIndex(x=>x.includes('lon'));
-        kmDB = rows.map(r => {
-            const c = r.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
-        }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
-}
-
-function initG() { 
-    navigator.geolocation.watchPosition(p => {
-        if(!kmDB.length) return;
-        let n = null, dM = Infinity;
-        for(const pt of kmDB) {
-            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if(d < dM) { dM = d; n = pt; }
-        }
-        if(n) document.getElementById('km-txt').innerText = "Km " + n.km;
-    }, null, {enableHighAccuracy:true});
-}
-
-window.onload = () => { loadCSV(); initG(); };
-</script>
-</body>
-</html>
+        const ik = h.indexOf('km'), ilt = h.findIndex(x=>x.includes('lat')), iln = h.findIndex(x=>x.
