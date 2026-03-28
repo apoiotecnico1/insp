@@ -3,10 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO - HIGH VISIBILITY</title>
+    <title>INSPEÇÃO PRO - REFINEMENT</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; --glass: rgba(5, 5, 5, 0.96); }
+        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; --glass: rgba(10, 10, 10, 0.96); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
@@ -43,30 +43,27 @@
         }
         #km-hud h1 { font-size: 1.7rem; font-weight: 800; color: #fff; letter-spacing: -1px; }
 
-        /* NOVO INDICADOR DE ALTA VISIBILIDADE */
+        /* NOVO INDICADOR REFINADO */
         #rec-tag { 
             position: absolute; top: 25px; right: 25px; 
-            display: flex; align-items: center; gap: 12px; 
+            display: flex; align-items: center; gap: 8px; 
             z-index: 10; opacity: 0; transition: 0.5s; 
-            background: var(--glass); padding: 10px 20px; 
-            border-radius: 8px; border: 2px solid var(--accent);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             pointer-events: none;
         }
         #rec-tag span { 
-            font-size: 12px; font-weight: 700; color: #fff; 
-            text-transform: uppercase; letter-spacing: 1.5px; 
+            font-size: 11px; font-weight: 300; color: rgba(255,255,255,0.8); 
+            text-transform: uppercase; letter-spacing: 2px; 
         }
         .dot { 
-            width: 14px; height: 14px; background: var(--danger); 
-            border-radius: 50%; border: 2px solid #fff;
-            animation: pulse-red 1.5s infinite; 
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+            width: 10px; height: 10px; 
+            background: transparent;
+            border-radius: 50%; border: 1px solid #fff;
+            animation: pulse-on-off 2s infinite cubic-bezier(0.4, 0, 0.6, 1); 
         }
-        @keyframes pulse-red {
-            0% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px rgba(255, 0, 0, 0.7); }
-            50% { transform: scale(1.1); opacity: 0.8; box-shadow: 0 0 20px rgba(255, 0, 0, 0.9); }
-            100% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px rgba(255, 0, 0, 0.7); }
+        @keyframes pulse-on-off {
+            0% { background-color: transparent; box-shadow: 0 0 0px rgba(255, 0, 0, 0); }
+            50% { background-color: var(--danger); box-shadow: 0 0 10px rgba(255, 0, 0, 0.8); }
+            100% { background-color: transparent; box-shadow: 0 0 0px rgba(255, 0, 0, 0); }
         }
 
         /* CONTROLES COM AUTO-HIDE */
@@ -82,6 +79,15 @@
         .field { margin-bottom: 25px; }
         .field label { font-size: 11px; color: #777; display: block; margin-bottom: 8px; }
         select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 4px; font-size: 13px; }
+
+        /* ÍCONE DE FECHAR (SAIR FULLSCREEN) */
+        #close-fullscreen {
+            position: absolute; bottom: 25px; right: 25px;
+            width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+            color: rgba(255,255,255,0.3); font-size: 24px; cursor: pointer; z-index: 10;
+            transition: 0.3s; pointer-events: auto;
+        }
+        #close-fullscreen:hover { color: var(--accent); }
 
         canvas { display: none; }
     </style>
@@ -114,9 +120,11 @@
     <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
     
     <div id="rec-tag">
+        <span>Capturando</span>
         <div class="dot"></div>
-        <span>INSPEÇÃO EM ANDAMENTO</span>
     </div>
+
+    <div id="close-fullscreen" onclick="exitFullscreen()">×</div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
@@ -148,8 +156,23 @@ async function acceptSafety() {
 
 function wakeUI() {
     document.getElementById('ui-controls').classList.remove('ui-hidden');
+    document.getElementById('close-fullscreen').style.opacity = '1';
     clearTimeout(uiTimer);
-    if(rec) uiTimer = setTimeout(() => document.getElementById('ui-controls').classList.add('ui-hidden'), 4000);
+    if(rec) {
+        uiTimer = setTimeout(() => {
+            document.getElementById('ui-controls').classList.add('ui-hidden');
+            document.getElementById('close-fullscreen').style.opacity = '0.3'; // Fica semi-transparente
+        }, 4000);
+    }
+}
+
+function exitFullscreen() {
+    if (document.exitFullscreen) {
+        document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+    }
+    // Ao sair do fullscreen, o navegador mostra os menus do Android automaticamente.
 }
 
 async function listCams() {
