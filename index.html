@@ -3,191 +3,238 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V19 - SAFETY EDITION</title>
+    <title>INSPEÇÃO PRO V20 - GUARDIAN</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --safety: #056b3c; --danger: #d00; --glass: rgba(10, 10, 10, 0.95); }
+        :root { --accent: #ffcc00; --safety: #056b3c; --danger: #d00; --glass: rgba(10, 10, 10, 0.85); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* TELA DE SEGURANÇA (Obrigatória) */
-        #safety-screen { 
-            position: fixed; inset: 0; background: #000; z-index: 2000; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 30px; transition: 0.8s;
-        }
-        .safety-box { 
-            background: #111; border: 2px solid var(--accent); padding: 30px; 
-            border-radius: 8px; width: 100%; max-width: 450px; 
-        }
-        .safety-box h2 { color: var(--accent); font-size: 18px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
+        /* TELA DE SEGURANÇA E QUIZ */
+        #gate-screen { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px; transition: 0.6s; overflow-y: auto; }
+        .gate-box { background: #111; border: 1px solid #333; padding: 25px; border-radius: 12px; width: 100%; max-width: 480px; }
+        .gate-box h2 { color: var(--accent); font-size: 16px; margin-bottom: 20px; text-transform: uppercase; text-align: center; }
         
-        .check-item { 
-            display: flex; align-items: center; gap: 15px; margin-bottom: 20px; 
-            padding: 15px; background: #1a1a1a; border-radius: 5px; cursor: pointer;
-            transition: 0.3s; border: 1px solid transparent;
-        }
-        .check-item input { width: 22px; height: 22px; cursor: pointer; accent-color: var(--accent); }
-        .check-item span { font-size: 14px; line-height: 1.4; color: #ddd; }
-        .check-item:active { background: #222; }
+        .quiz-item { margin-bottom: 20px; background: #1a1a1a; padding: 15px; border-radius: 8px; border-left: 4px solid #333; }
+        .quiz-item.correct { border-left-color: var(--safety); }
+        .quiz-item p { font-size: 13px; margin-bottom: 10px; color: #bbb; }
+        .opt { display: block; margin: 8px 0; font-size: 12px; cursor: pointer; color: #888; }
+        .opt input { margin-right: 10px; accent-color: var(--accent); }
 
-        #btn-unlock { 
-            width: 100%; padding: 20px; border: none; border-radius: 5px; 
-            background: #333; color: #666; font-weight: 900; 
-            text-transform: uppercase; letter-spacing: 2px; cursor: not-allowed;
-            margin-top: 10px; transition: 0.5s;
-        }
-        #btn-unlock.ready { background: var(--accent); color: #000; cursor: pointer; box-shadow: 0 0 30px rgba(255,204,0,0.2); }
+        #btn-gate { width: 100%; padding: 20px; border: none; border-radius: 8px; background: #222; color: #444; font-weight: 800; text-transform: uppercase; cursor: not-allowed; transition: 0.4s; }
+        #btn-gate.ready { background: var(--accent); color: #000; cursor: pointer; }
 
-        /* Layout Principal */
+        /* HUD E CAPTURA */
         #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        #km-hud { position: absolute; top: 30px; left: 30px; background: var(--safety); padding: 15px 35px; border-radius: 4px; border-left: 10px solid #fff; z-index: 10; }
-        #km-hud h1 { font-size: 3.2rem; font-weight: 900; }
-        
-        #action-bar { 
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); 
-            display: flex; align-items: center; gap: 40px; width: 92%; max-width: 550px; 
-            background: var(--glass); padding: 15px 40px; border-radius: 80px; 
-            border: 1px solid #222; z-index: 100; justify-content: space-between;
-        }
-        .stat-group b { font-size: 1.4rem; color: #fff; display: block; }
-        .stat-group small { font-size: 9px; color: var(--accent); text-transform: uppercase; font-weight: bold; }
-        .btn-main { border: none; border-radius: 40px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px 45px; font-size: 13px; background: var(--accent); color: #000; }
+        #km-hud { position: absolute; top: 30px; left: 30px; background: var(--safety); padding: 12px 30px; border-radius: 4px; border-left: 10px solid #fff; z-index: 10; pointer-events: none; }
+        #km-hud h1 { font-size: 3rem; font-weight: 900; }
 
-        #settings { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #080808; z-index: 500; transition: 0.5s; padding: 60px 30px; border-left: 1px solid var(--accent); }
-        #settings.open { right: 0; }
-        .close-x { position: absolute; top: 20px; right: 20px; font-size: 28px; color: #444; cursor: pointer; }
+        #rec-indicator { position: absolute; top: 35px; right: 35px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; }
+        .dot { width: 8px; height: 8px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; }
+        #rec-indicator span { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; font-weight: 300; color: rgba(255,255,255,0.7); }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* BOTÕES QUE SE AJUSTAM AO CENTRO */
+        #action-bar { 
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
+            display: flex; align-items: center; gap: 30px; width: 90%; max-width: 450px; 
+            background: var(--glass); padding: 20px 40px; border-radius: 100px; 
+            backdrop-filter: blur(10px); z-index: 100; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 1; 
+        }
+        #action-bar.hidden { opacity: 0; bottom: 20px; pointer-events: none; transform: translateX(-50%) scale(0.9); }
         
-        .field { margin-bottom: 30px; }
-        .field label { font-size: 10px; color: var(--accent); margin-bottom: 8px; font-weight: bold; display: block; text-transform: uppercase; }
-        select, input { width: 100%; background: #111; border: 1px solid #222; color: #fff; padding: 15px; border-radius: 8px; }
+        .btn-main { flex: 1; border: none; border-radius: 50px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px; font-size: 12px; background: var(--accent); color: #000; }
+        #btn-stop { background: var(--danger); color: #fff; }
+
+        #settings-btn { position: absolute; bottom: 120px; right: 50px; font-size: 24px; color: #444; cursor: pointer; transition: 0.5s; }
+        #settings-btn.hidden { opacity: 0; }
 
         canvas { display: none; }
     </style>
 </head>
-<body>
+<body onclick="showControls()">
 
-<div id="safety-screen">
-    <div class="safety-box">
-        <h2>Checklist de Segurança</h2>
-        
-        <label class="check-item">
-            <input type="checkbox" class="safety-check">
-            <span>Utilizando cinto de segurança corretamente.</span>
-        </label>
-        
-        <label class="check-item">
-            <input type="checkbox" class="safety-check">
-            <span>Celular fixado no suporte (Proibido manuseio manual).</span>
-        </label>
-        
-        <label class="check-item">
-            <input type="checkbox" class="safety-check">
-            <span>Retrovisores ajustados e visibilidade limpa.</span>
-        </label>
-        
-        <label class="check-item">
-            <input type="checkbox" class="safety-check">
-            <span>Luzes do veículo (Giroflex/Faróis) operacionais.</span>
-        </label>
-        
-        <label class="check-item">
-            <input type="checkbox" class="safety-check">
-            <span>Ciente que a vida vale mais que a foto.</span>
-        </label>
-
-        <button id="btn-unlock" disabled onclick="validateSafety()">Liberar Sistema</button>
+<div id="gate-screen">
+    <div class="gate-box" id="quiz-container">
+        <h2>Consciência de Segurança</h2>
+        <div id="questions-area"></div>
+        <button id="btn-gate" disabled onclick="handleGateClick()">Validar Respostas</button>
     </div>
-    <p style="margin-top: 30px; font-size: 10px; color: #444; letter-spacing: 2px;">PROTOCOLO OPERACIONAL OBRIGATÓRIO</p>
-</div>
-
-<div id="settings">
-    <div class="close-x" onclick="toggleSet()">×</div>
-    <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="field"><label>Fotos/Lote</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
-    <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
-    <div id="gear-btn" style="position:absolute; top:30px; right:30px; color:#555; cursor:pointer; font-size:24px;" onclick="toggleSet()">⚙</div>
+    
+    <div id="km-hud">
+        <h1 id="km-txt">Km ---+---</h1>
+    </div>
+
+    <div id="rec-indicator">
+        <span>Capturando</span>
+        <div class="dot"></div>
+    </div>
+
+    <div id="settings-btn" onclick="toggleSet()">⚙</div>
+
     <div id="action-bar">
-        <div class="stat-group"><small>Lote</small><b id="stat-batch">0</b></div>
         <button id="btn-action" class="btn-main" onclick="startRec()">Iniciar</button>
-        <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopRec()">Concluir</button>
-        <div class="stat-group"><small>Geral</small><b id="stat-total">0</b></div>
+        <button id="btn-stop" class="btn-main" style="display:none;" onclick="stopRec()">Concluir</button>
     </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], gps=null, rec=false, buffer=[], total=0, batchIdx=0, hDir=null, currentStream=null;
+let kmDB=[], gps=null, rec=false, buffer=[], total=0, hDir=null, currentStream=null, hideTimer;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// Lógica de Validação de Segurança
-const checks = document.querySelectorAll('.safety-check');
-const btnUnlock = document.getElementById('btn-unlock');
+const pool = [
+    { q: "Uso de celular ao volante é permitido?", a: "Nunca, apenas no suporte e sem toque manual.", o: ["Apenas em retas", "Nunca, apenas no suporte e sem toque manual.", "Sim, com uma mão"] },
+    { q: "Qual a distância segura do veículo à frente?", a: "No mínimo 2 segundos de tempo.", o: ["Colado para ver melhor", "No mínimo 2 segundos de tempo.", "10 metros fixos"] },
+    { q: "Ao caminhar na rodovia, qual EPI é vital?", a: "Colete Refletivo.", o: ["Apenas boné", "Colete Refletivo.", "Luvas de couro"] },
+    { q: "Sua atenção principal deve estar em:", a: "Na via e no tráfego ao redor.", o: ["No Km da tela", "Na via e no tráfego ao redor.", "No rádio"] },
+    { q: "Ao notar neblina forte, você deve:", a: "Reduzir e buscar local seguro.", o: ["Aumentar a luz alta", "Reduzir e buscar local seguro.", "Parar no acostamento"] }
+];
 
-checks.forEach(check => {
-    check.addEventListener('change', () => {
-        const allChecked = Array.from(checks).every(c => c.checked);
-        if(allChecked) {
-            btnUnlock.disabled = false;
-            btnUnlock.classList.add('ready');
-        } else {
-            btnUnlock.disabled = true;
-            btnUnlock.classList.remove('ready');
-        }
-    });
-});
-
-async function validateSafety() {
-    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
-    const s = document.getElementById('safety-screen');
-    s.style.opacity = '0';
-    setTimeout(() => {
-        s.remove();
-        document.getElementById('app-shell').style.visibility = 'visible';
-        document.getElementById('app-shell').style.opacity = '1';
-        listCams(); // Inicia câmeras só após segurança
-    }, 800);
+function initQuiz() {
+    const area = document.getElementById('questions-area');
+    const shuffled = pool.sort(() => 0.5 - Math.random()).slice(0, 4);
+    area.innerHTML = shuffled.map((item, i) => `
+        <div class="quiz-item" id="q${i}">
+            <p>${item.q}</p>
+            ${item.o.map(opt => `<label class="opt"><input type="radio" name="r${i}" value="${opt}" onchange="checkQuiz()"> ${opt}</label>`).join('')}
+        </div>
+    `).join('');
+    window.currentQuestions = shuffled;
 }
 
-window.onload = () => { loadCSV(); initG(); };
+function checkQuiz() {
+    const btn = document.getElementById('btn-gate');
+    let corrects = 0;
+    window.currentQuestions.forEach((item, i) => {
+        const sel = document.querySelector(`input[name="r${i}"]:checked`);
+        if(sel && sel.value === item.a) {
+            corrects++;
+            document.getElementById(`q${i}`).classList.add('correct');
+        }
+    });
+    if(corrects === window.currentQuestions.length) {
+        btn.disabled = false;
+        btn.classList.add('ready');
+    }
+}
+
+async function handleGateClick() {
+    const btn = document.getElementById('btn-gate');
+    if(btn.innerText === "VALIDAR RESPOSTAS") {
+        btn.innerText = "DEFINIR PASTA DE DESTINO";
+        return;
+    }
+    try {
+        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('gate-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('gate-screen').remove();
+            document.getElementById('app-shell').style.visibility = 'visible';
+            document.getElementById('app-shell').style.opacity = '1';
+            listCams();
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+        }, 600);
+    } catch(e) {}
+}
+
+function showControls() {
+    document.getElementById('action-bar').classList.remove('hidden');
+    document.getElementById('settings-btn').classList.remove('hidden');
+    clearTimeout(hideTimer);
+    if(rec) {
+        hideTimer = setTimeout(() => {
+            document.getElementById('action-bar').classList.add('hidden');
+            document.getElementById('settings-btn').classList.add('hidden');
+        }, 5000);
+    }
+}
 
 async function listCams() {
-    try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(d => d.kind === 'videoinput');
-        const sel = document.getElementById('cam-select');
-        sel.innerHTML = "";
-        videoDevices.forEach((d, i) => {
-            const opt = document.createElement('option');
-            opt.value = d.deviceId; opt.text = `Lente ${i + 1}`;
-            sel.appendChild(opt);
-        });
-        const backCam = videoDevices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('traseira')) || videoDevices;
-        if(backCam) { sel.value = backCam.deviceId; initC(backCam.deviceId); }
-    } catch(e) {}
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+    const backCam = videoDevices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('traseira')) || videoDevices;
+    initC(backCam.deviceId);
 }
 
 async function initC(id) {
     if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id ? { exact: id } : undefined, width: { ideal: 1920 }, height: { ideal: 1080 } } });
-        currentStream = stream; vid.srcObject = stream;
-        vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; vid.play(); };
-    } catch (err) {
-        const fallback = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        currentStream = fallback; vid.srcObject = fallback;
-    }
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+    currentStream = stream; vid.srcObject = stream;
+    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; vid.play(); };
 }
 
-function switchCam(id) { initC(id); }
+async function startRec() {
+    rec = true;
+    document.getElementById('btn-action').style.display = 'none';
+    document.getElementById('btn-stop').style.display = 'inline-block';
+    document.getElementById('rec-indicator').style.opacity = '1';
+    showControls();
+    loop();
+}
+
+function stopRec() {
+    rec = false;
+    save();
+    document.getElementById('btn-action').style.display = 'inline-block';
+    document.getElementById('btn-stop').style.display = 'none';
+    document.getElementById('rec-indicator').style.opacity = '0';
+}
+
+function loop() {
+    if(!rec) return;
+    if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
+        ctx.drawImage(vid, 0, 0, can.width, can.height);
+        buffer.push({ 
+            raw: can.toDataURL('image/jpeg', 0.45), 
+            km: document.getElementById('km-txt').innerText.replace("Km ", ""), 
+            ts: new Date().toLocaleString('pt-BR').toUpperCase() 
+        });
+        if(buffer.length >= 50) save();
+    }
+    setTimeout(loop, 200);
+}
+
+async function save() {
+    if(!buffer.length || !hDir) return;
+    const items = [...buffer]; buffer = [];
+    const isPortrait = can.width < can.height;
+    const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    for(let i=0; i<items.length; i++){
+        if(i > 0) doc.addPage(isPortrait?'p':'l');
+        const img = new Image();
+        await new Promise(r => {
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0); drawS(items[i]);
+                doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
+                r();
+            };
+            img.src = items[i].raw;
+        });
+    }
+    const f = await hDir.getFileHandle(`LOTE_${Date.now()}.pdf`, {create:true});
+    const s = await f.createWritable();
+    await s.write(doc.output('blob')); await s.close();
+}
+
+function drawS(m) {
+    const w = can.width, h = can.height, barH = h * 0.16;
+    ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, h-barH, w, barH);
+    ctx.fillStyle = "#fff"; ctx.font = `900 ${barH * 0.4}px Inter`;
+    ctx.fillText("Km " + m.km, 60, h-(barH*0.5));
+    ctx.font = `300 ${barH * 0.18}px Inter`;
+    ctx.fillText(m.ts, 60, h-(barH*0.25));
+}
 
 async function loadCSV() {
     try {
@@ -213,81 +260,8 @@ function updateKM() {
     if(n) document.getElementById('km-txt').innerText = "Km " + n.km;
 }
 
-function drawS(m) {
-    const w = can.width, h = can.height;
-    ctx.save();
-    const barH = h * 0.16;
-    const grd = ctx.createLinearGradient(0, h-barH, 0, h);
-    grd.addColorStop(0, "transparent"); grd.addColorStop(1, "rgba(0,0,0,0.9)");
-    ctx.fillStyle = grd; ctx.fillRect(0, h-barH, w, barH);
-    ctx.textAlign = "left";
-    const fK = barH * 0.45;
-    ctx.font = `900 ${fK}px Inter, sans-serif`;
-    ctx.lineWidth = 14; ctx.strokeStyle = "#000";
-    ctx.strokeText("Km " + m.km, 60, h-(barH*0.55));
-    ctx.fillStyle = "#fff"; ctx.fillText("Km " + m.km, 60, h-(barH*0.55));
-    const fD = barH * 0.22;
-    ctx.font = `500 ${fD}px Inter, sans-serif`;
-    ctx.lineWidth = 8; ctx.strokeStyle = "#000";
-    ctx.strokeText(m.ts, 60, h-(barH*0.2));
-    ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillText(m.ts, 60, h-(barH*0.2));
-    ctx.restore();
-}
-
-async function save() {
-    if(!buffer.length || !hDir) return;
-    const items = [...buffer]; buffer = []; batchIdx++;
-    const isPortrait = can.width < can.height;
-    const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
-    const pw = doc.internal.pageSize.getWidth();
-    const ph = doc.internal.pageSize.getHeight();
-    for(let i=0; i<items.length; i++){
-        if(i > 0) doc.addPage(isPortrait?'p':'l');
-        const img = new Image();
-        await new Promise(r => {
-            img.onload = () => {
-                ctx.drawImage(img, 0, 0); drawS(items[i]);
-                doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
-                r();
-            };
-            img.src = items[i].raw;
-        });
-    }
-    const f = await hDir.getFileHandle(`LOTE_${batchIdx}.pdf`, {create:true});
-    const s = await f.createWritable();
-    await s.write(doc.output('blob')); await s.close();
-}
-
-function loop() {
-    if(!rec) return;
-    if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
-        ctx.drawImage(vid, 0, 0, can.width, can.height);
-        buffer.push({ raw: can.toDataURL('image/jpeg', 0.45), km: document.getElementById('km-txt').innerText.replace("Km ", ""), ts: new Date().toLocaleString('pt-BR').toUpperCase() });
-        total++;
-        document.getElementById('stat-total').innerText = total;
-        document.getElementById('stat-batch').innerText = buffer.length;
-        if(buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 50)) save();
-    }
-    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
-}
-
-async function startRec() {
-    try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        rec = true; loop();
-        document.getElementById('btn-action').style.display = 'none';
-        document.getElementById('btn-stop').style.display = 'inline-block';
-    } catch(e) {}
-}
-
-function stopRec() {
-    rec = false; save();
-    document.getElementById('btn-action').style.display = 'inline-block';
-    document.getElementById('btn-stop').style.display = 'none';
-}
-
-function toggleSet() { document.getElementById('settings').classList.toggle('open'); }
 function initG() { navigator.geolocation.watchPosition(p => { gps = { lat: p.coords.latitude, lon: p.coords.longitude }; updateKM(); }, null, {enableHighAccuracy:true}); }
+window.onload = () => { initQuiz(); loadCSV(); initG(); };
 </script>
 </body>
 </html>
