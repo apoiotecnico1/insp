@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO - ROGÉRIO EDITION</title>
+    <title>INSPEÇÃO PRO - DATA & KM</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; --glass: rgba(10, 10, 10, 0.96); }
@@ -66,7 +66,8 @@
         #rec-tag { 
             position: absolute; top: 25px; right: 25px; 
             display: flex; align-items: center; gap: 8px; 
-            z-index: 10; opacity: 0; transition: 0.5s; pointer-events: none;
+            z-index: 10; opacity: 0; transition: 0.5s; 
+            pointer-events: none;
         }
         #rec-tag span { font-size: 11px; font-weight: 300; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 2px; }
         .dot { 
@@ -108,11 +109,11 @@
     <div class="alert-box">
         <h2>Protocolo de Inspeção Segura</h2>
         <div class="checklist">
-            <div class="item"><b>1.</b> Configuração Estacionária: Ajustes apenas com o veículo parado.</div>
-            <div class="item"><b>2.</b> Mãos Livres: Dispositivo fixado no suporte.</div>
-            <div class="item"><b>3.</b> Foco na Via: Atenção total ao trânsito.</div>
-            <div class="item"><b>4.</b> Intervenção Técnica: Pare o veículo para operar a tela.</div>
-            <div class="item"><b>5.</b> Finalização: Salve somente após imobilização total.</div>
+            <div class="item"><b>1.</b> Configuração Estacionária: Realize todos os ajustes de sistema apenas com o veículo parado.</div>
+            <div class="item"><b>2.</b> Mãos Livres: O celular deve estar obrigatoriamente acoplado ao suporte.</div>
+            <div class="item"><b>3.</b> Foco na Via: Mantenha 100% da sua atenção na condução.</div>
+            <div class="item"><b>4.</b> Intervenção Técnica: Estacione em local seguro antes de tocar na tela.</div>
+            <div class="item"><b>5.</b> Finalização Segura: Salve os arquivos somente após imobilização total.</div>
         </div>
         <button class="btn-aware" onclick="acceptSafety()">Estou de acordo e ciente</button>
     </div>
@@ -121,8 +122,8 @@
 <div id="settings-panel">
     <div style="text-align:right; margin-bottom:20px; cursor:pointer; color:#777;" onclick="toggleSet()">FECHAR ×</div>
     <div class="field"><label>Câmera do dispositivo</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Tempo da foto (ms)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="field"><label>Fotos por Lote</label><input type="number" id="cfg-lote" value="50"></div>
+    <div class="field"><label>Tempo da foto (Milissegundos)</label><input type="number" id="cfg-int" value="200"></div>
+    <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
@@ -142,10 +143,15 @@
 let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, uiTimer;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
+// Gerenciador de Abertura
 window.onload = () => {
     const splash = document.getElementById('splash-hypnos');
     const txt = document.getElementById('splash-txt');
+    
+    // Troca de texto durante a animação
     setTimeout(() => { txt.innerText = "Inspeção Fotográfica"; }, 1500);
+    
+    // Encerra splash e mostra segurança
     setTimeout(() => {
         splash.style.opacity = '0';
         setTimeout(() => {
@@ -153,6 +159,7 @@ window.onload = () => {
             document.getElementById('safety-gate').style.display = 'flex';
         }, 800);
     }, 3500);
+
     loadCSV(); 
     initG(); 
 };
@@ -169,8 +176,10 @@ async function acceptSafety() {
             if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
             wakeUI();
         }, 600);
-    } catch(e) { alert("Selecione uma pasta."); }
+    } catch(e) { alert("Selecione uma pasta para salvar os relatórios."); }
 }
+
+// --- RESTANTE DO SEU CÓDIGO ORIGINAL INTEGRAL ---
 
 function wakeUI() {
     document.getElementById('ui-controls').classList.remove('ui-hidden');
@@ -239,9 +248,11 @@ async function savePDF() {
     const items = [...buffer]; 
     buffer = [];
     
+    // Nomenclatura Inteligente Conforme Solicitado
     const kmI = items.km.replace(/\+/g, '_');
     const kmF = items[items.length - 1].km.replace(/\+/g, '_');
-    const dataStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '_');
+    const d = new Date();
+    const dataStr = d.getDate().toString().padStart(2, '0') + '_' + (d.getMonth() + 1).toString().padStart(2, '0') + '_' + d.getFullYear();
     
     const isPortrait = can.width < can.height;
     const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
@@ -254,44 +265,20 @@ async function savePDF() {
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
-                
-                // MOLDURA TÉCNICA PROFISSIONAL
-                const borderSize = 25;
-                ctx.strokeStyle = "rgba(255, 204, 0, 0.9)";
-                ctx.lineWidth = borderSize;
-                ctx.strokeRect(0, 0, can.width, can.height);
-
-                // TEXTO IMPRESSIONANTE COM CONTORNO (SEM BARRA PRETA)
-                const fKm = can.height * 0.085; // Aumentado em 25%
-                const fTs = can.height * 0.038;
-                
-                ctx.lineJoin = "round";
-                ctx.miterLimit = 2;
-
-                // 1. KM - CONTORNO E PREENCHIMENTO
-                ctx.font = `900 ${fKm}px Arial Black, sans-serif`;
-                ctx.strokeStyle = "black";
-                ctx.lineWidth = 15;
-                ctx.strokeText("KM " + items[i].km, 80, can.height - 110);
-                ctx.fillStyle = "#ffcc00";
-                ctx.fillText("KM " + items[i].km, 80, can.height - 110);
-
-                // 2. DATA/HORA - CONTORNO E PREENCHIMENTO
-                ctx.font = `bold ${fTs}px Arial, sans-serif`;
-                ctx.strokeStyle = "black";
-                ctx.lineWidth = 8;
-                ctx.strokeText(items[i].ts, 80, can.height - 60);
-                ctx.fillStyle = "#ffffff";
-                ctx.fillText(items[i].ts, 80, can.height - 60);
-
-                doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
+                const barH = can.height * 0.16;
+                ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, can.height-barH, can.width, barH);
+                ctx.fillStyle = "#fff"; ctx.font = `bold ${barH * 0.4}px Arial`;
+                ctx.fillText("Km " + items[i].km, 60, can.height-(barH*0.5));
+                ctx.font = `${barH * 0.18}px Arial`;
+                ctx.fillText(items[i].ts, 60, can.height-(barH*0.22));
+                doc.addImage(can.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
                 r();
             };
             img.src = items[i].raw;
         });
     }
 
-    const nome = `RELATORIO_Km_${kmI}_ao_${kmF}_${dataStr}.pdf`;
+    const nome = `Relatorio_Km_${kmI}_ao_Km_${kmF}_Data_${dataStr}.pdf`;
     try {
         const f = await hDir.getFileHandle(nome, {create:true});
         const s = await f.createWritable();
