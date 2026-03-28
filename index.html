@@ -3,336 +3,329 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO - FINAL</title>
+    <title>INSPEÇÃO PRO: THE MOVIE</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; }
+        :root { --accent: #ffcc00; --placa: #007934; --danger: #ff4444; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; touch-action: manipulation; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* --- CINEMATIC SPLASH --- */
-        #splash {
-            position: fixed; inset: 0; background: #000; z-index: 9999;
+        /* --- SPLASH CINEMATOGRÁFICO E IRÔNICO --- */
+        #splash-screen {
+            position: fixed; inset: 0; background: #050505; z-index: 10000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            overflow: hidden; transition: opacity 1s ease-out;
+            transition: opacity 1s ease;
         }
 
-        /* Estrada em Perspectiva */
-        .road {
-            position: absolute; bottom: 0; width: 200px; height: 100%;
-            background: linear-gradient(to top, #222 0%, transparent 100%);
-            clip-path: polygon(45% 0%, 55% 0%, 100% 100%, 0% 100%);
-            opacity: 0; animation: fadeIn 1s forwards 0.5s;
+        .highway {
+            position: relative; width: 300px; height: 150px;
+            background: #222; transform: perspective(100px) rotateX(45deg);
+            overflow: hidden; border: 4px solid #333;
         }
-        .road-line {
-            position: absolute; left: 50%; top: 0; width: 4px; height: 100%;
-            background: repeating-linear-gradient(to top, var(--accent) 0, var(--accent) 50px, transparent 50px, transparent 100px);
-            transform: translateX(-50%);
-            animation: roadMove 1.5s linear infinite;
+        .road-marks {
+            position: absolute; width: 100%; height: 200%;
+            background: repeating-linear-gradient(to top, transparent 0, transparent 40px, #fff 40px, #fff 80px);
+            animation: moveRoad 0.8s linear infinite;
         }
+        @keyframes moveRoad { from { top: -80px; } to { top: 0; } }
 
-        /* Elementos de Captura (GPS e Câmera) */
-        .capture-icon {
-            position: absolute; font-size: 24px; opacity: 0;
-            animation: iconPop 2s ease-in-out infinite;
+        .car-emoji {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%) rotateX(-45deg);
+            font-size: 50px; filter: drop-shadow(0 0 15px var(--accent));
+            animation: shake 0.2s infinite;
         }
-        .gps { left: 20%; bottom: 30%; animation-delay: 1.5s; }
-        .cam { right: 20%; bottom: 40%; animation-delay: 2s; }
+        @keyframes shake { 0%, 100% { margin-left: 0; } 50% { margin-left: 3px; } }
 
-        /* Fusão (O Cubo/PDF) */
-        .fusion-core {
-            width: 80px; height: 80px; border: 2px solid var(--accent);
-            position: relative; transform: rotate(45deg); opacity: 0;
-            box-shadow: 0 0 20px var(--accent);
-            animation: cubeForm 2s forwards 3s;
-        }
-        .fusion-core::after { content: 'PDF'; position: absolute; transform: rotate(-45deg); inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; }
+        .loading-msg { margin-top: 40px; font-weight: bold; color: var(--accent); text-align: center; height: 30px; }
+        .joke { font-size: 10px; color: #666; margin-top: 10px; font-style: italic; }
 
-        /* Pasta de Destino */
-        .folder-final {
-            font-size: 50px; margin-top: 20px; opacity: 0;
-            animation: folderIn 1s forwards 5s;
-        }
-
-        /* Texto Final */
-        .brand-title {
-            margin-top: 30px; text-align: center; opacity: 0;
-            animation: fadeIn 1.5s forwards 6s;
-        }
-        .brand-title h1 { letter-spacing: 8px; font-weight: 200; font-size: 1.2rem; color: var(--accent); }
-
-        /* Keyframes Cinematográficos */
-        @keyframes roadMove { from { background-position: 0 0; } to { background-position: 0 300px; } }
-        @keyframes fadeIn { to { opacity: 1; } }
-        @keyframes iconPop { 
-            0% { transform: scale(0) translateY(0); opacity: 0; }
-            50% { opacity: 1; transform: scale(1.2) translateY(-50px); }
-            100% { transform: scale(0.8) translateY(-100px); opacity: 0; }
-        }
-        @keyframes cubeForm {
-            0% { transform: rotate(0) scale(0); opacity: 0; }
-            100% { transform: rotate(405deg) scale(1); opacity: 1; }
-        }
-        @keyframes folderIn { to { opacity: 1; transform: translateY(-10px); } }
-
-        /* --- INTERFACE DO APP --- */
-        #gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: none; align-items: center; justify-content: center; }
-        .btn-ready { background: var(--accent); color: #000; border: none; padding: 25px 50px; font-weight: 900; border-radius: 12px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; }
-
-        #app-main { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
+        /* --- INTERFACE PRINCIPAL --- */
+        #main-app { visibility: hidden; position: relative; width: 100vw; height: 100vh; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        #km-hud { 
+        #km-display { 
             position: absolute; top: 40px; left: 20px; 
-            background: var(--placa-verde); padding: 12px 25px; 
-            border: 2px solid #fff; border-radius: 10px; z-index: 10;
+            background: var(--placa); padding: 12px 25px; 
+            border: 3px solid #fff; border-radius: 12px; z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
-        #km-txt { font-size: 2.2rem; font-weight: 900; }
+        #km-val { font-size: 2.2rem; font-weight: 900; color: #fff; text-shadow: 2px 2px 0 #000; }
 
-        /* Overlay Flutuante */
-        #ui-layer {
+        /* OVERLAY "RAIO" (FANTASMA) */
+        #ui-overlay {
             position: absolute; inset: 0; display: flex; flex-direction: column; 
-            justify-content: space-between; padding: 50px 30px;
-            pointer-events: none; opacity: 0; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            justify-content: space-between; padding: 40px 30px;
+            pointer-events: none; opacity: 0; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        #ui-layer.visible { opacity: 1; pointer-events: auto; }
+        #ui-overlay.active { opacity: 1; pointer-events: auto; }
 
-        #status-box { align-self: flex-end; text-align: right; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .indicator { display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-weight: 900; font-size: 14px; }
-        .dot { width: 12px; height: 12px; border-radius: 50%; background: #444; }
-        .dot.active { background: var(--danger); animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,0,0,0.7); } 70% { box-shadow: 0 0 0 10px rgba(255,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(255,0,0,0); } }
+        #status-pill { 
+            align-self: flex-end; background: rgba(0,0,0,0.8); 
+            padding: 15px; border-radius: 15px; border: 1px solid #444; backdrop-filter: blur(10px);
+        }
+        .rec-indicator { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 14px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; background: #555; }
+        .dot.on { background: var(--danger); box-shadow: 0 0 15px var(--danger); animation: blink 0.8s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
 
-        #controls-row { display: flex; align-items: center; justify-content: center; gap: 30px; }
-        .btn-main { border: none; border-radius: 60px; font-weight: 900; padding: 22px 60px; background: var(--accent); color: #000; text-transform: uppercase; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        .btn-box { display: flex; align-items: center; justify-content: center; gap: 20px; }
+        .btn { 
+            border: none; border-radius: 50px; font-weight: 900; padding: 22px 50px; 
+            background: var(--accent); color: #000; text-transform: uppercase; 
+            font-size: 14px; cursor: pointer;
+        }
         #btn-stop { background: var(--danger); color: #fff; }
-        #gear-icon { background: rgba(255,255,255,0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+        #gear { background: rgba(255,255,255,0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 25px; }
 
-        #settings-side { position: fixed; right: -300px; top: 0; width: 280px; height: 100%; background: rgba(10,10,10,0.98); z-index: 2000; padding: 50px 25px; transition: 0.4s ease; border-left: 1px solid #333; }
-        #settings-side.open { right: 0; }
+        #gate { position: fixed; inset: 0; background: #000; z-index: 9000; display: none; align-items: center; justify-content: center; text-align: center; }
+        #panel { position: fixed; right: -320px; top: 0; width: 300px; height: 100%; background: #111; z-index: 11000; padding: 40px; transition: 0.4s; }
+        #panel.open { right: 0; }
         canvas { display: none; }
     </style>
 </head>
-<body onclick="triggerUI()">
+<body onclick="wakeUI()">
 
-    <div id="splash">
-        <div class="road"><div class="road-line"></div></div>
-        <div class="capture-icon gps">📍</div>
-        <div class="capture-icon cam">📸</div>
-        <div class="fusion-core"></div>
-        <div class="folder-final">📁</div>
-        <div class="brand-title">
-            <h1>INSPEÇÃO PRO</h1>
-            <p style="font-size: 10px; opacity: 0.6; margin-top: 10px; letter-spacing: 3px;">DO CAMINHO AO RELATÓRIO</p>
-        </div>
+    <div id="splash-screen">
+        <div class="highway"><div class="road-marks"></div><div class="car-emoji">🚗</div></div>
+        <div class="loading-msg" id="msg">INICIALIZANDO MOTORES...</div>
+        <div class="joke" id="joke">"Calma, o estagiário está organizando as pastas..."</div>
     </div>
 
     <div id="gate">
-        <button class="btn-ready" onclick="startApp()">Acessar Sistema</button>
+        <div>
+            <h1 style="color:var(--accent); margin-bottom:20px;">DIRETÓRIO PRONTO?</h1>
+            <button class="btn" onclick="openSys()">SELECIONAR PASTA E VOAR</button>
+        </div>
     </div>
 
-    <div id="app-main">
+    <div id="main-app">
         <video id="v" autoplay playsinline muted></video>
-        
-        <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
+        <div id="km-display"><h1 id="km-val">Km 000+000</h1></div>
 
-        <div id="ui-layer">
-            <div id="status-box">
-                <div class="indicator">
-                    <div id="status-dot" class="dot"></div>
-                    <span id="status-label">SISTEMA PRONTO</span>
+        <div id="ui-overlay">
+            <div id="status-pill">
+                <div class="rec-indicator">
+                    <div id="dot" class="dot"></div>
+                    <span id="state-txt">SISTEMA EM STANDBY</span>
                 </div>
-                <div style="font-size: 10px; margin-top: 8px; opacity: 0.8;">PDFs GERADOS: <b id="pdf-count" style="color:var(--accent)">0</b></div>
+                <div style="font-size: 10px; margin-top: 8px; color: #888;">PDFS GERADOS: <b id="count-pdf" style="color:var(--accent)">0</b></div>
             </div>
 
-            <div id="controls-row">
-                <div id="gear-icon" onclick="openMenu(event)">⚙️</div>
-                <button id="btn-start" class="btn-main" onclick="run(event)">Iniciar</button>
-                <button id="btn-stop" class="btn-main" style="display:none;" onclick="halt(event)">Finalizar</button>
+            <div class="btn-box">
+                <div id="gear" onclick="toggleSettings(event)">⚙️</div>
+                <button id="btn-start" class="btn" onclick="startCapturing(event)">Iniciar Captura</button>
+                <button id="btn-stop" class="btn" style="display:none;" onclick="stopCapturing(event)">Finalizar PDF</button>
             </div>
         </div>
     </div>
 
-    <div id="settings-side">
-        <div style="text-align:right; font-size: 20px; margin-bottom: 40px;" onclick="openMenu(event)">✕</div>
-        <label style="font-size: 11px; color: #555;">CÂMERA ATIVA</label>
-        <select id="cam-list" onchange="changeCam(this.value)" style="width:100%; padding:15px; background:#222; color:#fff; border:none; border-radius:8px; margin: 10px 0 30px 0;"></select>
-        <label style="font-size: 11px; color: #555;">FOTOS POR LOTE</label>
-        <input type="number" id="lote-val" value="50" style="width:100%; padding:15px; background:#222; color:#fff; border:none; border-radius:8px; margin-top: 10px;">
+    <div id="panel">
+        <h2 style="margin-bottom:20px;">Ajustes</h2>
+        <label style="font-size: 10px;">LIMITE DO LOTE</label>
+        <input type="number" id="lote-size" value="50" style="width:100%; padding:15px; background:#222; color:#fff; border:none; margin-bottom:20px;">
+        <label style="font-size: 10px;">CÂMERA</label>
+        <select id="cam-sel" onchange="changeCamera(this.value)" style="width:100%; padding:15px; background:#222; color:#fff; border:none;"></select>
+        <button class="btn" style="margin-top:40px; width:100%" onclick="toggleSettings()">Fechar</button>
     </div>
 
     <canvas id="c"></canvas>
 
 <script>
-let db=[], active=false, buffer=[], hDir=null, uiHold, stream=null, pdfs=0;
-const v=document.getElementById('v'), c=document.getElementById('c'), ctx=c.getContext('2d');
+let kmDB=[], isRec=false, buffer=[], folderHandle=null, uiTimer, activeStream=null, pdfCount=0;
+const messages = [
+    "CONTAMINANDO O PDF COM DADOS...",
+    "CONVENCENDO O GPS A NÃO DAR ERRO...",
+    "LIMPANDO A LENTE VIRTUAL...",
+    "SAY CHEESE! PREPARANDO AS FOTOS...",
+    "ORGANIZANDO A BAGUNÇA DO ESTAGIÁRIO..."
+];
 
-// Fluxo de Splash
+const video=document.getElementById('v'), canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+
+// --- FLUXO DE ENTRADA ---
 window.onload = () => {
+    let mIdx = 0;
+    const interval = setInterval(() => {
+        document.getElementById('msg').innerText = messages[mIdx % messages.length];
+        mIdx++;
+    }, 2000);
+
     setTimeout(() => {
-        document.getElementById('splash').style.opacity = '0';
+        clearInterval(interval);
+        document.getElementById('splash-screen').style.opacity = '0';
         setTimeout(() => {
-            document.getElementById('splash').remove();
+            document.getElementById('splash-screen').remove();
             document.getElementById('gate').style.display = 'flex';
         }, 1000);
-    }, 7500); // Duração da animação cinematográfica
-    loadData();
+    }, 10000); // 10 segundos de splash realista
+    loadCSV();
 };
 
-async function startApp() {
+async function openSys() {
     try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        folderHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
         document.getElementById('gate').remove();
-        document.getElementById('app-main').style.visibility = 'visible';
-        
-        // Fullscreen Automático
+        document.getElementById('main-app').style.visibility = 'visible';
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-        
-        setupHardware();
-        initGPS();
-        triggerUI();
-    } catch(e) { alert("Permissão de pasta necessária."); }
+        setupCams();
+        startGPS();
+        wakeUI();
+    } catch(e) { alert("Sem pasta, sem PDF. Escolha uma pasta!"); }
 }
 
-function triggerUI() {
-    const layer = document.getElementById('ui-layer');
-    layer.classList.add('visible');
-    clearTimeout(uiHold);
-    uiHold = setTimeout(() => {
-        if(!document.getElementById('settings-side').classList.contains('open')){
-            layer.classList.remove('visible');
+// --- LÓGICA DE INTERFACE "RAIO" ---
+function wakeUI() {
+    const ui = document.getElementById('ui-overlay');
+    ui.classList.add('active');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(() => {
+        if(!document.getElementById('panel').classList.contains('open')) {
+            ui.classList.remove('active');
         }
-    }, 3500);
+    }, 4000);
 }
 
-async function run(e) {
+// --- CORREÇÃO DO KM (DEFINITIVA) ---
+async function loadCSV() {
+    try {
+        const r = await fetch('SNVBR116SPRJ.csv');
+        const t = await r.text();
+        const rows = t.split('\n').filter(l => l.trim().length > 0);
+        const header = rows.toLowerCase().split(';');
+        
+        // Encontra os índices corrigindo possíveis espaços
+        const idxKm = header.findIndex(h => h.includes('km'));
+        const idxLat = header.findIndex(h => h.includes('lat'));
+        const idxLon = header.findIndex(h => h.includes('lon'));
+
+        kmDB = rows.slice(1).map(row => {
+            const cols = row.split(';');
+            return {
+                km: cols[idxKm] ? cols[idxKm].trim() : "000+000",
+                lat: parseFloat(cols[idxLat].replace(',', '.')),
+                lon: parseFloat(cols[idxLon].replace(',', '.'))
+            };
+        }).filter(d => !isNaN(d.lat));
+        console.log("Base de KM carregada:", kmDB.length);
+    } catch(e) { console.error("Erro ao ler CSV:", e); }
+}
+
+function startGPS() {
+    navigator.geolocation.watchPosition(pos => {
+        if(kmDB.length === 0) return;
+        let closest = null, minD = Infinity;
+        for(const p of kmDB) {
+            const d = Math.hypot(p.lat - pos.coords.latitude, p.lon - pos.coords.longitude);
+            if(d < minD) { minD = d; closest = p; }
+        }
+        if(closest) {
+            document.getElementById('km-val').innerText = "Km " + closest.km;
+        }
+    }, err => console.error(err), { enableHighAccuracy: true });
+}
+
+// --- CAPTURA E PDF ---
+async function startCapturing(e) {
     if(e) e.stopPropagation();
-    active = true;
+    isRec = true;
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('status-dot').classList.add('active');
-    document.getElementById('status-label').innerText = "CAPTURANDO...";
-    engine();
+    document.getElementById('dot').classList.add('on');
+    document.getElementById('state-txt').innerText = "CAPTURANDO FOTOS...";
+    captureLoop();
 }
 
-async function halt(e) {
+async function stopCapturing(e) {
     if(e) e.stopPropagation();
-    active = false;
-    document.getElementById('status-label').innerText = "SALVANDO PDF FINAL...";
-    if(buffer.length > 0) await createPDF();
+    isRec = false;
+    document.getElementById('state-txt').innerText = "GERANDO PDF FINAL...";
+    if(buffer.length > 0) await saveToPDF();
     
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('status-dot').classList.remove('active');
-    document.getElementById('status-label').innerText = "SISTEMA PRONTO";
+    document.getElementById('dot').classList.remove('on');
+    document.getElementById('state-txt').innerText = "SISTEMA EM STANDBY";
 }
 
-function engine() {
-    if(!active) return;
-    if (v.readyState === v.HAVE_ENOUGH_DATA) {
-        ctx.drawImage(v, 0, 0, c.width, c.height);
+function captureLoop() {
+    if(!isRec) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         buffer.push({ 
-            img: c.toDataURL('image/jpeg', 0.5), 
-            km: document.getElementById('km-txt').innerText.replace("Km ", ""), 
-            time: new Date().toLocaleTimeString('pt-BR') 
+            img: canvas.toDataURL('image/jpeg', 0.5), 
+            km: document.getElementById('km-val').innerText.replace("Km ", ""),
+            time: new Date().toLocaleTimeString('pt-BR')
         });
         
-        const limit = parseInt(document.getElementById('lote-val').value) || 50;
-        if(buffer.length >= limit) createPDF();
+        const max = parseInt(document.getElementById('lote-size').value) || 50;
+        if(buffer.length >= max) saveToPDF();
     }
-    setTimeout(engine, 400); 
+    setTimeout(captureLoop, 400); 
 }
 
-async function createPDF() {
+async function saveToPDF() {
     if(!buffer.length) return;
-    const stack = [...buffer]; 
+    const data = [...buffer]; 
     buffer = []; 
     
-    const k1 = stack.km.replace(/\+/g, '_');
-    const k2 = stack[stack.length - 1].km.replace(/\+/g, '_');
-    const isP = window.innerHeight > window.innerWidth;
-    const doc = new jspdf.jsPDF(isP?'p':'l', 'mm', 'a4');
-    const w = doc.internal.pageSize.getWidth();
-    const h = doc.internal.pageSize.getHeight();
+    const kStart = data.km.replace('+', '_');
+    const isPortrait = window.innerHeight > window.innerWidth;
+    const doc = new jspdf.jsPDF(isPortrait ? 'p' : 'l', 'mm', 'a4');
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
 
-    for(let i=0; i<stack.length; i++){
-        if(i > 0) doc.addPage(isP?'p':'l');
-        const imgObj = new Image();
-        await new Promise(res => {
-            imgObj.onload = () => {
-                ctx.drawImage(imgObj, 0, 0);
-                const bh = c.height * 0.15;
-                ctx.fillStyle = "rgba(0,0,0,0.85)"; 
-                ctx.fillRect(0, c.height-bh, c.width, bh);
+    for(let i=0; i < data.length; i++) {
+        if(i > 0) doc.addPage();
+        const img = new Image();
+        await new Promise(r => {
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0);
+                const bh = canvas.height * 0.15;
+                ctx.fillStyle = "rgba(0,0,0,0.8)"; 
+                ctx.fillRect(0, canvas.height-bh, canvas.width, bh);
                 ctx.fillStyle = "#fff"; 
                 ctx.font = `bold ${bh * 0.4}px Arial`;
-                ctx.fillText("Km " + stack[i].km, 50, c.height-(bh*0.45));
+                ctx.fillText("Km " + data[i].km, 50, canvas.height-(bh*0.45));
                 ctx.font = `${bh * 0.15}px Arial`;
-                ctx.fillText(stack[i].time + " | INSPEÇÃO FOTOGRÁFICA", 50, c.height-(bh*0.18));
-                doc.addImage(c.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, w, h, undefined, 'FAST');
-                res();
+                ctx.fillText(data[i].time + " | INSPEÇÃO AUTOMÁTICA", 50, canvas.height-(bh*0.15));
+                doc.addImage(canvas.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
+                r();
             };
-            imgObj.src = stack[i].img;
+            img.src = data[i].img;
         });
     }
 
     try {
-        const file = await hDir.getFileHandle(`Relatorio_KM_${k1}_${Date.now()}.pdf`, {create:true});
-        const stream = await file.createWritable();
-        await stream.write(doc.output('blob')); 
-        await stream.close();
-        pdfs++;
-        document.getElementById('pdf-count').innerText = pdfs;
-    } catch(err) {}
+        const fileHandle = await folderHandle.getFileHandle(`Inspeção_Km_${kStart}_${Date.now()}.pdf`, {create:true});
+        const writable = await fileHandle.createWritable();
+        await writable.write(doc.output('blob')); 
+        await writable.close();
+        pdfCount++;
+        document.getElementById('count-pdf').innerText = pdfCount;
+    } catch(err) { console.error("Erro ao salvar arquivo:", err); }
 }
 
-async function setupHardware() {
-    const devs = await navigator.mediaDevices.enumerateDevices();
-    const cams = devs.filter(d => d.kind === 'videoinput');
-    const list = document.getElementById('cam-list');
-    cams.forEach((cm, i) => {
-        const o = document.createElement('option');
-        o.value = cm.deviceId; o.text = cm.label || `Lente ${i+1}`;
-        list.appendChild(o);
+// --- HARDWARE ---
+async function setupCams() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+    const sel = document.getElementById('cam-sel');
+    videoDevices.forEach((d, i) => {
+        const opt = document.createElement('option');
+        opt.value = d.deviceId; opt.text = d.label || `Lente ${i+1}`;
+        sel.appendChild(opt);
     });
-    bindCam(cams[cams.length-1].deviceId);
+    changeCamera(videoDevices[videoDevices.length-1].deviceId);
 }
 
-async function bindCam(id) {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1280, height: 720 } });
-    v.srcObject = stream;
-    v.onloadedmetadata = () => { c.width = v.videoWidth; c.height = v.videoHeight; };
+async function changeCamera(id) {
+    if (activeStream) activeStream.getTracks().forEach(t => t.stop());
+    activeStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1280, height: 720 } });
+    video.srcObject = activeStream;
+    video.onloadedmetadata = () => { canvas.width = video.videoWidth; canvas.height = video.videoHeight; };
 }
 
-function openMenu(e) { if(e) e.stopPropagation(); document.getElementById('settings-side').classList.toggle('open'); }
-function changeCam(id) { bindCam(id); }
-
-async function loadData() {
-    try {
-        const r = await fetch('SNVBR116SPRJ.csv');
-        const txt = await r.text();
-        const lines = txt.split('\n').filter(l => l.includes(';'));
-        const head = lines.shift().split(';');
-        const ik = head.indexOf('km'), ilt = head.findIndex(x=>x.toLowerCase().includes('lat')), iln = head.findIndex(x=>x.toLowerCase().includes('lon'));
-        db = lines.map(ln => {
-            const c = ln.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
-        }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
-}
-
-function initGPS() { 
-    navigator.geolocation.watchPosition(p => {
-        if(!db.length) return;
-        let best = null, minD = Infinity;
-        for(const pt of db) {
-            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if(d < minD) { minD = d; best = pt; }
-        }
-        if(best) document.getElementById('km-txt').innerText = "Km " + best.km;
-    }, null, {enableHighAccuracy:true});
-}
+function toggleSettings(e) { if(e) e.stopPropagation(); document.getElementById('panel').classList.toggle('open'); }
 </script>
 </body>
 </html>
