@@ -3,18 +3,16 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V13 - FINAL STEALTH</title>
+    <title>INSPEÇÃO PRO V14 - REPARO DE GRAVAÇÃO</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --neon: #00ff88; --gold: #ffcc00; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.85); }
+        :root { --neon: #00ff88; --gold: #ffcc00; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body { background: #000; color: #fff; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        /* VÍDEO FULLSCREEN */
-        #cam-layer { position: absolute; inset: 0; z-index: 1; background: #000; }
+        #cam-layer { position: absolute; inset: 0; z-index: 1; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD SUPERIOR - KM SEMPRE FIXO */
         #hud-top { 
             position: absolute; top: env(safe-area-inset-top, 20px); left: 20px; right: 20px;
             display: flex; justify-content: space-between; align-items: flex-start; z-index: 100;
@@ -24,43 +22,31 @@
             padding: 12px 35px; border: 2.5px solid #fff; border-radius: 18px;
             box-shadow: 0 12px 45px rgba(0,0,0,0.9); pointer-events: none;
         }
-        #km-txt { font-size: 3rem; font-weight: 900; letter-spacing: -2px; color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        #km-txt { font-size: 3rem; font-weight: 900; letter-spacing: -2px; }
 
-        /* BOTÕES LATERAIS (OCULTÁVEIS) */
-        #side-btns { display: flex; flex-direction: column; gap: 15px; transition: 0.5s ease; pointer-events: auto; }
-        .circle-btn { 
-            width: 55px; height: 55px; background: var(--glass); backdrop-filter: blur(12px);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            border: 1px solid rgba(255,255,255,0.2); font-size: 24px; cursor: pointer;
-        }
+        #side-btns { display: flex; flex-direction: column; gap: 15px; transition: 0.5s; }
+        .circle-btn { width: 55px; height: 55px; background: var(--glass); backdrop-filter: blur(10px); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2); font-size: 24px; }
 
-        /* DOCK DE COMANDOS (AUTO-HIDE) */
         #ui-dock {
             position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%);
             width: 92%; max-width: 520px; background: var(--glass); backdrop-filter: blur(25px);
             padding: 25px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1);
-            z-index: 1000; transition: all 0.7s cubic-bezier(0.19, 1, 0.22, 1);
+            z-index: 1000; transition: 0.6s cubic-bezier(0.19, 1, 0.22, 1);
         }
         
-        /* ESTADOS DE HIDE */
         .hide-ui { bottom: -200px !important; opacity: 0; pointer-events: none; }
-        .hide-controls { opacity: 0; pointer-events: none; transform: translateX(30px); }
+        .hide-controls { opacity: 0; pointer-events: none; }
 
-        /* BOTÕES */
-        .btn-main { width: 100%; border: none; border-radius: 22px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 12px; }
+        .btn-main { width: 100%; border: none; border-radius: 22px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 10px; }
         .btn-start { background: linear-gradient(90deg, #00ff88, #009e54); color: #00331b; height: 90px; font-size: 1.3rem; }
         .btn-stop { background: linear-gradient(90deg, #ff4444, #b30000); color: #fff; height: 90px; font-size: 1.3rem; }
-        .btn-folder { background: #fff; color: #000; height: 50px; margin-bottom: 15px; font-size: 14px; }
+        .btn-folder { background: #fff; color: #000; height: 50px; font-size: 14px; }
 
-        /* STATUS */
-        .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 18px; }
+        .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
         .box-stat { background: rgba(255,255,255,0.08); padding: 14px; border-radius: 18px; text-align: center; }
         .box-stat b { font-size: 1.6rem; color: var(--gold); font-family: monospace; }
 
-        #side-panel { position: fixed; inset: 0; background: rgba(0,0,0,0.97); backdrop-filter: blur(30px); z-index: 5000; display: none; padding: 50px 30px; }
-        .panel-row { margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 20px; }
-        select, input { width: 100%; background: #151515; border: 1px solid #444; color: #fff; padding: 18px; border-radius: 15px; }
-
+        #side-panel { position: fixed; inset: 0; background: rgba(0,0,0,0.98); backdrop-filter: blur(30px); z-index: 5000; display: none; padding: 50px 30px; }
         canvas { display: none; }
     </style>
 </head>
@@ -78,20 +64,21 @@
 
 <div id="ui-dock">
     <div class="grid-stats">
-        <div class="box-stat"><small>LOTE ATUAL</small><br><b id="v-batch">0/50</b></div>
-        <div class="box-stat"><small>TOTAL PDFS</small><br><b id="v-total">0</b></div>
+        <div class="box-stat"><small>LOTE</small><br><b id="v-batch">0/50</b></div>
+        <div class="box-stat"><small>TOTAL</small><br><b id="v-total">0</b></div>
     </div>
-    <button id="btn-dir" class="btn-main btn-folder" onclick="pickFolder()">📁 DIRETÓRIO DE SALVAMENTO</button>
-    <button id="btn-start" class="btn-main btn-start" disabled onclick="startApp()">▶ INICIAR INSPEÇÃO</button>
-    <button id="btn-stop" class="btn-main btn-stop" style="display:none" onclick="stopApp()">■ PARAR E SALVAR PDF</button>
-    <div id="status" style="font-size:10px; color:#666; text-align:center; margin-top:10px; font-weight:bold;">V13 PRO | PROTEÇÃO DE DADOS</div>
+    <button id="btn-dir" class="btn-main btn-folder" onclick="pickFolder()">📁 RECONECTAR PASTA</button>
+    <button id="btn-start" class="btn-main btn-start" disabled onclick="startApp()">▶ INICIAR</button>
+    <button id="btn-stop" class="btn-main btn-stop" style="display:none" onclick="stopApp()">■ PARAR E SALVAR</button>
+    <div id="save-status" style="font-size:11px; color:var(--neon); text-align:center; margin-top:10px; display:none;">GRAVANDO PDF... AGUARDE</div>
 </div>
 
 <div id="side-panel">
-    <h2 style="margin-bottom:35px; color:var(--gold);">CONFIGURAÇÕES</h2>
-    <div class="panel-row"><label>Câmera</label><select id="cam-list" onchange="initCam(this.value)"></select></div>
-    <div class="panel-row"><label>Fotos por PDF</label><input type="number" id="cfg-batch" value="50"></div>
-    <div class="panel-row"><label>Qualidade</label><select id="cfg-quality"><option value="0.75" selected>Equilibrada</option><option value="0.95">Alta</option></select></div>
+    <h2 style="margin-bottom:35px; color:var(--gold);">AJUSTES</h2>
+    <div style="margin-bottom:20px;">
+        <label>Fotos por Lote</label>
+        <input type="number" id="cfg-batch" value="50" style="width:100%; padding:15px; background:#111; color:#fff; border-radius:10px; border:1px solid #333;">
+    </div>
     <button class="btn-main btn-folder" style="background:var(--gold)" onclick="toggleSettings()">VOLTAR</button>
 </div>
 
@@ -106,12 +93,6 @@ window.onload = async () => { await loadCams(); loadCSV(); initGPS(); wakeUI(); 
 async function loadCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     cams = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-list');
-    cams.forEach((c, i) => {
-        const opt = document.createElement('option');
-        opt.value = c.deviceId; opt.text = c.label || `Lente ${i+1}`;
-        sel.appendChild(opt);
-    });
     if(cams.length) initCam(cams[cams.length-1].deviceId);
 }
 
@@ -123,9 +104,8 @@ async function initCam(id) {
 }
 
 function switchCam() {
-    let current = document.getElementById('cam-list').selectedIndex;
+    let current = cams.findIndex(c => c.deviceId === vid.srcObject.getTracks().getSettings().deviceId);
     let next = (current + 1) % cams.length;
-    document.getElementById('cam-list').selectedIndex = next;
     initCam(cams[next].deviceId);
     vibrate(40);
 }
@@ -134,12 +114,10 @@ function wakeUI() {
     document.getElementById('ui-dock').classList.remove('hide-ui');
     document.getElementById('side-btns').classList.remove('hide-controls');
     clearTimeout(uiTimer);
-    if(active) {
-        uiTimer = setTimeout(() => {
-            document.getElementById('ui-dock').classList.add('hide-ui');
-            document.getElementById('side-btns').classList.add('hide-controls');
-        }, 4500);
-    }
+    if(active) uiTimer = setTimeout(() => {
+        document.getElementById('ui-dock').classList.add('hide-ui');
+        document.getElementById('side-btns').classList.add('hide-controls');
+    }, 4500);
 }
 
 async function loadCSV() {
@@ -171,14 +149,15 @@ function initGPS() {
 }
 
 async function pickFolder() {
-    hFolder = await window.showDirectoryPicker({ mode: 'readwrite' });
-    document.getElementById('btn-dir').innerText = "✓ PASTA PRONTA";
-    document.getElementById('btn-start').disabled = false;
-    vibrate(60);
+    try {
+        hFolder = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('btn-dir').innerText = "✓ PASTA CONECTADA";
+        document.getElementById('btn-start').disabled = false;
+        vibrate(60);
+    } catch(e) { alert("Erro ao acessar pasta. Tente novamente."); }
 }
 
 function startApp() {
-    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
     active = true;
     vibrate();
     document.getElementById('btn-start').style.display = 'none';
@@ -186,23 +165,24 @@ function startApp() {
     loop();
 }
 
-function stopApp() {
+async function stopApp() {
     active = false;
     vibrate(250);
     document.getElementById('btn-start').style.display = 'flex';
     document.getElementById('btn-stop').style.display = 'none';
-    if(buffer.length > 0) saveBatch();
+    if(buffer.length > 0) await saveBatch();
 }
 
 function loop() {
     if(!active) return;
     ctx.drawImage(vid, 0, 0, proc.width, proc.height);
-    const q = parseFloat(document.getElementById('cfg-quality').value);
     buffer.push({
-        raw: proc.toDataURL('image/jpeg', q),
+        raw: proc.toDataURL('image/jpeg', 0.7),
         km: document.getElementById('km-txt').innerText.replace("KM ", ""),
         ts: new Date().toLocaleString('pt-BR').toUpperCase()
     });
+    total++;
+    document.getElementById('v-total').innerText = total;
     document.getElementById('v-batch').innerText = `${buffer.length}/${document.getElementById('cfg-batch').value}`;
     if(buffer.length >= parseInt(document.getElementById('cfg-batch').value)) saveBatch();
     setTimeout(loop, 800);
@@ -210,30 +190,49 @@ function loop() {
 
 async function saveBatch() {
     if(!buffer.length || !hFolder) return;
-    const items = [...buffer]; buffer = []; batchCount++;
-    const doc = new jspdf.jsPDF('l', 'mm', 'a4');
-    for(let i=0; i<items.length; i++){
-        if(i > 0) doc.addPage();
-        const img = new Image();
-        await new Promise(r => {
-            img.onload = () => {
-                ctx.drawImage(img, 0, 0);
-                const bh = proc.height * 0.16;
-                ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, proc.height-bh, proc.width, bh);
-                ctx.fillStyle = "#ffcc00"; ctx.font = `bold ${bh*0.48}px Arial`;
-                ctx.fillText("KM " + items[i].km, 60, proc.height-(bh*0.42));
-                ctx.fillStyle = "#fff"; ctx.font = `${bh*0.16}px monospace`;
-                ctx.fillText(items[i].ts, 60, proc.height-(bh*0.18));
-                doc.addImage(proc.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, 297, 210, undefined, 'FAST');
-                r();
-            };
-            img.src = items[i].raw;
-        });
+    
+    const items = [...buffer];
+    buffer = [];
+    batchCount++;
+    
+    document.getElementById('save-status').style.display = 'block';
+    
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a4');
+        
+        for(let i=0; i<items.length; i++){
+            if(i > 0) doc.addPage();
+            const img = new Image();
+            await new Promise(r => {
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0);
+                    const bh = proc.height * 0.16;
+                    ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, proc.height-bh, proc.width, bh);
+                    ctx.fillStyle = "#ffcc00"; ctx.font = `bold ${bh*0.48}px Arial`;
+                    ctx.fillText("KM " + items[i].km, 60, proc.height-(bh*0.42));
+                    ctx.fillStyle = "#fff"; ctx.font = `${bh*0.16}px monospace`;
+                    ctx.fillText(items[i].ts, 60, proc.height-(bh*0.18));
+                    doc.addImage(proc.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, 297, 210);
+                    r();
+                };
+                img.src = items[i].raw;
+            });
+        }
+        
+        const fileName = `INSPECAO_LOTE_${batchCount}_KM_${items.km.replace('+','-')}.pdf`;
+        const fileHandle = await hFolder.getFileHandle(fileName, {create:true});
+        const writable = await fileHandle.createWritable();
+        await writable.write(doc.output('blob'));
+        await writable.close();
+        
+        vibrate();
+    } catch(e) {
+        console.error(e);
+        alert("FALHA AO SALVAR: Reclique em 'RECONECTAR PASTA'");
+    } finally {
+        document.getElementById('save-status').style.display = 'none';
     }
-    const handle = await hFolder.getFileHandle(`LOTE_${batchCount}_KM_${items.km.replace('+','-')}.pdf`, {create:true});
-    const writable = await handle.createWritable();
-    await writable.write(doc.output('blob')); await writable.close();
-    vibrate();
 }
 
 function toggleSettings() { 
