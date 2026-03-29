@@ -2,203 +2,180 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V6 - OMNI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>INSPEÇÃO PRO V6</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { 
-            --accent: #00f2ff; 
-            --danger: #ff003c; 
-            --placa-verde: #06723b;
-        }
+        :root { --accent: #00f2ff; --danger: #ff003c; --green: #06723b; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        body { background: #000; color: #fff; overflow: hidden; height: 100vh; width: 100vw; }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            background: #000; 
-            color: #fff; 
-            font-family: 'Segoe UI', sans-serif; 
-            overflow: hidden; 
-            height: 100vh;
-            width: 100vw;
+        /* ETAPAS DE INICIALIZAÇÃO */
+        #setup-screen {
+            position: fixed; inset: 0; z-index: 9999; background: #000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
         }
+        .step-box { text-align: center; display: none; }
+        .step-box.active { display: block; }
+        
+        /* UI PRINCIPAL */
+        #app-shell { display: none; position: relative; height: 100vh; width: 100vw; }
+        video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* --- VIDEO & PERFORMANCE --- */
-        #vid { 
-            width: 100%; height: 100%; object-fit: cover; 
-            position: absolute; inset: 0; z-index: 1;
-            will-change: transform;
+        /* HUD SUPERIOR */
+        .hud-top {
+            position: absolute; top: 20px; left: 0; right: 0;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            padding: 0 20px; pointer-events: none; z-index: 100;
         }
+        #km-display {
+            background: var(--green); padding: 10px 20px; border: 4px solid #fff; border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); pointer-events: auto;
+        }
+        #km-display h1 { font-size: 2.5rem; font-weight: 900; color: #fff; letter-spacing: -1px; }
 
-        /* --- HUD LAYOUT (ANTI-SOBREPOSIÇÃO) --- */
-        .hud-header {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            z-index: 100;
-            pointer-events: none;
+        #stats-display {
+            background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; text-align: right;
+            font-family: monospace; font-size: 12px; pointer-events: auto;
         }
+        .rec-dot { color: var(--danger); font-weight: bold; animation: blink 1s infinite; display: none; }
+        @keyframes blink { 50% { opacity: 0; } }
 
-        #km-hud { 
-            background: var(--placa-verde); 
-            padding: 12px 25px; 
-            border: 4px solid #fff; 
-            border-radius: 8px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.8);
-        }
-        #km-hud h1 { 
-            font-size: clamp(2rem, 6vw, 3.5rem); 
-            font-weight: 900; 
-            line-height: 1;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-
-        #stats-hud {
-            background: rgba(0,0,0,0.6);
-            padding: 10px 15px;
-            border-radius: 10px;
-            backdrop-filter: blur(5px);
-            text-align: right;
-            font-family: monospace;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .stat-row { font-size: 13px; font-weight: bold; margin-bottom: 2px; letter-spacing: 0.5px; }
-        #rec-indicator { color: var(--danger); animation: blink 1s steps(2) infinite; display: none; }
-        @keyframes blink { to { visibility: hidden; } }
-
-        /* --- CONTROLES --- */
-        #ui-controls { 
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); 
-            display: flex; gap: 15px; z-index: 500; transition: opacity 0.3s, transform 0.3s;
+        /* CONTROLES INFERIORES */
+        #controls {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 15px; z-index: 200; transition: 0.3s;
         }
         .ui-hidden { opacity: 0; transform: translate(-50%, 50px); pointer-events: none; }
-        
-        .btn { 
-            border: none; border-radius: 12px; font-weight: 900; cursor: pointer; 
-            padding: 20px 40px; text-transform: uppercase; font-size: 14px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        #btn-start-insp { background: var(--accent); color: #000; }
-        #btn-stop-insp { background: var(--danger); color: #fff; display: none; }
-        #btn-settings { background: #333; color: #fff; padding: 20px; }
 
-        /* --- SETTINGS PANEL --- */
-        #settings-panel { 
-            position: fixed; right: -400px; top: 0; width: 350px; height: 100%; 
-            background: rgba(15,15,15,0.98); backdrop-filter: blur(20px); z-index: 1000; 
-            padding: 40px 25px; transition: 0.4s cubic-bezier(0.1, 0.7, 0.1, 1);
-            border-left: 1px solid #333;
+        .btn {
+            border: none; border-radius: 12px; padding: 18px 35px; font-weight: 900;
+            text-transform: uppercase; cursor: pointer; font-size: 14px;
         }
-        #settings-panel.open { right: 0; }
+        #btn-start { background: var(--accent); color: #000; }
+        #btn-stop { background: var(--danger); color: #fff; display: none; }
+        #btn-opt { background: #333; color: #fff; padding: 18px; }
+
+        /* PAINEL DE OPÇÕES */
+        #panel {
+            position: fixed; right: -350px; top: 0; width: 320px; height: 100%;
+            background: rgba(20,20,20,0.95); backdrop-filter: blur(10px);
+            padding: 30px; transition: 0.3s; z-index: 500; border-left: 1px solid #333;
+        }
+        #panel.open { right: 0; }
         .field { margin-bottom: 20px; }
-        .field label { font-size: 11px; color: var(--accent); text-transform: uppercase; display: block; margin-bottom: 8px; }
-        select, input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; }
+        .field label { font-size: 10px; color: var(--accent); display: block; margin-bottom: 5px; }
+        select, input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 5px; }
 
-        #gate { 
-            position: fixed; inset: 0; background: #000; z-index: 2000; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
+        canvas { display: none; }
     </style>
 </head>
 <body onclick="wakeUI()">
 
-<div id="gate">
-    <h1 style="color:var(--accent); margin-bottom:5px;">INSPEÇÃO PRO V6</h1>
-    <p style="color:#555; margin-bottom:30px; font-size:14px;">MÓDULO DE CAPTURA RODOVIÁRIA</p>
-    <button class="btn" id="btn-start-insp" onclick="launchSystem()">ATIVAR SISTEMA</button>
-</div>
-
-<div id="app-shell" style="display:none;">
-    <video id="vid" autoplay playsinline muted></video>
-
-    <div class="hud-header">
-        <div id="km-hud">
-            <h1 id="km-txt">KM ---</h1>
-        </div>
+    <div id="setup-screen">
+        <h2 style="color:var(--accent); margin-bottom:20px;">INSPEÇÃO PRO V6</h2>
         
-        <div id="stats-hud">
-            <div id="rec-indicator" class="stat-row">● GRAVANDO</div>
-            <div id="st-lote" class="stat-row">LOTE: 0/0</div>
-            <div id="st-sessao" class="stat-row">TOTAL: 0</div>
+        <div id="step-1" class="step-box active">
+            <p style="margin-bottom:20px; color:#aaa;">Clique para iniciar em Tela Cheia</p>
+            <button class="btn" id="btn-start" onclick="goFullscreen()">1. ENTRAR EM TELA CHEIA</button>
+        </div>
+
+        <div id="step-2" class="step-box">
+            <p style="margin-bottom:20px; color:#aaa;">Escolha onde salvar os relatórios</p>
+            <button class="btn" id="btn-start" onclick="pickFolder()">2. SELECIONAR PASTA</button>
+        </div>
+
+        <div id="step-3" class="step-box">
+            <p style="margin-bottom:20px; color:#aaa;">Tudo pronto!</p>
+            <button class="btn" id="btn-start" onclick="startSystem()">3. ACESSAR CÂMERA</button>
         </div>
     </div>
 
-    <div id="ui-controls">
-        <button id="btn-settings" class="btn" onclick="toggleSet()">⚙</button>
-        <button id="btn-start-ui" class="btn" onclick="startInsp()">Iniciar Inspeção</button>
-        <button id="btn-stop-ui" class="btn" onclick="stopInsp()" style="display:none;">Finalizar Relatório</button>
-    </div>
-</div>
+    <div id="app-shell">
+        <video id="vid" autoplay playsinline muted></video>
 
-<div id="settings-panel">
-    <h3 style="color:var(--accent); margin-bottom:25px">CONFIGURAÇÕES</h3>
-    
-    <div class="field">
-        <label>Qualidade Relatório</label>
-        <select id="cfg-qual">
-            <option value="0.4">BAIXA (Rápido)</option>
-            <option value="0.7" selected>MÉDIA (Equilibrado)</option>
-            <option value="0.9">ALTA (Definição)</option>
-        </select>
-    </div>
+        <div class="hud-top">
+            <div id="km-display">
+                <h1 id="km-txt">KM ---</h1>
+            </div>
+            <div id="stats-display">
+                <div id="rec-label" class="rec-dot">● GRAVANDO</div>
+                <div id="info-lote">LOTE: 0/0</div>
+                <div id="info-sessao">SESSÃO: 0</div>
+            </div>
+        </div>
 
-    <div class="field">
-        <label>Mostrar Coordenadas GPS</label>
-        <select id="cfg-coords">
-            <option value="sim">SIM</option>
-            <option value="nao">NÃO</option>
-        </select>
+        <div id="controls">
+            <button id="btn-opt" class="btn" onclick="togglePanel()">⚙</button>
+            <button id="btn-start-insp" class="btn" onclick="startInsp()">Iniciar Inspeção</button>
+            <button id="btn-stop-insp" class="btn" onclick="stopInsp()" style="display:none;">Finalizar Relatório</button>
+        </div>
     </div>
 
-    <div class="field">
-        <label>Fotos por Lote</label>
-        <input type="number" id="cfg-lote" value="50">
+    <div id="panel">
+        <h3 style="margin-bottom:20px; color:var(--accent)">OPÇÕES</h3>
+        <div class="field">
+            <label>Qualidade Imagem</label>
+            <select id="cfg-q">
+                <option value="0.4">BAIXA</option>
+                <option value="0.7" selected>MÉDIA</option>
+                <option value="0.9">ALTA</option>
+            </select>
+        </div>
+        <div class="field">
+            <label>Mostrar GPS no PDF</label>
+            <select id="cfg-gps">
+                <option value="sim">SIM</option>
+                <option value="nao">NÃO</option>
+            </select>
+        </div>
+        <div class="field">
+            <label>Fotos por Lote</label>
+            <input type="number" id="cfg-lote" value="50">
+        </div>
+        <div class="field">
+            <label>Intervalo (ms)</label>
+            <input type="number" id="cfg-int" value="400">
+        </div>
+        <div class="field">
+            <label>Câmera</label>
+            <select id="cam-select" onchange="initCam(this.value)"></select>
+        </div>
+        <button class="btn" style="width:100%; background:#222; color:#fff;" onclick="togglePanel()">FECHAR</button>
     </div>
 
-    <div class="field">
-        <label>Intervalo Captura (ms)</label>
-        <input type="number" id="cfg-int" value="400">
-    </div>
-
-    <div class="field">
-        <label>Lente</label>
-        <select id="cam-select" onchange="initCam(this.value)"></select>
-    </div>
-
-    <button class="btn" style="width:100%; background:#222; color:#fff;" onclick="toggleSet()">VOLTAR</button>
-</div>
-
-<canvas id="c" style="display:none;"></canvas>
+    <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], buffer=[], hDir=null, stream=null, rec=false, uiTimer, lastPos=null, total=0;
+let kmDB=[], buffer=[], hDir=null, stream=null, rec=false, uiTimer, lastPos=null, totalSessao=0;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-async function launchSystem() {
-    try {
-        // 1. Fullscreen primeiro (Gatilho de confiança)
-        if (document.documentElement.requestFullscreen) {
-            await document.documentElement.requestFullscreen();
-        }
-
-        // 2. Pasta depois
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-
-        // 3. Montar interface
-        document.getElementById('gate').style.display = 'none';
-        document.getElementById('app-shell').style.display = 'block';
-        
-        await listCams();
-        loadCSV();
-        initGPS();
-    } catch(e) {
-        alert("Erro ao iniciar. Certifique-se de dar as permissões de tela cheia e pasta.");
+// --- LÓGICA DE INICIALIZAÇÃO (PASSO A PASSO) ---
+function goFullscreen() {
+    if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(()=>{});
     }
+    document.getElementById('step-1').classList.remove('active');
+    document.getElementById('step-2').classList.add('active');
 }
 
+async function pickFolder() {
+    try {
+        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('step-2').classList.remove('active');
+        document.getElementById('step-3').classList.add('active');
+    } catch(e) { alert("A pasta é necessária para salvar os arquivos."); }
+}
+
+async function startSystem() {
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('app-shell').style.display = 'block';
+    await listCams();
+    loadKM();
+    initGPS();
+}
+
+// --- GPS E DADOS ---
 function initGPS() {
     navigator.geolocation.watchPosition(p => {
         lastPos = { lt: p.coords.latitude, ln: p.coords.longitude };
@@ -206,36 +183,37 @@ function initGPS() {
     }, null, {enableHighAccuracy:true});
 }
 
-async function loadCSV() {
+async function loadKM() {
     try {
         const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
         const t = await r.text();
-        const lines = t.split('\n').filter(l => l.includes(';'));
-        lines.shift();
-        kmDB = lines.map(l => {
-            const c = l.split(';');
+        const rows = t.split('\n').filter(l => l.includes(';'));
+        rows.shift();
+        kmDB = rows.map(r => {
+            const c = r.split(';');
             return { km: c, lt: parseFloat(c.replace(',','.')), ln: parseFloat(c.replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
+    } catch(e) { console.warn("CSV KM não carregado"); }
 }
 
 function updateKM() {
     if(!lastPos || !kmDB.length) return;
     let nearest = kmDB, minDist = Infinity;
-    for(const pt of kmDB) {
+    kmDB.forEach(pt => {
         const d = Math.hypot(lastPos.lt - pt.lt, lastPos.ln - pt.ln);
         if(d < minDist) { minDist = d; nearest = pt; }
-    }
+    });
     document.getElementById('km-txt').innerText = "KM " + nearest.km;
 }
 
+// --- CÂMERA ---
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const video = devices.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
     video.forEach((d, i) => {
         const opt = document.createElement('option');
-        opt.value = d.deviceId; opt.text = d.label || `Câmera ${i+1}`;
+        opt.value = d.deviceId; opt.text = d.label || `Lente ${i+1}`;
         sel.appendChild(opt);
     });
     if(video.length) initCam(video[video.length-1].deviceId);
@@ -248,48 +226,50 @@ async function initCam(id) {
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
+// --- INSPEÇÃO ---
 function startInsp() {
     rec = true;
-    document.getElementById('btn-start-ui').style.display = 'none';
-    document.getElementById('btn-stop-ui').style.display = 'block';
-    document.getElementById('rec-indicator').style.display = 'block';
-    loop();
+    document.getElementById('btn-start-insp').style.display = 'none';
+    document.getElementById('btn-stop-insp').style.display = 'block';
+    document.getElementById('rec-label').style.display = 'block';
+    captureLoop();
 }
 
 function stopInsp() {
     rec = false;
-    document.getElementById('btn-start-ui').style.display = 'block';
-    document.getElementById('btn-stop-ui').style.display = 'none';
-    document.getElementById('rec-indicator').style.display = 'none';
+    document.getElementById('btn-start-insp').style.display = 'block';
+    document.getElementById('btn-stop-insp').style.display = 'none';
+    document.getElementById('rec-label').style.display = 'none';
     savePDF();
 }
 
-function loop() {
+function captureLoop() {
     if(!rec) return;
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const limit = parseInt(document.getElementById('cfg-lote').value);
     
     buffer.push({
-        img: can.toDataURL('image/jpeg', parseFloat(document.getElementById('cfg-qual').value)),
+        img: can.toDataURL('image/jpeg', parseFloat(document.getElementById('cfg-q').value)),
         km: document.getElementById('km-txt').innerText,
         lat: lastPos?.lt.toFixed(6),
         lon: lastPos?.ln.toFixed(6),
         ts: new Date().toLocaleString()
     });
 
-    total++;
-    document.getElementById('st-lote').innerText = `LOTE: ${buffer.length}/${limit}`;
-    document.getElementById('st-sessao').innerText = `TOTAL: ${total}`;
+    totalSessao++;
+    document.getElementById('info-lote').innerText = `LOTE: ${buffer.length}/${limit}`;
+    document.getElementById('info-sessao').innerText = `SESSÃO: ${totalSessao}`;
 
     if(buffer.length >= limit) savePDF();
-    setTimeout(loop, parseInt(document.getElementById('cfg-int').value));
+    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value));
 }
 
 async function savePDF() {
     if(!buffer.length) return;
     const batch = [...buffer];
     buffer = [];
-    const showCoords = document.getElementById('cfg-coords').value === 'sim';
+    const showGPS = document.getElementById('cfg-gps').value === 'sim';
+    const qual = parseFloat(document.getElementById('cfg-q').value);
 
     const doc = new jspdf.jsPDF(can.width > can.height ? 'l' : 'p', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth();
@@ -308,9 +288,9 @@ async function savePDF() {
                 ctx.font = `bold ${h * 0.4}px Arial`;
                 ctx.fillText(batch[i].km, 50, can.height - (h * 0.45));
                 
-                if(showCoords) {
+                if(showGPS) {
                     ctx.font = `${h * 0.15}px Arial`;
-                    ctx.fillText(`${batch[i].ts} | GPS: ${batch[i].lat}, ${batch[i].lon}`, 50, can.height - (h * 0.2));
+                    ctx.fillText(`${batch[i].ts} | GPS: ${batch[i].lat}, ${batch[i].lon}`, 50, can.height - (h * 0.22));
                 }
                 doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph);
                 r();
@@ -319,7 +299,7 @@ async function savePDF() {
         });
     }
 
-    const name = `REL_${Date.now()}.pdf`;
+    const name = `REL_KM_${Date.now()}.pdf`;
     try {
         const f = await hDir.getFileHandle(name, { create: true });
         const w = await f.createWritable();
@@ -328,11 +308,12 @@ async function savePDF() {
     } catch(e) { doc.save(name); }
 }
 
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+// --- UI ---
+function togglePanel() { document.getElementById('panel').classList.toggle('open'); }
 function wakeUI() {
-    document.getElementById('ui-controls').classList.remove('ui-hidden');
+    document.getElementById('controls').classList.remove('ui-hidden');
     clearTimeout(uiTimer);
-    uiTimer = setTimeout(() => { if(rec) document.getElementById('ui-controls').classList.add('ui-hidden'); }, 4000);
+    uiTimer = setTimeout(() => { if(rec) document.getElementById('controls').classList.add('ui-hidden'); }, 4000);
 }
 </script>
 </body>
