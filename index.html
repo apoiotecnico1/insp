@@ -9,208 +9,193 @@
         :root { 
             --accent: #00f2ff; 
             --danger: #ff003c; 
-            --bg: #000;
-            --panel: rgba(15, 18, 22, 0.98);
             --placa-verde: #06723b;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
-            background: var(--bg); 
+            background: #000; 
             color: #fff; 
-            font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; 
+            font-family: 'Segoe UI', sans-serif; 
             overflow: hidden; 
             height: 100vh;
             width: 100vw;
         }
 
-        /* --- UI SHELL --- */
-        #app-shell { visibility: hidden; opacity: 0; transition: 0.5s; height: 100vh; position: relative; width: 100%; }
-        video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+        /* --- VIDEO & PERFORMANCE --- */
+        #vid { 
+            width: 100%; height: 100%; object-fit: cover; 
+            position: absolute; inset: 0; z-index: 1;
+            will-change: transform;
+        }
 
-        /* HUD SUPERIOR - DISTANCIADO PARA EVITAR SOBREPOSIÇÃO */
+        /* --- HUD LAYOUT (ANTI-SOBREPOSIÇÃO) --- */
         .hud-header {
             position: absolute;
-            top: env(safe-area-inset-top, 20px);
-            left: 0;
-            right: 0;
+            top: 20px;
+            left: 20px;
+            right: 20px;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            padding: 0 25px;
-            z-index: 1000;
+            z-index: 100;
             pointer-events: none;
         }
 
         #km-hud { 
             background: var(--placa-verde); 
-            padding: 10px 25px; 
+            padding: 12px 25px; 
             border: 4px solid #fff; 
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.7);
-            pointer-events: auto;
+            border-radius: 8px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.8);
         }
         #km-hud h1 { 
-            font-size: clamp(1.8rem, 5vw, 2.8rem); 
+            font-size: clamp(2rem, 6vw, 3.5rem); 
             font-weight: 900; 
-            font-family: 'Arial Black', sans-serif; 
             line-height: 1;
-            color: #fff;
-            text-transform: uppercase;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
-        #hud-stats {
+        #stats-hud {
+            background: rgba(0,0,0,0.6);
+            padding: 10px 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
             text-align: right;
-            font-family: 'Courier New', monospace;
-            background: rgba(0,0,0,0.5);
-            padding: 10px;
-            border-radius: 8px;
-            backdrop-filter: blur(4px);
-            pointer-events: auto;
+            font-family: monospace;
+            border: 1px solid rgba(255,255,255,0.1);
         }
-        .stat-line { font-size: 12px; font-weight: bold; margin-bottom: 2px; letter-spacing: 1px; }
-        #rec-tag { color: var(--danger); animation: pulse 1s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .stat-row { font-size: 13px; font-weight: bold; margin-bottom: 2px; letter-spacing: 0.5px; }
+        #rec-indicator { color: var(--danger); animation: blink 1s steps(2) infinite; display: none; }
+        @keyframes blink { to { visibility: hidden; } }
 
-        /* CONTROLES INFERIORES */
+        /* --- CONTROLES --- */
         #ui-controls { 
-            position: absolute; 
-            bottom: clamp(30px, 10vh, 60px); 
-            left: 50%; 
-            transform: translateX(-50%); 
-            display: flex; 
-            gap: 20px; 
-            z-index: 2000; 
-            transition: 0.4s ease-out;
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); 
+            display: flex; gap: 15px; z-index: 500; transition: opacity 0.3s, transform 0.3s;
         }
-        .ui-hidden { opacity: 0; transform: translate(-50%, 40px); pointer-events: none; }
+        .ui-hidden { opacity: 0; transform: translate(-50%, 50px); pointer-events: none; }
         
-        .btn-main { 
-            border: none; border-radius: 15px; font-weight: 900; cursor: pointer; 
-            padding: 18px 35px; text-transform: uppercase; font-size: 13px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
-            display: flex; align-items: center; justify-content: center;
+        .btn { 
+            border: none; border-radius: 12px; font-weight: 900; cursor: pointer; 
+            padding: 20px 40px; text-transform: uppercase; font-size: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        #btn-start { background: var(--accent); color: #000; min-width: 180px; }
-        #btn-stop { background: var(--danger); color: #fff; display: none; min-width: 180px; }
-        #gear-btn { background: #333; color: #fff; width: 60px; }
+        #btn-start-insp { background: var(--accent); color: #000; }
+        #btn-stop-insp { background: var(--danger); color: #fff; display: none; }
+        #btn-settings { background: #333; color: #fff; padding: 20px; }
 
-        /* PAINEL DE CONFIGURAÇÕES */
+        /* --- SETTINGS PANEL --- */
         #settings-panel { 
-            position: fixed; right: -400px; top: 0; width: min(380px, 90vw); height: 100%; 
-            background: var(--panel); backdrop-filter: blur(15px); z-index: 5000; 
-            padding: 40px 25px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-left: 1px solid rgba(255,255,255,0.1);
-            overflow-y: auto;
+            position: fixed; right: -400px; top: 0; width: 350px; height: 100%; 
+            background: rgba(15,15,15,0.98); backdrop-filter: blur(20px); z-index: 1000; 
+            padding: 40px 25px; transition: 0.4s cubic-bezier(0.1, 0.7, 0.1, 1);
+            border-left: 1px solid #333;
         }
         #settings-panel.open { right: 0; }
-        .field { margin-bottom: 22px; }
-        .field label { font-size: 10px; color: var(--accent); text-transform: uppercase; display: block; margin-bottom: 8px; font-weight: bold; }
-        select, input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 14px; border-radius: 10px; font-size: 14px; }
-        
-        .btn-action { 
-            background: #222; color: #fff; border: 1px solid #444; padding: 14px; 
-            width: 100%; border-radius: 10px; cursor: pointer; margin-top: 10px; font-weight: bold; font-size: 12px;
-        }
+        .field { margin-bottom: 20px; }
+        .field label { font-size: 11px; color: var(--accent); text-transform: uppercase; display: block; margin-bottom: 8px; }
+        select, input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; }
 
-        canvas { display: none; }
+        #gate { 
+            position: fixed; inset: 0; background: #000; z-index: 2000; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
     </style>
 </head>
 <body onclick="wakeUI()">
 
-<div id="safety-gate" style="position:fixed; inset:0; background:#000; z-index:9000; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:30px;">
-    <h1 style="color:var(--accent); font-weight:900; margin-bottom:10px;">INSPEÇÃO PRO V6</h1>
-    <p style="color:#666; font-size:12px; margin-bottom:30px; text-align:center;">SISTEMA DE MONITORAMENTO RODOVIÁRIO</p>
-    <button class="btn-main" id="btn-start" onclick="initApp()" style="width:100%; max-width:300px;">Entrar em Fullscreen</button>
+<div id="gate">
+    <h1 style="color:var(--accent); margin-bottom:5px;">INSPEÇÃO PRO V6</h1>
+    <p style="color:#555; margin-bottom:30px; font-size:14px;">MÓDULO DE CAPTURA RODOVIÁRIA</p>
+    <button class="btn" id="btn-start-insp" onclick="launchSystem()">ATIVAR SISTEMA</button>
 </div>
 
-<div id="app-shell">
+<div id="app-shell" style="display:none;">
     <video id="vid" autoplay playsinline muted></video>
 
     <div class="hud-header">
-        <div id="km-hud"><h1 id="km-txt">KM ---</h1></div>
+        <div id="km-hud">
+            <h1 id="km-txt">KM ---</h1>
+        </div>
         
-        <div id="hud-stats">
-            <div id="rec-tag" class="stat-line">● GRAVANDO</div>
-            <div id="stat-lote" class="stat-line">LOTE: 0/0</div>
-            <div id="stat-total" class="stat-line">TOTAL: 0</div>
+        <div id="stats-hud">
+            <div id="rec-indicator" class="stat-row">● GRAVANDO</div>
+            <div id="st-lote" class="stat-row">LOTE: 0/0</div>
+            <div id="st-sessao" class="stat-row">TOTAL: 0</div>
         </div>
     </div>
 
     <div id="ui-controls">
-        <button id="gear-btn" class="btn-main" onclick="toggleSet()">⚙</button>
-        <button id="btn-start-ui" class="btn-main" onclick="startInspeção()" style="background:var(--accent); color:#000;">Iniciar Inspeção</button>
-        <button id="btn-stop-ui" class="btn-main" onclick="stopInspeção()" style="background:var(--danger); color:#fff; display:none;">Finalizar Relatório</button>
+        <button id="btn-settings" class="btn" onclick="toggleSet()">⚙</button>
+        <button id="btn-start-ui" class="btn" onclick="startInsp()">Iniciar Inspeção</button>
+        <button id="btn-stop-ui" class="btn" onclick="stopInsp()" style="display:none;">Finalizar Relatório</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <h3 style="color:var(--accent); margin-bottom:25px; letter-spacing:1px;">OPÇÕES DO SISTEMA</h3>
+    <h3 style="color:var(--accent); margin-bottom:25px">CONFIGURAÇÕES</h3>
     
     <div class="field">
-        <label>Qualidade das Imagens</label>
+        <label>Qualidade Relatório</label>
         <select id="cfg-qual">
-            <option value="0.4">BAIXA (Econômico)</option>
-            <option value="0.7" selected>MÉDIA (Recomendado)</option>
-            <option value="0.9">ALTA (Definição total)</option>
+            <option value="0.4">BAIXA (Rápido)</option>
+            <option value="0.7" selected>MÉDIA (Equilibrado)</option>
+            <option value="0.9">ALTA (Definição)</option>
         </select>
     </div>
 
     <div class="field">
-        <label>Coordenadas GPS no PDF</label>
+        <label>Mostrar Coordenadas GPS</label>
         <select id="cfg-coords">
-            <option value="sim">MOSTRAR NO RELATÓRIO</option>
-            <option value="nao">OCULTAR</option>
+            <option value="sim">SIM</option>
+            <option value="nao">NÃO</option>
         </select>
     </div>
 
     <div class="field">
-        <label>Fotos por Lote (Auto-Save)</label>
+        <label>Fotos por Lote</label>
         <input type="number" id="cfg-lote" value="50">
     </div>
 
     <div class="field">
-        <label>Captura a cada (ms)</label>
+        <label>Intervalo Captura (ms)</label>
         <input type="number" id="cfg-int" value="400">
     </div>
 
     <div class="field">
-        <label>Lente da Câmera</label>
-        <select id="cam-select" onchange="initCamera(this.value)"></select>
+        <label>Lente</label>
+        <select id="cam-select" onchange="initCam(this.value)"></select>
     </div>
 
-    <div style="margin-top:40px;">
-        <button class="btn-action" style="background: #06723b; border:none;" onclick="alert('Arquivos salvos na pasta selecionada no início.')">📁 LOCALIZAR RELATÓRIOS</button>
-        <button class="btn-action" onclick="toggleSet()">VOLTAR</button>
-    </div>
+    <button class="btn" style="width:100%; background:#222; color:#fff;" onclick="toggleSet()">VOLTAR</button>
 </div>
 
-<canvas id="c"></canvas>
+<canvas id="c" style="display:none;"></canvas>
 
 <script>
-let kmDB=[], buffer=[], hDir=null, stream=null, rec=false, uiTimer, lastPos=null;
-let sessaoCount = 0;
+let kmDB=[], buffer=[], hDir=null, stream=null, rec=false, uiTimer, lastPos=null, total=0;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-async function initApp() {
+async function launchSystem() {
     try {
-        // Solicita Fullscreen
+        // 1. Fullscreen primeiro (Gatilho de confiança)
         if (document.documentElement.requestFullscreen) {
             await document.documentElement.requestFullscreen();
         }
-        
-        // Solicita Pasta
+
+        // 2. Pasta depois
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+
+        // 3. Montar interface
+        document.getElementById('gate').style.display = 'none';
+        document.getElementById('app-shell').style.display = 'block';
         
-        document.getElementById('safety-gate').style.display = 'none';
-        document.getElementById('app-shell').style.visibility = 'visible';
-        document.getElementById('app-shell').style.opacity = '1';
-        
-        listCameras();
-        loadKM();
+        await listCams();
+        loadCSV();
         initGPS();
     } catch(e) {
-        alert("Para funcionar, aceite o modo tela cheia e selecione uma pasta.");
+        alert("Erro ao iniciar. Certifique-se de dar as permissões de tela cheia e pasta.");
     }
 }
 
@@ -221,17 +206,17 @@ function initGPS() {
     }, null, {enableHighAccuracy:true});
 }
 
-async function loadKM() {
+async function loadCSV() {
     try {
         const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
         const t = await r.text();
         const lines = t.split('\n').filter(l => l.includes(';'));
-        lines.shift(); // remove header
-        kmDB = lines.map(line => {
-            const cols = line.split(';');
-            return { km: cols, lt: parseFloat(cols.replace(',','.')), ln: parseFloat(cols.replace(',','.')) };
+        lines.shift();
+        kmDB = lines.map(l => {
+            const c = l.split(';');
+            return { km: c, lt: parseFloat(c.replace(',','.')), ln: parseFloat(c.replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) { console.error("CSV não encontrado"); }
+    } catch(e) {}
 }
 
 function updateKM() {
@@ -244,42 +229,42 @@ function updateKM() {
     document.getElementById('km-txt').innerText = "KM " + nearest.km;
 }
 
-async function listCameras() {
+async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+    const video = devices.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
-    videoDevices.forEach((d, i) => {
+    video.forEach((d, i) => {
         const opt = document.createElement('option');
-        opt.value = d.deviceId; opt.text = d.label || `Lente ${i+1}`;
+        opt.value = d.deviceId; opt.text = d.label || `Câmera ${i+1}`;
         sel.appendChild(opt);
     });
-    if(videoDevices.length) initCamera(videoDevices[videoDevices.length-1].deviceId);
+    if(video.length) initCam(video[video.length-1].deviceId);
 }
 
-async function initCamera(id) {
+async function initCam(id) {
     if(stream) stream.getTracks().forEach(t => t.stop());
     stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
     vid.srcObject = stream;
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
-function startInspeção() {
+function startInsp() {
     rec = true;
     document.getElementById('btn-start-ui').style.display = 'none';
-    document.getElementById('btn-stop-ui').style.display = 'flex';
-    document.getElementById('rec-tag').style.display = 'block';
-    capture();
+    document.getElementById('btn-stop-ui').style.display = 'block';
+    document.getElementById('rec-indicator').style.display = 'block';
+    loop();
 }
 
-function stopInspeção() {
+function stopInsp() {
     rec = false;
-    document.getElementById('btn-start-ui').style.display = 'flex';
+    document.getElementById('btn-start-ui').style.display = 'block';
     document.getElementById('btn-stop-ui').style.display = 'none';
-    document.getElementById('rec-tag').style.display = 'none';
+    document.getElementById('rec-indicator').style.display = 'none';
     savePDF();
 }
 
-function capture() {
+function loop() {
     if(!rec) return;
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const limit = parseInt(document.getElementById('cfg-lote').value);
@@ -292,62 +277,62 @@ function capture() {
         ts: new Date().toLocaleString()
     });
 
-    sessaoCount++;
-    document.getElementById('stat-lote').innerText = `LOTE: ${buffer.length}/${limit}`;
-    document.getElementById('stat-total').innerText = `TOTAL: ${sessaoCount}`;
+    total++;
+    document.getElementById('st-lote').innerText = `LOTE: ${buffer.length}/${limit}`;
+    document.getElementById('st-sessao').innerText = `TOTAL: ${total}`;
 
     if(buffer.length >= limit) savePDF();
-    setTimeout(capture, parseInt(document.getElementById('cfg-int').value));
+    setTimeout(loop, parseInt(document.getElementById('cfg-int').value));
 }
 
 async function savePDF() {
     if(!buffer.length) return;
-    const items = [...buffer];
+    const batch = [...buffer];
     buffer = [];
     const showCoords = document.getElementById('cfg-coords').value === 'sim';
-    const qual = parseFloat(document.getElementById('cfg-qual').value);
 
     const doc = new jspdf.jsPDF(can.width > can.height ? 'l' : 'p', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
 
-    for(let i=0; i<items.length; i++){
+    for(let i=0; i<batch.length; i++){
         if(i > 0) doc.addPage();
         const img = new Image();
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
-                const h = can.height * 0.1;
-                ctx.fillStyle = "rgba(0,0,0,0.85)";
+                const h = can.height * 0.12;
+                ctx.fillStyle = "rgba(0,0,0,0.8)";
                 ctx.fillRect(0, can.height - h, can.width, h);
                 ctx.fillStyle = "#fff";
                 ctx.font = `bold ${h * 0.4}px Arial`;
-                ctx.fillText(items[i].km, 40, can.height - (h * 0.45));
-                ctx.font = `${h * 0.15}px Arial`;
-                let info = items[i].ts;
-                if(showCoords) info += ` | GPS: ${items[i].lat}, ${items[i].lon}`;
-                ctx.fillText(info, 40, can.height - (h * 0.2));
-                doc.addImage(can.toDataURL('image/jpeg', qual), 'JPEG', 0, 0, pw, ph);
+                ctx.fillText(batch[i].km, 50, can.height - (h * 0.45));
+                
+                if(showCoords) {
+                    ctx.font = `${h * 0.15}px Arial`;
+                    ctx.fillText(`${batch[i].ts} | GPS: ${batch[i].lat}, ${batch[i].lon}`, 50, can.height - (h * 0.2));
+                }
+                doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph);
                 r();
             };
-            img.src = items[i].img;
+            img.src = batch[i].img;
         });
     }
 
-    const fname = `REL_${Date.now()}.pdf`;
+    const name = `REL_${Date.now()}.pdf`;
     try {
-        const file = await hDir.getFileHandle(fname, { create: true });
-        const writer = await file.createWritable();
-        await writer.write(doc.output('blob'));
-        await writer.close();
-    } catch(e) { doc.save(fname); }
+        const f = await hDir.getFileHandle(name, { create: true });
+        const w = await f.createWritable();
+        await w.write(doc.output('blob'));
+        await w.close();
+    } catch(e) { doc.save(name); }
 }
 
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 function wakeUI() {
     document.getElementById('ui-controls').classList.remove('ui-hidden');
     clearTimeout(uiTimer);
-    uiTimer = setTimeout(() => { if(rec) document.getElementById('ui-controls').classList.add('ui-hidden'); }, 5000);
+    uiTimer = setTimeout(() => { if(rec) document.getElementById('ui-controls').classList.add('ui-hidden'); }, 4000);
 }
 </script>
 </body>
