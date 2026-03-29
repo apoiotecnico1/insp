@@ -6,11 +6,10 @@
     <title>INSPEÇÃO PRO V6 - OMNI FINAL</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #00d9ff; --placa-verde: #056b3c; --danger: #ff3333; --glass: rgba(0,0,0,0.92); }
+        :root { --accent: #00d9ff; --placa-verde: #056b3c; --danger: #ff3333; --glass: rgba(0,0,0,0.95); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* --- UI ELEMENTS --- */
         #app-shell { height: 100vh; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
@@ -19,14 +18,14 @@
         #km-hud h1 { font-size: 2rem; font-weight: 900; }
 
         #id-nox-list { 
-            position: absolute; right: 20px; top: 80px; width: 160px; 
-            background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+            position: absolute; right: 20px; top: 80px; width: 170px; 
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
             padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
         }
-        .nox-item { font-size: 11px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #aaa; }
+        .nox-item { font-size: 11px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .nox-item.active { color: var(--accent); font-weight: 800; border-left: 3px solid var(--accent); padding-left: 8px; }
 
-        #st-gps { position: absolute; top: 25px; right: 25px; font-size: 10px; color: #666; font-weight: 700; }
+        #st-gps { position: absolute; top: 25px; right: 25px; font-size: 10px; color: #666; font-weight: 700; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 4px; }
 
         #ui-controls { position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 500; transition: 0.5s; }
         .btn-ui { border: none; border-radius: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 20px 40px; font-size: 12px; }
@@ -42,6 +41,7 @@
         .field { margin-bottom: 20px; }
         .field label { font-size: 10px; color: #777; display: block; margin-bottom: 6px; text-transform: uppercase; }
         input, select { width: 100%; background: #111; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; }
+        .ui-hidden { opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body onclick="wakeUI()">
@@ -62,7 +62,7 @@
     </div>
 
     <div id="id-nox-list">
-        <div style="font-size: 9px; color: var(--accent); font-weight: 800; margin-bottom: 10px;">IDS PRÓXIMOS (NOX)</div>
+        <div style="font-size: 9px; color: var(--accent); font-weight: 800; margin-bottom: 10px; letter-spacing: 1px;">IDS PRÓXIMOS (NOX)</div>
         <div id="nox-container"></div>
     </div>
 
@@ -77,7 +77,7 @@
 
 <div id="settings-panel">
     <h3 style="color:var(--accent); margin-bottom:30px">CONFIGURAÇÕES</h3>
-    <div class="field"><label>WhatsApp Destino (Ex: 551299...)</label><input type="text" id="cfg-zap" placeholder="55"></div>
+    <div class="field"><label>WhatsApp Destino (Ex: 55129...)</label><input type="text" id="cfg-zap" placeholder="5512999999999"></div>
     <div class="field"><label>Fotos por Lote (Auto-Envio)</label><input type="number" id="cfg-lote" value="20"></div>
     <div class="field"><label>Câmera Ativa</label><select id="cam-select" onchange="initC(this.value)"></select></div>
     <button class="btn-ui" style="background:var(--accent); color:#000; width:100%" onclick="toggleSet()">Fechar</button>
@@ -95,14 +95,14 @@ async function initFileSystem() {
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
         document.getElementById('app-shell').style.opacity = '1';
-        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
         initApp();
     } catch(e) { alert("Permissão de pasta é obrigatória."); }
 }
 
 function initApp() {
     loadCSV('SNVBR116SPRJ.csv', 'km');
-    loadCSV('dados.csv', 'id');
+    // NOME DO ARQUIVO ATUALIZADO CONFORME SOLICITADO
+    loadCSV('Dados_Completos_Grupo_2_all.csv', 'id');
     initGPS();
     listCams();
 }
@@ -114,19 +114,23 @@ async function loadCSV(file, type) {
         const rows = t.split('\n').filter(l => l.includes(';'));
         const headers = rows.shift().split(';').map(h => h.trim().toLowerCase());
         
-        const iLt = headers.findIndex(h => h.includes('lat')), iLn = headers.findIndex(h => h.includes('lon'));
+        // Busca inteligente de colunas (Lat/Lon)
+        const iLt = headers.findIndex(h => h.includes('lat'));
+        const iLn = headers.findIndex(h => h.includes('lon'));
         
         const data = rows.map(row => {
             const cols = row.split(';');
+            if (cols.length < 3) return null;
             return {
                 val: cols.trim(),
-                lt: parseFloat(cols[iLt].replace(',', '.')),
-                ln: parseFloat(cols[iLn].replace(',', '.'))
+                lt: parseFloat(cols[iLt]?.replace(',', '.')),
+                ln: parseFloat(cols[iLn]?.replace(',', '.'))
             };
-        }).filter(d => !isNaN(d.lt));
+        }).filter(d => d && !isNaN(d.lt));
 
         if(type === 'km') kmDB = data; else idDB = data;
-    } catch(e) { console.error("Erro CSV:", file); }
+        console.log(`Carregado ${file}: ${data.length} registros.`);
+    } catch(e) { console.error("Erro ao ler:", file); }
 }
 
 function initGPS() {
@@ -140,20 +144,25 @@ function initGPS() {
 function updateLoc() {
     if(!lastPos) return;
     
-    // Processar KM
+    // KM mais próximo
     let nearKM = kmDB.map(pt => ({...pt, d: Math.hypot(pt.lt-lastPos.lt, pt.ln-lastPos.ln)})).sort((a,b)=>a.d-b.d);
     if(nearKM) document.getElementById('km-txt').innerText = "KM " + nearKM.val;
 
-    // Processar IDs Nox
-    let nearIDs = idDB.map(pt => ({...pt, d: Math.hypot(pt.lt-lastPos.lt, pt.ln-lastPos.ln)})).sort((a,b)=>a.d-b.d).slice(0, 5);
-    const container = document.getElementById('nox-container');
-    container.innerHTML = "";
-    nearIDs.forEach((pt, i) => {
-        const div = document.createElement('div');
-        div.className = `nox-item ${i === 0 ? 'active' : ''}`;
-        div.innerText = pt.val;
-        container.appendChild(div);
-    });
+    // Listagem NOX (IDs)
+    if(idDB.length > 0) {
+        let nearIDs = idDB.map(pt => ({...pt, d: Math.hypot(pt.lt-lastPos.lt, pt.ln-lastPos.ln)}))
+                          .sort((a,b)=>a.d-b.d)
+                          .slice(0, 5);
+        
+        const container = document.getElementById('nox-container');
+        container.innerHTML = "";
+        nearIDs.forEach((pt, i) => {
+            const div = document.createElement('div');
+            div.className = `nox-item ${i === 0 ? 'active' : ''}`;
+            div.innerText = pt.val;
+            container.appendChild(div);
+        });
+    }
 }
 
 async function listCams() {
@@ -216,7 +225,9 @@ async function savePDF() {
         doc.text(`${batch[i].km} | ID: ${batch[i].id} | ${batch[i].ts}`, 15, 200);
     }
 
-    const nome = `Inspecao_${batch.km}_${Date.now()}.pdf`.replace(/\+/g,'_');
+    const d = new Date();
+    const nome = `Lote_${batch.km}_${d.getHours()}h${d.getMinutes()}.pdf`.replace(/\+/g,'_').replace(/\s/g,'');
+    
     if(hDir) {
         try {
             const f = await hDir.getFileHandle(nome, {create:true});
@@ -226,7 +237,7 @@ async function savePDF() {
     }
 
     if(zap) {
-        const text = `*RELATÓRIO DE INSPEÇÃO*\n📍 KM: ${batch.km}\n📂 Salvo: ${nome}\n⏰ ${batch.ts}`;
+        const text = `*INSPEÇÃO REALIZADA*\n📍 KM: ${batch.km}\n📂 PDF: ${nome}\n⏰ ${batch.ts}`;
         window.open(`https://wa.me/${zap}?text=${encodeURIComponent(text)}`, '_blank');
     }
 }
