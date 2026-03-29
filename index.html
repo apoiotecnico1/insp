@@ -13,9 +13,9 @@
         /* TELA DE ALERTA */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
         .alert-box { border: 1px solid #333; padding: 35px; border-radius: 12px; max-width: 450px; text-align: center; background: #080808; }
-        .alert-box h2 { color: #f44336; margin-bottom: 15px; font-size: 18px; letter-spacing: 1px; text-transform: uppercase; }
+        .alert-box h2 { color: var(--accent); margin-bottom: 15px; font-size: 18px; letter-spacing: 1px; }
         .alert-box p { font-size: 13px; line-height: 1.6; color: #999; margin-bottom: 25px; }
-        .btn-aware { background: #2e7d32; color: #fff; border: none; padding: 16px 45px; font-weight: 800; border-radius: 4px; cursor: pointer; text-transform: uppercase; font-size: 12px; }
+        .btn-aware { background: var(--accent); color: #000; border: none; padding: 16px 45px; font-weight: 800; border-radius: 4px; cursor: pointer; text-transform: uppercase; font-size: 12px; }
 
         /* INTERFACE PRINCIPAL */
         #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
@@ -30,7 +30,7 @@
         }
         #km-hud h1 { font-size: 1.8rem; font-weight: 800; color: #fff; letter-spacing: -1px; }
 
-        #rec-tag { position: absolute; top: 30px; right: 30px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 9px; color: rgba(255,255,255,0.7); letter-spacing: 1px; font-weight: bold; }
+        #rec-tag { position: absolute; top: 30px; right: 30px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 9px; color: rgba(255,255,255,0.5); letter-spacing: 1px; }
         .dot { width: 6px; height: 6px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
@@ -70,9 +70,9 @@
 
 <div id="settings-panel">
     <div class="close-x" onclick="toggleSet()">×</div>
-    <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Intervelo entre fotos em Milissegundos (ms)</label><input type="number" id="cfg-int" value="5000"></div>
-    <div class="field"><label>Fotos por relatório</label><input type="number" id="cfg-lote" value="50"></div>
+    <div class="field"><label>Câmera (Lente)</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="field"><label>Tempo da foto (ms)</label><input type="number" id="cfg-int" value="5000"></div>
+    <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
@@ -130,10 +130,10 @@ async function listCams() {
     sel.innerHTML = "";
     videoDevices.forEach((d, i) => {
         const opt = document.createElement('option');
-        opt.value = d.deviceId; opt.text = d.label || `${i + 1}`; 
+        opt.value = d.deviceId; opt.text = `${i + 1}`; 
         sel.appendChild(opt);
     });
-    const back = videoDevices[videoDevices.length - 1];
+    const back = videoDevices.find(d => d.label.toLowerCase().includes('back')) || videoDevices[videoDevices.length - 1];
     if(back) { sel.value = back.deviceId; initC(back.deviceId); }
 }
 
@@ -192,20 +192,29 @@ async function savePDF() {
     const fim = kmFinalLote;
     buffer = [];
 
-    const doc = new jspdf.jsPDF('l', 'mm', 'a4');
+    const isPortrait = can.width < can.height;
+    const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
 
     for(let i=0; i<items.length; i++){
-        if(i > 0) doc.addPage('l');
+        if(i > 0) doc.addPage(isPortrait?'p':'l');
         const img = new Image();
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
+                // LEGENDA ESTILO OMNI (TARJA PRETA)
                 const barH = can.height * 0.16;
-                ctx.fillStyle = "#ffcc00"; ctx.fillRect(40, can.height-(barH+40), 450, barH);
-                ctx.fillStyle = "#000"; ctx.font = `bold ${barH * 0.6}px Arial`;
-                ctx.fillText("Km " + items[i].km, 60, can.height-(barH*0.75));
+                ctx.fillStyle = "rgba(0,0,0,0.85)"; 
+                ctx.fillRect(0, can.height-barH, can.width, barH);
+                
+                ctx.fillStyle = "#fff"; 
+                ctx.font = `bold ${barH * 0.4}px Arial`;
+                ctx.fillText("Km " + items[i].km, 60, can.height-(barH*0.5));
+                
+                ctx.font = `${barH * 0.18}px Arial`;
+                ctx.fillText(items[i].ts, 60, can.height-(barH*0.22));
+                
                 doc.addImage(can.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
                 r();
             };
