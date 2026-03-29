@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>SUPORTE DE CAMPO</title>
+    <title>SUPORTE DE CAMPO - TELA ATIVA</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(15, 15, 15, 0.9); }
@@ -56,13 +56,13 @@
         canvas { display: none; }
     </style>
 </head>
-<body onclick="wakeUI()">
+<body onclick="handleInteraction()">
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2>Monitoramento Ativo</h2>
-        <p>A tela não apagará. Mantenha o carregador conectado.</p>
-        <button class="btn-aware" onclick="acceptSafety()">Estou Ciente</button>
+        <h2>Modo Captura Contínua</h2>
+        <p>A tela será bloqueada para **NUNCA APAGAR**. Certifique-se de estar conectado à energia.</p>
+        <button class="btn-aware" onclick="acceptSafety()">Ativar Monitoramento</button>
     </div>
 </div>
 
@@ -92,10 +92,31 @@ let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, uiTimer, wakeL
 let kmInicialLote = "", kmFinalLote = "";
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// MANTER TELA ACESA
+// --- SISTEMA ANTI-APAGAMENTO REFORÇADO ---
 async function requestWakeLock() {
-    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+    if ('wakeLock' in navigator) {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log("WakeLock Ativo.");
+        } catch (err) {
+            console.error("Erro WakeLock:", err);
+        }
+    }
 }
+
+// Reativa o bloqueio sempre que o usuário volta para a página ou clica
+function handleInteraction() {
+    wakeUI();
+    requestWakeLock();
+}
+
+// Monitora se o app foi minimizado e força a tela acesa ao voltar
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        requestWakeLock();
+        if (vid.paused) vid.play();
+    }
+});
 
 async function acceptSafety() {
     try {
@@ -105,7 +126,8 @@ async function acceptSafety() {
         document.getElementById('app-shell').style.opacity = '1';
         listCams();
         requestWakeLock();
-    } catch(e) { alert("Acesso à pasta necessário."); }
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    } catch(e) { alert("Selecione a pasta para evitar o desligamento."); }
 }
 
 function wakeUI() {
@@ -148,7 +170,6 @@ async function initCapture() {
 
 function stopCapture() {
     rec = false;
-    if (wakeLock) wakeLock.release();
     savePDF();
     document.getElementById('btn-start').style.display = 'inline-block';
     document.getElementById('btn-stop').style.display = 'none';
@@ -177,7 +198,6 @@ function loop() {
 
 async function savePDF() {
     if(!buffer.length || !hDir) return;
-    
     const items = [...buffer];
     const ini = kmInicialLote;
     const fim = kmFinalLote;
@@ -209,7 +229,6 @@ async function savePDF() {
         });
     }
 
-    // FORMATAÇÃO DA DATA E HORA PARA O NOME DO ARQUIVO
     const agora = new Date();
     const dataFmt = agora.toLocaleDateString('pt-BR').replace(/\//g, '-');
     const horaFmt = agora.toLocaleTimeString('pt-BR').replace(/:/g, '-');
