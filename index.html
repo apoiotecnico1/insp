@@ -21,15 +21,6 @@
         #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* BOTÃO FECHAR GERAL (X) */
-        #exit-app { 
-            position: absolute; top: 15px; right: 15px; width: 45px; height: 45px; 
-            background: var(--danger); color: #fff; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 28px; font-weight: bold; cursor: pointer; z-index: 3500;
-            box-shadow: 0 4px 15px rgba(255,0,0,0.3); border: 2px solid #fff;
-        }
-
         /* PLACA DE KM */
         #km-hud { 
             position: absolute; top: 20px; left: 20px; 
@@ -72,8 +63,8 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2>Sua segurança em primeiro lugar</h2>
-        <p>A tela permanecerá **ativa e ligada** durante todo o percurso. Não manuseie o celular com o veículo em movimento.</p>
+        <h2>Monitoramento de Campo</h2>
+        <p>A tela permanecerá **ativa**. Verifique se o aparelho está conectado ao carregador, pois a captura de 200ms consome mais bateria.</p>
         <button class="btn-aware" onclick="acceptSafety()">Estou Ciente</button>
     </div>
 </div>
@@ -86,7 +77,6 @@
 </div>
 
 <div id="app-shell">
-    <div id="exit-app" onclick="location.reload()">×</div>
     <video id="vid" autoplay playsinline muted loop></video>
     <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
     <div id="rec-tag"><div class="dot"></div><span>CAPTURA ATIVA</span></div>
@@ -105,27 +95,32 @@ let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, uiTimer, wakeL
 let kmInicialLote = "", kmFinalLote = "";
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// --- TELA SEMPRE ATIVA ---
+// --- GARANTIA DE TELA ATIVA ---
 async function requestWakeLock() {
     if ('wakeLock' in navigator) {
         try {
             wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) {}
+        } catch (err) { console.log("WakeLock erro."); }
     }
 }
 
-// Salva ajustes no navegador para não perder ao atualizar
+document.addEventListener('visibilitychange', async () => {
+    if (rec && document.visibilityState === 'visible') {
+        requestWakeLock();
+    }
+});
+
 function saveConfigs() {
     localStorage.setItem('field_int', document.getElementById('cfg-int').value);
     localStorage.setItem('field_lote', document.getElementById('cfg-lote').value);
 }
 
-// Carrega ajustes salvos
 function loadConfigs() {
     const savedInt = localStorage.getItem('field_int');
     const savedLote = localStorage.getItem('field_lote');
-    if (savedInt) document.getElementById('cfg-int').value = savedInt;
-    if (savedLote) document.getElementById('cfg-lote').value = savedLote;
+    // Força 200ms se não houver nada salvo, senão usa o salvo
+    document.getElementById('cfg-int').value = savedInt || "200";
+    document.getElementById('cfg-lote').value = savedLote || "50";
 }
 
 async function acceptSafety() {
@@ -138,9 +133,9 @@ async function acceptSafety() {
             document.getElementById('app-shell').style.opacity = '1';
             listCams();
             if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-            requestWakeLock();
+            requestWakeLock(); 
         }, 600);
-    } catch(e) { alert("Selecione uma pasta para salvar."); }
+    } catch(e) { alert("Selecione uma pasta."); }
 }
 
 function wakeUI() {
@@ -174,7 +169,7 @@ function toggleSet() { document.getElementById('settings-panel').classList.toggl
 
 async function initCapture() {
     rec = true;
-    await requestWakeLock();
+    await requestWakeLock(); 
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'inline-block';
     document.getElementById('rec-tag').style.opacity = '1';
@@ -207,8 +202,9 @@ function loop() {
         const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
         if(buffer.length >= limit) savePDF();
     }
-    // Usa o valor do input (padrão 200ms)
-    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
+    // O intervalo agora é fixo em 200ms conforme pedido, ou o valor do input
+    const intervalo = parseInt(document.getElementById('cfg-int').value) || 200;
+    setTimeout(loop, intervalo);
 }
 
 async function savePDF() {
