@@ -13,24 +13,22 @@
         /* TELA DE ALERTA */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 4000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
         .alert-box { border: 1px solid #333; padding: 35px; border-radius: 12px; max-width: 450px; text-align: center; background: #080808; }
-        .alert-box h2 { color: var(--accent); margin-bottom: 15px; font-size: 18px; letter-spacing: 1px; }
-        .alert-box p { font-size: 13px; line-height: 1.6; color: #999; margin-bottom: 25px; }
+        .alert-box h2 { color: var(--accent); margin-bottom: 15px; font-size: 18px; }
         .btn-aware { background: var(--accent); color: #000; border: none; padding: 16px 45px; font-weight: 800; border-radius: 4px; cursor: pointer; text-transform: uppercase; font-size: 12px; }
 
         /* INTERFACE PRINCIPAL */
         #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* PLACA DE KM */
         #km-hud { 
             position: absolute; top: 20px; left: 20px; 
             background: var(--placa-verde); padding: 10px 20px; 
             border: 2px solid #fff; border-radius: 6px; 
-            box-shadow: 0 8px 15px rgba(0,0,0,0.4); z-index: 10; pointer-events: none;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.4); z-index: 10;
         }
         #km-hud h1 { font-size: 1.6rem; font-weight: 800; color: #fff; }
 
-        #rec-tag { position: absolute; top: 85px; right: 20px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 10px; color: #fff; font-weight: bold; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 20px; }
+        #rec-tag { position: absolute; top: 85px; right: 20px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 10px; color: #fff; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 20px; }
         .dot { width: 8px; height: 8px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
@@ -41,7 +39,7 @@
             padding: 60px 25px; transition: 0.5s; border-left: 1px solid #444;
         }
         #settings-panel.open { right: 0; }
-        .close-settings { position: absolute; top: 20px; left: 20px; font-size: 14px; cursor: pointer; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
+        .close-settings { position: absolute; top: 20px; left: 20px; font-size: 14px; cursor: pointer; color: #aaa; text-transform: uppercase; }
 
         .field { margin-bottom: 25px; }
         .field label { font-size: 11px; color: #aaa; display: block; margin-bottom: 8px; }
@@ -52,7 +50,6 @@
             position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
             display: flex; align-items: center; gap: 20px; z-index: 100; transition: 0.5s;
         }
-        .ui-hidden { opacity: 0.1; bottom: 20px; }
         .btn-round { border: none; border-radius: 6px; font-weight: 800; cursor: pointer; text-transform: uppercase; padding: 20px 40px; font-size: 12px; background: var(--accent); color: #000; }
         #gear-btn { width: 55px; height: 55px; border-radius: 6px; background: rgba(255,255,255,0.15); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 24px; }
 
@@ -63,8 +60,8 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2>Monitoramento de Campo</h2>
-        <p>A tela permanecerá **ativa**. Verifique se o aparelho está conectado ao carregador, pois a captura de 200ms consome mais bateria.</p>
+        <h2>Monitoramento Ativo</h2>
+        <p>A tela não apagará. Mantenha o carregador conectado.</p>
         <button class="btn-aware" onclick="acceptSafety()">Estou Ciente</button>
     </div>
 </div>
@@ -72,8 +69,8 @@
 <div id="settings-panel">
     <div class="close-settings" onclick="toggleSet()">← Voltar</div>
     <div class="field"><label>Câmera (Lente)</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Tempo da foto (ms)</label><input type="number" id="cfg-int" value="200" onchange="saveConfigs()"></div>
-    <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50" onchange="saveConfigs()"></div>
+    <div class="field"><label>Tempo da foto (ms)</label><input type="number" id="cfg-int" value="200"></div>
+    <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
@@ -95,53 +92,26 @@ let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, uiTimer, wakeL
 let kmInicialLote = "", kmFinalLote = "";
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// --- GARANTIA DE TELA ATIVA ---
+// MANTER TELA ACESA
 async function requestWakeLock() {
-    if ('wakeLock' in navigator) {
-        try {
-            wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) { console.log("WakeLock erro."); }
-    }
-}
-
-document.addEventListener('visibilitychange', async () => {
-    if (rec && document.visibilityState === 'visible') {
-        requestWakeLock();
-    }
-});
-
-function saveConfigs() {
-    localStorage.setItem('field_int', document.getElementById('cfg-int').value);
-    localStorage.setItem('field_lote', document.getElementById('cfg-lote').value);
-}
-
-function loadConfigs() {
-    const savedInt = localStorage.getItem('field_int');
-    const savedLote = localStorage.getItem('field_lote');
-    // Força 200ms se não houver nada salvo, senão usa o salvo
-    document.getElementById('cfg-int').value = savedInt || "200";
-    document.getElementById('cfg-lote').value = savedLote || "50";
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
 }
 
 async function acceptSafety() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').style.opacity = '0';
-        setTimeout(() => {
-            document.getElementById('safety-gate').remove();
-            document.getElementById('app-shell').style.visibility = 'visible';
-            document.getElementById('app-shell').style.opacity = '1';
-            listCams();
-            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-            requestWakeLock(); 
-        }, 600);
-    } catch(e) { alert("Selecione uma pasta."); }
+        document.getElementById('safety-gate').remove();
+        document.getElementById('app-shell').style.visibility = 'visible';
+        document.getElementById('app-shell').style.opacity = '1';
+        listCams();
+        requestWakeLock();
+    } catch(e) { alert("Acesso à pasta necessário."); }
 }
 
 function wakeUI() {
-    document.getElementById('ui-controls').classList.remove('ui-hidden');
+    document.getElementById('ui-controls').style.opacity = '1';
     clearTimeout(uiTimer);
-    if(rec) uiTimer = setTimeout(() => document.getElementById('ui-controls').classList.add('ui-hidden'), 4000);
+    if(rec) uiTimer = setTimeout(() => document.getElementById('ui-controls').style.opacity = '0.2', 4000);
 }
 
 async function listCams() {
@@ -151,7 +121,7 @@ async function listCams() {
     sel.innerHTML = "";
     videoDevices.forEach((d, i) => {
         const opt = document.createElement('option');
-        opt.value = d.deviceId; opt.text = `Câmera ${i + 1}`; 
+        opt.value = d.deviceId; opt.text = `Lente ${i + 1}`; 
         sel.appendChild(opt);
     });
     const back = videoDevices.find(d => d.label.toLowerCase().includes('back')) || videoDevices[videoDevices.length - 1];
@@ -160,7 +130,7 @@ async function listCams() {
 
 async function initC(id) {
     if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: { ideal: 1280 }, height: { ideal: 720 } } });
     currentStream = stream; vid.srcObject = stream;
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; vid.play(); };
 }
@@ -169,17 +139,16 @@ function toggleSet() { document.getElementById('settings-panel').classList.toggl
 
 async function initCapture() {
     rec = true;
-    await requestWakeLock(); 
+    requestWakeLock();
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'inline-block';
     document.getElementById('rec-tag').style.opacity = '1';
-    wakeUI();
     loop();
 }
 
 function stopCapture() {
     rec = false;
-    if (wakeLock) { wakeLock.release(); wakeLock = null; }
+    if (wakeLock) wakeLock.release();
     savePDF();
     document.getElementById('btn-start').style.display = 'inline-block';
     document.getElementById('btn-stop').style.display = 'none';
@@ -199,17 +168,17 @@ function loop() {
             km: currentKm, 
             ts: new Date().toLocaleString('pt-BR').toUpperCase() 
         });
+
         const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
         if(buffer.length >= limit) savePDF();
     }
-    // O intervalo agora é fixo em 200ms conforme pedido, ou o valor do input
-    const intervalo = parseInt(document.getElementById('cfg-int').value) || 200;
-    setTimeout(loop, intervalo);
+    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
 async function savePDF() {
     if(!buffer.length || !hDir) return;
-    const items = [...buffer]; 
+    
+    const items = [...buffer];
     const ini = kmInicialLote;
     const fim = kmFinalLote;
     buffer = [];
@@ -225,25 +194,34 @@ async function savePDF() {
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
-                const barH = can.height * 0.16;
-                ctx.fillStyle = "rgba(0,0,0,0.85)"; 
+                const barH = can.height * 0.15;
+                ctx.fillStyle = "rgba(0,0,0,0.8)"; 
                 ctx.fillRect(0, can.height-barH, can.width, barH);
                 ctx.fillStyle = "#fff"; 
                 ctx.font = `bold ${barH * 0.4}px Arial`;
-                ctx.fillText("Km " + items[i].km, 60, can.height-(barH*0.5));
-                ctx.font = `${barH * 0.18}px Arial`;
-                ctx.fillText(items[i].ts, 60, can.height-(barH*0.22));
-                doc.addImage(can.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
+                ctx.fillText("Km " + items[i].km, 40, can.height-(barH * 0.45));
+                ctx.font = `${barH * 0.2}px Arial`;
+                ctx.fillText(items[i].ts, 40, can.height-(barH * 0.15));
+                doc.addImage(can.toDataURL('image/jpeg', 0.6), 'JPEG', 0, 0, pw, ph);
                 r();
             };
             img.src = items[i].raw;
         });
     }
 
-    const nomeArquivo = `Km_${ini}_ao_${fim}.pdf`.replace(/\+/g, '-');
-    const f = await hDir.getFileHandle(nomeArquivo, {create:true});
-    const s = await f.createWritable();
-    await s.write(doc.output('blob')); await s.close();
+    // FORMATAÇÃO DA DATA E HORA PARA O NOME DO ARQUIVO
+    const agora = new Date();
+    const dataFmt = agora.toLocaleDateString('pt-BR').replace(/\//g, '-');
+    const horaFmt = agora.toLocaleTimeString('pt-BR').replace(/:/g, '-');
+    const nomeArquivo = `Relatorio_Km_${ini}_a_${fim}_${dataFmt}_${horaFmt}.pdf`;
+
+    try {
+        const handle = await hDir.getFileHandle(nomeArquivo, {create:true});
+        const writable = await handle.createWritable();
+        await writable.write(doc.output('blob'));
+        await writable.close();
+    } catch (err) { console.error(err); }
+
     if(rec) kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
 }
 
@@ -273,7 +251,7 @@ function initG() {
     }, null, {enableHighAccuracy:true});
 }
 
-window.onload = () => { loadConfigs(); loadCSV(); initG(); };
+window.onload = () => { loadCSV(); initG(); };
 </script>
 </body>
 </html>
