@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V22</title>
+    <title>INSPEÇÃO PRO V22 - WAKE LOCK</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #d00; --glass: rgba(15, 15, 15, 0.9); }
@@ -70,9 +70,9 @@
 
 <div id="settings-panel">
     <div class="close-x" onclick="toggleSet()">×</div>
-    <div class="field"><label>Câmera do dispositivo</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Tempo da foto (Milissegundos)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50"></div>
+    <div class="field"><label>Câmera (Lente)</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
+    <div class="field"><label>Fotos por Lote</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
@@ -90,8 +90,36 @@
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], gps=null, rec=false, buffer=[], hDir=null, currentStream=null, uiTimer;
+let kmDB=[], gps=null, rec=false, buffer=[], hDir=null, currentStream=null, uiTimer, wakeLock = null;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
+
+// Lógica para manter a tela ligada
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log("Wake Lock ativo: a tela não desligará.");
+        }
+    } catch (err) {
+        console.error(`${err.name}, ${err.message}`);
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock !== null) {
+        wakeLock.release().then(() => {
+            wakeLock = null;
+            console.log("Wake Lock liberado.");
+        });
+    }
+}
+
+// Reativa se o usuário voltar para a aba
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        requestWakeLock();
+    }
+});
 
 async function acceptSafety() {
     try {
@@ -121,7 +149,7 @@ async function listCams() {
     sel.innerHTML = "";
     videoDevices.forEach((d, i) => {
         const opt = document.createElement('option');
-        opt.value = d.deviceId; opt.text = `Lente ${i + 1}`;
+        opt.value = d.deviceId; opt.text = `${i + 1}`; // Simplificado para 1, 2, 3...
         sel.appendChild(opt);
     });
     const back = videoDevices.find(d => d.label.toLowerCase().includes('back')) || videoDevices;
@@ -140,6 +168,7 @@ function toggleSet() { document.getElementById('settings-panel').classList.toggl
 
 async function initCapture() {
     rec = true;
+    requestWakeLock(); // Ativa o Wake Lock
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'inline-block';
     document.getElementById('rec-tag').style.opacity = '1';
@@ -149,6 +178,7 @@ async function initCapture() {
 
 function stopCapture() {
     rec = false;
+    releaseWakeLock(); // Libera o Wake Lock
     savePDF();
     document.getElementById('btn-start').style.display = 'inline-block';
     document.getElementById('btn-stop').style.display = 'none';
