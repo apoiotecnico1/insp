@@ -9,7 +9,6 @@
         :root { --primary: #2e7d32; --danger: #c62828; --dark: #1a1a1a; }
         body { font-family: sans-serif; margin: 0; background: #000; color: white; overflow: hidden; }
         
-        /* Alerta de Segurança Inicial */
         #safety-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); z-index: 9999;
@@ -20,13 +19,11 @@
             max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         #safety-modal h2 { color: var(--danger); margin-top: 0; }
-        #safety-modal p { line-height: 1.6; font-weight: 500; }
         #btn-confirm {
             background: var(--primary); color: white; border: none; padding: 15px 30px;
             border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%;
         }
 
-        /* Interface da Câmera */
         #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
         video { width: 100%; height: 100%; object-fit: cover; background: #222; }
         
@@ -34,26 +31,24 @@
         .top-ui { top: 0; padding: 15px; background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); display: flex; justify-content: space-between; align-items: center; }
         .bottom-ui { bottom: 0; padding: 20px; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 15px; }
 
-        .km-badge { background: #ffd600; color: #000; padding: 5px 15px; border-radius: 20px; font-weight: 900; font-size: 1.2rem; border: 2px solid #000; }
+        .km-badge { background: #ffd600; color: #000; padding: 5px 15px; border-radius: 20px; font-weight: 900; font-size: 1.2rem; border: 2px solid #000; pointer-events: auto; }
         .rec-status { color: #ff5252; font-weight: bold; display: none; align-items: center; gap: 5px; text-transform: uppercase; font-size: 0.9rem; }
         .rec-dot { width: 10px; height: 10px; background: red; border-radius: 50%; animation: blink 1s infinite; }
 
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
 
-        /* Botões */
-        .btn-action { width: 80%; padding: 18px; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: bold; color: white; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .btn-action { width: 80%; padding: 18px; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: bold; color: white; cursor: pointer; }
         #btn-start { background: var(--primary); }
         #btn-stop { background: var(--danger); display: none; }
         
-        /* Menu Engrenagem */
         #settings-btn { font-size: 24px; color: white; cursor: pointer; pointer-events: auto; }
         #settings-menu {
             position: absolute; top: 60px; right: 15px; background: white; color: #333;
-            padding: 15px; border-radius: 8px; display: none; z-index: 100; min-width: 200px;
+            padding: 15px; border-radius: 8px; display: none; z-index: 100; min-width: 220px;
         }
         .setting-item { margin-bottom: 12px; }
         .setting-item label { display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; }
-        select, input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
 
         canvas { display: none; }
     </style>
@@ -72,7 +67,7 @@
         <video id="video" autoplay playsinline muted></video>
         
         <div class="overlay-ui top-ui">
-            <div class="km-badge">Km ---+---</div>
+            <input type="text" id="km-display" class="km-badge" value="Km 137+000">
             <div id="rec-indicator" class="rec-status"><span class="rec-dot"></span> Captura Ativa</div>
             <div id="settings-btn" onclick="toggleSettings()">⚙️</div>
         </div>
@@ -80,11 +75,11 @@
         <div id="settings-menu">
             <div class="setting-item">
                 <label>Câmera</label>
-                <select id="videoSource"></select>
+                <select id="videoSource" style="width:100%"></select>
             </div>
             <div class="setting-item">
                 <label>Intervelo entre fotos em Milissegundos (ms)</label>
-                <input type="number" id="intervalTime" value="5000" step="500">
+                <input type="number" id="intervalTime" value="5000">
             </div>
             <div class="setting-item">
                 <label>Fotos por relatório</label>
@@ -105,14 +100,15 @@
         const overlay = document.getElementById('safety-overlay');
         const btnStart = document.getElementById('btn-start');
         const btnStop = document.getElementById('btn-stop');
+        const kmDisplay = document.getElementById('km-display');
         const recIndicator = document.getElementById('rec-indicator');
         const settingsMenu = document.getElementById('settings-menu');
         
         let isCapturing = false;
         let captureInterval;
         let photoBatch = [];
+        let kmInicialLote = "";
 
-        // Fechar alerta inicial
         btnConfirm.addEventListener('click', () => {
             overlay.style.display = 'none';
             initCamera();
@@ -123,9 +119,7 @@
         }
 
         async function initCamera() {
-            const video = document.getElementById('video');
             const videoSource = document.getElementById('videoSource');
-            
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoDevices = devices.filter(device => device.kind === 'videoinput');
             
@@ -136,15 +130,13 @@
                 option.text = device.label || `Lente ${videoSource.length + 1}`;
                 videoSource.appendChild(option);
             });
-
             startStream();
         }
 
         async function startStream() {
             const video = document.getElementById('video');
             const videoSource = document.getElementById('videoSource').value;
-            const constraints = { video: { deviceId: videoSource ? { exact: videoSource } : undefined } };
-            
+            const constraints = { video: { deviceId: videoSource ? { exact: videoSource } : undefined, width: { ideal: 1920 }, height: { ideal: 1080 } } };
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = stream;
         }
@@ -155,6 +147,9 @@
             btnStop.style.display = 'block';
             recIndicator.style.display = 'flex';
             settingsMenu.style.display = 'none';
+            
+            // Grava o KM da primeiríssima foto do início
+            kmInicialLote = kmDisplay.value.replace(/[^a-zA-Z0-9+]/g, "_");
             
             const time = document.getElementById('intervalTime').value;
             captureInterval = setInterval(takePhoto, time);
@@ -178,11 +173,24 @@
             const canvas = document.getElementById('canvas');
             const context = canvas.getContext('2d');
             const batchSize = document.getElementById('batchSize').value;
+            const kmAtual = kmDisplay.value;
+
+            // Se for a primeira foto de um novo lote automático
+            if (photoBatch.length === 0) {
+                kmInicialLote = kmAtual.replace(/[^a-zA-Z0-9+]/g, "_");
+            }
 
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             
+            // Estampar o KM na imagem (Preto com fundo amarelo para legibilidade)
+            context.fillStyle = "#ffd600";
+            context.fillRect(50, canvas.height - 120, 450, 80);
+            context.font = "bold 50px sans-serif";
+            context.fillStyle = "black";
+            context.fillText(kmAtual, 70, canvas.height - 65);
+
             const imgData = canvas.toDataURL('image/jpeg', 0.7);
             photoBatch.push(imgData);
 
@@ -195,18 +203,18 @@
             if (photoBatch.length === 0) return;
             
             const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF();
+            const pdf = new jsPDF('l', 'mm', 'a4'); // Paisagem para fotos de rodovia
             
             photoBatch.forEach((img, index) => {
                 if (index > 0) pdf.addPage();
-                pdf.addImage(img, 'JPEG', 10, 10, 190, 140);
-                pdf.text(`Vistoria - Foto ${index + 1}`, 10, 160);
-                pdf.text(`Data: ${new Date().toLocaleString()}`, 10, 170);
+                pdf.addImage(img, 'JPEG', 10, 10, 277, 160);
+                pdf.setFontSize(12);
+                pdf.text(`Lote iniciado em: ${kmInicialLote} | Foto: ${index + 1}`, 10, 185);
             });
 
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            pdf.save(`RELATORIO_${timestamp}.pdf`);
-            photoBatch = []; // Limpa lote após salvar
+            // Nome do arquivo baseado no KM inicial do lote
+            pdf.save(`${kmInicialLote}.pdf`);
+            photoBatch = []; 
         }
 
         document.getElementById('videoSource').onchange = startStream;
