@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V6 - TURBO OMNI</title>
+    <title>INSPEÇÃO PRO V6 - TURBO PERSISTENT</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { 
@@ -15,7 +15,7 @@
 
         /* --- SPLASH & SAFETY --- */
         #splash-hypnos { position: fixed; inset: 0; background: #000; z-index: 9000; display: flex; align-items: center; justify-content: center; transition: opacity 0.8s; }
-        .vortex { width: 120px; height: 120px; border: 3px solid var(--accent); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; animation: rotate 4s linear infinite; box-shadow: 0 0 20px var(--accent); }
+        .vortex { width: 100px; height: 100px; border: 3px solid var(--accent); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; animation: rotate 4s linear infinite; box-shadow: 0 0 15px var(--accent); }
         @keyframes rotate { 100% { transform: rotate(360deg); } }
         
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 8000; display: none; align-items: center; justify-content: center; padding: 20px; }
@@ -26,25 +26,21 @@
         #app-shell { visibility: hidden; opacity: 0; transition: 1s; height: 100vh; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD KM (Topo Esquerda) */
         .hud-top-left { position: absolute; top: 25px; left: 25px; z-index: 100; }
         #km-hud { background: var(--placa-verde); padding: 12px 25px; border: 3px solid #fff; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
         #km-hud h1 { font-size: 2.2rem; font-weight: 900; letter-spacing: -1px; }
 
-        /* LISTA NOX (Lateral Direita) */
         #nox-list-container { 
             position: absolute; right: 20px; top: 80px; width: 180px; 
             background: rgba(0,0,0,0.5); backdrop-filter: blur(15px);
             padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
             max-height: 65vh; overflow-y: auto; transition: 0.5s;
         }
-        .nox-item { font-size: 11px; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #888; cursor: pointer; }
-        .nox-item.active { color: var(--accent); font-weight: 900; border-left: 3px solid var(--accent); padding-left: 10px; background: rgba(0,217,255,0.05); }
+        .nox-item { font-size: 11px; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #888; }
+        .nox-item.active { color: var(--accent); font-weight: 900; border-left: 3px solid var(--accent); padding-left: 10px; }
 
-        /* STATUS GPS (Topo Direita) */
-        #st-gps { position: absolute; top: 25px; right: 25px; font-size: 10px; color: #555; font-weight: 800; text-transform: uppercase; }
+        #st-gps { position: absolute; top: 25px; right: 25px; font-size: 10px; color: #555; font-weight: 800; }
 
-        /* CONTROLES */
         #ui-controls { position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 15px; z-index: 500; transition: 0.5s; }
         .btn-main { border: none; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 20px 40px; font-size: 12px; }
         #btn-start { background: var(--accent); color: #000; }
@@ -52,19 +48,11 @@
         #gear-btn { background: rgba(255,255,255,0.1); color: #fff; padding: 20px; width: 60px; }
         .ui-hidden { opacity: 0; pointer-events: none; transform: translate(-50%, 20px); }
 
-        /* PAINEL CONFIGS */
-        #settings-panel { 
-            position: fixed; right: -350px; top: 0; width: 320px; height: 100%; 
-            background: var(--glass); backdrop-filter: blur(25px); z-index: 2000; 
-            padding: 40px 25px; transition: 0.5s; border-left: 1px solid #333; 
-        }
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); z-index: 2000; padding: 40px 25px; transition: 0.5s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
         .field { margin-bottom: 20px; }
         .field label { font-size: 10px; color: #666; text-transform: uppercase; display: block; margin-bottom: 8px; }
         input, select { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; }
-
-        #rec-indicator { position: absolute; top: 110px; left: 25px; color: var(--danger); font-size: 12px; font-weight: 900; animation: blink 1s infinite; display: none; }
-        @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body onclick="wakeUI()">
@@ -73,60 +61,30 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2>ACESSO REQUERIDO</h2>
-        <p style="font-size:12px; color:#666; margin:15px 0">Selecione a pasta de destino para os relatórios.</p>
-        <button class="btn-aware" onclick="acceptSafety()">Definir Pasta de Trabalho</button>
+        <h2 id="gate-title">ACESSO REQUERIDO</h2>
+        <p id="gate-desc" style="font-size:12px; color:#666; margin:15px 0">Selecione a pasta de destino para os relatórios.</p>
+        <button id="gate-btn" class="btn-aware" onclick="initFolderFlow()">Definir Pasta de Trabalho</button>
     </div>
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
-
-    <div class="hud-top-left">
-        <div id="km-hud"><h1 id="km-txt">KM ---+---</h1></div>
-        <div id="rec-indicator">● GRAVANDO LOTE</div>
-    </div>
-
-    <div id="nox-list-container">
-        <div style="font-size: 9px; color: var(--accent); font-weight: 900; margin-bottom: 10px; letter-spacing: 1px;">IDS PRÓXIMOS (NOX)</div>
-        <div id="nox-items"></div>
-    </div>
-
-    <div id="st-gps">Aguardando GPS...</div>
-
+    <div class="hud-top-left"><div id="km-hud"><h1 id="km-txt">KM ---+---</h1></div></div>
+    <div id="nox-list-container"><div id="nox-items"></div></div>
+    <div id="st-gps">GPS: ...</div>
     <div id="ui-controls">
         <button id="gear-btn" class="btn-main" onclick="toggleSet()">⚙</button>
-        <button id="btn-start" class="btn-main" onclick="startCapture()">Iniciar Inspeção</button>
-        <button id="btn-stop" class="btn-main" onclick="stopCapture()">Finalizar Relatório</button>
+        <button id="btn-start" class="btn-main" onclick="startCapture()">Iniciar</button>
+        <button id="btn-stop" class="btn-main" onclick="stopCapture()">Finalizar</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <h3 style="color:var(--accent); margin-bottom:25px">OPÇÕES TURBO</h3>
-    
-    <div class="field">
-        <label>WhatsApp para Envio (55129...)</label>
-        <input type="text" id="cfg-zap" placeholder="5512999999999">
-    </div>
-
-    <div class="field">
-        <label>Fotos por Lote (Auto-Zap)</label>
-        <input type="number" id="cfg-lote" value="25">
-    </div>
-
-    <div class="field">
-        <label>Exibir IDs na tela</label>
-        <select id="cfg-id-qty">
-            <option value="1">Apenas o mais próximo</option>
-            <option value="5" selected>5 mais próximos</option>
-            <option value="10">10 mais próximos</option>
-        </select>
-    </div>
-
+    <h3 style="color:var(--accent); margin-bottom:25px">OPÇÕES</h3>
+    <div class="field"><label>WhatsApp (5512...)</label><input type="text" id="cfg-zap" value="55"></div>
+    <div class="field"><label>Fotos por Lote</label><input type="number" id="cfg-lote" value="25"></div>
     <div class="field"><label>Câmera</label><select id="cam-select" onchange="initC(this.value)"></select></div>
-    <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="350"></div>
-
-    <button class="btn-aware" onclick="toggleSet()" style="background:#222; color:#fff">SALVAR E FECHAR</button>
+    <button class="btn-aware" onclick="toggleSet()" style="background:#222; color:#fff">FECHAR</button>
 </div>
 
 <canvas id="c" style="display:none"></canvas>
@@ -135,46 +93,91 @@
 let kmDB=[], idDB=[], buffer=[], hDir=null, currentStream=null, rec=false, lastPos=null, uiTimer;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-window.onload = () => {
+window.onload = async () => {
+    // 1. Tentar recuperar pasta anterior do banco de dados
+    const savedHandle = await getSavedFolder();
+    if(savedHandle) {
+        hDir = savedHandle;
+        document.getElementById('gate-title').innerText = "REAUTENTICAR PASTA";
+        document.getElementById('gate-desc').innerText = "Clique abaixo para liberar o acesso à pasta já selecionada.";
+        document.getElementById('gate-btn').innerText = "Liberar Acesso";
+    }
+
     setTimeout(() => {
         document.getElementById('splash-hypnos').style.opacity = '0';
-        setTimeout(() => { document.getElementById('splash-hypnos').remove(); document.getElementById('safety-gate').style.display = 'flex'; }, 800);
-    }, 2000);
+        setTimeout(() => { 
+            document.getElementById('splash-hypnos').remove(); 
+            document.getElementById('safety-gate').style.display = 'flex'; 
+        }, 800);
+    }, 1500);
+
     loadCSVs();
     initGPS();
 };
 
-async function acceptSafety() {
+// --- PERSISTÊNCIA DE PASTA (IndexedDB) ---
+async function getSavedFolder() {
+    return new Promise(resolve => {
+        const req = indexedDB.open("InspecaoDB", 1);
+        req.onupgradeneeded = () => req.result.createObjectStore("settings");
+        req.onsuccess = () => {
+            const store = req.result.transaction("settings", "readonly").objectStore("settings");
+            const get = store.get("folderHandle");
+            get.onsuccess = () => resolve(get.result);
+            get.onerror = () => resolve(null);
+        };
+    });
+}
+
+async function saveFolder(handle) {
+    const req = indexedDB.open("InspecaoDB", 1);
+    req.onsuccess = () => {
+        const db = req.result;
+        db.transaction("settings", "readwrite").objectStore("settings").put(handle, "folderHandle");
+    };
+}
+
+async function initFolderFlow() {
     try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        // Se já temos um handle, apenas pedimos permissão de novo (F5)
+        if (hDir) {
+            const permission = await hDir.requestPermission({ mode: 'readwrite' });
+            if (permission !== 'granted') throw new Error();
+        } else {
+            // Primeira vez selecionando
+            hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+            await saveFolder(hDir);
+        }
+        
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
         document.getElementById('app-shell').style.opacity = '1';
         listCams();
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-        wakeUI();
-    } catch(e) { alert("Acesso à pasta é obrigatório para salvar PDFs."); }
+    } catch(e) {
+        // Se falhar a reautenticação, limpa e pede para selecionar do zero
+        hDir = null;
+        initFolderFlow();
+    }
 }
 
+// --- RESTO DA LÓGICA TURBO ---
 async function loadCSVs() {
     try {
         const rK = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
         const tK = await rK.text();
-        const rowsK = tK.split('\n').filter(l => l.includes(';'));
-        kmDB = rowsK.map(r => {
+        kmDB = tK.split('\n').filter(l => l.includes(';')).map(r => {
             const c = r.split(';');
             return { km: c.trim(), lt: parseFloat(c.replace(',','.')), ln: parseFloat(c.replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
 
-        // NOME DO ARQUIVO ATUALIZADO CONFORME SOLICITAÇÃO
         const rI = await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now());
         const tI = await rI.text();
-        const rowsI = tI.split('\n').filter(l => l.includes(';'));
-        idDB = rowsI.map(r => {
+        idDB = tI.split('\n').filter(l => l.includes(';')).map(r => {
             const c = r.split(';');
             return { id: c.trim(), lt: parseFloat(c.replace(',','.')), ln: parseFloat(c.replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) { console.warn("CSV não encontrado ou erro de leitura."); }
+    } catch(e) {}
 }
 
 function initGPS() {
@@ -187,36 +190,24 @@ function initGPS() {
 
 function updateHUD() {
     if(!lastPos) return;
-    
-    // KM
-    let bestKM = kmDB.map(pt => ({ ...pt, d: Math.hypot(pt.lt - lastPos.lt, pt.ln - lastPos.ln) })).sort((a,b) => a.d - b.d);
-    if(bestKM) document.getElementById('km-txt').innerText = "KM " + bestKM.km;
+    let bKM = kmDB.map(pt => ({ ...pt, d: Math.hypot(pt.lt-lastPos.lt, pt.ln-lastPos.ln) })).sort((a,b)=>a.d-b.d);
+    if(bKM) document.getElementById('km-txt').innerText = "KM " + bKM.km;
 
-    // NOX IDs
-    let scored = idDB.map(pt => ({ ...pt, d: Math.hypot(pt.lt - lastPos.lt, pt.ln - lastPos.ln) })).sort((a,b) => a.d - b.d);
-    const qty = parseInt(document.getElementById('cfg-id-qty').value);
-    const nearest = scored.slice(0, qty);
-    
+    let bIDs = idDB.map(pt => ({ ...pt, d: Math.hypot(pt.lt-lastPos.lt, pt.ln-lastPos.ln) })).sort((a,b)=>a.d-b.d).slice(0, 5);
     const container = document.getElementById('nox-items');
-    container.innerHTML = "";
-    nearest.forEach((item, idx) => {
-        const div = document.createElement('div');
-        div.className = `nox-item ${idx === 0 ? 'active' : ''}`;
-        div.innerText = item.id;
-        container.appendChild(div);
-    });
+    container.innerHTML = bIDs.map((it, idx) => `<div class="nox-item ${idx===0?'active':''}">${it.id}</div>`).join('');
 }
 
 async function listCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const video = devices.filter(d => d.kind === 'videoinput');
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const vids = devs.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
-    video.forEach((d, i) => {
+    vids.forEach((d, i) => {
         const opt = document.createElement('option');
         opt.value = d.deviceId; opt.text = d.label || `Lente ${i+1}`;
         sel.appendChild(opt);
     });
-    if(video.length) initC(video[video.length-1].deviceId);
+    if(vids.length) initC(vids[vids.length-1].deviceId);
 }
 
 async function initC(id) {
@@ -230,7 +221,6 @@ function startCapture() {
     rec = true;
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-indicator').style.display = 'block';
     loop();
 }
 
@@ -238,8 +228,7 @@ function stopCapture() {
     rec = false;
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-indicator').style.display = 'none';
-    saveAndSend();
+    saveBatch();
 }
 
 function loop() {
@@ -249,15 +238,13 @@ function loop() {
         img: can.toDataURL('image/jpeg', 0.5),
         km: document.getElementById('km-txt').innerText,
         id: document.querySelector('.nox-item.active')?.innerText || "---",
-        lat: lastPos?.lt.toFixed(6),
-        lon: lastPos?.ln.toFixed(6),
         ts: new Date().toLocaleTimeString('pt-BR')
     });
-    if(buffer.length >= parseInt(document.getElementById('cfg-lote').value)) saveAndSend();
-    setTimeout(loop, parseInt(document.getElementById('cfg-int').value));
+    if(buffer.length >= parseInt(document.getElementById('cfg-lote').value)) saveBatch();
+    setTimeout(loop, 400);
 }
 
-async function saveAndSend() {
+async function saveBatch() {
     if(!buffer.length) return;
     const batch = [...buffer]; buffer = [];
     const zap = document.getElementById('cfg-zap').value;
@@ -266,11 +253,9 @@ async function saveAndSend() {
     for(let i=0; i<batch.length; i++){
         if(i > 0) doc.addPage();
         doc.addImage(batch[i].img, 'JPEG', 0, 0, 297, 210);
-        doc.setFillColor(0,0,0,0.85); doc.rect(0, 185, 297, 25, 'F');
+        doc.setFillColor(0,0,0,0.8); doc.rect(0, 185, 297, 25, 'F');
         doc.setTextColor(255,255,255); doc.setFontSize(16);
         doc.text(`${batch[i].km} | ID: ${batch[i].id} | ${batch[i].ts}`, 15, 200);
-        doc.setFontSize(10);
-        doc.text(`LAT: ${batch[i].lat} LON: ${batch[i].lon}`, 15, 206);
     }
 
     const nome = `Inspecao_${batch.km}_${Date.now()}.pdf`.replace(/\+/g,'_');
@@ -281,9 +266,8 @@ async function saveAndSend() {
             await s.write(doc.output('blob')); await s.close();
         } catch(e) {}
     }
-
-    if(zap) {
-        const text = `*NOVO LOTE TURBO*\n📍 KM Inicial: ${batch.km}\n🛠️ Ativo: ${batch.id}\n⏰ Hora: ${batch.ts}\n📂 Salvo como: ${nome}`;
+    if(zap.length > 5) {
+        const text = `*RELATÓRIO GERADO*\n📍 KM: ${batch.km}\n📂 PDF: ${nome}\n⏰ ${batch.ts}`;
         window.open(`https://wa.me/${zap}?text=${encodeURIComponent(text)}`, '_blank');
     }
 }
@@ -291,9 +275,8 @@ async function saveAndSend() {
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 function wakeUI() {
     document.getElementById('ui-controls').classList.remove('ui-hidden');
-    document.getElementById('nox-list-container').style.opacity = "1";
     clearTimeout(uiTimer);
-    uiTimer = setTimeout(() => { if(rec) { document.getElementById('ui-controls').classList.add('ui-hidden'); document.getElementById('nox-list-container').style.opacity = "0.2"; } }, 5000);
+    uiTimer = setTimeout(() => { if(rec) document.getElementById('ui-controls').classList.add('ui-hidden'); }, 4000);
 }
 </script>
 </body>
