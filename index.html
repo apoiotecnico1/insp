@@ -3,122 +3,201 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V8.0</title>
+    <title>INSPEÇÃO PRO V22</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --green: #056b3c; --gold: #ffcc00; --danger: #cc0000; --bg: #050505; }
+        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #d00; --glass: rgba(15, 15, 15, 0.9); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-        #app-shell { display: flex; flex-direction: column; height: 100vh; }
+        /* TELA DE ALERTA */
+        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
+        .alert-box { border: 1px solid #333; padding: 35px; border-radius: 12px; max-width: 450px; text-align: center; background: #080808; }
+        .alert-box h2 { color: var(--accent); margin-bottom: 15px; font-size: 18px; letter-spacing: 1px; }
+        .alert-box p { font-size: 13px; line-height: 1.6; color: #999; margin-bottom: 25px; }
+        .btn-aware { background: var(--accent); color: #000; border: none; padding: 16px 45px; font-weight: 800; border-radius: 4px; cursor: pointer; text-transform: uppercase; font-size: 12px; }
 
-        @media (orientation: landscape) {
-            #app-shell { flex-direction: row; }
-            #cam-view { flex: 3; }
-            #ui-panel { flex: 0.9; border-left: 2px solid #222; }
-            #gear-btn { top: 10px; right: 10px; } /* Ajuste fino na horizontal */
-        }
-
-        @media (orientation: portrait) {
-            #cam-view { height: 60vh; }
-            #ui-panel { height: 40vh; border-top: 2px solid #222; }
-            #gear-btn { top: 10px; right: 10px; }
-        }
-
-        /* Área da Câmera */
-        #cam-view { position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        /* INTERFACE PRINCIPAL */
+        #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
         video { width: 100%; height: 100%; object-fit: cover; }
-        #km-live { position: absolute; top: 15px; left: 15px; background: var(--green); padding: 10px 20px; border: 2px solid #fff; border-radius: 8px; font-size: 1.8rem; font-weight: 900; z-index: 10; }
 
-        /* Botão Engrenagem */
-        #gear-btn { position: absolute; background: rgba(0,0,0,0.6); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #555; cursor: pointer; z-index: 100; }
+        /* PLACA DE KM ESTILO RODOVIA */
+        #km-hud { 
+            position: absolute; top: 25px; left: 25px; 
+            background: var(--placa-verde); padding: 8px 20px; 
+            border: 2px solid #fff; border-radius: 6px; 
+            box-shadow: 0 8px 15px rgba(0,0,0,0.4); z-index: 10; pointer-events: none;
+        }
+        #km-hud h1 { font-size: 1.8rem; font-weight: 800; color: #fff; letter-spacing: -1px; }
 
-        /* Menu de Ajustes */
-        #settings-flyout { position: fixed; top: 0; right: -100%; width: 260px; height: 100%; background: #111; z-index: 200; transition: 0.3s; padding: 20px; border-left: 3px solid var(--gold); overflow-y: auto; }
-        #settings-flyout.open { right: 0; }
-        .set-row { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #222; }
-        .set-row label { font-size: 10px; color: var(--gold); display: block; margin-bottom: 5px; text-transform: uppercase; }
-        select, input { width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 5px; font-size: 13px; }
+        #rec-tag { position: absolute; top: 30px; right: 30px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 9px; color: rgba(255,255,255,0.5); letter-spacing: 1px; }
+        .dot { width: 6px; height: 6px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
 
-        /* Interface de Comandos */
-        #ui-panel { background: var(--bg); display: flex; flex-direction: column; padding: 12px; gap: 8px; justify-content: center; }
-        .counter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .counter-item { background: #111; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #222; }
-        .counter-item b { font-size: 1.3rem; display: block; }
+        /* MENU DE AJUSTES */
+        #settings-panel { 
+            position: fixed; right: -350px; top: 0; width: 300px; height: 100%; 
+            background: var(--glass); backdrop-filter: blur(20px); z-index: 2000; 
+            padding: 60px 25px; transition: 0.5s; border-left: 1px solid #333;
+        }
+        #settings-panel.open { right: 0; }
+        .close-x { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; color: #444; }
+        .field { margin-bottom: 25px; }
+        .field label { font-size: 11px; color: #777; display: block; margin-bottom: 8px; font-weight: 500; }
+        select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 4px; font-size: 13px; }
 
-        .btn { width: 100%; border: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
-        .btn-f { background: var(--gold); color: #000; height: 45px; font-size: 0.75rem; }
-        .btn-on { background: var(--green); color: #fff; height: 75px; font-size: 1.1rem; }
-        .btn-off { background: var(--danger); color: #fff; height: 75px; font-size: 1.1rem; }
-        button:disabled { opacity: 0.1; }
+        /* CONTROLES */
+        #ui-controls { 
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
+            display: flex; align-items: center; gap: 20px; transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1); z-index: 100;
+        }
+        .ui-hidden { opacity: 0; bottom: 15px; pointer-events: none; }
+        .btn-round { border: none; border-radius: 4px; font-weight: 800; cursor: pointer; text-transform: uppercase; padding: 18px 40px; font-size: 11px; background: var(--accent); color: #000; letter-spacing: 1px; }
+        #gear-btn { width: 48px; height: 48px; border-radius: 4px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
         canvas { display: none; }
     </style>
 </head>
-<body>
+<body onclick="wakeUI()">
 
-<div id="gear-btn" onclick="toggleSet()">⚙️</div>
-
-<div id="settings-flyout">
-    <h4 style="margin-bottom:20px; font-size:14px">AJUSTES TÉCNICOS</h4>
-    
-    <div class="set-row">
-        <label>Data/Hora no Relatório</label>
-        <select id="cfg-date"><option value="S">SIM</option><option value="N">NÃO</option></select>
+<div id="safety-gate">
+    <div class="alert-box">
+        <h2>Consciência Operacional</h2>
+        <p>Este sistema é um suporte à inspeção. Mantenha foco total na via e utilize o suporte de celular. Sua segurança é prioridade.</p>
+        <button class="btn-aware" onclick="acceptSafety()">Estou Ciente</button>
     </div>
+</div>
 
-    <div class="set-row">
-        <label>Coordenadas GPS</label>
-        <select id="cfg-gps"><option value="N">NÃO</option><option value="S">SIM</option></select>
-    </div>
-
-    <div class="set-row">
-        <label>Fotos por Lote (Qtd)</label>
-        <input type="number" id="cfg-batch-size" value="50">
-    </div>
-
-    <div class="set-row">
-        <label>Intervalo (Milissegundos)</label>
-        <input type="number" id="cfg-interval" value="750">
-        <small style="font-size:8px; color:#666">1000ms = 1 segundo</small>
-    </div>
-
-    <button onclick="toggleSet()" style="width:100%; padding:12px; background:var(--danger); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer">SALVAR E VOLTAR</button>
+<div id="settings-panel">
+    <div class="close-x" onclick="toggleSet()">×</div>
+    <div class="field"><label>Câmera do dispositivo</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="field"><label>Tempo da foto (Milissegundos)</label><input type="number" id="cfg-int" value="200"></div>
+    <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
-    <div id="cam-view">
-        <video id="vid" autoplay playsinline muted></video>
-        <div id="km-live">Km ---+---</div>
-    </div>
+    <video id="vid" autoplay playsinline muted></video>
+    <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
+    <div id="rec-tag"><span>Captura Ativa</span><div class="dot"></div></div>
 
-    <div id="ui-panel">
-        <div class="counter-grid">
-            <div class="counter-item"><small style="color:#666">LOTE</small><b id="v-batch">0/50</b></div>
-            <div class="counter-item"><small style="color:#666">TOTAL</small><b id="v-total">0</b></div>
-        </div>
-
-        <button id="btn-dir" class="btn btn-f">📁 DEFINIR PASTA DESTINO</button>
-        <button id="btn-start" class="btn btn-on" disabled>▶ INICIAR CAPTURA</button>
-        <button id="btn-stop" class="btn btn-off" disabled>■ FINALIZAR LOTE</button>
-        
-        <div id="status" style="font-size:10px; color:#444; text-align:center">MODO FULL IMMERSIVE V8.0</div>
+    <div id="ui-controls">
+        <div id="gear-btn" onclick="toggleSet()">⚙</div>
+        <button id="btn-start" class="btn-round" onclick="initCapture()">Iniciar Inspeção</button>
+        <button id="btn-stop" class="btn-round" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Encerrar Relatório</button>
     </div>
 </div>
 
-<canvas id="proc"></canvas>
+<canvas id="c"></canvas>
 
 <script>
-let kmDB = [], gps = null, active = false, buffer = [], total = 0, batchNum = 0, hFolder = null;
+let kmDB=[], gps=null, rec=false, buffer=[], hDir=null, currentStream=null, uiTimer;
+const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-const vid = document.getElementById('vid'), proc = document.getElementById('proc'), ctx = proc.getContext('2d');
+async function acceptSafety() {
+    try {
+        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('safety-gate').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('safety-gate').remove();
+            document.getElementById('app-shell').style.visibility = 'visible';
+            document.getElementById('app-shell').style.opacity = '1';
+            listCams();
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+            wakeUI();
+        }, 600);
+    } catch(e) { alert("Selecione uma pasta para salvar os relatórios."); }
+}
 
-window.onload = () => { initCam(); loadCSV(); initGPS(); };
+function wakeUI() {
+    document.getElementById('ui-controls').classList.remove('ui-hidden');
+    clearTimeout(uiTimer);
+    if(rec) uiTimer = setTimeout(() => document.getElementById('ui-controls').classList.add('ui-hidden'), 4000);
+}
 
-async function initCam() {
-    const s = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment", width:1920, height:1080}});
-    vid.srcObject = s;
-    vid.onloadedmetadata = () => { proc.width = vid.videoWidth; proc.height = vid.videoHeight; vid.play(); };
+async function listCams() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+    const sel = document.getElementById('cam-select');
+    sel.innerHTML = "";
+    videoDevices.forEach((d, i) => {
+        const opt = document.createElement('option');
+        opt.value = d.deviceId; opt.text = `Lente ${i + 1}`;
+        sel.appendChild(opt);
+    });
+    const back = videoDevices.find(d => d.label.toLowerCase().includes('back')) || videoDevices;
+    if(back) { sel.value = back.deviceId; initC(back.deviceId); }
+}
+
+async function initC(id) {
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+    currentStream = stream; vid.srcObject = stream;
+    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; vid.play(); };
+}
+
+function switchCam(id) { initC(id); }
+function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+
+async function initCapture() {
+    rec = true;
+    document.getElementById('btn-start').style.display = 'none';
+    document.getElementById('btn-stop').style.display = 'inline-block';
+    document.getElementById('rec-tag').style.opacity = '1';
+    wakeUI();
+    loop();
+}
+
+function stopCapture() {
+    rec = false;
+    savePDF();
+    document.getElementById('btn-start').style.display = 'inline-block';
+    document.getElementById('btn-stop').style.display = 'none';
+    document.getElementById('rec-tag').style.opacity = '0';
+}
+
+function loop() {
+    if(!rec) return;
+    if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
+        ctx.drawImage(vid, 0, 0, can.width, can.height);
+        buffer.push({ 
+            raw: can.toDataURL('image/jpeg', 0.45), 
+            km: document.getElementById('km-txt').innerText.replace("Km ", ""), 
+            ts: new Date().toLocaleString('pt-BR').toUpperCase() 
+        });
+        const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
+        if(buffer.length >= limit) savePDF();
+    }
+    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
+}
+
+async function savePDF() {
+    if(!buffer.length || !hDir) return;
+    const items = [...buffer]; buffer = [];
+    const isPortrait = can.width < can.height;
+    const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    for(let i=0; i<items.length; i++){
+        if(i > 0) doc.addPage(isPortrait?'p':'l');
+        const img = new Image();
+        await new Promise(r => {
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0);
+                const barH = can.height * 0.16;
+                ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, can.height-barH, can.width, barH);
+                ctx.fillStyle = "#fff"; ctx.font = `bold ${barH * 0.4}px Arial`;
+                ctx.fillText("Km " + items[i].km, 60, can.height-(barH*0.5));
+                ctx.font = `${barH * 0.18}px Arial`;
+                ctx.fillText(items[i].ts, 60, can.height-(barH*0.22));
+                doc.addImage(can.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
+                r();
+            };
+            img.src = items[i].raw;
+        });
+    }
+    const f = await hDir.getFileHandle(`RELATORIO_${Date.now()}.pdf`, {create:true});
+    const s = await f.createWritable();
+    await s.write(doc.output('blob')); await s.close();
 }
 
 async function loadCSV() {
@@ -126,122 +205,28 @@ async function loadCSV() {
         const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
         const t = await r.text();
         const rows = t.split('\n').filter(l => l.includes(';'));
-        const head = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ik=head.indexOf('km'), ilt=head.findIndex(x=>x.includes('lat')), iln=head.findIndex(x=>x.includes('lon'));
+        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
+        const ik = h.indexOf('km'), ilt = h.findIndex(x=>x.includes('lat')), iln = h.findIndex(x=>x.includes('lon'));
         kmDB = rows.map(r => {
             const c = r.split(';');
             return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) { document.getElementById('status').innerText = "Erro CSV"; }
+    } catch(e) { console.error("Erro CSV:", e); }
 }
 
-function updateKM() {
-    if(!gps || !kmDB.length) return;
-    let near = null, dMin = Infinity;
-    for(const pt of kmDB) {
-        const d = Math.hypot(pt.lt - gps.lat, pt.ln - gps.lon);
-        if(d < dMin) { dMin = d; near = pt; }
-    }
-    if(near) document.getElementById('km-live').innerText = "Km " + near.km;
-}
-
-function drawStamp(meta) {
-    const w = proc.width, h = proc.height;
-    ctx.save();
-    const barH = h * 0.12;
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(0, h - barH, w, barH);
-
-    // GRAFIA: Km
-    ctx.fillStyle = "#fff";
-    ctx.textAlign = "left";
-    ctx.font = `900 ${barH * 0.5}px Arial`;
-    ctx.fillText("Km " + meta.km, w * 0.05, h - (barH * 0.35));
-
-    // Opcionais (Data e GPS)
-    ctx.font = `bold ${barH * 0.2}px monospace`;
-    ctx.textAlign = "right";
-    let info = "";
-    if(document.getElementById('cfg-date').value === 'S') info += meta.ts + " ";
-    if(document.getElementById('cfg-gps').value === 'S') info += `[${meta.lat}, ${meta.lon}]`;
-    ctx.fillText(info, w * 0.95, h - (barH * 0.4));
-    
-    ctx.restore();
-}
-
-async function saveBatch() {
-    if(!buffer.length || !hFolder) return;
-    const items = [...buffer]; buffer = []; batchNum++;
-    document.getElementById('status').innerText = `Salvando Lote ${batchNum}...`;
-    const doc = new jspdf.jsPDF('l', 'mm', 'a4');
-    for(let i=0; i<items.length; i++){
-        if(i > 0) doc.addPage();
-        const img = new Image();
-        await new Promise(r => {
-            img.onload = () => {
-                ctx.drawImage(img, 0, 0);
-                drawStamp(items[i]);
-                const ratio = proc.width / proc.height;
-                let dw = 297, dh = 297/ratio;
-                if(dh > 210) { dh = 210; dw = 210*ratio; }
-                doc.addImage(proc.toDataURL('image/jpeg', 0.8), 'JPEG', (297-dw)/2, (210-dh)/2, dw, dh);
-                r();
-            };
-            img.src = items[i].raw;
-        });
-    }
-    const f = await hFolder.getFileHandle(`INSPECAO_LOTE_${batchNum}.pdf`, {create:true});
-    const s = await f.createWritable();
-    await s.write(doc.output('blob')); await s.close();
-    document.getElementById('status').innerText = `Lote ${batchNum} OK!`;
-}
-
-function loop() {
-    if(!active) return;
-    ctx.drawImage(vid, 0, 0, proc.width, proc.height);
-    const bLimit = parseInt(document.getElementById('cfg-batch-size').value) || 50;
-    
-    buffer.push({
-        raw: proc.toDataURL('image/jpeg', 0.5),
-        km: document.getElementById('km-live').innerText.replace("Km ", ""),
-        ts: new Date().toLocaleString('pt-BR'),
-        lat: gps ? gps.lat.toFixed(6) : "0",
-        lon: gps ? gps.lon.toFixed(6) : "0"
-    });
-
-    total++;
-    document.getElementById('v-total').innerText = total;
-    document.getElementById('v-batch').innerText = `${buffer.length}/${bLimit}`;
-
-    if(buffer.length >= bLimit) saveBatch();
-    
-    const interval = parseInt(document.getElementById('cfg-interval').value) || 750;
-    setTimeout(loop, interval);
-}
-
-document.getElementById('btn-dir').onclick = async () => {
-    hFolder = await window.showDirectoryPicker({ mode: 'readwrite' });
-    document.getElementById('btn-dir').innerText = "PASTA OK ✓";
-    document.getElementById('btn-start').disabled = false;
-};
-
-document.getElementById('btn-start').onclick = () => {
-    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    active = true; loop();
-    document.getElementById('btn-start').disabled = true;
-    document.getElementById('btn-stop').disabled = false;
-};
-
-document.getElementById('btn-stop').onclick = () => { active = false; saveBatch(); document.getElementById('btn-start').disabled = false; document.getElementById('btn-stop').disabled = true; };
-
-function toggleSet() { document.getElementById('settings-flyout').classList.toggle('open'); }
-
-function initGPS() {
+function initG() { 
     navigator.geolocation.watchPosition(p => {
-        gps = { lat: p.coords.latitude, lon: p.coords.longitude };
-        updateKM();
+        if(!kmDB.length) return;
+        let n = null, dM = Infinity;
+        for(const pt of kmDB) {
+            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
+            if(d < dM) { dM = d; n = pt; }
+        }
+        if(n) document.getElementById('km-txt').innerText = "Km " + n.km;
     }, null, {enableHighAccuracy:true});
 }
+
+window.onload = () => { loadCSV(); initG(); };
 </script>
 </body>
 </html>
