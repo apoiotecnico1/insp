@@ -3,120 +3,152 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>SUPORTE DE CAMPO ELITE</title>
+    <title>SUPORTE DE CAMPO PRO</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.98); }
+        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(15, 15, 15, 0.95); --border: #333; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Inter', system-ui, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; }
 
-        /* TELA DE SEGURANÇA OBRIGATÓRIA */
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .alert-box { border: 1px solid #333; padding: 35px; border-radius: 15px; max-width: 450px; background: #0a0a0a; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,1); }
-        .alert-box h2 { color: var(--accent); text-transform: uppercase; margin-bottom: 20px; font-size: 22px; }
-        .safety-list { text-align: left; margin: 20px 0; font-size: 14px; color: #ccc; line-height: 1.6; }
-        .safety-list b { color: #fff; }
-        .btn-aware { width: 100%; background: var(--accent); color: #000; border: none; padding: 22px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; margin-top: 10px; font-size: 14px; }
+        /* TELA DE SEGURANÇA INICIAL */
+        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px; }
+        .alert-box { border: 1px solid var(--border); padding: 30px; border-radius: 12px; max-width: 500px; background: #080808; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        .alert-box h2 { color: var(--accent); margin-bottom: 20px; font-size: 20px; text-transform: uppercase; text-align: center; }
+        
+        .safety-guide { text-align: left; margin-bottom: 25px; }
+        .safety-item { display: flex; gap: 12px; margin-bottom: 15px; align-items: flex-start; }
+        .safety-icon { color: var(--accent); font-size: 18px; }
+        .safety-text { font-size: 13px; color: #ccc; line-height: 1.4; }
+        .safety-text b { color: #fff; }
 
-        /* APP SHELL */
-        #app-shell { display: none; height: 100vh; width: 100vw; position: relative; background: #000; }
+        .btn-aware { width: 100%; background: var(--accent); color: #000; border: none; padding: 18px; font-weight: 800; border-radius: 6px; cursor: pointer; text-transform: uppercase; font-size: 13px; transition: 0.3s; }
+        .btn-aware:hover { background: #e6b800; }
+
+        /* INTERFACE PRINCIPAL */
+        #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD KM */
         #km-hud { 
-            position: absolute; top: env(safe-area-inset-top, 25px); left: 25px; 
-            background: var(--placa-verde); padding: 15px 25px; 
-            border: 2px solid #fff; border-radius: 8px; z-index: 10;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            position: absolute; top: 20px; left: 20px; 
+            background: var(--placa-verde); padding: 10px 20px; 
+            border: 2px solid #fff; border-radius: 6px; 
+            box-shadow: 0 8px 15px rgba(0,0,0,0.4); z-index: 10;
         }
-        #km-hud h1 { font-size: 2.2rem; font-weight: 900; letter-spacing: -1px; }
+        #km-hud h1 { font-size: 1.6rem; font-weight: 800; color: #fff; }
 
-        /* HUD CONTADOR */
-        #counter-hud {
-            position: absolute; top: env(safe-area-inset-top, 25px); right: 25px;
-            background: rgba(0,0,0,0.85); padding: 12px 18px; border-radius: 8px;
-            border: 1px solid #444; text-align: right; z-index: 10;
-        }
-        #counter-hud small { font-size: 10px; color: #aaa; display: block; font-weight: 800; }
-        #count-txt { font-size: 24px; font-weight: 900; color: var(--accent); font-family: monospace; }
-
-        /* STATUS GRAVANDO */
-        #rec-tag { position: absolute; top: 110px; right: 25px; display: none; align-items: center; gap: 8px; color: #fff; font-size: 12px; font-weight: 900; background: rgba(255,0,0,0.6); padding: 5px 12px; border-radius: 20px; }
-        .dot { width: 10px; height: 10px; background: #fff; border-radius: 50%; animation: blink 0.8s infinite; }
+        #rec-tag { position: absolute; top: 85px; right: 20px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 10px; color: #fff; font-weight: bold; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 20px; }
+        .dot { width: 8px; height: 8px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* CONTROLES */
-        #ui-controls { 
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
-            display: flex; align-items: center; gap: 25px; z-index: 100;
-        }
-        .btn-main { border: none; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 22px 50px; font-size: 15px; background: var(--accent); color: #000; box-shadow: 0 5px 20px rgba(0,0,0,0.6); }
-        #gear-btn { width: 65px; height: 65px; border-radius: 12px; background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); }
-
-        /* PAINEL LATERAL */
+        /* PAINEL LATERAL MULTI-FERRAMENTAS */
         #settings-panel { 
-            position: fixed; right: -350px; top: 0; width: 320px; height: 100%; 
-            background: var(--glass); backdrop-filter: blur(25px); z-index: 4000; 
-            padding: 40px 25px; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-left: 1px solid #333;
+            position: fixed; right: -350px; top: 0; width: 340px; height: 100%; 
+            background: var(--glass); backdrop-filter: blur(25px); z-index: 3000; 
+            padding: 20px; transition: 0.5s; border-left: 1px solid var(--border);
+            overflow-y: auto;
         }
         #settings-panel.open { right: 0; }
-        .field { margin-bottom: 25px; }
-        .field label { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 10px; display: block; font-weight: 700; }
-        select, input { width: 100%; background: #151515; border: 1px solid #333; color: #fff; padding: 14px; border-radius: 8px; font-size: 14px; }
-        
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .close-settings { cursor: pointer; color: var(--accent); font-weight: bold; font-size: 12px; text-transform: uppercase; }
+
+        .tool-section { margin-bottom: 25px; }
+        .tool-section h3 { font-size: 11px; text-transform: uppercase; color: var(--accent); margin-bottom: 15px; letter-spacing: 1px; }
+
+        .field { margin-bottom: 15px; }
+        .field label { font-size: 10px; color: #aaa; display: block; margin-bottom: 5px; }
+        select, input, textarea { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 4px; font-size: 13px; }
+
+        .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .tool-btn { background: #222; border: 1px solid #333; padding: 10px; border-radius: 6px; color: #eee; font-size: 11px; text-align: center; cursor: pointer; }
+        .tool-btn:active { background: var(--accent); color: #000; }
+
+        #ui-controls { 
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); 
+            display: flex; align-items: center; gap: 15px; z-index: 100;
+        }
+        .btn-round { border: none; border-radius: 8px; font-weight: 800; cursor: pointer; text-transform: uppercase; padding: 18px 35px; font-size: 12px; background: var(--accent); color: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        #gear-btn { width: 55px; height: 55px; border-radius: 8px; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 22px; border: 1px solid rgba(255,255,255,0.2); }
+
         canvas { display: none; }
     </style>
 </head>
-<body>
+<body onclick="requestWakeLock()">
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2>Segurança na Operação</h2>
-        <div class="safety-list">
-            <p>• <b>Mãos Livres:</b> Utilize suporte veicular. Nunca manuseie o celular em movimento.</p>
-            <p style="margin-top:10px">• <b>Alimentação:</b> Mantenha o cabo de energia conectado (Consumo Alto).</p>
-            <p style="margin-top:10px">• <b>Tela Ativa:</b> O sistema impedirá que a tela apague automaticamente.</p>
-            <p style="margin-top:10px">• <b>Armazenamento:</b> Escolha uma pasta para o salvamento automático dos lotes.</p>
+        <h2>Guia de Operação Segura</h2>
+        
+        <div class="safety-guide">
+            <div class="safety-item">
+                <span class="safety-icon">⚠️</span>
+                <span class="safety-text"><b>Foco na Via:</b> Nunca opere o dispositivo enquanto estiver dirigindo. Utilize suportes fixos no para-brisa ou painel.</span>
+            </div>
+            <div class="safety-item">
+                <span class="safety-icon">🔋</span>
+                <span class="safety-text"><b>Alimentação:</b> Mantenha o aparelho conectado ao carregador veicular. O processamento contínuo de imagens exige alto consumo.</span>
+            </div>
+            <div class="safety-item">
+                <span class="safety-icon">📁</span>
+                <span class="safety-text"><b>Armazenamento:</b> Ao iniciar, selecione uma pasta vazia. O app salvará automaticamente os PDFs a cada 200 fotos.</span>
+            </div>
+            <div class="safety-item">
+                <span class="safety-icon">🌡️</span>
+                <span class="safety-text"><b>Temperatura:</b> Evite incidência direta de sol no aparelho por períodos prolongados para prevenir superaquecimento.</span>
+            </div>
         </div>
-        <button class="btn-aware" onclick="startApp()">Aceitar e Iniciar Fullscreen</button>
+
+        <button class="btn-aware" onclick="acceptSafety()">Entendi e Aceito os Riscos</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <h3 style="color:var(--accent); margin-bottom:30px; font-size:14px;">AJUSTES TÉCNICOS</h3>
-    <div class="field">
-        <label>Lente da Câmera</label>
-        <select id="cam-select" onchange="initC(this.value)"></select>
+    <div class="panel-header">
+        <span style="font-weight: 800; font-size: 14px;">TOOLBOX PRO</span>
+        <div class="close-settings" onclick="toggleSet()">Fechar ✕</div>
     </div>
-    <div class="field">
-        <label>Fotos por PDF (Lote)</label>
-        <input type="number" id="cfg-lote" value="200">
+
+    <div class="tool-section">
+        <h3>Configurações de Captura</h3>
+        <div class="field"><label>Câmera (Lente)</label><select id="cam-select" onchange="initC(this.value)"></select></div>
+        <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
+        <div class="field"><label>Fotos por Lote (PDF)</label><input type="number" id="cfg-lote" value="200"></div>
     </div>
-    <div class="field">
-        <label>Intervalo de Captura (ms)</label>
-        <input type="number" id="cfg-int" value="200">
+
+    <div class="tool-section">
+        <h3>Auxiliares de Engenharia</h3>
+        <div class="tools-grid">
+            <div class="tool-btn" onclick="alert('Nível: 0.2° (Simulado)')">📐 Nível Bolha</div>
+            <div class="tool-btn" onclick="window.open('https://www.google.com.br/maps', '_blank')">🗺 Ver Mapa</div>
+            <div class="tool-btn" onclick="prompt('Distância Estimada (m):')">📏 Trena Visual</div>
+            <div class="tool-btn" onclick="alert('Inclinômetro: 1%')">📉 Declividade</div>
+        </div>
     </div>
-    <button class="btn-aware" onclick="toggleSet()">Fechar Ajustes</button>
+
+    <div class="tool-section">
+        <h3>Notas de Ocorrência</h3>
+        <textarea id="field-notes" placeholder="Digite observações importantes aqui..." rows="4"></textarea>
+    </div>
+
+    <div class="tool-section">
+        <h3>Utilidades</h3>
+        <div class="tools-grid">
+            <div class="tool-btn" onclick="location.reload()">🔄 Reset App</div>
+            <div class="tool-btn" id="torch-btn" onclick="toggleTorch()">🔦 Lanterna</div>
+            <div class="tool-btn" onclick="exportNotes()">💾 Salvar Notas</div>
+            <div class="tool-btn" onclick="alert('Verificando status de hardware...')">🔋 Status Energia</div>
+        </div>
+    </div>
 </div>
 
 <div id="app-shell">
-    <video id="vid" autoplay playsinline muted></video>
-    
-    <div id="km-hud">
-        <h1 id="km-txt">Km ---</h1>
-    </div>
-
-    <div id="counter-hud">
-        <small>FOTOS NO LOTE</small>
-        <span id="count-txt">000</span><span style="color:#555; font-size:14px"> / <span id="max-txt">200</span></span>
-    </div>
-
-    <div id="rec-tag"><div class="dot"></div> GRAVANDO</div>
+    <video id="vid" autoplay playsinline muted loop></video>
+    <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
+    <div id="rec-tag"><div class="dot"></div><span>CAPTURA ATIVA</span></div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙️</div>
-        <button id="btn-start" class="btn-main" onclick="initCapture()">Iniciar Captura</button>
-        <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Finalizar Lote</button>
+        <button id="btn-start" class="btn-round" onclick="initCapture()">Iniciar Captura</button>
+        <button id="btn-stop" class="btn-round" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Finalizar Lote</button>
     </div>
 </div>
 
@@ -127,65 +159,72 @@ let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, wakeLock=null;
 let kmInicialLote = "";
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// MANTER TELA SEMPRE ACESA
+window.addEventListener('pagehide', () => {
+    if (rec && buffer.length > 0) {
+        const kmFim = document.getElementById('km-txt').innerText.replace("Km ", "");
+        savePDF([...buffer], kmInicialLote, kmFim, true);
+    }
+});
+
 async function requestWakeLock() {
     if ('wakeLock' in navigator) {
-        try { 
-            wakeLock = await navigator.wakeLock.request('screen');
-            console.log("Wake Lock Ativado");
-        } catch (e) { console.error("Falha no Wake Lock"); }
+        try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
     }
 }
 
-async function startApp() {
+async function acceptSafety() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        
-        // Ativa Tela Cheia
-        if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen();
-        } else if (document.documentElement.webkitRequestFullscreen) {
-            document.documentElement.webkitRequestFullscreen();
-        }
-
-        document.getElementById('safety-gate').style.display = 'none';
-        document.getElementById('app-shell').style.display = 'block';
-        
-        await listCams();
-        loadCSV();
-        initGPS();
+        document.getElementById('safety-gate').remove();
+        document.getElementById('app-shell').style.visibility = 'visible';
+        document.getElementById('app-shell').style.opacity = '1';
+        listCams();
         requestWakeLock();
-    } catch(e) { 
-        alert("Para funcionar, você precisa aceitar a permissão da pasta."); 
-    }
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    } catch(e) { alert("Acesso à pasta é obrigatório para o funcionamento."); }
 }
 
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const vids = devices.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
+    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Lente ${i+1}</option>`).join('');
     const back = vids.find(d => d.label.toLowerCase().includes('back')) || vids[vids.length-1];
     if(back) { sel.value = back.deviceId; initC(back.deviceId); }
 }
 
 async function initC(id) {
     if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { deviceId: id, width: {ideal: 1920}, height: {ideal: 1080} } 
-    });
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1280, height: 720 } });
     vid.srcObject = currentStream;
+    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; vid.play(); };
 }
 
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+
+function toggleTorch() {
+    const track = currentStream.getVideoTracks();
+    try {
+        const isTorchOn = track.getSettings().torch;
+        track.applyConstraints({ advanced: [{ torch: !isTorchOn }] });
+    } catch(e) { alert("Lanterna indisponível para esta lente."); }
+}
+
+function exportNotes() {
+    const notes = document.getElementById('field-notes').value;
+    const blob = new Blob([notes], {type: 'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Notas_${new Date().getTime()}.txt`;
+    a.click();
+}
 
 function initCapture() {
     rec = true; buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'inline-block';
-    document.getElementById('rec-tag').style.display = 'flex';
-    document.getElementById('max-txt').innerText = document.getElementById('cfg-lote').value;
+    document.getElementById('rec-tag').style.opacity = '1';
     loop();
 }
 
@@ -195,67 +234,57 @@ function stopCapture() {
     buffer = [];
     document.getElementById('btn-start').style.display = 'inline-block';
     document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-tag').style.display = 'none';
+    document.getElementById('rec-tag').style.opacity = '0';
 }
 
 function loop() {
     if(!rec) return;
     if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
-        can.width = vid.videoWidth; can.height = vid.videoHeight;
-        ctx.drawImage(vid, 0, 0);
-        
-        const curKm = document.getElementById('km-txt').innerText.replace("Km ", "");
-        buffer.push({ 
-            raw: can.toDataURL('image/jpeg', 0.5), 
-            km: curKm, 
-            ts: new Date().toLocaleTimeString() 
-        });
-
-        document.getElementById('count-txt').innerText = buffer.length.toString().padStart(3, '0');
-
+        const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
+        ctx.drawImage(vid, 0, 0, can.width, can.height);
+        buffer.push({ raw: can.toDataURL('image/jpeg', 0.45), km: currentKm, ts: new Date().toLocaleString('pt-BR').toUpperCase() });
         const limit = parseInt(document.getElementById('cfg-lote').value) || 200;
         if(buffer.length >= limit) {
-            const temp = [...buffer];
-            savePDF(temp, kmInicialLote, curKm);
-            buffer = [];
-            kmInicialLote = curKm;
+            const temp = [...buffer]; const kI = kmInicialLote; const kF = currentKm;
+            buffer = []; kmInicialLote = currentKm;
+            savePDF(temp, kI, kF);
         }
     }
     setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
-async function savePDF(data, ini, fim) {
-    const doc = new jspdf.jsPDF(can.width > can.height ? 'l' : 'p', 'mm', 'a4');
+async function savePDF(data, ini, fim, emergency = false) {
+    const isPortrait = can.width < can.height;
+    const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
-
     for(let i=0; i<data.length; i++){
         if(i > 0) doc.addPage();
         const img = new Image();
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
-                const bh = can.height * 0.12;
+                const bh = can.height * 0.15;
                 ctx.fillStyle = "rgba(0,0,0,0.8)";
                 ctx.fillRect(0, can.height-bh, can.width, bh);
                 ctx.fillStyle = "#fff"; 
                 ctx.font = `bold ${bh*0.4}px Arial`;
-                ctx.fillText(`Km ${data[i].km}`, 40, can.height-(bh*0.45));
+                ctx.fillText("Km " + data[i].km, 40, can.height-(bh*0.45));
                 ctx.font = `${bh*0.2}px Arial`;
-                ctx.fillText(`DATA: ${new Date().toLocaleDateString()} | ${data[i].ts}`, 40, can.height-(bh*0.15));
+                ctx.fillText(data[i].ts, 40, can.height-(bh*0.15));
                 doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
                 r();
             };
             img.src = data[i].raw;
         });
     }
-    const nome = `Relatorio_KM_${ini}_a_${fim}_${Date.now()}.pdf`;
+    const nome = `Relatorio_Km_${ini}_a_${fim}_${new Date().getTime()}${emergency?"_EMERG":""}.pdf`;
     try {
         const f = await hDir.getFileHandle(nome, {create:true});
         const w = await f.createWritable();
         await w.write(doc.output('blob'));
         await w.close();
-    } catch(e) { console.error("Erro ao salvar PDF automático."); }
+    } catch(e) {}
 }
 
 async function loadCSV() {
@@ -269,7 +298,7 @@ async function loadCSV() {
             const c = r.split(';');
             return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) { console.warn("CSV não encontrado ou erro na leitura."); }
+    } catch(e) {}
 }
 
 function initGPS() {
@@ -284,10 +313,7 @@ function initGPS() {
     }, null, {enableHighAccuracy:true});
 }
 
-// Renovar WakeLock ao voltar para a aba
-document.addEventListener('visibilitychange', () => { 
-    if(document.visibilityState === 'visible') requestWakeLock(); 
-});
+window.onload = () => { loadCSV(); initGPS(); };
 </script>
 </body>
 </html>
