@@ -3,25 +3,25 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V22 - OMNI</title>
+    <title>SUPORTE DE CAMPO</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #d00; --glass: rgba(15, 15, 15, 0.9); }
+        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #c62828; --glass: rgba(15, 15, 15, 0.9); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
         /* TELA DE ALERTA */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
         .alert-box { border: 1px solid #333; padding: 35px; border-radius: 12px; max-width: 450px; text-align: center; background: #080808; }
-        .alert-box h2 { color: var(--accent); margin-bottom: 15px; font-size: 18px; letter-spacing: 1px; }
-        .alert-box p { font-size: 13px; line-height: 1.6; color: #999; margin-bottom: 25px; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 16px 45px; font-weight: 800; border-radius: 4px; cursor: pointer; text-transform: uppercase; font-size: 12px; }
+        .alert-box h2 { color: #f44336; margin-bottom: 15px; font-size: 18px; letter-spacing: 1px; text-transform: uppercase; }
+        .alert-box p { font-size: 14px; line-height: 1.6; color: #ddd; margin-bottom: 25px; font-weight: 500; }
+        .btn-aware { background: #2e7d32; color: #fff; border: none; padding: 16px 45px; font-weight: 800; border-radius: 4px; cursor: pointer; text-transform: uppercase; font-size: 12px; }
 
         /* INTERFACE PRINCIPAL */
         #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* PLACA DE KM ESTILO RODOVIA */
+        /* PLACA DE KM */
         #km-hud { 
             position: absolute; top: 25px; left: 25px; 
             background: var(--placa-verde); padding: 8px 20px; 
@@ -30,8 +30,8 @@
         }
         #km-hud h1 { font-size: 1.8rem; font-weight: 800; color: #fff; letter-spacing: -1px; }
 
-        #rec-tag { position: absolute; top: 30px; right: 30px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 9px; color: rgba(255,255,255,0.5); letter-spacing: 1px; }
-        .dot { width: 6px; height: 6px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; }
+        #rec-tag { position: absolute; top: 30px; right: 30px; display: flex; align-items: center; gap: 8px; z-index: 10; opacity: 0; transition: 0.5s; font-size: 10px; color: #ff5252; font-weight: bold; text-transform: uppercase; }
+        .dot { width: 8px; height: 8px; background: #ff5252; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
         /* MENU DE AJUSTES */
@@ -41,19 +41,21 @@
             padding: 60px 25px; transition: 0.5s; border-left: 1px solid #333;
         }
         #settings-panel.open { right: 0; }
-        .close-x { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; color: #444; }
+        .close-x { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; color: #fff; }
         .field { margin-bottom: 25px; }
-        .field label { font-size: 11px; color: #777; display: block; margin-bottom: 8px; font-weight: 500; }
-        select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 4px; font-size: 13px; }
+        .field label { font-size: 11px; color: #aaa; display: block; margin-bottom: 8px; font-weight: bold; }
+        select, input { width: 100%; background: #1a1a1a; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 4px; font-size: 13px; }
 
         /* CONTROLES */
         #ui-controls { 
             position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
-            display: flex; align-items: center; gap: 20px; transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1); z-index: 100;
+            display: flex; align-items: center; gap: 20px; transition: 0.6s; z-index: 100; width: 90%; justify-content: center;
         }
-        .ui-hidden { opacity: 0; bottom: 15px; pointer-events: none; }
-        .btn-round { border: none; border-radius: 4px; font-weight: 800; cursor: pointer; text-transform: uppercase; padding: 18px 40px; font-size: 11px; background: var(--accent); color: #000; letter-spacing: 1px; }
-        #gear-btn { width: 48px; height: 48px; border-radius: 4px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .ui-hidden { opacity: 0; pointer-events: none; }
+        .btn-round { border: none; border-radius: 50px; font-weight: 800; cursor: pointer; text-transform: uppercase; padding: 18px 0; width: 70%; font-size: 12px; letter-spacing: 1px; }
+        #btn-start { background: #2e7d32; color: #fff; }
+        #btn-stop { background: var(--danger); color: #fff; }
+        #gear-btn { width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; }
 
         canvas { display: none; }
     </style>
@@ -62,17 +64,17 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2>Consciência Operacional</h2>
-        <p>Este sistema é um suporte à inspeção. Mantenha foco total na via e utilize o suporte de celular. Sua segurança é prioridade.</p>
+        <h2>Sua segurança em primeiro lugar</h2>
+        <p>ATENÇÃO: É proibido e perigoso manusear este aparelho com o veículo em movimento. Posicione o celular no suporte fixo e acione o sistema com o carro parado em local seguro. Sua vida e a segurança da via são prioridades absolutas. Se possível, peça ao passageiro para operar o sistema.</p>
         <button class="btn-aware" onclick="acceptSafety()">Estou Ciente</button>
     </div>
 </div>
 
 <div id="settings-panel">
     <div class="close-x" onclick="toggleSet()">×</div>
-    <div class="field"><label>Câmera (Lente)</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Tempo da foto (ms)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50"></div>
+    <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="field"><label>Intervelo entre fotos em Milissegundos (ms)</label><input type="number" id="cfg-int" value="5000"></div>
+    <div class="field"><label>Fotos por relatório</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
@@ -82,40 +84,27 @@
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-round" onclick="initCapture()">Iniciar Inspeção</button>
-        <button id="btn-stop" class="btn-round" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Encerrar Relatório</button>
+        <button id="btn-start" class="btn-round" onclick="initCapture()">Iniciar captura</button>
+        <button id="btn-stop" class="btn-round" style="display:none;" onclick="stopCapture()">Finalizar</button>
     </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], gps=null, rec=false, buffer=[], hDir=null, currentStream=null, uiTimer, wakeLock = null;
+let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, uiTimer, wakeLock = null;
+let kmInicialLote = "", kmFinalLote = "";
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// --- WAKE LOCK (Impede a tela de desligar) ---
+// --- WAKE LOCK ---
 async function requestWakeLock() {
-    try {
-        if ('wakeLock' in navigator) {
-            wakeLock = await navigator.wakeLock.request('screen');
-        }
-    } catch (err) {
-        console.warn("WakeLock falhou:", err.message);
-    }
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } 
+    catch (err) { console.warn("WakeLock falhou:", err.message); }
 }
 
 function releaseWakeLock() {
-    if (wakeLock !== null) {
-        wakeLock.release().then(() => { wakeLock = null; });
-    }
+    if (wakeLock !== null) { wakeLock.release().then(() => { wakeLock = null; }); }
 }
-
-// Re-ativa se o usuário alternar abas
-document.addEventListener('visibilitychange', async () => {
-    if (wakeLock !== null && document.visibilityState === 'visible') {
-        requestWakeLock();
-    }
-});
 
 async function acceptSafety() {
     try {
@@ -145,11 +134,10 @@ async function listCams() {
     sel.innerHTML = "";
     videoDevices.forEach((d, i) => {
         const opt = document.createElement('option');
-        opt.value = d.deviceId; opt.text = `${i + 1}`; 
+        opt.value = d.deviceId; opt.text = d.label || `Lente ${i + 1}`; 
         sel.appendChild(opt);
     });
-    const back = videoDevices.find(d => d.label.toLowerCase().includes('back')) || videoDevices;
-    if(back) { sel.value = back.deviceId; initC(back.deviceId); }
+    if(videoDevices.length) { sel.value = videoDevices[videoDevices.length-1].deviceId; initC(sel.value); }
 }
 
 async function initC(id) {
@@ -164,7 +152,8 @@ function toggleSet() { document.getElementById('settings-panel').classList.toggl
 
 async function initCapture() {
     rec = true;
-    requestWakeLock(); // Ativa bloqueio de suspensão
+    kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
+    requestWakeLock();
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'inline-block';
     document.getElementById('rec-tag').style.opacity = '1';
@@ -174,7 +163,8 @@ async function initCapture() {
 
 function stopCapture() {
     rec = false;
-    releaseWakeLock(); // Libera suspensão
+    kmFinalLote = document.getElementById('km-txt').innerText.replace("Km ", "");
+    releaseWakeLock();
     savePDF();
     document.getElementById('btn-start').style.display = 'inline-block';
     document.getElementById('btn-stop').style.display = 'none';
@@ -184,46 +174,58 @@ function stopCapture() {
 function loop() {
     if(!rec) return;
     if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
+        const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
+        if(buffer.length === 0) kmInicialLote = currentKm;
+        kmFinalLote = currentKm;
+
         ctx.drawImage(vid, 0, 0, can.width, can.height);
         buffer.push({ 
-            raw: can.toDataURL('image/jpeg', 0.45), 
-            km: document.getElementById('km-txt').innerText.replace("Km ", ""), 
+            raw: can.toDataURL('image/jpeg', 0.5), 
+            km: currentKm, 
             ts: new Date().toLocaleString('pt-BR').toUpperCase() 
         });
         const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
         if(buffer.length >= limit) savePDF();
     }
-    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
+    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 5000);
 }
 
 async function savePDF() {
     if(!buffer.length || !hDir) return;
-    const items = [...buffer]; buffer = [];
-    const isPortrait = can.width < can.height;
-    const doc = new jspdf.jsPDF(isPortrait?'p':'l', 'mm', 'a4');
+    const items = [...buffer]; 
+    const ini = kmInicialLote; 
+    const fim = kmFinalLote;
+    buffer = [];
+
+    const doc = new jspdf.jsPDF('l', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
+
     for(let i=0; i<items.length; i++){
-        if(i > 0) doc.addPage(isPortrait?'p':'l');
+        if(i > 0) doc.addPage('l');
         const img = new Image();
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
                 const barH = can.height * 0.16;
-                ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, can.height-barH, can.width, barH);
-                ctx.fillStyle = "#fff"; ctx.font = `bold ${barH * 0.4}px Arial`;
-                ctx.fillText("Km " + items[i].km, 60, can.height-(barH*0.5));
-                ctx.font = `${barH * 0.18}px Arial`;
-                ctx.fillText(items[i].ts, 60, can.height-(barH*0.22));
-                doc.addImage(can.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
+                // ESTAMPA AMARELA DE AUDITORIA
+                ctx.fillStyle = "#ffcc00"; ctx.fillRect(40, can.height-(barH+40), 450, barH);
+                ctx.fillStyle = "#000"; ctx.font = `bold ${barH * 0.6}px Arial`;
+                ctx.fillText("Km " + items[i].km, 60, can.height-(barH*0.75));
+                doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
                 r();
             };
             img.src = items[i].raw;
         });
     }
-    const f = await hDir.getFileHandle(`RELATORIO_${Date.now()}.pdf`, {create:true});
+
+    // NOMEAÇÃO DO ARQUIVO COM INTERVALO
+    const nomeArquivo = `Km_${ini}_ao_${fim}.pdf`.replace(/\+/g, '-');
+    const f = await hDir.getFileHandle(nomeArquivo, {create:true});
     const s = await f.createWritable();
     await s.write(doc.output('blob')); await s.close();
+    
+    if(rec) kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
 }
 
 async function loadCSV() {
