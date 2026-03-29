@@ -3,102 +3,84 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V6 - AUTO-SEND</title>
+    <title>INSPEÇÃO PRO V6 - OMNI FINAL</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { 
-            --accent: #00d9ff; --placa-verde: #056b3c; 
-            --danger: #ff3333; --glass: rgba(0, 0, 0, 0.9); --bg: #000;
-        }
+        :root { --accent: #00d9ff; --placa-verde: #056b3c; --danger: #ff3333; --glass: rgba(0,0,0,0.92); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
         /* --- UI ELEMENTS --- */
-        #app-shell { height: 100vh; position: relative; }
+        #app-shell { height: 100vh; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
         .hud-top { position: absolute; top: 25px; left: 25px; z-index: 100; }
-        #km-hud { background: var(--placa-verde); padding: 10px 20px; border: 3px solid #fff; border-radius: 6px; }
-        #km-hud h1 { font-size: 1.8rem; font-weight: 900; }
+        #km-hud { background: var(--placa-verde); padding: 12px 25px; border: 3px solid #fff; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #km-hud h1 { font-size: 2rem; font-weight: 900; }
 
-        #id-list-container { 
-            position: absolute; right: 20px; top: 60px; width: 160px; 
-            background: rgba(0,0,0,0.4); backdrop-filter: blur(5px);
-            padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
+        #id-nox-list { 
+            position: absolute; right: 20px; top: 80px; width: 160px; 
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+            padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
         }
-        .id-item { font-size: 11px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .id-item.near { color: var(--accent); font-weight: bold; }
+        .nox-item { font-size: 11px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #aaa; }
+        .nox-item.active { color: var(--accent); font-weight: 800; border-left: 3px solid var(--accent); padding-left: 8px; }
 
-        #st-gps { position: absolute; top: 25px; right: 25px; font-size: 10px; color: #888; }
+        #st-gps { position: absolute; top: 25px; right: 25px; font-size: 10px; color: #666; font-weight: 700; }
 
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 500; transition: 0.5s; }
-        .btn-main { border: none; border-radius: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px 30px; font-size: 11px; }
+        #ui-controls { position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 500; transition: 0.5s; }
+        .btn-ui { border: none; border-radius: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 20px 40px; font-size: 12px; }
         #btn-start { background: var(--accent); color: #000; }
         #btn-stop { background: var(--danger); color: #fff; display: none; }
+        #gear-btn { background: rgba(255,255,255,0.1); color: #fff; width: 60px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+
+        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 25px; }
+        .gate-box { background: #0a0a0a; border: 1px solid #222; padding: 30px; border-radius: 15px; text-align: center; max-width: 400px; }
         
-        #settings-panel { 
-            position: fixed; right: -350px; top: 0; width: 320px; height: 100%; 
-            background: var(--glass); backdrop-filter: blur(25px); z-index: 2000; 
-            padding: 50px 25px; transition: 0.5s; border-left: 1px solid #333; 
-        }
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); z-index: 2000; padding: 50px 25px; transition: 0.5s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
         .field { margin-bottom: 20px; }
-        .field label { font-size: 10px; color: #888; display: block; margin-bottom: 5px; }
-        input, select { width: 100%; background: #111; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 6px; }
-
-        .rec-dot { width: 10px; height: 10px; background: red; border-radius: 50%; display: inline-block; margin-right: 5px; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
+        .field label { font-size: 10px; color: #777; display: block; margin-bottom: 6px; text-transform: uppercase; }
+        input, select { width: 100%; background: #111; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; }
     </style>
 </head>
 <body onclick="wakeUI()">
+
+<div id="safety-gate">
+    <div class="gate-box">
+        <h2 style="color:var(--accent); margin-bottom:15px">ACESSO NECESSÁRIO</h2>
+        <p style="font-size:13px; color:#888; margin-bottom:25px">Selecione a pasta onde os relatórios de inspeção serão salvos.</p>
+        <button class="btn-ui" style="background:var(--accent); color:#000; width:100%" onclick="initFileSystem()">Escolher Pasta</button>
+    </div>
+</div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
 
     <div class="hud-top">
         <div id="km-hud"><h1 id="km-txt">KM ---+---</h1></div>
-        <div id="rec-status" style="display:none; margin-top:10px; font-size:12px;"><span class="rec-dot"></span> TRANSMITINDO LOTE</div>
     </div>
 
-    <div id="id-list-container">
-        <div style="font-size: 9px; color: var(--accent); margin-bottom: 5px;">IDS PRÓXIMOS (NOX)</div>
-        <div id="id-list-items"></div>
+    <div id="id-nox-list">
+        <div style="font-size: 9px; color: var(--accent); font-weight: 800; margin-bottom: 10px;">IDS PRÓXIMOS (NOX)</div>
+        <div id="nox-container"></div>
     </div>
 
-    <div id="st-gps">SINAL GPS...</div>
+    <div id="st-gps">GPS: AGUARDANDO...</div>
 
     <div id="ui-controls">
-        <button id="gear-btn" class="btn-main" style="background:#333; color:#fff" onclick="toggleSet()">⚙</button>
-        <button id="btn-start" class="btn-main" onclick="startInspeção()">Iniciar</button>
-        <button id="btn-stop" class="btn-main" onclick="stopInspeção()">Finalizar</button>
+        <button id="gear-btn" class="btn-ui" onclick="toggleSet()">⚙</button>
+        <button id="btn-start" class="btn-ui" onclick="startCapture()">Iniciar Inspeção</button>
+        <button id="btn-stop" class="btn-ui" onclick="stopCapture()">Finalizar Relatório</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <h3 style="color:var(--accent); margin-bottom:20px">AUTOMAÇÃO WHATSAPP</h3>
-    
-    <div class="field">
-        <label>Número Destino (Com 55 e DDD)</label>
-        <input type="text" id="cfg-zap" placeholder="5512999999999">
-    </div>
-
-    <div class="field">
-        <label>Fotos por Lote (Auto-Envio)</label>
-        <input type="number" id="cfg-lote" value="20">
-    </div>
-
-    <div class="field">
-        <label>IDs na tela</label>
-        <select id="cfg-id-qty">
-            <option value="1">1</option>
-            <option value="5" selected>5</option>
-            <option value="10">10</option>
-        </select>
-    </div>
-
-    <div class="field"><label>Câmera</label><select id="cam-select" onchange="initC(this.value)"></select></div>
-    
-    <button class="btn-main" onclick="toggleSet()" style="width:100%; background:var(--accent); color:#000">SALVAR E FECHAR</button>
+    <h3 style="color:var(--accent); margin-bottom:30px">CONFIGURAÇÕES</h3>
+    <div class="field"><label>WhatsApp Destino (Ex: 551299...)</label><input type="text" id="cfg-zap" placeholder="55"></div>
+    <div class="field"><label>Fotos por Lote (Auto-Envio)</label><input type="number" id="cfg-lote" value="20"></div>
+    <div class="field"><label>Câmera Ativa</label><select id="cam-select" onchange="initC(this.value)"></select></div>
+    <button class="btn-ui" style="background:var(--accent); color:#000; width:100%" onclick="toggleSet()">Fechar</button>
 </div>
 
 <canvas id="c" style="display:none"></canvas>
@@ -107,63 +89,80 @@
 let kmDB=[], idDB=[], buffer=[], hDir=null, currentStream=null, rec=false, lastPos=null, uiTimer;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-window.onload = () => { loadCSVs(); initGPS(); listCams(); };
-
-async function loadCSVs() {
+async function initFileSystem() {
     try {
-        const rK = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
-        const tK = await rK.text();
-        const rowsK = tK.split('\n').filter(l => l.includes(';'));
-        kmDB = rowsK.map(r => {
-            const c = r.split(';');
-            return { km: c, lt: parseFloat(c.replace(',','.')), ln: parseFloat(c.replace(',','.')) };
-        });
+        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('safety-gate').remove();
+        document.getElementById('app-shell').style.visibility = 'visible';
+        document.getElementById('app-shell').style.opacity = '1';
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+        initApp();
+    } catch(e) { alert("Permissão de pasta é obrigatória."); }
+}
 
-        const rI = await fetch('dados.csv?v='+Date.now());
-        const tI = await rI.text();
-        const rowsI = tI.split('\n').filter(l => l.includes(';'));
-        idDB = rowsI.map(r => {
-            const c = r.split(';');
-            return { id: c, lt: parseFloat(c.replace(',','.')), ln: parseFloat(c.replace(',','.')) };
-        });
-    } catch(e) {}
+function initApp() {
+    loadCSV('SNVBR116SPRJ.csv', 'km');
+    loadCSV('dados.csv', 'id');
+    initGPS();
+    listCams();
+}
+
+async function loadCSV(file, type) {
+    try {
+        const r = await fetch(file + '?v=' + Date.now());
+        const t = await r.text();
+        const rows = t.split('\n').filter(l => l.includes(';'));
+        const headers = rows.shift().split(';').map(h => h.trim().toLowerCase());
+        
+        const iLt = headers.findIndex(h => h.includes('lat')), iLn = headers.findIndex(h => h.includes('lon'));
+        
+        const data = rows.map(row => {
+            const cols = row.split(';');
+            return {
+                val: cols.trim(),
+                lt: parseFloat(cols[iLt].replace(',', '.')),
+                ln: parseFloat(cols[iLn].replace(',', '.'))
+            };
+        }).filter(d => !isNaN(d.lt));
+
+        if(type === 'km') kmDB = data; else idDB = data;
+    } catch(e) { console.error("Erro CSV:", file); }
 }
 
 function initGPS() {
     navigator.geolocation.watchPosition(p => {
         lastPos = { lt: p.coords.latitude, ln: p.coords.longitude, acc: p.coords.accuracy };
-        document.getElementById('st-gps').textContent = `±${Math.round(p.coords.accuracy)}m | ${lastPos.lt.toFixed(5)}`;
-        updateHUD();
-    }, null, {enableHighAccuracy:true});
+        document.getElementById('st-gps').textContent = `GPS: ±${Math.round(p.coords.accuracy)}m`;
+        updateLoc();
+    }, null, { enableHighAccuracy: true });
 }
 
-function updateHUD() {
+function updateLoc() {
     if(!lastPos) return;
-    // Lógica Simplificada de Distância
-    let sortedIDs = idDB.map(pt => ({ ...pt, d: Math.hypot(pt.lt - lastPos.lt, pt.ln - lastPos.ln) })).sort((a,b) => a.d - b.d);
-    const qty = parseInt(document.getElementById('cfg-id-qty').value);
-    const nearest = sortedIDs.slice(0, qty);
     
-    const list = document.getElementById('id-list-items');
-    list.innerHTML = "";
-    nearest.forEach((item, idx) => {
-        const div = document.createElement('div');
-        div.className = `id-item ${idx === 0 ? 'near' : ''}`;
-        div.textContent = `${item.id}`;
-        list.appendChild(div);
-    });
+    // Processar KM
+    let nearKM = kmDB.map(pt => ({...pt, d: Math.hypot(pt.lt-lastPos.lt, pt.ln-lastPos.ln)})).sort((a,b)=>a.d-b.d);
+    if(nearKM) document.getElementById('km-txt').innerText = "KM " + nearKM.val;
 
-    let bestKM = kmDB.map(pt => ({ ...pt, d: Math.hypot(pt.lt - lastPos.lt, pt.ln - lastPos.ln) })).sort((a,b) => a.d - b.d);
-    if(bestKM) document.getElementById('km-txt').innerText = "KM " + bestKM.km;
+    // Processar IDs Nox
+    let nearIDs = idDB.map(pt => ({...pt, d: Math.hypot(pt.lt-lastPos.lt, pt.ln-lastPos.ln)})).sort((a,b)=>a.d-b.d).slice(0, 5);
+    const container = document.getElementById('nox-container');
+    container.innerHTML = "";
+    nearIDs.forEach((pt, i) => {
+        const div = document.createElement('div');
+        div.className = `nox-item ${i === 0 ? 'active' : ''}`;
+        div.innerText = pt.val;
+        container.appendChild(div);
+    });
 }
 
 async function listCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const video = devices.filter(d => d.kind === 'videoinput');
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const video = devs.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
     video.forEach((d, i) => {
         const opt = document.createElement('option');
-        opt.value = d.deviceId; opt.text = d.label || `Lente ${i+1}`;
+        opt.value = d.deviceId; opt.text = d.label || `Câmera ${i+1}`;
         sel.appendChild(opt);
     });
     if(video.length) initC(video[video.length-1].deviceId);
@@ -171,57 +170,53 @@ async function listCams() {
 
 async function initC(id) {
     if(currentStream) currentStream.getTracks().forEach(t => t.stop());
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
-    currentStream = stream; vid.srcObject = stream;
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
+    vid.srcObject = currentStream;
+    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
-function startInspeção() {
+function startCapture() {
     rec = true;
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-status').style.display = 'block';
-    captureLoop();
+    loop();
 }
 
-function stopInspeção() {
+function stopCapture() {
     rec = false;
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-status').style.display = 'none';
-    saveAndSend();
+    savePDF();
 }
 
-function captureLoop() {
+function loop() {
     if(!rec) return;
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     buffer.push({
         img: can.toDataURL('image/jpeg', 0.5),
         km: document.getElementById('km-txt').innerText,
-        id: document.querySelector('.id-item.near')?.textContent || "---",
-        ts: new Date().toLocaleTimeString()
+        id: document.querySelector('.nox-item.active')?.innerText || "---",
+        ts: new Date().toLocaleTimeString('pt-BR')
     });
-    if(buffer.length >= parseInt(document.getElementById('cfg-lote').value)) saveAndSend();
-    setTimeout(captureLoop, 400); 
+    if(buffer.length >= parseInt(document.getElementById('cfg-lote').value)) savePDF();
+    setTimeout(loop, 400);
 }
 
-async function saveAndSend() {
+async function savePDF() {
     if(!buffer.length) return;
     const batch = [...buffer]; buffer = [];
     const zap = document.getElementById('cfg-zap').value;
-    
-    // PDF Minimalista para envio rápido
     const doc = new jspdf.jsPDF('l', 'mm', 'a4');
+
     for(let i=0; i<batch.length; i++){
         if(i > 0) doc.addPage();
         doc.addImage(batch[i].img, 'JPEG', 0, 0, 297, 210);
-        doc.setFillColor(0,0,0,0.7); doc.rect(0, 185, 297, 25, 'F');
+        doc.setFillColor(0,0,0,0.8); doc.rect(0, 185, 297, 25, 'F');
         doc.setTextColor(255,255,255); doc.setFontSize(16);
         doc.text(`${batch[i].km} | ID: ${batch[i].id} | ${batch[i].ts}`, 15, 200);
     }
 
-    const nome = `Lote_KM_${batch.km}.pdf`.replace(/\+/g,'_');
-    
-    // Tenta salvar na pasta (se hDir existir)
+    const nome = `Inspecao_${batch.km}_${Date.now()}.pdf`.replace(/\+/g,'_');
     if(hDir) {
         try {
             const f = await hDir.getFileHandle(nome, {create:true});
@@ -230,11 +225,9 @@ async function saveAndSend() {
         } catch(e) {}
     }
 
-    // DISPARO WHATSAPP AUTOMÁTICO
     if(zap) {
-        const text = `*NOVO LOTE DE INSPEÇÃO*\n📍 KM Inicial: ${batch.km}\n🛠️ Ativo: ${batch.id}\n⏰ Hora: ${batch.ts}\n\nO arquivo foi salvo na pasta local.`;
-        const link = `https://wa.me/${zap}?text=${encodeURIComponent(text)}`;
-        window.open(link, '_blank');
+        const text = `*RELATÓRIO DE INSPEÇÃO*\n📍 KM: ${batch.km}\n📂 Salvo: ${nome}\n⏰ ${batch.ts}`;
+        window.open(`https://wa.me/${zap}?text=${encodeURIComponent(text)}`, '_blank');
     }
 }
 
@@ -242,7 +235,7 @@ function toggleSet() { document.getElementById('settings-panel').classList.toggl
 function wakeUI() {
     document.getElementById('ui-controls').classList.remove('ui-hidden');
     clearTimeout(uiTimer);
-    uiTimer = setTimeout(() => { if(rec) document.getElementById('ui-controls').classList.add('ui-hidden'); }, 4000);
+    uiTimer = setTimeout(() => { if(rec) document.getElementById('ui-controls').classList.add('ui-hidden'); }, 5000);
 }
 </script>
 </body>
