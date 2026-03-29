@@ -3,31 +3,32 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO PRO V11 - STEALTH</title>
+    <title>INSPEÇÃO PRO V12 - KM FIXO</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --neon: #00ff88; --gold: #ffcc00; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.75); }
+        :root { --neon: #00ff88; --gold: #ffcc00; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.8); }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { background: #000; color: #fff; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        body { background: #000; color: #fff; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        /* VÍDEO IMERSIVO */
+        /* VÍDEO FUNDO TOTAL */
         #cam-layer { position: absolute; inset: 0; z-index: 1; }
-        video { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
+        video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD SUPERIOR */
+        /* HUD SUPERIOR - KM SEMPRE VISÍVEL */
         #hud-top { 
             position: absolute; top: env(safe-area-inset-top, 20px); left: 20px; right: 20px;
             display: flex; justify-content: space-between; align-items: flex-start; z-index: 100;
-            pointer-events: none; transition: 0.5s;
         }
         .placa-km { 
-            background: linear-gradient(180deg, #056b3c 0%, #02361e 100%); 
-            padding: 8px 25px; border: 2px solid #fff; border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6); pointer-events: auto;
+            background: linear-gradient(180deg, #056b3c 0%, #01311b 100%); 
+            padding: 10px 30px; border: 2px solid #fff; border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8); pointer-events: none;
+            transition: transform 0.3s ease;
         }
-        #km-txt { font-size: 2.6rem; font-weight: 900; letter-spacing: -1.5px; }
+        #km-txt { font-size: 2.8rem; font-weight: 900; letter-spacing: -1.5px; color: #fff; }
 
-        #side-btns { display: flex; flex-direction: column; gap: 15px; pointer-events: auto; }
+        /* BOTÕES DE AJUSTE (SOMEM NO HIDE) */
+        #side-btns { display: flex; flex-direction: column; gap: 15px; transition: 0.5s; }
         .circle-btn { 
             width: 50px; height: 50px; background: var(--glass); backdrop-filter: blur(10px);
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -37,47 +38,45 @@
         /* DOCK DE COMANDOS (AUTO-HIDE) */
         #ui-dock {
             position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 480px; background: var(--glass); backdrop-filter: blur(20px);
-            padding: 20px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.1);
+            width: 92%; max-width: 500px; background: var(--glass); backdrop-filter: blur(25px);
+            padding: 22px; border-radius: 28px; border: 1px solid rgba(255,255,255,0.1);
             z-index: 1000; transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
         }
-        .hide-ui { bottom: -150px !important; opacity: 0; pointer-events: none; }
-        .hide-hud { transform: translateY(-100px); opacity: 0; }
+        
+        /* ESTADOS DE OCULTAÇÃO */
+        .hide-ui { bottom: -180px !important; opacity: 0; pointer-events: none; }
+        .hide-controls { opacity: 0; pointer-events: none; transform: translateX(20px); }
 
-        /* BOTÕES PRINCIPAIS */
-        .btn-main { 
-            width: 100%; border: none; border-radius: 18px; font-weight: 900;
-            text-transform: uppercase; cursor: pointer; font-size: 15px; transition: 0.3s;
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-        }
-        .btn-start { background: linear-gradient(90deg, #00ff88, #009e54); color: #00331b; height: 75px; }
-        .btn-stop { background: linear-gradient(90deg, #ff4444, #b30000); color: #fff; height: 75px; }
-        .btn-folder { background: #fff; color: #000; height: 45px; margin-bottom: 12px; }
-        .btn-main:active { transform: scale(0.96); filter: brightness(1.2); }
+        /* BOTÕES */
+        .btn-main { width: 100%; border: none; border-radius: 20px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-start { background: linear-gradient(90deg, #00ff88, #009e54); color: #00331b; height: 85px; font-size: 1.2rem; }
+        .btn-stop { background: linear-gradient(90deg, #ff4444, #b30000); color: #fff; height: 85px; font-size: 1.2rem; }
+        .btn-folder { background: #fff; color: #000; height: 48px; margin-bottom: 12px; font-size: 13px; }
+        .btn-main:active { transform: scale(0.95); filter: brightness(1.2); }
 
-        /* STATUS E COUNTERS */
-        .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .box-stat { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; text-align: center; }
-        .box-stat b { font-size: 1.2rem; color: var(--gold); font-family: monospace; }
+        /* STATUS E INFO */
+        .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+        .box-stat { background: rgba(255,255,255,0.08); padding: 12px; border-radius: 15px; text-align: center; }
+        .box-stat b { font-size: 1.4rem; color: var(--gold); font-family: monospace; }
+        .box-stat small { color: #888; font-weight: bold; font-size: 10px; }
 
         /* PAINEL DE AJUSTES */
-        #side-panel { 
-            position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(20px);
-            z-index: 5000; display: none; padding: 40px 25px; overflow-y: auto;
-        }
+        #side-panel { position: fixed; inset: 0; background: rgba(0,0,0,0.96); backdrop-filter: blur(20px); z-index: 5000; display: none; padding: 45px 30px; }
         .panel-row { margin-bottom: 25px; border-bottom: 1px solid #222; padding-bottom: 15px; }
-        label { color: var(--gold); font-size: 11px; font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 8px; }
-        select, input { width: 100%; background: #111; border: 1px solid #333; color: #fff; padding: 14px; border-radius: 10px; font-size: 14px; }
+        label { color: var(--gold); font-size: 11px; font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 10px; }
+        select, input { width: 100%; background: #111; border: 1px solid #333; color: #fff; padding: 15px; border-radius: 12px; font-size: 15px; outline: none; }
 
         canvas { display: none; }
     </style>
 </head>
-<body onclick="interact()">
+<body onclick="wakeUI()">
 
 <div id="cam-layer"><video id="vid" autoplay playsinline muted></video></div>
 
 <div id="hud-top">
     <div class="placa-km"><div id="km-txt">KM ---+---</div></div>
+    
     <div id="side-btns">
         <div class="circle-btn" onclick="toggleSettings()">⚙️</div>
         <div class="circle-btn" onclick="switchCam()">🔄</div>
@@ -86,33 +85,34 @@
 
 <div id="ui-dock">
     <div class="grid-stats">
-        <div class="box-stat"><small>LOTE</small><br><b id="v-batch">0/50</b></div>
-        <div class="box-stat"><small>TOTAL</small><br><b id="v-total">0</b></div>
+        <div class="box-stat"><small>LOTE ATUAL</small><br><b id="v-batch">0/50</b></div>
+        <div class="box-stat"><small>TOTAL PDF</small><br><b id="v-total">0</b></div>
     </div>
-    <button id="btn-dir" class="btn-main btn-folder" onclick="pickFolder()">📁 DEFINIR PASTA</button>
+    <button id="btn-dir" class="btn-main btn-folder" onclick="pickFolder()">📁 SELECIONAR PASTA DESTINO</button>
     <button id="btn-start" class="btn-main btn-start" disabled onclick="startApp()">▶ INICIAR INSPEÇÃO</button>
     <button id="btn-stop" class="btn-main btn-stop" style="display:none" onclick="stopApp()">■ FINALIZAR LOTE</button>
+    <div id="status" style="font-size:10px; color:#555; text-align:center; margin-top:8px; letter-spacing:1px;">ENGINE V12 | KM FIXED MODE</div>
 </div>
 
 <div id="side-panel">
-    <h2 style="margin-bottom:30px; font-weight:900">CONFIGURAÇÕES V11</h2>
+    <h2 style="margin-bottom:35px; font-weight:900; letter-spacing:-1px; border-bottom:2px solid var(--gold); padding-bottom:10px;">AJUSTES TÉCNICOS</h2>
     <div class="panel-row">
-        <label>Qualidade das Imagens (PDF)</label>
-        <select id="cfg-quality"><option value="0.5">BAIXA (Econômico)</option><option value="0.75" selected>MÉDIA (Recomendado)</option><option value="0.9">ALTA (HQ)</option></select>
-    </div>
-    <div class="panel-row">
-        <label>Lente da Câmera</label>
+        <label>Câmera Ativa</label>
         <select id="cam-list" onchange="initCam(this.value)"></select>
     </div>
     <div class="panel-row">
-        <label>Fotos por Lote</label>
+        <label>Fotos por PDF</label>
         <input type="number" id="cfg-batch" value="50">
     </div>
     <div class="panel-row">
-        <label>Intervalo (ms)</label>
+        <label>Intervalo de Captura (ms)</label>
         <input type="number" id="cfg-ms" value="800">
     </div>
-    <button class="btn-main btn-folder" onclick="toggleSettings()">CONCLUIR E VOLTAR</button>
+    <div class="panel-row">
+        <label>Qualidade do Arquivo</label>
+        <select id="cfg-quality"><option value="0.5">Econômica</option><option value="0.75" selected>Padrão</option><option value="0.9">Alta Definição</option></select>
+    </div>
+    <button class="btn-main btn-folder" onclick="toggleSettings()">SALVAR E VOLTAR</button>
 </div>
 
 <canvas id="proc"></canvas>
@@ -121,7 +121,7 @@
 let kmDB=[], gps=null, active=false, buffer=[], total=0, batchCount=0, hFolder=null, uiTimer, cams=[];
 const vid=document.getElementById('vid'), proc=document.getElementById('proc'), ctx=proc.getContext('2d');
 
-window.onload = async () => { await loadCams(); loadCSV(); initGPS(); interact(); };
+window.onload = async () => { await loadCams(); loadCSV(); initGPS(); wakeUI(); };
 
 async function loadCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -129,7 +129,7 @@ async function loadCams() {
     const sel = document.getElementById('cam-list');
     cams.forEach((c, i) => {
         const opt = document.createElement('option');
-        opt.value = c.deviceId; opt.text = c.label || `Câmera ${i+1}`;
+        opt.value = c.deviceId; opt.text = c.label || `Lente ${i+1}`;
         sel.appendChild(opt);
     });
     if(cams.length) initCam(cams[cams.length-1].deviceId);
@@ -137,7 +137,7 @@ async function loadCams() {
 
 async function initCam(id) {
     if(vid.srcObject) vid.srcObject.getTracks().forEach(t => t.stop());
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: {ideal: 1920}, height: {ideal: 1080} } });
     vid.srcObject = stream;
     vid.onloadedmetadata = () => { proc.width = vid.videoWidth; proc.height = vid.videoHeight; vid.play(); };
 }
@@ -147,6 +147,19 @@ function switchCam() {
     let next = (current + 1) % cams.length;
     document.getElementById('cam-list').selectedIndex = next;
     initCam(cams[next].deviceId);
+    vibrate(30);
+}
+
+function wakeUI() {
+    document.getElementById('ui-dock').classList.remove('hide-ui');
+    document.getElementById('side-btns').classList.remove('hide-controls');
+    clearTimeout(uiTimer);
+    if(active) {
+        uiTimer = setTimeout(() => {
+            document.getElementById('ui-dock').classList.add('hide-ui');
+            document.getElementById('side-btns').classList.add('hide-controls');
+        }, 4000);
+    }
 }
 
 async function loadCSV() {
@@ -177,26 +190,19 @@ function initGPS() {
     }, null, {enableHighAccuracy: true});
 }
 
-function interact() {
-    document.getElementById('ui-dock').classList.remove('hide-ui');
-    document.getElementById('hud-top').classList.remove('hide-hud');
-    clearTimeout(uiTimer);
-    if(active) uiTimer = setTimeout(() => {
-        document.getElementById('ui-dock').classList.add('hide-ui');
-        document.getElementById('hud-top').classList.add('hide-hud');
-    }, 4000);
-}
-
 async function pickFolder() {
-    hFolder = await window.showDirectoryPicker({ mode: 'readwrite' });
-    document.getElementById('btn-dir').innerText = "✓ PASTA PRONTA";
-    document.getElementById('btn-start').disabled = false;
-    vibrate(50);
+    try {
+        hFolder = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('btn-dir').innerText = "✓ PASTA PRONTA";
+        document.getElementById('btn-start').disabled = false;
+        vibrate(50);
+    } catch(e) {}
 }
 
 function startApp() {
     if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
     active = true;
+    vibrate();
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'flex';
     loop();
@@ -204,6 +210,7 @@ function startApp() {
 
 function stopApp() {
     active = false;
+    vibrate(200);
     document.getElementById('btn-start').style.display = 'flex';
     document.getElementById('btn-stop').style.display = 'none';
     saveBatch();
@@ -235,10 +242,10 @@ async function saveBatch() {
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
-                const bh = proc.height * 0.15;
+                const bh = proc.height * 0.16;
                 ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, proc.height-bh, proc.width, bh);
-                ctx.fillStyle = "#ffcc00"; ctx.font = `bold ${bh*0.45}px Arial`;
-                ctx.fillText("KM " + items[i].km, 60, proc.height-(bh*0.45));
+                ctx.fillStyle = "#ffcc00"; ctx.font = `bold ${bh*0.48}px Arial`;
+                ctx.fillText("KM " + items[i].km, 60, proc.height-(bh*0.42));
                 ctx.fillStyle = "#fff"; ctx.font = `${bh*0.16}px monospace`;
                 ctx.fillText(items[i].ts, 60, proc.height-(bh*0.18));
                 doc.addImage(proc.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, 297, 210, undefined, 'FAST');
@@ -247,7 +254,7 @@ async function saveBatch() {
             img.src = items[i].raw;
         });
     }
-    const fName = `INSPECAO_LOTE_${batchCount}_KM_${items.km.replace('+','-')}.pdf`;
+    const fName = `LOTE_${batchCount}_KM_${items.km.replace('+','-')}.pdf`;
     const handle = await hFolder.getFileHandle(fName, {create:true});
     const writable = await handle.createWritable();
     await writable.write(doc.output('blob')); await writable.close();
@@ -257,6 +264,7 @@ async function saveBatch() {
 function toggleSettings() { 
     const p = document.getElementById('side-panel');
     p.style.display = p.style.display === 'block' ? 'none' : 'block';
+    vibrate(10);
 }
 
 function vibrate(ms) { if(navigator.vibrate) navigator.vibrate(ms); }
