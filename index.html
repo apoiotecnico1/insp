@@ -10,64 +10,107 @@
             --accent: #00f2ff; 
             --danger: #ff003c; 
             --bg: #000;
-            --panel: rgba(20, 25, 30, 0.95);
+            --panel: rgba(15, 18, 22, 0.98);
             --placa-verde: #06723b;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
+        body { 
+            background: var(--bg); 
+            color: #fff; 
+            font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; 
+            overflow: hidden; 
+            height: 100vh;
+            width: 100vw;
+        }
 
-        /* --- UI ELEMENTS --- */
-        #app-shell { visibility: hidden; opacity: 0; transition: 1s; height: 100vh; position: relative; }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        /* --- UI SHELL --- */
+        #app-shell { visibility: hidden; opacity: 0; transition: 0.5s; height: 100vh; position: relative; width: 100%; }
+        video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
 
-        .hud-left { position: absolute; top: 25px; left: 25px; z-index: 100; }
+        /* HUD SUPERIOR - DISTANCIADO PARA EVITAR SOBREPOSIÇÃO */
+        .hud-header {
+            position: absolute;
+            top: env(safe-area-inset-top, 20px);
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 0 25px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
         #km-hud { 
-            background: var(--placa-verde); padding: 12px 30px; border: 5px solid #fff; border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            background: var(--placa-verde); 
+            padding: 10px 25px; 
+            border: 4px solid #fff; 
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+            pointer-events: auto;
         }
         #km-hud h1 { 
-            font-size: 3rem; font-weight: 900; font-family: 'Arial Black', sans-serif; 
-            letter-spacing: -2px; text-shadow: 2px 2px 0px #000;
+            font-size: clamp(1.8rem, 5vw, 2.8rem); 
+            font-weight: 900; 
+            font-family: 'Arial Black', sans-serif; 
+            line-height: 1;
+            color: #fff;
+            text-transform: uppercase;
         }
 
-        /* HUD INFO (ESTATÍSTICAS) */
         #hud-stats {
-            position: absolute; top: 25px; right: 25px; text-align: right;
-            font-family: monospace; font-size: 14px; text-shadow: 1px 1px 2px #000;
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 8px;
+            backdrop-filter: blur(4px);
+            pointer-events: auto;
         }
+        .stat-line { font-size: 12px; font-weight: bold; margin-bottom: 2px; letter-spacing: 1px; }
+        #rec-tag { color: var(--danger); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-        #rec-tag { color: var(--danger); font-weight: bold; display: none; margin-bottom: 5px; }
-
-        /* CONTROLES */
+        /* CONTROLES INFERIORES */
         #ui-controls { 
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
-            display: flex; gap: 15px; z-index: 500; transition: 0.4s;
+            position: absolute; 
+            bottom: clamp(30px, 10vh, 60px); 
+            left: 50%; 
+            transform: translateX(-50%); 
+            display: flex; 
+            gap: 20px; 
+            z-index: 2000; 
+            transition: 0.4s ease-out;
         }
-        .ui-hidden { opacity: 0; pointer-events: none; }
+        .ui-hidden { opacity: 0; transform: translate(-50%, 40px); pointer-events: none; }
         
         .btn-main { 
-            border: none; border-radius: 12px; font-weight: 900; cursor: pointer; 
-            padding: 20px 40px; text-transform: uppercase; font-size: 14px;
+            border: none; border-radius: 15px; font-weight: 900; cursor: pointer; 
+            padding: 18px 35px; text-transform: uppercase; font-size: 13px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            display: flex; align-items: center; justify-content: center;
         }
-        #btn-start { background: var(--accent); color: #000; }
-        #btn-stop { background: var(--danger); color: #fff; display: none; }
-        #gear-btn { background: #333; color: #fff; padding: 20px; }
+        #btn-start { background: var(--accent); color: #000; min-width: 180px; }
+        #btn-stop { background: var(--danger); color: #fff; display: none; min-width: 180px; }
+        #gear-btn { background: #333; color: #fff; width: 60px; }
 
-        /* PAINEL */
+        /* PAINEL DE CONFIGURAÇÕES */
         #settings-panel { 
-            position: fixed; right: -400px; top: 0; width: 380px; height: 100%; 
-            background: var(--panel); backdrop-filter: blur(20px); z-index: 2000; 
-            padding: 40px 30px; transition: 0.4s; overflow-y: auto;
+            position: fixed; right: -400px; top: 0; width: min(380px, 90vw); height: 100%; 
+            background: var(--panel); backdrop-filter: blur(15px); z-index: 5000; 
+            padding: 40px 25px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 1px solid rgba(255,255,255,0.1);
+            overflow-y: auto;
         }
         #settings-panel.open { right: 0; }
-        .field { margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
-        .field label { font-size: 11px; color: var(--accent); text-transform: uppercase; display: block; margin-bottom: 8px; }
-        select, input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; }
+        .field { margin-bottom: 22px; }
+        .field label { font-size: 10px; color: var(--accent); text-transform: uppercase; display: block; margin-bottom: 8px; font-weight: bold; }
+        select, input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 14px; border-radius: 10px; font-size: 14px; }
         
         .btn-action { 
-            background: #444; color: #fff; border: none; padding: 12px; 
-            width: 100%; border-radius: 8px; cursor: pointer; margin-top: 10px; font-weight: bold;
+            background: #222; color: #fff; border: 1px solid #444; padding: 14px; 
+            width: 100%; border-radius: 10px; cursor: pointer; margin-top: 10px; font-weight: bold; font-size: 12px;
         }
 
         canvas { display: none; }
@@ -75,167 +118,171 @@
 </head>
 <body onclick="wakeUI()">
 
-<div id="safety-gate" style="position:fixed; inset:0; background:#000; z-index:8000; display:flex; align-items:center; justify-content:center;">
-    <div style="text-align:center; max-width:400px; padding:20px;">
-        <h2 style="color:var(--accent); margin-bottom:20px;">INSPEÇÃO PRO V6</h2>
-        <button class="btn-main" id="btn-start" onclick="acceptSafety()" style="width:100%">Abrir Câmera e Definir Pasta</button>
-    </div>
+<div id="safety-gate" style="position:fixed; inset:0; background:#000; z-index:9000; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:30px;">
+    <h1 style="color:var(--accent); font-weight:900; margin-bottom:10px;">INSPEÇÃO PRO V6</h1>
+    <p style="color:#666; font-size:12px; margin-bottom:30px; text-align:center;">SISTEMA DE MONITORAMENTO RODOVIÁRIO</p>
+    <button class="btn-main" id="btn-start" onclick="initApp()" style="width:100%; max-width:300px;">Entrar em Fullscreen</button>
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
 
-    <div class="hud-left">
+    <div class="hud-header">
         <div id="km-hud"><h1 id="km-txt">KM ---</h1></div>
-    </div>
-
-    <div id="hud-stats">
-        <div id="rec-tag">● GRAVANDO</div>
-        <div id="stat-lote">LOTE: 0/0</div>
-        <div id="stat-total">TOTAL SESSÃO: 0</div>
+        
+        <div id="hud-stats">
+            <div id="rec-tag" class="stat-line">● GRAVANDO</div>
+            <div id="stat-lote" class="stat-line">LOTE: 0/0</div>
+            <div id="stat-total" class="stat-line">TOTAL: 0</div>
+        </div>
     </div>
 
     <div id="ui-controls">
         <button id="gear-btn" class="btn-main" onclick="toggleSet()">⚙</button>
-        <button id="btn-start" class="btn-main" onclick="startInspeção()">Iniciar Inspeção</button>
-        <button id="btn-stop" class="btn-main" onclick="stopInspeção()">Finalizar Relatório</button>
+        <button id="btn-start-ui" class="btn-main" onclick="startInspeção()" style="background:var(--accent); color:#000;">Iniciar Inspeção</button>
+        <button id="btn-stop-ui" class="btn-main" onclick="stopInspeção()" style="background:var(--danger); color:#fff; display:none;">Finalizar Relatório</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <h3 style="color:var(--accent); margin-bottom:20px">CONFIGURAÇÕES</h3>
+    <h3 style="color:var(--accent); margin-bottom:25px; letter-spacing:1px;">OPÇÕES DO SISTEMA</h3>
     
     <div class="field">
-        <label>Qualidade do Relatório</label>
+        <label>Qualidade das Imagens</label>
         <select id="cfg-qual">
-            <option value="0.4">Baixa (Arquivo leve)</option>
-            <option value="0.7" selected>Média (Padrão)</option>
-            <option value="0.9">Alta (Máximo detalhe)</option>
+            <option value="0.4">BAIXA (Econômico)</option>
+            <option value="0.7" selected>MÉDIA (Recomendado)</option>
+            <option value="0.9">ALTA (Definição total)</option>
         </select>
     </div>
 
     <div class="field">
-        <label>Mostrar Coordenadas no Relatório?</label>
+        <label>Coordenadas GPS no PDF</label>
         <select id="cfg-coords">
-            <option value="sim">Sim</option>
-            <option value="nao">Não</option>
+            <option value="sim">MOSTRAR NO RELATÓRIO</option>
+            <option value="nao">OCULTAR</option>
         </select>
     </div>
 
     <div class="field">
-        <label>Fotos por Lote PDF</label>
+        <label>Fotos por Lote (Auto-Save)</label>
         <input type="number" id="cfg-lote" value="50">
     </div>
 
     <div class="field">
-        <label>Intervalo de Captura (ms)</label>
-        <input type="number" id="cfg-int" value="300">
+        <label>Captura a cada (ms)</label>
+        <input type="number" id="cfg-int" value="400">
     </div>
 
     <div class="field">
-        <label>Câmera Ativa</label>
-        <select id="cam-select" onchange="initC(this.value)"></select>
+        <label>Lente da Câmera</label>
+        <select id="cam-select" onchange="initCamera(this.value)"></select>
     </div>
 
-    <hr style="border-color:#333; margin-bottom:15px;">
-    
-    <button class="btn-action" style="background: #06723b;" onclick="openFolder()">📁 Ver Pasta de Relatórios</button>
-    <button class="btn-action" onclick="toggleSet()">FECHAR</button>
+    <div style="margin-top:40px;">
+        <button class="btn-action" style="background: #06723b; border:none;" onclick="alert('Arquivos salvos na pasta selecionada no início.')">📁 LOCALIZAR RELATÓRIOS</button>
+        <button class="btn-action" onclick="toggleSet()">VOLTAR</button>
+    </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], buffer=[], hDir=null, currentStream=null, rec=false, uiTimer, lastPos=null;
-let totalSessao = 0;
+let kmDB=[], buffer=[], hDir=null, stream=null, rec=false, uiTimer, lastPos=null;
+let sessaoCount = 0;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-async function acceptSafety() {
+async function initApp() {
     try {
+        // Solicita Fullscreen
+        if (document.documentElement.requestFullscreen) {
+            await document.documentElement.requestFullscreen();
+        }
+        
+        // Solicita Pasta
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').remove();
+        
+        document.getElementById('safety-gate').style.display = 'none';
         document.getElementById('app-shell').style.visibility = 'visible';
         document.getElementById('app-shell').style.opacity = '1';
-        listCams();
-        loadKMData();
+        
+        listCameras();
+        loadKM();
         initGPS();
-    } catch(e) { alert("Permissão necessária para salvar arquivos."); }
-}
-
-async function openFolder() {
-    alert("Para ver os arquivos, abra o Gerenciador de Arquivos do seu dispositivo e vá até a pasta que você selecionou no início.");
+    } catch(e) {
+        alert("Para funcionar, aceite o modo tela cheia e selecione uma pasta.");
+    }
 }
 
 function initGPS() {
     navigator.geolocation.watchPosition(p => {
         lastPos = { lt: p.coords.latitude, ln: p.coords.longitude };
-        updateHUD();
+        updateKM();
     }, null, {enableHighAccuracy:true});
 }
 
-async function loadKMData() {
+async function loadKM() {
     try {
         const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
         const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ik=h.indexOf('km'), ilt=h.findIndex(x=>x.includes('lat')), iln=h.findIndex(x=>x.includes('lon'));
-        kmDB = rows.map(r => {
-            const c = r.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
+        const lines = t.split('\n').filter(l => l.includes(';'));
+        lines.shift(); // remove header
+        kmDB = lines.map(line => {
+            const cols = line.split(';');
+            return { km: cols, lt: parseFloat(cols.replace(',','.')), ln: parseFloat(cols.replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
+    } catch(e) { console.error("CSV não encontrado"); }
 }
 
-function updateHUD() {
+function updateKM() {
     if(!lastPos || !kmDB.length) return;
-    let bestKM = null, minDist = Infinity;
-    kmDB.forEach(pt => {
+    let nearest = kmDB, minDist = Infinity;
+    for(const pt of kmDB) {
         const d = Math.hypot(lastPos.lt - pt.lt, lastPos.ln - pt.ln);
-        if(d < minDist) { minDist = d; bestKM = pt; }
-    });
-    if(bestKM) document.getElementById('km-txt').innerText = "KM " + bestKM.km;
+        if(d < minDist) { minDist = d; nearest = pt; }
+    }
+    document.getElementById('km-txt').innerText = "KM " + nearest.km;
 }
 
-async function listCams() {
+async function listCameras() {
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const video = devices.filter(d => d.kind === 'videoinput');
+    const videoDevices = devices.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
-    video.forEach((d, i) => {
+    videoDevices.forEach((d, i) => {
         const opt = document.createElement('option');
-        opt.value = d.deviceId; opt.text = d.label || `Câmera ${i+1}`;
+        opt.value = d.deviceId; opt.text = d.label || `Lente ${i+1}`;
         sel.appendChild(opt);
     });
-    if(video.length) initC(video[video.length-1].deviceId);
+    if(videoDevices.length) initCamera(videoDevices[videoDevices.length-1].deviceId);
 }
 
-async function initC(id) {
-    if(currentStream) currentStream.getTracks().forEach(t => t.stop());
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
-    currentStream = stream; vid.srcObject = stream;
+async function initCamera(id) {
+    if(stream) stream.getTracks().forEach(t => t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
+    vid.srcObject = stream;
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
 function startInspeção() {
     rec = true;
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'inline-block';
+    document.getElementById('btn-start-ui').style.display = 'none';
+    document.getElementById('btn-stop-ui').style.display = 'flex';
     document.getElementById('rec-tag').style.display = 'block';
-    captureLoop();
+    capture();
 }
 
 function stopInspeção() {
     rec = false;
-    document.getElementById('btn-start').style.display = 'inline-block';
-    document.getElementById('btn-stop').style.display = 'none';
+    document.getElementById('btn-start-ui').style.display = 'flex';
+    document.getElementById('btn-stop-ui').style.display = 'none';
     document.getElementById('rec-tag').style.display = 'none';
     savePDF();
 }
 
-function captureLoop() {
+function capture() {
     if(!rec) return;
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const loteLimit = parseInt(document.getElementById('cfg-lote').value);
+    const limit = parseInt(document.getElementById('cfg-lote').value);
     
     buffer.push({
         img: can.toDataURL('image/jpeg', parseFloat(document.getElementById('cfg-qual').value)),
@@ -245,56 +292,55 @@ function captureLoop() {
         ts: new Date().toLocaleString()
     });
 
-    totalSessao++;
-    document.getElementById('stat-lote').innerText = `LOTE: ${buffer.length}/${loteLimit}`;
-    document.getElementById('stat-total').innerText = `TOTAL SESSÃO: ${totalSessao}`;
+    sessaoCount++;
+    document.getElementById('stat-lote').innerText = `LOTE: ${buffer.length}/${limit}`;
+    document.getElementById('stat-total').innerText = `TOTAL: ${sessaoCount}`;
 
-    if(buffer.length >= loteLimit) savePDF();
-    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value));
+    if(buffer.length >= limit) savePDF();
+    setTimeout(capture, parseInt(document.getElementById('cfg-int').value));
 }
 
 async function savePDF() {
     if(!buffer.length) return;
-    const batch = [...buffer];
+    const items = [...buffer];
     buffer = [];
     const showCoords = document.getElementById('cfg-coords').value === 'sim';
+    const qual = parseFloat(document.getElementById('cfg-qual').value);
 
     const doc = new jspdf.jsPDF(can.width > can.height ? 'l' : 'p', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
 
-    for(let i=0; i<batch.length; i++){
+    for(let i=0; i<items.length; i++){
         if(i > 0) doc.addPage();
         const img = new Image();
         await new Promise(r => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
-                const barH = can.height * 0.12;
-                ctx.fillStyle = "rgba(0,0,0,0.8)";
-                ctx.fillRect(0, can.height - barH, can.width, barH);
+                const h = can.height * 0.1;
+                ctx.fillStyle = "rgba(0,0,0,0.85)";
+                ctx.fillRect(0, can.height - h, can.width, h);
                 ctx.fillStyle = "#fff";
-                ctx.font = `bold ${barH * 0.4}px Arial`;
-                ctx.fillText(batch[i].km, 50, can.height - (barH*0.45));
-                
-                ctx.font = `${barH * 0.15}px Arial`;
-                let info = batch[i].ts;
-                if(showCoords) info += ` | LAT: ${batch[i].lat} LON: ${batch[i].lon}`;
-                ctx.fillText(info, 50, can.height - (barH*0.2));
-                
-                doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph);
+                ctx.font = `bold ${h * 0.4}px Arial`;
+                ctx.fillText(items[i].km, 40, can.height - (h * 0.45));
+                ctx.font = `${h * 0.15}px Arial`;
+                let info = items[i].ts;
+                if(showCoords) info += ` | GPS: ${items[i].lat}, ${items[i].lon}`;
+                ctx.fillText(info, 40, can.height - (h * 0.2));
+                doc.addImage(can.toDataURL('image/jpeg', qual), 'JPEG', 0, 0, pw, ph);
                 r();
             };
-            img.src = batch[i].img;
+            img.src = items[i].img;
         });
     }
 
-    const nome = `INSP_${Date.now()}.pdf`;
+    const fname = `REL_${Date.now()}.pdf`;
     try {
-        const file = await hDir.getFileHandle(nome, { create: true });
-        const writable = await file.createWritable();
-        await writable.write(doc.output('blob'));
-        await writable.close();
-    } catch(e) { doc.save(nome); }
+        const file = await hDir.getFileHandle(fname, { create: true });
+        const writer = await file.createWritable();
+        await writer.write(doc.output('blob'));
+        await writer.close();
+    } catch(e) { doc.save(fname); }
 }
 
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
