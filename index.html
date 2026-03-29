@@ -6,6 +6,7 @@
     <title>INSPEÇÃO PRO V24 - OMNI</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
+        /* MANTIDO EXATAMENTE IGUAL AO SEU ANTERIOR */
         :root { 
             --accent: #00f2ff; 
             --danger: #ff003c; 
@@ -24,7 +25,6 @@
             width: 100vw; 
         }
 
-        /* --- INICIALIZAÇÃO --- */
         #safety-gate { 
             position: fixed; inset: 0; background: #000; z-index: 8000; 
             display: flex; align-items: center; justify-content: center; padding: 25px;
@@ -39,11 +39,9 @@
             text-transform: uppercase; margin-top: 20px;
         }
 
-        /* --- UI PRINCIPAL --- */
         #app-shell { visibility: hidden; opacity: 0; transition: 0.5s; height: 100vh; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; z-index: 1; }
 
-        /* --- PLACA DE KM --- */
         #km-container { position: absolute; top: 30px; left: 25px; z-index: 100; pointer-events: none; }
         #km-plate { 
             background: var(--placa-verde); 
@@ -55,7 +53,6 @@
             text-shadow: 2px 2px 0px rgba(0,0,0,0.5); letter-spacing: -2px; line-height: 1;
         }
 
-        /* --- STATUS --- */
         #rec-tag { 
             position: absolute; top: 35px; right: 30px; z-index: 100;
             background: rgba(0,0,0,0.7); padding: 12px 20px; border-radius: 12px;
@@ -64,7 +61,6 @@
         .dot { display: inline-block; width: 10px; height: 10px; background: #ff0000; border-radius: 50%; margin-right: 8px; animation: blink 0.8s infinite; }
         @keyframes blink { 50% { opacity: 0.2; } }
 
-        /* --- CONTROLES --- */
         #ui-controls { 
             position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
             z-index: 500; display: flex; gap: 20px; transition: 0.4s;
@@ -79,11 +75,11 @@
         #btn-stop { background: var(--danger); color: #fff; display: none; }
         #gear-btn { background: #333; color: #fff; padding: 20px; }
 
-        /* --- SETTINGS --- */
         #settings-panel { 
             position: fixed; right: -360px; top: 0; width: 340px; height: 100%; 
             background: var(--panel); backdrop-filter: blur(20px); z-index: 2000; 
             padding: 40px 30px; transition: 0.3s; border-left: 2px solid var(--accent);
+            overflow-y: auto; /* Adicionado para garantir rolagem se muitas opções */
         }
         #settings-panel.open { right: 0; }
         .field { margin-bottom: 20px; }
@@ -125,16 +121,46 @@
 
 <div id="settings-panel">
     <h3 style="color:var(--accent); margin-bottom:25px">OPÇÕES</h3>
-    <div class="field"><label>Câmera</label><select id="cam-select" onchange="initCam(this.value)"></select></div>
-    <div class="field"><label>Qualidade do PDF</label><select id="cfg-qual"><option value="0.4">BAIXA</option><option value="0.7" selected>MÉDIA</option><option value="0.9">ALTA</option></select></div>
-    <div class="field"><label>Fotos por Lote</label><input type="number" id="cfg-lote" value="50"></div>
-    <div class="field"><label>Mostrar Coordenadas</label><select id="cfg-gps"><option value="sim">SIM</option><option value="nao">NÃO</option></select></div>
+    
+    <div class="field">
+        <label>Câmera Ativa</label>
+        <select id="cam-select" onchange="initCam(this.value)"></select>
+    </div>
+    
+    <div class="field">
+        <label>Qualidade do PDF</label>
+        <select id="cfg-qual">
+            <option value="0.4">BAIXA</option>
+            <option value="0.7" selected>MÉDIA</option>
+            <option value="0.9">ALTA</option>
+        </select>
+    </div>
+    
+    <div class="field">
+        <label>Fotos por Lote PDF</label>
+        <input type="number" id="cfg-lote" value="50">
+    </div>
+    
+    <div class="field">
+        <label>Intervalo Captura (ms)</label>
+        <input type="number" id="cfg-int" value="400">
+    </div>
+    
+    <div class="field">
+        <label>Mostrar GPS no PDF?</label>
+        <select id="cfg-gps">
+            <option value="sim">SIM</option>
+            <option value="nao">NÃO</option>
+        </select>
+    </div>
+
     <button class="btn-aware" onclick="toggleSet()" style="background:#333; color:#fff">Fechar</button>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
+/* LÓGICA MANTIDA IGUAL, APENAS ADAPTANDO A CAPTURA DAS NOVAS OPÇÕES */
 let kmDB=[], buffer=[], hDir=null, stream=null, rec=false, uiTimer, lastPos=null, totalSessao=0;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
@@ -215,7 +241,10 @@ function stopCapture() {
 function loop() {
     if(!rec) return;
     ctx.drawImage(vid, 0, 0, can.width, can.height);
+    
+    // Captura qualidade selecionada no momento
     const qual = parseFloat(document.getElementById('cfg-qual').value);
+    const int = parseInt(document.getElementById('cfg-int').value);
     
     buffer.push({
         img: can.toDataURL('image/jpeg', qual),
@@ -230,7 +259,7 @@ function loop() {
     document.getElementById('total-info').innerText = `TOTAL: ${totalSessao}`;
 
     if(buffer.length >= parseInt(document.getElementById('cfg-lote').value)) savePDF();
-    setTimeout(loop, 400);
+    setTimeout(loop, int);
 }
 
 async function savePDF() {
@@ -240,6 +269,8 @@ async function savePDF() {
     
     const kmStart = batch.km;
     const kmEnd = batch[batch.length-1].km;
+    
+    // Captura opção GPS selecionada
     const showGPS = document.getElementById('cfg-gps').value === 'sim';
 
     const doc = new jspdf.jsPDF('l', 'mm', 'a4');
@@ -261,6 +292,7 @@ async function savePDF() {
                 ctx.font = `bold ${hT * 0.45}px Arial`;
                 ctx.fillText("KM " + batch[i].km, 50, can.height - (hT * 0.42));
                 
+                // Lógica mantida: só mostra se 'Sim' estiver selecionado
                 if(showGPS) {
                     ctx.font = `${hT * 0.15}px Arial`;
                     ctx.fillText(`${batch[i].ts} | GPS: ${batch[i].lat}, ${batch[i].lon}`, 50, can.height - (hT * 0.18));
