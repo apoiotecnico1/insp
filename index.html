@@ -21,7 +21,7 @@
         #app-shell { display: flex; height: 100vh; width: 100vw; position: relative; visibility: hidden; opacity: 0; transition: 1s; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* BOTÃO FECHAR GERAL (X) - REDESENHADO */
+        /* BOTÃO FECHAR GERAL (X) */
         #exit-app { 
             position: absolute; top: 15px; right: 15px; width: 45px; height: 45px; 
             background: var(--danger); color: #fff; border-radius: 50%; 
@@ -73,7 +73,7 @@
 <div id="safety-gate">
     <div class="alert-box">
         <h2>Sua segurança em primeiro lugar</h2>
-        <p>ATENÇÃO: Posicione o celular no suporte fixo. A tela permanecerá ativa durante todo o trajeto para monitoramento.</p>
+        <p>A tela permanecerá **ativa e ligada** durante todo o percurso. Não manuseie o celular com o veículo em movimento.</p>
         <button class="btn-aware" onclick="acceptSafety()">Estou Ciente</button>
     </div>
 </div>
@@ -81,12 +81,12 @@
 <div id="settings-panel">
     <div class="close-settings" onclick="toggleSet()">← Voltar</div>
     <div class="field"><label>Câmera (Lente)</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Tempo da foto (ms)</label><input type="number" id="cfg-int" value="5000"></div>
-    <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50"></div>
+    <div class="field"><label>Tempo da foto (ms)</label><input type="number" id="cfg-int" value="200" onchange="saveConfigs()"></div>
+    <div class="field"><label>Salvar relatório a cada X fotos</label><input type="number" id="cfg-lote" value="50" onchange="saveConfigs()"></div>
 </div>
 
 <div id="app-shell">
-    <div id="exit-app" onclick="location.reload()" title="Fechar tudo">×</div>
+    <div id="exit-app" onclick="location.reload()">×</div>
     <video id="vid" autoplay playsinline muted loop></video>
     <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
     <div id="rec-tag"><div class="dot"></div><span>CAPTURA ATIVA</span></div>
@@ -105,24 +105,28 @@ let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, uiTimer, wakeL
 let kmInicialLote = "", kmFinalLote = "";
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// --- SISTEMA ANTI-STANDBY REFORÇADO ---
+// --- TELA SEMPRE ATIVA ---
 async function requestWakeLock() {
     if ('wakeLock' in navigator) {
         try {
             wakeLock = await navigator.wakeLock.request('screen');
-            console.log("Tela bloqueada para não apagar.");
-        } catch (err) {
-            console.error("Falha ao manter tela ativa:", err);
-        }
+        } catch (err) {}
     }
 }
 
-// Reativa se mudar de aba ou travar/destravar
-document.addEventListener('visibilitychange', async () => {
-    if (wakeLock !== null && document.visibilityState === 'visible') {
-        requestWakeLock();
-    }
-});
+// Salva ajustes no navegador para não perder ao atualizar
+function saveConfigs() {
+    localStorage.setItem('field_int', document.getElementById('cfg-int').value);
+    localStorage.setItem('field_lote', document.getElementById('cfg-lote').value);
+}
+
+// Carrega ajustes salvos
+function loadConfigs() {
+    const savedInt = localStorage.getItem('field_int');
+    const savedLote = localStorage.getItem('field_lote');
+    if (savedInt) document.getElementById('cfg-int').value = savedInt;
+    if (savedLote) document.getElementById('cfg-lote').value = savedLote;
+}
 
 async function acceptSafety() {
     try {
@@ -134,7 +138,7 @@ async function acceptSafety() {
             document.getElementById('app-shell').style.opacity = '1';
             listCams();
             if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-            requestWakeLock(); // Ativa já no início
+            requestWakeLock();
         }, 600);
     } catch(e) { alert("Selecione uma pasta para salvar."); }
 }
@@ -166,12 +170,11 @@ async function initC(id) {
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; vid.play(); };
 }
 
-function switchCam(id) { initC(id); }
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
 async function initCapture() {
     rec = true;
-    await requestWakeLock(); // Reforça o bloqueio ao iniciar
+    await requestWakeLock();
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'inline-block';
     document.getElementById('rec-tag').style.opacity = '1';
@@ -204,7 +207,8 @@ function loop() {
         const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
         if(buffer.length >= limit) savePDF();
     }
-    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 5000);
+    // Usa o valor do input (padrão 200ms)
+    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
 async function savePDF() {
@@ -273,7 +277,7 @@ function initG() {
     }, null, {enableHighAccuracy:true});
 }
 
-window.onload = () => { loadCSV(); initG(); };
+window.onload = () => { loadConfigs(); loadCSV(); initG(); };
 </script>
 </body>
 </html>
