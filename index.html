@@ -3,104 +3,106 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>INSPEÇÃO V15 - ULTRA MINIMALIST</title>
+    <title>INSPEÇÃO PRO V17 - ELITE FIELD</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --neon: #00ff88; --gold: #ffcc00; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.4); }
+        :root { --neon: #00ff88; --gold: #ffcc00; --danger: #ff4444; --glass: rgba(0, 0, 0, 0.6); }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { background: #000; color: #fff; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        /* VÍDEO TOTAL */
+        /* VÍDEO FULL SCREEN */
         #cam-layer { position: absolute; inset: 0; z-index: 1; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* KM FIXO - DESIGNER CLEAN */
-        #hud-top { 
-            position: absolute; top: 20px; left: 20px; z-index: 100;
-            pointer-events: none;
-        }
+        /* HUD KM - ALTO CONTRASTE PARA SOL */
+        #hud-top { position: absolute; top: 25px; left: 20px; z-index: 100; pointer-events: auto; }
         .placa-km { 
-            background: rgba(5, 107, 60, 0.85); 
-            padding: 8px 25px; border-radius: 12px;
-            border-left: 5px solid #fff;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            background: linear-gradient(180deg, #056b3c 0%, #002e1a 100%); 
+            padding: 12px 35px; border-radius: 12px; border: 3px solid #fff;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.8); cursor: pointer;
         }
-        #km-txt { font-size: 2.5rem; font-weight: 900; letter-spacing: -1.5px; }
+        #km-txt { font-size: 3.2rem; font-weight: 900; letter-spacing: -2px; color: #fff; text-shadow: 3px 3px 0px #000; }
 
-        /* ÍCONES MINIMALISTAS LATERAIS */
-        #side-controls {
-            position: absolute; top: 20px; right: 20px; 
-            display: flex; flex-direction: column; gap: 20px; z-index: 1000;
-            transition: 0.5s;
-        }
+        /* BOTÕES FLUTUANTES LATERAIS */
+        #side-btns { position: absolute; top: 25px; right: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 1000; transition: 0.5s; }
         .icon-btn { 
-            width: 45px; height: 45px; background: var(--glass); backdrop-filter: blur(8px);
-            border-radius: 12px; display: flex; align-items: center; justify-content: center;
-            border: 1px solid rgba(255,255,255,0.1); font-size: 20px; cursor: pointer;
+            width: 55px; height: 55px; background: var(--glass); backdrop-filter: blur(15px);
+            border-radius: 15px; display: flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(255,255,255,0.3); font-size: 24px; color: #fff;
         }
 
-        /* COMANDOS INVISÍVEIS NO CENTRO (SÓ APARECEM NO TOQUE) */
+        /* OVERLAY DE COMANDOS (CENTRAL) */
         #ui-overlay {
-            position: absolute; inset: 0; z-index: 500;
-            display: flex; align-items: center; justify-content: center;
-            background: rgba(0,0,0,0.4); backdrop-filter: blur(5px);
-            transition: 0.4s; opacity: 0; pointer-events: none;
+            position: absolute; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); transition: 0.4s; opacity: 0; pointer-events: none;
         }
         #ui-overlay.active { opacity: 1; pointer-events: auto; }
 
-        .dock-central {
-            width: 85%; max-width: 400px; text-align: center;
-            display: flex; flex-direction: column; gap: 15px;
+        .menu-card {
+            width: 90%; max-width: 420px; background: #111; padding: 30px; border-radius: 35px;
+            border: 1px solid #333; text-align: center; box-shadow: 0 30px 100px rgba(0,0,0,1);
         }
 
-        .btn-main { 
-            width: 100%; padding: 20px; border: none; border-radius: 15px; 
-            font-weight: 900; text-transform: uppercase; cursor: pointer;
-            font-size: 14px; letter-spacing: 1px;
+        .btn-action { 
+            width: 100%; padding: 22px; border: none; border-radius: 20px; font-weight: 900; 
+            text-transform: uppercase; cursor: pointer; font-size: 16px; margin-bottom: 12px; transition: 0.2s;
         }
         .btn-start { background: var(--neon); color: #000; }
         .btn-stop { background: var(--danger); color: #fff; }
-        .btn-folder { background: #fff; color: #000; }
+        .btn-white { background: #fff; color: #000; }
+        .btn-action:active { transform: scale(0.95); }
 
-        /* STATUS DISCRETO */
-        #save-indicator {
+        /* INDICADOR DE CAPTURA (FLASH) */
+        #capture-flash { position: absolute; inset: 0; border: 10px solid var(--neon); pointer-events: none; z-index: 2000; opacity: 0; transition: 0.1s; }
+
+        /* RODAPÉ DE STATUS */
+        #status-bar { 
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            font-size: 10px; color: var(--gold); font-weight: bold; background: rgba(0,0,0,0.5);
-            padding: 5px 15px; border-radius: 20px; z-index: 1000; display: none;
+            display: flex; gap: 10px; z-index: 1000; pointer-events: none;
         }
+        .tag { background: rgba(0,0,0,0.8); padding: 5px 15px; border-radius: 20px; font-size: 10px; font-weight: 900; color: var(--gold); border: 1px solid #444; }
+
+        .hide-stealth { opacity: 0 !important; pointer-events: none !important; transform: translateX(30px); }
 
         canvas { display: none; }
     </style>
 </head>
-<body onclick="toggleOverlay()">
+<body onclick="showUI()">
 
+<div id="capture-flash"></div>
 <div id="cam-layer"><video id="vid" autoplay playsinline muted></video></div>
 
 <div id="hud-top">
-    <div class="placa-km"><div id="km-txt">KM ---+---</div></div>
+    <div class="placa-km" onclick="initGPS(); event.stopPropagation();"><div id="km-txt">KM ---+---</div></div>
 </div>
 
-<div id="side-controls">
+<div id="side-btns">
     <div class="icon-btn" onclick="switchCam(); event.stopPropagation();">🔄</div>
     <div class="icon-btn" onclick="toggleSettings(); event.stopPropagation();">⚙️</div>
 </div>
 
 <div id="ui-overlay">
-    <div class="dock-central">
-        <div style="font-size: 11px; margin-bottom: 10px; opacity: 0.7;">INSPEÇÃO PRO V15</div>
-        <button id="btn-dir" class="btn-main btn-folder" onclick="pickFolder(); event.stopPropagation();">📁 ESCOLHER PASTA</button>
-        <button id="btn-start" class="btn-main btn-start" disabled onclick="startApp(); event.stopPropagation();">▶ INICIAR CAPTURA</button>
-        <button id="btn-stop" class="btn-main btn-stop" style="display:none" onclick="stopApp(); event.stopPropagation();">■ PARAR E SALVAR</button>
-        <div id="stats-info" style="font-size: 12px; margin-top: 10px;">LOTE: <span id="v-batch">0</span> | TOTAL: <span id="v-total">0</span></div>
+    <div class="menu-card">
+        <h1 style="font-size: 1.2rem; margin-bottom: 25px; letter-spacing: 2px; color: var(--neon);">INSPEÇÃO ELITE V17</h1>
+        <button id="btn-dir" class="btn-action btn-white" onclick="pickFolder(); event.stopPropagation();">📁 VINCULAR PASTA</button>
+        <button id="btn-start" class="btn-action btn-start" disabled onclick="startEngine(); event.stopPropagation();">▶ INICIAR TRECHO</button>
+        <button id="btn-stop" class="btn-action btn-stop" style="display:none" onclick="stopEngine(); event.stopPropagation();">■ FINALIZAR E SALVAR</button>
+        <div style="margin-top: 15px; font-size: 13px; color: #777;">
+            LOTE: <b id="v-batch" style="color:#fff">0</b>/50 | TOTAL: <b id="v-total" style="color:#fff">0</b>
+        </div>
     </div>
 </div>
 
-<div id="save-indicator">GRAVANDO PDF...</div>
+<div id="status-bar">
+    <div id="save-tag" class="tag" style="display:none; color: #fff; background: var(--danger);">💾 GRAVANDO PDF...</div>
+    <div class="tag">GPS ATIVO</div>
+    <div class="tag">AUTO-SAVE: ON</div>
+</div>
 
 <canvas id="proc"></canvas>
 
 <script>
-let kmDB=[], gps=null, active=false, buffer=[], total=0, batchCount=0, hFolder=null, cams=[];
+let kmDB=[], gps=null, active=false, buffer=[], total=0, batchCount=0, hFolder=null, cams=[], uiTimer;
 const vid=document.getElementById('vid'), proc=document.getElementById('proc'), ctx=proc.getContext('2d');
 
 window.onload = async () => { await loadCams(); loadCSV(); initGPS(); };
@@ -113,7 +115,7 @@ async function loadCams() {
 
 async function initCam(id) {
     if(vid.srcObject) vid.srcObject.getTracks().forEach(t => t.stop());
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: {ideal: 1920}, height: {ideal: 1080} } });
     vid.srcObject = stream;
     vid.onloadedmetadata = () => { proc.width = vid.videoWidth; proc.height = vid.videoHeight; vid.play(); };
 }
@@ -122,12 +124,23 @@ function switchCam() {
     let current = cams.findIndex(c => c.deviceId === vid.srcObject.getTracks().getSettings().deviceId);
     let next = (current + 1) % cams.length;
     initCam(cams[next].deviceId);
-    if(navigator.vibrate) navigator.vibrate(30);
+    vibrate(50);
 }
 
-function toggleOverlay() {
+function showUI() {
     const overlay = document.getElementById('ui-overlay');
-    overlay.classList.toggle('active');
+    const side = document.getElementById('side-btns');
+    overlay.classList.add('active');
+    side.classList.remove('hide-stealth');
+    clearTimeout(uiTimer);
+}
+
+function hideUI() {
+    if(!active) return;
+    document.getElementById('ui-overlay').classList.remove('active');
+    uiTimer = setTimeout(() => {
+        document.getElementById('side-btns').classList.add('hide-stealth');
+    }, 4000);
 }
 
 async function loadCSV() {
@@ -141,10 +154,11 @@ async function loadCSV() {
             const c = r.split(';');
             return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
+    } catch(e) { console.log("Erro CSV"); }
 }
 
 function initGPS() {
+    vibrate(30);
     navigator.geolocation.watchPosition(p => {
         gps = { lat: p.coords.latitude, lon: p.coords.longitude };
         if(kmDB.length) {
@@ -161,46 +175,57 @@ function initGPS() {
 async function pickFolder() {
     try {
         hFolder = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('btn-dir').innerText = "✓ PASTA OK";
+        document.getElementById('btn-dir').innerText = "✓ DIRETÓRIO PRONTO";
         document.getElementById('btn-start').disabled = false;
-        if(navigator.vibrate) navigator.vibrate(50);
-    } catch(e) {}
+        vibrate(60);
+    } catch(e) { alert("Acesso negado à pasta."); }
 }
 
-function startApp() {
+function startEngine() {
     active = true;
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
-    toggleOverlay(); // Esconde o menu ao começar
-    loop();
+    hideUI();
+    vibrate();
+    captureLoop();
 }
 
-async function stopApp() {
+async function stopEngine() {
     active = false;
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
-    if(buffer.length > 0) await saveBatch();
+    if(buffer.length > 0) await savePDF();
+    vibrate(300);
 }
 
-function loop() {
+function captureLoop() {
     if(!active) return;
+    
+    // Efeito Visual de Captura
+    const flash = document.getElementById('capture-flash');
+    flash.style.opacity = "1";
+    setTimeout(() => flash.style.opacity = "0", 100);
+
     ctx.drawImage(vid, 0, 0, proc.width, proc.height);
     buffer.push({
-        raw: proc.toDataURL('image/jpeg', 0.7),
+        raw: proc.toDataURL('image/jpeg', 0.75),
         km: document.getElementById('km-txt').innerText.replace("KM ", ""),
         ts: new Date().toLocaleString('pt-BR').toUpperCase()
     });
+
     total++;
     document.getElementById('v-total').innerText = total;
     document.getElementById('v-batch').innerText = buffer.length;
-    if(buffer.length >= 50) saveBatch();
-    setTimeout(loop, 800);
+
+    if(buffer.length >= 50) savePDF();
+    setTimeout(captureLoop, 850);
 }
 
-async function saveBatch() {
+async function savePDF() {
     if(!buffer.length || !hFolder) return;
     const items = [...buffer]; buffer = []; batchCount++;
-    document.getElementById('save-indicator').style.display = 'block';
+    document.getElementById('save-tag').style.display = 'block';
+
     try {
         const doc = new jspdf.jsPDF('l', 'mm', 'a4');
         for(let i=0; i<items.length; i++){
@@ -210,12 +235,12 @@ async function saveBatch() {
                 img.onload = () => {
                     ctx.drawImage(img, 0, 0);
                     const bh = proc.height * 0.16;
-                    ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, proc.height-bh, proc.width, bh);
+                    ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, proc.height-bh, proc.width, bh);
                     ctx.fillStyle = "#ffcc00"; ctx.font = `bold ${bh*0.48}px Arial`;
                     ctx.fillText("KM " + items[i].km, 60, proc.height-(bh*0.42));
                     ctx.fillStyle = "#fff"; ctx.font = `${bh*0.16}px monospace`;
                     ctx.fillText(items[i].ts, 60, proc.height-(bh*0.18));
-                    doc.addImage(proc.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, 297, 210);
+                    doc.addImage(proc.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, 297, 210, undefined, 'FAST');
                     r();
                 };
                 img.src = items[i].raw;
@@ -224,12 +249,13 @@ async function saveBatch() {
         const handle = await hFolder.getFileHandle(`INS_LOTE_${batchCount}_KM_${items.km}.pdf`, {create:true});
         const writable = await handle.createWritable();
         await writable.write(doc.output('blob')); await writable.close();
-        if(navigator.vibrate) navigator.vibrate();
-    } catch(e) { alert("Erro ao salvar. Reconecte a pasta."); }
-    document.getElementById('save-indicator').style.display = 'none';
+        vibrate();
+    } catch(e) { alert("Reconecte a pasta para salvar!"); }
+    document.getElementById('save-tag').style.display = 'none';
 }
 
-function toggleSettings() { alert("Ajustes: 50 fotos por lote / 800ms intervalo."); }
+function toggleSettings() { alert("Configuração Padrão: 50 fotos | 850ms | Qualidade Alta"); }
+function vibrate(ms) { if(navigator.vibrate) navigator.vibrate(ms); }
 </script>
 </body>
 </html>
