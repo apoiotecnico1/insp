@@ -3,159 +3,92 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>RELATÓRIO FOTOGRÁFICO</title>
+    <title>SISTEMA DE RELATÓRIO FOTOGRÁFICO</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { 
             --accent: #ffcc00; 
             --placa-verde: #007934; 
             --danger: #cc0000; 
-            --mistic-gold: #fdfc97;
-            --mistic-void: #1a0a2a;
+            --dark-bg: #121212;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
-        html, body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
+        html, body { background: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
 
-        /* SPLASH DE ABERTURA HIPNÓTICO/MÍSTICO */
-        #splash-screen {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle at center, #2e1a4a 0%, #000 70%);
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            overflow: hidden;
-            opacity: 1;
-            transition: opacity 1.5s ease-in-out;
+        /* TELA DE ADVERTÊNCIA DIRETA */
+        #safety-gate { 
+            position: fixed; 
+            inset: 0; 
+            background: #000; 
+            z-index: 9999; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 30px; 
         }
-
-        #splash-screen::before {
-            content: '';
-            position: absolute;
-            width: 200%;
-            height: 200%;
-            background: conic-gradient(
-                from 180deg at 50% 50%,
-                #000 0deg,
-                var(--mistic-void) 60deg,
-                var(--mistic-gold) 120deg,
-                #fff 180deg,
-                var(--mistic-gold) 240deg,
-                var(--mistic-void) 300deg,
-                #000 360deg
-            );
-            animation: rotatePortal 20s linear infinite;
-            opacity: 0.15;
-            filter: blur(20px);
-        }
-
-        .splash-text {
-            font-family: 'Georgia', serif; /* Fonte mais clássica/mística */
-            font-size: 2rem;
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: 6px;
-            font-weight: 300;
-            text-align: center;
-            z-index: 10001;
-            animation: fadeInText 3s ease-out forwards, pulseLight 4s ease-in-out 3s infinite;
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-        }
-
-        @keyframes rotatePortal {
-            to { transform: rotate(360deg); }
-        }
-
-        @keyframes fadeInText {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes pulseLight {
-            0%, 100% { text-shadow: 0 0 15px rgba(255, 255, 255, 0.5), 0 0 30px rgba(253, 252, 151, 0.3); }
-            50% { text-shadow: 0 0 25px rgba(255, 255, 255, 0.8), 0 0 50px rgba(253, 252, 151, 0.6); }
-        }
-
-        /* TELA DE ADVERTÊNCIA IMPACTANTE */
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 30px; display: none; }
-        .safety-box { max-width: 500px; text-align: center; border: 1px solid #444; padding: 40px; border-radius: 8px; }
-        .safety-box h2 { color: #fff; margin-bottom: 25px; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 1px; }
-        .safety-box p { font-size: 18px; line-height: 1.6; color: #ddd; margin-bottom: 35px; font-weight: bold; }
-        .btn-proceed { width: 100%; background: var(--accent); color: #000; border: none; padding: 20px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 16px; border-radius: 4px; }
+        .safety-box { max-width: 500px; text-align: center; border: 1px solid #333; padding: 40px; border-radius: 12px; background: #0a0a0a; }
+        .safety-box h2 { color: var(--danger); margin-bottom: 25px; font-size: 1.5rem; text-transform: uppercase; }
+        .safety-box p { font-size: 18px; line-height: 1.6; color: #ccc; margin-bottom: 35px; }
+        .btn-proceed { width: 100%; background: var(--accent); color: #000; border: none; padding: 20px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 16px; border-radius: 8px; }
 
         /* INTERFACE PRINCIPAL */
         #app-shell { display: none; height: 100vh; width: 100vw; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; z-index: 1; }
 
-        /* PLACA DE KM */
-        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 12px 25px; border: 3px solid #fff; border-radius: 12px; z-index: 10; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        #km-hud h1 { font-size: 2.5rem; font-weight: 900; letter-spacing: -1px; }
+        /* HUD DE INFORMAÇÕES */
+        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 10px 20px; border: 2px solid #fff; border-radius: 8px; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        #km-hud h1 { font-size: 2rem; font-weight: 800; }
 
-        /* STATUS DE GRAVAÇÃO (APENAS BOLINHA E "ON") */
-        #rec-status { position: absolute; top: 20px; right: 20px; display: none; align-items: center; gap: 8px; background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 4px; z-index: 10; border: 1px solid rgba(255,255,255,0.2); font-weight: bold; letter-spacing: 1px; }
-        .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; box-shadow: 0 0 8px #f00; }
+        #rec-status { position: absolute; top: 20px; right: 20px; display: none; align-items: center; gap: 8px; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 6px; z-index: 10; border: 1px solid #f00; color: #f00; font-weight: bold; }
+        .dot { width: 10px; height: 10px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* AJUSTES */
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: rgba(10,10,10,0.98); z-index: 4000; padding: 30px; transition: 0.4s; border-left: 1px solid #333; }
+        /* PAINEL DE CONFIGURAÇÕES LATERAIS */
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #1a1a1a; z-index: 4000; padding: 30px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
-        .field { margin-bottom: 15px; }
-        .field label { display: block; font-size: 10px; color: #777; text-transform: uppercase; margin-bottom: 5px; }
-        select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; font-size: 14px; border-radius: 4px; }
-        
-        #mini-info { display: none; font-size: 12px; color: #888; margin-top: 15px; padding: 15px; background: #000; border: 1px solid #222; line-height: 1.5; }
+        .field { margin-bottom: 20px; }
+        .field label { display: block; font-size: 11px; color: #aaa; text-transform: uppercase; margin-bottom: 8px; }
+        select, input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 12px; font-size: 14px; border-radius: 6px; }
 
-        /* CONTROLES */
-        #ui-controls { position: absolute; bottom: 40px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 15px; z-index: 100; }
-        .btn-main { border: none; font-weight: 900; cursor: pointer; padding: 20px 40px; font-size: 14px; background: var(--accent); color: #000; text-transform: uppercase; border-radius: 4px; }
-        #gear-btn { width: 55px; height: 55px; background: #222; color: #fff; border: none; cursor: pointer; font-size: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+        /* BOTÕES DE CONTROLE */
+        #ui-controls { position: absolute; bottom: 40px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 100; }
+        .btn-main { border: none; font-weight: bold; cursor: pointer; padding: 18px 35px; font-size: 14px; background: var(--accent); color: #000; text-transform: uppercase; border-radius: 8px; transition: transform 0.1s; }
+        .btn-main:active { transform: scale(0.95); }
+        #gear-btn { width: 55px; height: 55px; background: rgba(255,255,255,0.1); backdrop-filter: blur(5px); color: #fff; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; font-size: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         
         canvas { display: none; }
     </style>
 </head>
 <body onclick="forceFull()">
 
-<div id="splash-screen">
-    <div class="splash-text">Relatório Fotográfico</div>
-</div>
-
 <div id="safety-gate">
     <div class="safety-box">
-        <h2>ADVERTÊNCIA DE SEGURANÇA</h2>
-        <p>A ATENÇÃO AO VOLANTE SALVA VIDAS.<br><br>O uso deste sistema é estritamente proibido para o condutor do veículo em movimento.</p>
-        <button class="btn-proceed" onclick="requestAccess()">ESTOU CIENTE E SOU PASSAGEIRO</button>
+        <h2>AVISO DE SEGURANÇA</h2>
+        <p>O uso deste aplicativo é restrito a <b>passageiros</b>. Nunca manuseie o dispositivo enquanto estiver dirigindo.</p>
+        <button class="btn-proceed" onclick="requestAccess()">ACEITAR E CONTINUAR</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-        <span style="font-size: 12px; font-weight: bold; color: #555;">SISTEMA</span>
-        <button onclick="document.getElementById('mini-info').style.display=(document.getElementById('mini-info').style.display=='none'?'block':'none')" style="background:none; border:none; color:var(--accent); cursor:pointer; font-size: 18px;">ℹ️</button>
-    </div>
-
-    <div id="mini-info">
-        • Selecione a pasta de destino para salvar os PDFs.<br>
-        • GPS sincroniza Km com base no CSV.<br>
-        • Fotos automáticas com marca d'água.<br>
-        • Lotes fechados conforme configuração.
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <span style="font-size: 14px; font-weight: bold; color: #fff;">CONFIGURAÇÕES</span>
+        <button onclick="toggleSet()" style="background:none; border:none; color:#777; font-size: 24px;">×</button>
     </div>
 
     <div class="field">
-        <label>Dispositivo de Vídeo</label>
+        <label>Câmera Disponível</label>
         <select id="cam-select" onchange="initC(this.value)"></select>
     </div>
     <div class="field">
-        <label>Capacidade do Lote (Fotos)</label>
+        <label>Fotos por Lote (PDF)</label>
         <input type="number" id="cfg-lote" value="200">
     </div>
     <div class="field">
-        <label>Intervalo de Captura (ms)</label>
+        <label>Intervalo entre capturas (ms)</label>
         <input type="number" id="cfg-int" value="200">
     </div>
-    <br>
-    <button class="btn-main" style="width:100%; background: #fff;" onclick="toggleSet()">FECHAR</button>
+    
+    <button class="btn-main" style="width:100%; margin-top: 20px;" onclick="toggleSet()">SALVAR E VOLTAR</button>
 </div>
 
 <div id="app-shell">
@@ -163,12 +96,12 @@
     
     <div id="km-hud"><h1 id="km-txt">KM ---</h1></div>
     
-    <div id="rec-status"><div class="dot"></div><span>ON</span></div>
+    <div id="rec-status"><div class="dot"></div><span>GRAVANDO</span></div>
 
     <div id="ui-controls">
         <button id="gear-btn" onclick="toggleSet(); event.stopPropagation();">⚙️</button>
         <button id="btn-start" class="btn-main" onclick="initCapture(); event.stopPropagation();">INICIAR CAPTURA</button>
-        <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture(); event.stopPropagation();">FINALIZAR LOTE</button>
+        <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture(); event.stopPropagation();">PARAR E SALVAR</button>
     </div>
 </div>
 
@@ -182,24 +115,6 @@ const canCap=document.getElementById('can_cap'), ctxCap=canCap.getContext('2d');
 const canOff = document.createElement('canvas');
 const ctxOff = canOff.getContext('2d');
 
-// Lógica do Splash de Abertura
-window.addEventListener('load', () => {
-    const splash = document.getElementById('splash-screen');
-    const safety = document.getElementById('safety-gate');
-    
-    // Exibe o splash por 6 segundos (para impacto neural lento e místico)
-    setTimeout(() => {
-        splash.style.opacity = '0'; // Inicia fade-out
-        safety.style.display = 'flex'; // Prepara a próxima tela
-        
-        // Remove o splash do DOM após a transição de fade-out (1.5s)
-        setTimeout(() => {
-            splash.style.display = 'none';
-        }, 1500); 
-        
-    }, 6000);
-});
-
 function forceFull() { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {}); }
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
@@ -208,7 +123,7 @@ async function requestAccess() {
         dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
         if (await dirHandle.queryPermission({mode:'readwrite'}) !== 'granted') await dirHandle.requestPermission({mode:'readwrite'});
         if(dirHandle) unlockSystem();
-    } catch (e) { alert("Acesso negado."); }
+    } catch (e) { alert("É necessário conceder permissão à pasta para salvar os arquivos."); }
 }
 
 async function unlockSystem() {
@@ -217,21 +132,22 @@ async function unlockSystem() {
     forceFull();
     await listCams();
     if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
-    loadCSV(); initGPS();
+    loadCSV(); 
+    initGPS();
 }
 
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const vids = devices.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">CÂMERA ${i+1}</option>`).join('');
+    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">CÂMERA ${i+1} ${d.label ? '- ' + d.label : ''}</option>`).join('');
     const back = vids.find(d => d.label.toLowerCase().includes('back')) || vids[vids.length-1];
     if(back) { sel.value = back.deviceId; initC(back.deviceId); }
 }
 
 async function initC(id) {
     if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1280, height: 720 } });
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: {ideal: 1280}, height: {ideal: 720} } });
     vid.srcObject = currentStream;
 }
 
@@ -268,7 +184,6 @@ function loop() {
     setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
-// Geração de PDF 100% silenciosa
 async function saveAuto(data, ini, fim) {
     const pdfW = canCap.width, pdfH = canCap.height;
     canOff.width = pdfW; canOff.height = pdfH;
@@ -294,13 +209,13 @@ async function saveAuto(data, ini, fim) {
     }
     const d = new Date();
     const p = (n) => n.toString().padStart(2, '0');
-    const nome = `K_${ini}_a_${fim}_${p(d.getDate())}${p(d.getMonth()+1)}.pdf`;
+    const nome = `Km_${ini}_a_${fim}_${p(d.getDate())}${p(d.getMonth()+1)}.pdf`;
     try {
         const fh = await dirHandle.getFileHandle(nome, { create: true });
         const wr = await fh.createWritable();
         await wr.write(doc.output('blob'));
         await wr.close();
-    } catch (e) {}
+    } catch (e) { console.error("Erro ao salvar PDF:", e); }
 }
 
 async function loadCSV() {
@@ -314,7 +229,7 @@ async function loadCSV() {
             const c = r.split(';');
             return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
+    } catch(e) { console.warn("CSV não carregado. Verifique se o arquivo SNVBR116SPRJ.csv está na pasta."); }
 }
 
 function initGPS() {
