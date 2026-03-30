@@ -6,29 +6,34 @@
     <title>SISTEMA ELITE PRO</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; }
+        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; --bg: #000; }
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
-        html, body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
+        html, body { background: var(--bg); color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
 
-        /* TELA DE ADVERTÊNCIA CHAMATIVA */
+        /* TELA DE ADVERTÊNCIA CRÍTICA */
         #safety-gate { 
             position: fixed; inset: 0; background: #000; z-index: 9999; 
-            display: flex; align-items: center; justify-content: center; padding: 20px;
-            border: 8px solid var(--danger);
-            animation: borderBlink 1.5s infinite;
+            display: flex; align-items: center; justify-content: center; padding: 25px;
+            border: 12px solid var(--danger);
+            animation: pulseAlert 2s infinite;
         }
-        @keyframes borderBlink { 50% { border-color: #300; } }
+        @keyframes pulseAlert { 
+            0% { border-color: #ff0000; box-shadow: inset 0 0 50px #500; } 
+            50% { border-color: #550000; box-shadow: inset 0 0 20px #200; } 
+            100% { border-color: #ff0000; box-shadow: inset 0 0 50px #500; } 
+        }
 
-        .safety-box { max-width: 450px; text-align: center; }
-        .safety-box h1 { color: var(--danger); font-size: 3rem; margin-bottom: 20px; }
+        .safety-box { max-width: 500px; text-align: center; }
+        .safety-box h1 { color: var(--danger); font-size: 5rem; margin-bottom: 10px; line-height: 1; }
+        .safety-box h2 { color: #fff; font-size: 1.5rem; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px; }
         .safety-box p { 
-            font-size: 18px; line-height: 1.6; color: #fff; margin-bottom: 40px; 
-            text-align: center; font-weight: bold; text-transform: uppercase;
+            font-size: 18px; line-height: 1.5; color: #eee; margin-bottom: 40px; 
+            font-weight: bold; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px;
         }
         .btn-proceed { 
             width: 100%; background: var(--accent); color: #000; border: none; 
-            padding: 25px; font-weight: 900; border-radius: 12px; cursor: pointer; 
-            text-transform: uppercase; font-size: 20px; box-shadow: 0 0 30px rgba(255,204,0,0.4);
+            padding: 25px; font-weight: 900; border-radius: 15px; cursor: pointer; 
+            text-transform: uppercase; font-size: 22px; transition: 0.3s;
         }
 
         /* INTERFACE PRINCIPAL */
@@ -38,24 +43,24 @@
         #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 12px 25px; border: 2px solid #fff; border-radius: 10px; z-index: 10; }
         #km-hud h1 { font-size: 2.2rem; font-weight: 900; }
 
-        #rec-status { position: absolute; top: 20px; right: 20px; display: none; align-items: center; gap: 8px; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 30px; z-index: 10; border: 1px solid rgba(255,255,255,0.2); }
-        .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
+        #rec-status { position: absolute; top: 20px; right: 20px; display: none; align-items: center; gap: 8px; background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 30px; z-index: 10; border: 1px solid var(--danger); }
+        .dot { width: 12px; height: 12px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
         #rec-status span { font-weight: 900; font-size: 14px; color: #fff; }
 
-        /* AJUSTES */
+        /* PAINEL DE AJUSTES */
         #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(15px); z-index: 4000; padding: 40px 20px; transition: 0.4s; border-left: 1px solid #333; overflow-y: auto; }
         #settings-panel.open { right: 0; }
         .field { margin-bottom: 20px; }
         select, input { width: 100%; background: #1a1a1a; border: 1px solid #444; color: #fff; padding: 15px; border-radius: 8px; font-size: 16px; text-align: center; }
         
-        #info-box { display: none; background: #111; padding: 15px; border-radius: 8px; font-size: 11px; line-height: 1.4; color: #aaa; margin-top: 15px; text-align: left; border: 1px solid #333; }
         .info-btn { background: none; border: 1px solid #444; color: #888; padding: 10px; border-radius: 8px; width: 100%; margin-bottom: 20px; cursor: pointer; font-size: 12px; }
+        #info-box { display: none; background: #111; padding: 15px; border-radius: 8px; font-size: 11px; line-height: 1.4; color: #aaa; margin-top: 15px; border: 1px solid #333; }
 
         /* CONTROLES */
         #ui-controls { position: absolute; bottom: 50px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 100; }
-        .btn-main { border: none; border-radius: 20px; font-weight: 900; cursor: pointer; padding: 20px 50px; font-size: 24px; background: var(--accent); color: #000; display: flex; align-items: center; justify-content: center; min-width: 140px; }
-        #gear-btn { width: 65px; height: 65px; border-radius: 20px; background: rgba(255,255,255,0.2); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; backdrop-filter: blur(5px); }
+        .btn-main { border: none; border-radius: 20px; font-weight: 900; cursor: pointer; padding: 20px 50px; font-size: 24px; background: var(--accent); color: #000; min-width: 140px; }
+        #gear-btn { width: 65px; height: 65px; border-radius: 20px; background: rgba(255,255,255,0.1); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; backdrop-filter: blur(5px); }
         
         canvas { display: none; }
     </style>
@@ -64,30 +69,28 @@
 
 <div id="safety-gate">
     <div class="safety-box">
-        <h1>⚠️</h1>
+        <h1>🚫</h1>
+        <h2>Atenção Crítica</h2>
         <p>
-            ADVERTÊNCIA DE SEGURANÇA<br><br>
-            É estritamente proibido o uso deste sistema pelo condutor.<br><br>
-            A operação deve ser feita exclusivamente por um passageiro.<br><br>
-            Não manuseie o dispositivo com o veículo em movimento.
+            ESTE APLICATIVO NÃO PODE SER USADO POR QUEM ESTÁ DIRIGINDO.<br><br>
+            O manuseio do celular ao volante coloca vidas em risco e é infração gravíssima.<br><br>
+            OPERAÇÃO PERMITIDA APENAS PARA PASSAGEIROS.
         </p>
-        <button class="btn-proceed" onclick="requestAccess()">ESTOU CIENTE</button>
+        <button class="btn-proceed" onclick="requestAccess()">ENTENDO O RISCO E SOU PASSAGEIRO</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <button class="info-btn" onclick="document.getElementById('info-box').style.display = (document.getElementById('info-box').style.display=='none'?'block':'none')">ℹ️</button>
-    
+    <button class="info-btn" onclick="const b=document.getElementById('info-box'); b.style.display=b.style.display=='none'?'block':'none'">ℹ️ SOBRE O USO</button>
     <div id="info-box">
         1. Escolha a pasta de destino.<br>
-        2. Permita acesso de gravação.<br>
-        3. ▶️ inicia captura / ⏹️ finaliza lote.<br>
-        4. Km automático via GPS.
+        2. ▶️ Inicia / ⏹️ Para e Salva.<br>
+        3. O sistema fecha lotes automaticamente.<br>
+        4. Km via GPS integrado.
     </div>
-
     <div class="field"><select id="cam-select" onchange="initC(this.value)"></select></div>
-    <div class="field"><input type="number" id="cfg-lote" value="200"></div>
-    <div class="field"><input type="number" id="cfg-int" value="200"></div>
+    <div class="field"><input type="number" id="cfg-lote" value="200" placeholder="Lote"></div>
+    <div class="field"><input type="number" id="cfg-int" value="200" placeholder="ms"></div>
     <button class="btn-main" style="width:100%; background: #333; color: #fff;" onclick="toggleSet()">✖️</button>
 </div>
 
@@ -124,9 +127,10 @@ function toggleSet() { document.getElementById('settings-panel').classList.toggl
 async function requestAccess() {
     try {
         dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        if (await dirHandle.queryPermission({mode:'readwrite'}) !== 'granted') await dirHandle.requestPermission({mode:'readwrite'});
+        const perms = { mode: 'readwrite' };
+        if (await dirHandle.queryPermission(perms) !== 'granted') await dirHandle.requestPermission(perms);
         if(dirHandle) unlockSystem();
-    } catch (e) { }
+    } catch (e) { alert("Acesso à pasta é obrigatório!"); }
 }
 
 async function unlockSystem() {
