@@ -10,11 +10,10 @@
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         html, body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
 
-        /* TELA DE ADVERTÊNCIA IMPACTANTE */
+        /* TELA DE ADVERTÊNCIA SÉRIA */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 30px; }
-        .safety-box { max-width: 500px; text-align: center; border: 1px solid #444; padding: 40px; border-radius: 8px; }
-        .safety-box h2 { color: #fff; margin-bottom: 25px; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 1px; }
-        .safety-box p { font-size: 18px; line-height: 1.6; color: #ddd; margin-bottom: 35px; font-weight: bold; }
+        .safety-box { max-width: 500px; text-align: center; border: 1px solid #333; padding: 40px; border-radius: 8px; }
+        .safety-box p { font-size: 18px; line-height: 1.6; color: #eee; margin-bottom: 35px; font-weight: 500; }
         .btn-proceed { width: 100%; background: var(--accent); color: #000; border: none; padding: 20px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 16px; border-radius: 4px; }
 
         /* INTERFACE PRINCIPAL */
@@ -50,35 +49,37 @@
 
 <div id="safety-gate">
     <div class="safety-box">
-        <h2>ADVERTÊNCIA DE SEGURANÇA</h2>
-        <p>A ATENÇÃO AO VOLANTE SALVA VIDAS.<br><br>O uso deste sistema é estritamente proibido para o condutor do veículo em movimento.</p>
-        <button class="btn-proceed" onclick="requestAccess()">ESTOU CIENTE E SOU PASSAGEIRO</button>
+        <p>
+            Não utilize este sistema enquanto estiver dirigindo.<br><br>
+            Mantenha sua atenção total na condução do veículo. Caso precise manipular o sistema, procure um local seguro para estacionar ou solicite o auxílio de um passageiro.
+        </p>
+        <button class="btn-proceed" onclick="requestAccess()">ESTOU CIENTE</button>
     </div>
 </div>
 
 <div id="settings-panel">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-        <span style="font-size: 12px; font-weight: bold; color: #555;">SISTEMA</span>
+        <span style="font-size: 12px; font-weight: bold; color: #555;">AJUSTES</span>
         <button onclick="document.getElementById('mini-info').style.display=(document.getElementById('mini-info').style.display=='none'?'block':'none')" style="background:none; border:none; color:var(--accent); cursor:pointer; font-size: 18px;">ℹ️</button>
     </div>
 
     <div id="mini-info">
-        • Selecione a pasta de destino para salvar os PDFs.<br>
-        • GPS sincroniza Km com base no CSV.<br>
-        • Fotos automáticas com marca d'água.<br>
-        • Lotes fechados conforme configuração.
+        • Selecione a pasta de destino para gravação automática.<br>
+        • O Bip indica fechamento e salvamento do arquivo PDF.<br>
+        • Sincronia Km via GPS + Base CSV.<br>
+        • Lotes automáticos garantem a integridade dos dados.
     </div>
 
     <div class="field">
-        <label>Dispositivo de Vídeo</label>
+        <label>Câmera</label>
         <select id="cam-select" onchange="initC(this.value)"></select>
     </div>
     <div class="field">
-        <label>Capacidade do Lote (Fotos)</label>
+        <label>Fotos por Lote</label>
         <input type="number" id="cfg-lote" value="200">
     </div>
     <div class="field">
-        <label>Intervalo de Captura (ms)</label>
+        <label>Intervalo (ms)</label>
         <input type="number" id="cfg-int" value="200">
     </div>
     <br>
@@ -87,9 +88,7 @@
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
-    
     <div id="km-hud"><h1 id="km-txt">KM ---</h1></div>
-    
     <div id="rec-status"><div class="dot"></div><span>ATIVO</span></div>
 
     <div id="ui-controls">
@@ -109,6 +108,20 @@ const canCap=document.getElementById('can_cap'), ctxCap=canCap.getContext('2d');
 const canOff = document.createElement('canvas');
 const ctxOff = canOff.getContext('2d');
 
+// Função de Bip Eletrônico
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playBip() {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime); 
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.1);
+}
+
 function forceFull() { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {}); }
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
@@ -117,7 +130,7 @@ async function requestAccess() {
         dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
         if (await dirHandle.queryPermission({mode:'readwrite'}) !== 'granted') await dirHandle.requestPermission({mode:'readwrite'});
         if(dirHandle) unlockSystem();
-    } catch (e) { alert("Acesso negado."); }
+    } catch (e) { alert("Acesso à pasta é obrigatório."); }
 }
 
 async function unlockSystem() {
@@ -178,6 +191,7 @@ function loop() {
 }
 
 async function saveAuto(data, ini, fim) {
+    playBip(); // Toca o Bip ao iniciar o salvamento
     const pdfW = canCap.width, pdfH = canCap.height;
     canOff.width = pdfW; canOff.height = pdfH;
     const doc = new jspdf.jsPDF(pdfW > pdfH ? 'l' : 'p', 'mm', 'a4');
