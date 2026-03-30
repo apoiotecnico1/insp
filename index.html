@@ -7,26 +7,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; }
-        
-        /* Força o desaparecimento de barras de rolagem e espaços vazios */
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
-        
-        html, body { 
-            background: #000; 
-            color: #fff; 
-            font-family: sans-serif; 
-            overflow: hidden; 
-            height: 100vh; 
-            width: 100vw;
-            position: fixed; /* Impede o "puxar para atualizar" do Chrome */
-        }
+        html, body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
 
-        /* TELA DE SEGURANÇA */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 20px; }
         .alert-box { border: 2px solid var(--danger); padding: 30px; border-radius: 15px; max-width: 500px; background: #0a0a0a; text-align: center; }
-        .btn-proceed { width: 100%; background: var(--accent); color: #000; border: none; padding: 20px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; font-size: 16px; }
+        .btn-proceed { width: 100%; background: var(--accent); color: #000; border: none; padding: 20px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; font-size: 16px; box-shadow: 0 0 20px rgba(255, 204, 0, 0.3); }
 
-        /* VIDEO E HUD */
         #app-shell { display: none; height: 100vh; width: 100vw; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; z-index: 1; }
 
@@ -37,9 +24,8 @@
         .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* CONTROLES FLUTUANTES */
         #ui-controls { position: absolute; bottom: 40px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 100; }
-        .btn-main { border: none; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px 40px; font-size: 14px; background: var(--accent); color: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .btn-main { border: none; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px 40px; font-size: 14px; background: var(--accent); color: #000; }
         #gear-btn { width: 55px; height: 55px; border-radius: 12px; background: rgba(255,255,255,0.2); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; backdrop-filter: blur(5px); }
 
         #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: rgba(10,10,10,0.95); backdrop-filter: blur(15px); z-index: 4000; padding: 30px 20px; transition: 0.4s; border-left: 1px solid #333; }
@@ -55,11 +41,11 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2 style="color:var(--danger)">⚠️ ORIENTAÇÕES DE SEGURANÇA</h2>
+        <h2 style="color:var(--danger)">⚠️ CONFIGURAÇÃO DE DESTINO</h2>
         <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:8px; margin:20px 0; text-align:left; border-left:4px solid var(--accent);">
-            <p style="font-size:14px; line-height:1.5;">O sistema deve ser operado pelo <b>PASSAGEIRO</b>.<br><br>Ao avançar, a tela entrará em modo de captura total e as barras do sistema serão ocultadas.</p>
+            <p style="font-size:14px; line-height:1.5;">1. Operação pelo <b>PASSAGEIRO</b>.<br>2. Ao clicar abaixo, <b>selecione a pasta</b> onde os relatórios serão salvos.<br>3. Confirme a permissão de "Ver arquivos" e "Salvar".</p>
         </div>
-        <button class="btn-proceed" onclick="startApp()">Ciente e Avançar</button>
+        <button class="btn-proceed" onclick="handleStart()">Ciente e Selecionar Pasta</button>
     </div>
 </div>
 
@@ -86,16 +72,26 @@
 
 <script>
 let kmDB=[], rec=false, buffer=[], currentStream=null, wakeLock=null;
-let kmInicialLote = "";
+let kmInicialLote = "", directoryHandle = null;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// ESCONDE BARRA DE NAVEGAÇÃO E STATUS
 function forceFull() {
     const el = document.documentElement;
-    const requestMethod = el.requestFullscreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (el.requestFullscreen) el.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+}
 
-    if (requestMethod) {
-        requestMethod.call(el, { navigationUI: "hide" }).catch(() => {});
+// SOLICITA PASTA DE DESTINO LOGO NO INÍCIO
+async function handleStart() {
+    try {
+        if (!window.showDirectoryPicker) {
+            alert("Seu navegador não suporta salvamento direto em pasta. Use o Chrome ou Edge atualizados.");
+            return;
+        }
+        directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        // Após selecionar a pasta, inicia o app
+        startApp();
+    } catch (e) {
+        alert("Você precisa selecionar uma pasta para o sistema funcionar corretamente.");
     }
 }
 
@@ -146,8 +142,6 @@ function stopCapture() {
     document.getElementById('btn-start').style.display = 'inline-block';
     document.getElementById('btn-stop').style.display = 'none';
     document.getElementById('rec-indicator').style.display = 'none';
-    // Sai do modo tela cheia ao finalizar
-    if (document.exitFullscreen) document.exitFullscreen();
 }
 
 function loop() {
@@ -167,42 +161,44 @@ function loop() {
 }
 
 async function savePDF(data, ini, fim) {
-    setTimeout(async () => {
-        const doc = new jspdf.jsPDF(can.width > can.height ? 'l' : 'p', 'mm', 'a4');
-        const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
+    const doc = new jspdf.jsPDF(can.width > can.height ? 'l' : 'p', 'mm', 'a4');
+    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
 
-        for(let i=0; i<data.length; i++){
-            if(i > 0) doc.addPage();
-            const img = new Image();
-            await new Promise(r => {
-                img.onload = () => {
-                    ctx.drawImage(img, 0, 0);
-                    const bh = can.height * 0.12;
-                    ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, can.height-bh, can.width, bh);
-                    ctx.fillStyle = "#fff"; ctx.font = `bold ${bh*0.4}px Arial`;
-                    ctx.fillText(`Km ${data[i].km}`, 40, can.height-(bh*0.45));
-                    ctx.font = `${bh*0.2}px Arial`;
-                    ctx.fillText(`${new Date().toLocaleDateString('pt-BR')} | ${data[i].ts}`, 40, can.height-(bh*0.15));
-                    doc.addImage(can.toDataURL('image/jpeg', 0.6), 'JPEG', 0, 0, pw, ph); r();
-                };
-                img.src = data[i].raw;
-            });
-        }
+    for(let i=0; i<data.length; i++){
+        if(i > 0) doc.addPage();
+        const img = new Image();
+        await new Promise(r => {
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0);
+                const bh = can.height * 0.12;
+                ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, can.height-bh, can.width, bh);
+                ctx.fillStyle = "#fff"; ctx.font = `bold ${bh*0.4}px Arial`;
+                ctx.fillText(`Km ${data[i].km}`, 40, can.height-(bh*0.45));
+                ctx.font = `${bh*0.2}px Arial`;
+                ctx.fillText(`${new Date().toLocaleDateString('pt-BR')} | ${data[i].ts}`, 40, can.height-(bh*0.15));
+                doc.addImage(can.toDataURL('image/jpeg', 0.6), 'JPEG', 0, 0, pw, ph); r();
+            };
+            img.src = data[i].raw;
+        });
+    }
 
-        const d = new Date();
-        const pad = (n) => n.toString().padStart(2, '0');
-        const dt = pad(d.getDate()) + pad(d.getMonth()+1) + d.getFullYear().toString().substring(2);
-        const hr = pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
-        const nome = `Relat_KM_${ini}_a_${fim}_${dt}_${hr}.pdf`.replace(/[\s\+]/g, '_');
+    const d = new Date();
+    const pad = (n) => n.toString().padStart(2, '0');
+    const dt = pad(d.getDate()) + pad(d.getMonth()+1) + d.getFullYear().toString().substring(2);
+    const hr = pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+    const nome = `Relat_KM_${ini}_a_${fim}_${dt}_${hr}.pdf`.replace(/[\s\+]/g, '_');
 
-        const blob = doc.output('blob');
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = nome;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
-    }, 10);
+    // SALVAMENTO SILENCIOSO NA PASTA ESCOLHIDA
+    try {
+        const fileHandle = await directoryHandle.getFileHandle(nome, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(doc.output('blob'));
+        await writable.close();
+        console.log("Salvo: " + nome);
+    } catch (err) {
+        console.error("Erro ao salvar silenciosamente, tentando download padrão...");
+        doc.save(nome);
+    }
 }
 
 async function loadCSV() {
