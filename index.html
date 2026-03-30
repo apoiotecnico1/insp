@@ -12,7 +12,16 @@
             --danger: #ff0000; 
         }
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
-        html, body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
+        html, body { 
+            background: #000; 
+            color: #fff; 
+            font-family: sans-serif; 
+            overflow: hidden; 
+            height: 100vh; 
+            width: 100vw; 
+            position: fixed; 
+            touch-action: none;
+        }
 
         /* ADVERTÊNCIA */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 30px; }
@@ -21,8 +30,8 @@
         .safety-box p { font-size: 18px; margin-bottom: 30px; font-weight: bold; }
         .btn-proceed { width: 100%; background: var(--accent); color: #000; border: none; padding: 20px; font-weight: 900; cursor: pointer; text-transform: uppercase; border-radius: 8px; }
 
-        /* APP */
-        #app-shell { display: none; height: 100vh; width: 100vw; position: relative; }
+        /* APP FULLSCREEN */
+        #app-shell { display: none; height: 100vh; width: 100vw; position: relative; overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; z-index: 1; }
 
         #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 10px 20px; border: 3px solid #fff; border-radius: 8px; z-index: 10; }
@@ -39,25 +48,13 @@
         .dot { width: 12px; height: 12px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; box-shadow: 0 0 10px var(--danger); }
         @keyframes blink { 50% { opacity: 0.2; } }
 
-        /* CONTROLES PADRONIZADOS */
+        /* CONTROLES */
         #ui-controls { position: absolute; bottom: 40px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 15px; z-index: 100; }
-        
-        .btn-rect { 
-            border: none; font-weight: 900; padding: 20px 40px; 
-            font-size: 14px; text-transform: uppercase; border-radius: 6px; 
-            cursor: pointer; min-width: 180px; text-align: center;
-        }
-
+        .btn-rect { border: none; font-weight: 900; padding: 20px 40px; font-size: 14px; text-transform: uppercase; border-radius: 6px; cursor: pointer; min-width: 180px; text-align: center; }
         #btn-start { background: var(--accent); color: #000; }
-
-        #btn-stop { 
-            background: var(--danger); color: #fff; 
-            border: 2px solid #fff; display: none; 
-        }
-        
+        #btn-stop { background: var(--danger); color: #fff; border: 2px solid #fff; display: none; }
         #gear-btn { width: 55px; height: 55px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #444; cursor: pointer; font-size: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 
-        /* PAINEL CONFIG */
         #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #111; z-index: 4000; padding: 30px; transition: 0.3s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
         .field { margin-bottom: 15px; }
@@ -116,7 +113,30 @@ const canCap=document.getElementById('can_cap'), ctxCap=canCap.getContext('2d');
 const canOff = document.createElement('canvas');
 const ctxOff = canOff.getContext('2d');
 
-function forceFull() { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {}); }
+// Bloqueio de Tela (Wake Lock)
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log("Bloqueio de tela ativo.");
+        }
+    } catch (err) {
+        console.error("Wake Lock falhou:", err);
+    }
+}
+
+// Reativar Wake Lock se o usuário mudar de aba e voltar
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        await requestWakeLock();
+    }
+});
+
+function forceFull() { 
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+}
+
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
 async function requestAccess() {
@@ -126,8 +146,9 @@ async function requestAccess() {
         if(dirHandle) {
             document.getElementById('safety-gate').style.display = 'none';
             document.getElementById('app-shell').style.display = 'block';
-            forceFull(); await listCams();
-            if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+            forceFull();
+            await requestWakeLock(); // Ativa ao entrar no app
+            await listCams();
             loadCSV(); initGPS();
         }
     } catch (e) { alert("Acesso necessário."); }
@@ -146,11 +167,13 @@ async function listCams() {
 
 async function initC(id) {
     if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1280, height: 720 } });
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: {ideal: 1920}, height: {ideal: 1080} } });
     vid.srcObject = currentStream;
 }
 
 function initCapture() {
+    forceFull();
+    requestWakeLock(); // Reforça o bloqueio de suspensão ao iniciar
     rec = true; buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText.replace("KM ","");
     document.getElementById('btn-start').style.display = 'none';
@@ -165,6 +188,7 @@ function stopCapture() {
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
     document.getElementById('rec-status').style.display = 'none';
+    // Não liberamos o Wake Lock aqui para garantir que a tela não apague enquanto processa o PDF
 }
 
 function loop() {
@@ -208,7 +232,6 @@ async function saveAuto(data, ini, fim) {
     }
     const d = new Date();
     const p = (n) => n.toString().padStart(2, '0');
-    // NOME ATUALIZADO: Relat_Km_..._a_Km_...
     const nome = `Relat_Km_${ini}_a_Km_${fim}_${p(d.getDate())}${p(d.getMonth()+1)}.pdf`;
     try {
         const fh = await dirHandle.getFileHandle(nome, { create: true });
