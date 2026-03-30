@@ -10,10 +10,11 @@
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         html, body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
 
-        /* TELA DE BLOQUEIO */
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .alert-box { border: 2px solid var(--danger); padding: 40px; border-radius: 20px; max-width: 400px; background: #0a0a0a; text-align: center; }
-        .btn-setup { width: 100%; background: var(--accent); color: #000; border: none; padding: 25px; font-weight: 900; border-radius: 12px; cursor: pointer; font-size: 24px; }
+        /* TELA DE SEGURANÇA INICIAL */
+        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 25px; }
+        .safety-box { max-width: 450px; text-align: center; }
+        .safety-box p { font-size: 16px; line-height: 1.6; color: #ccc; margin-bottom: 30px; text-align: left; border-left: 3px solid var(--danger); padding-left: 15px; }
+        .btn-proceed { width: 100%; background: var(--accent); color: #000; border: none; padding: 22px; font-weight: 900; border-radius: 12px; cursor: pointer; text-transform: uppercase; font-size: 16px; }
 
         /* INTERFACE PRINCIPAL */
         #app-shell { display: none; height: 100vh; width: 100vw; position: relative; }
@@ -27,11 +28,15 @@
         @keyframes blink { 50% { opacity: 0; } }
         #rec-status span { font-weight: 900; font-size: 14px; color: #fff; }
 
-        /* AJUSTES (LIMPO) */
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); z-index: 4000; padding: 40px 20px; transition: 0.4s; border-left: 1px solid #333; }
+        /* AJUSTES */
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(15px); z-index: 4000; padding: 40px 20px; transition: 0.4s; border-left: 1px solid #333; overflow-y: auto; }
         #settings-panel.open { right: 0; }
-        .field { margin-bottom: 25px; }
+        .field { margin-bottom: 20px; }
         select, input { width: 100%; background: #1a1a1a; border: 1px solid #444; color: #fff; padding: 15px; border-radius: 8px; font-size: 16px; text-align: center; }
+        
+        /* SOBRE O USO (PEQUENO) */
+        #info-box { display: none; background: #111; padding: 15px; border-radius: 8px; font-size: 11px; line-height: 1.4; color: #aaa; margin-top: 15px; text-align: left; border: 1px solid #333; }
+        .info-btn { background: none; border: 1px solid #444; color: #888; padding: 10px; border-radius: 8px; width: 100%; margin-bottom: 20px; cursor: pointer; font-size: 12px; }
 
         /* CONTROLES */
         #ui-controls { position: absolute; bottom: 50px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 100; }
@@ -44,12 +49,28 @@
 <body onclick="forceFull()">
 
 <div id="safety-gate">
-    <div class="alert-box">
-        <button class="btn-setup" onclick="requestAccess()">📂</button>
+    <div class="safety-box">
+        <p>
+            • Proibido o uso pelo condutor em movimento.<br><br>
+            • Fixe o dispositivo antes de iniciar.<br><br>
+            • Operação exclusiva por passageiro.<br><br>
+            • Atenção total à via.
+        </p>
+        <button class="btn-proceed" onclick="requestAccess()">Ciente</button>
     </div>
 </div>
 
 <div id="settings-panel">
+    <button class="info-btn" onclick="document.getElementById('info-box').style.display = (document.getElementById('info-box').style.display=='none'?'block':'none')">ℹ️ SOBRE O USO</button>
+    
+    <div id="info-box">
+        <b>1. PASSO INICIAL:</b> Selecione uma pasta no dispositivo. Clique em "Permitir" no navegador para autorizar o salvamento sem avisos.<br><br>
+        <b>2. GPS:</b> O Km é lido automaticamente via satélite baseado no CSV carregado.<br><br>
+        <b>3. CAPTURA:</b> Ao clicar em ▶️, o sistema tira fotos a cada 200ms (ajustável).<br><br>
+        <b>4. SALVAMENTO:</b> A cada 200 fotos, um PDF é gerado e gravado silenciosamente na pasta escolhida. Clique em ⏹️ para finalizar e salvar o lote atual.<br><br>
+        <b>5. SEGURANÇA:</b> Nunca manuseie este app enquanto estiver na direção do veículo.
+    </div>
+
     <div class="field"><select id="cam-select" onchange="initC(this.value)"></select></div>
     <div class="field"><input type="number" id="cfg-lote" value="200"></div>
     <div class="field"><input type="number" id="cfg-int" value="200"></div>
@@ -59,7 +80,6 @@
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
     <div id="km-hud"><h1 id="km-txt">---</h1></div>
-    
     <div id="rec-status"><div class="dot"></div><span>ON</span></div>
 
     <div id="ui-controls">
@@ -92,7 +112,7 @@ async function requestAccess() {
         dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
         if (await dirHandle.queryPermission({mode:'readwrite'}) !== 'granted') await dirHandle.requestPermission({mode:'readwrite'});
         if(dirHandle) unlockSystem();
-    } catch (e) { alert("!"); }
+    } catch (e) { }
 }
 
 async function unlockSystem() {
