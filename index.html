@@ -12,6 +12,11 @@
 
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; }
         .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; max-width: 90%; background: #0a0a0a; }
+        
+        /* Estilo da imagem de abertura */
+        .img-proibido { width: 120px; height: auto; margin-bottom: 20px; }
+        .msg-seguranca { color: #ff4444; font-weight: bold; margin-bottom: 20px; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; }
+
         .btn-aware { background: var(--accent); color: #000; border: none; padding: 18px 40px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; margin-top: 20px; }
 
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
@@ -45,6 +50,9 @@
 
 <div id="safety-gate">
     <div class="alert-box">
+        <img src="proibido.png" alt="Proibido" class="img-proibido">
+        <div class="msg-seguranca">NÃO DIRIJA USANDO O CELULAR</div>
+        
         <h2 style="color:var(--accent)">SEGURANÇA ATIVA</h2>
         <p style="margin: 15px 0; font-size: 14px; color: #bbb;">A tela NÃO irá apagar durante a operação.<br>Processamento de 5 fotos/segundo habilitado.</p>
         <button class="btn-aware" onclick="startApp()">ENTRAR NO SISTEMA</button>
@@ -146,7 +154,7 @@ function captureLoop() {
         
         // Desenha no canvas e extrai o JPG rapidamente
         ctx.drawImage(vid, 0, 0, can.width, can.height);
-        const imgData = can.toDataURL('image/jpeg', 0.4); // Qualidade balanceada para velocidade
+        const imgData = can.toDataURL('image/jpeg', 0.4); 
 
         buffer.push({
             img: imgData,
@@ -154,15 +162,14 @@ function captureLoop() {
             ts: new Date().toLocaleString('pt-BR')
         });
 
-        // Verifica se atingiu o lote
         const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
         if (buffer.length >= limit) {
             const batchToSave = [...buffer];
             const kmFim = currentKm;
             const kmIniLocal = kmInicialLote;
             
-            buffer = []; // Limpa o buffer imediatamente para não repetir fotos
-            kmInicialLote = currentKm; // Novo lote começa desse KM
+            buffer = []; 
+            kmInicialLote = currentKm; 
             
             savePDF(batchToSave, kmIniLocal, kmFim);
         }
@@ -184,7 +191,6 @@ async function savePDF(dataList, kmIni, kmFim) {
         const img = new Image();
         await new Promise(resolve => {
             img.onload = () => {
-                // Adiciona tarja preta de dados na imagem final do PDF
                 ctx.drawImage(img, 0, 0);
                 const bh = can.height * 0.15;
                 ctx.fillStyle = "rgba(0,0,0,0.8)";
@@ -218,7 +224,6 @@ async function savePDF(dataList, kmIni, kmFim) {
     }
 }
 
-// --- GPS E CSV ---
 async function loadCSV() {
     try {
         const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
