@@ -59,8 +59,8 @@
 <div id="safety-gate">
     <div class="alert-box">
         <h2 style="color:var(--accent); margin-bottom:15px">OPERAÇÃO DE CAMPO</h2>
-        <p style="color: #ccc; font-size: 13px; margin-bottom: 20px;">Permita o acesso à pasta para salvar os arquivos automaticamente.</p>
-        <button class="btn-aware" onclick="startApp()">Autorizar Pasta</button>
+        <p style="color: #ccc; font-size: 13px; margin-bottom: 20px;">Clique para iniciar o monitoramento.</p>
+        <button class="btn-aware" onclick="startApp()">Acessar Câmera</button>
     </div>
 </div>
 
@@ -79,18 +79,17 @@
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙️</div>
         <button id="btn-start" class="btn-main" onclick="initCapture()">Iniciar Captura</button>
-        <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Finalizar</button>
+        <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Parar e Salvar</button>
     </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, wakeLock=null;
+let kmDB=[], rec=false, buffer=[], currentStream=null, wakeLock=null;
 let kmInicialLote = "";
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// Impedir fechamento
 window.addEventListener('beforeunload', (e) => { if (rec) { e.preventDefault(); e.returnValue = ''; } });
 
 async function requestWakeLock() {
@@ -99,22 +98,14 @@ async function requestWakeLock() {
 
 async function startApp() {
     try {
-        // Solicita acesso à pasta e pede permissão de ESCRITA explicitamente
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        
-        // Verifica se temos permissão de escrita (Chrome exige isso para FileSystem API)
-        const options = { mode: 'readwrite' };
-        if ((await hDir.queryPermission(options)) !== 'granted') {
-            await hDir.requestPermission(options);
-        }
-
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
         document.getElementById('safety-gate').style.display = 'none';
         document.getElementById('app-shell').style.display = 'block';
-        await listCams(); loadCSV(); initGPS(); requestWakeLock();
-    } catch(e) { 
-        alert("Erro: Para salvar os arquivos, você deve selecionar a pasta e confirmar a permissão no topo do Chrome."); 
-    }
+        await listCams(); 
+        loadCSV(); 
+        initGPS(); 
+        requestWakeLock();
+    } catch(e) { alert("Erro ao acessar câmera."); }
 }
 
 async function listCams() {
@@ -128,7 +119,7 @@ async function listCams() {
 
 async function initC(id) {
     if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1280, height: 720 } });
     vid.srcObject = currentStream;
 }
 
@@ -144,10 +135,10 @@ function initCapture() {
 }
 
 function stopCapture() {
+    if(!rec) return;
     rec = false;
     if(buffer.length > 0) {
-        const temp = [...buffer];
-        savePDF(temp, kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
+        savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
     }
     buffer = [];
     document.getElementById('btn-start').style.display = 'inline-block';
@@ -164,7 +155,7 @@ function loop() {
         const curKm = document.getElementById('km-txt').innerText.replace("Km ", "");
         
         buffer.push({ 
-            raw: can.toDataURL('image/jpeg', 0.5), 
+            raw: can.toDataURL('image/jpeg', 0.4), 
             km: curKm, 
             ts: new Date().toLocaleTimeString('pt-BR') 
         });
@@ -172,11 +163,11 @@ function loop() {
         const limit = parseInt(document.getElementById('cfg-lote').value) || 200;
         if(buffer.length >= limit) {
             const temp = [...buffer];
-            const kIni = kmInicialLote;
-            const kFim = curKm;
+            const kI = kmInicialLote;
+            const kF = curKm;
             buffer = [];
             kmInicialLote = curKm;
-            savePDF(temp, kIni, kFim);
+            savePDF(temp, kI, kF);
         }
     }
     setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
@@ -198,7 +189,7 @@ async function savePDF(data, ini, fim) {
                 ctx.fillText(`Km ${data[i].km}`, 40, can.height-(bh*0.45));
                 ctx.font = `${bh*0.2}px Arial`;
                 ctx.fillText(`${new Date().toLocaleDateString('pt-BR')} | ${data[i].ts}`, 40, can.height-(bh*0.15));
-                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph); r();
+                doc.addImage(can.toDataURL('image/jpeg', 0.6), 'JPEG', 0, 0, pw, ph); r();
             };
             img.src = data[i].raw;
         });
@@ -208,22 +199,17 @@ async function savePDF(data, ini, fim) {
     const pad = (n) => n.toString().padStart(2, '0');
     const dataAbrev = pad(d.getDate()) + pad(d.getMonth()+1) + d.getFullYear().toString().substring(2);
     const horaAbrev = pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
-    
-    // Nome limpo para evitar erros no Chrome/Android
-    const safeIni = ini.replace(/[^0-9]/g, '');
-    const safeFim = fim.replace(/[^0-9]/g, '');
-    const nome = `Relat_KM_${safeIni}_a_${safeFim}_${dataAbrev}_${horaAbrev}.pdf`;
+    const nome = `Relat_KM_${ini}_a_${fim}_${dataAbrev}_${horaAbrev}.pdf`.replace(/[\s\+]/g, '_');
 
-    try {
-        // ESSENCIAL PARA O CHROME: Criar o arquivo e escrever o blob
-        const fileHandle = await hDir.getFileHandle(nome, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(doc.output('blob'));
-        await writable.close();
-        console.log("Salvo com sucesso: " + nome);
-    } catch(e) { 
-        console.error("Erro ao gravar arquivo. Verifique a permissão da pasta no topo do Chrome.", e);
-    }
+    // MÉTODO DE DOWNLOAD DIRETO (MAIS ESTÁVEL PARA CHROME AUTOMÁTICO)
+    const blob = doc.output('blob');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = nome;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(link.href), 100);
 }
 
 async function loadCSV() {
