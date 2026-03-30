@@ -3,135 +3,132 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>SISTEMA DE RELATÓRIO - SESSÃO ÚNICA</title>
+    <title>SISTEMA DE RELATÓRIO FOTOGRÁFICO</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff0000; }
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; touch-action: none; }
+        :root { 
+            --accent: #ffcc00; 
+            --placa-verde: #007934; 
+            --danger: #cc0000; 
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         html, body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
 
-        #app-shell { height: 100vh; width: 100vw; position: relative; }
+        /* TELA DE ADVERTÊNCIA LIMPA */
+        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 30px; }
+        .safety-box { max-width: 500px; text-align: center; border: 1px solid #333; padding: 40px; border-radius: 12px; }
+        .safety-box h2 { color: var(--danger); margin-bottom: 20px; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
+        .safety-box p { font-size: 18px; line-height: 1.4; color: #fff; margin-bottom: 30px; font-weight: bold; }
+        .btn-proceed { width: 100%; background: var(--accent); color: #000; border: none; padding: 20px; font-weight: 900; cursor: pointer; text-transform: uppercase; border-radius: 8px; }
+
+        /* INTERFACE PRINCIPAL */
+        #app-shell { display: none; height: 100vh; width: 100vw; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; z-index: 1; }
-        #draw-layer { position: absolute; inset: 0; z-index: 5; pointer-events: auto; }
 
-        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 10px 20px; border: 3px solid #fff; border-radius: 8px; z-index: 10; pointer-events: none; }
-        #km-hud h1 { font-size: 2.2rem; font-weight: 900; margin: 0; }
+        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 12px 25px; border: 3px solid #fff; border-radius: 12px; z-index: 10; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        #km-hud h1 { font-size: 2.5rem; font-weight: 900; }
 
-        #rec-status { position: absolute; top: 25px; right: 25px; display: none; align-items: center; gap: 8px; background: rgba(0,0,0,0.7); padding: 6px 15px; border-radius: 20px; z-index: 10; font-weight: 900; }
-        .dot { width: 12px; height: 12px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.2; } }
+        #rec-status { position: absolute; top: 20px; right: 20px; display: none; align-items: center; gap: 8px; background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 4px; z-index: 10; border: 1px solid #f00; font-weight: bold; color: #f00; }
+        .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
 
-        #draw-tools { position: absolute; right: 20px; top: 100px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
-        .mini-btn { width: 42px; height: 42px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
-        #btn-clear { display: none; background: var(--danger); border: 1px solid #fff; }
-
-        #ui-controls { position: absolute; bottom: 40px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 15px; z-index: 100; }
-        .btn-rect { border: none; font-weight: 900; padding: 20px 40px; font-size: 14px; text-transform: uppercase; border-radius: 6px; cursor: pointer; min-width: 180px; }
-        #btn-start { background: var(--accent); color: #000; }
-        #btn-stop { background: var(--danger); color: #fff; border: 2px solid #fff; display: none; }
-        #gear-btn { width: 50px; height: 50px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #444; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 30px; text-align: center; }
-        .safety-box { max-width: 500px; border: 1px solid #333; padding: 40px; border-radius: 12px; }
-        
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #111; z-index: 4000; padding: 30px; transition: 0.3s; border-left: 2px solid var(--accent); }
+        /* CONFIGURAÇÕES */
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #111; z-index: 4000; padding: 30px; transition: 0.3s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
-        select { width: 100%; background: #222; color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; border: 1px solid #444; appearance: none; }
+        .field { margin-bottom: 15px; }
+        .field label { display: block; font-size: 10px; color: #777; text-transform: uppercase; margin-bottom: 5px; }
+        select, input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 12px; font-size: 14px; border-radius: 4px; }
 
-        canvas#final-canvas { display: none; }
+        /* CONTROLES */
+        #ui-controls { position: absolute; bottom: 40px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 15px; z-index: 100; }
+        .btn-main { border: none; font-weight: 900; cursor: pointer; padding: 20px 40px; font-size: 14px; background: var(--accent); color: #000; text-transform: uppercase; border-radius: 4px; }
+        #gear-btn { width: 55px; height: 55px; background: #222; color: #fff; border: none; cursor: pointer; font-size: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+        
+        canvas { display: none; }
     </style>
 </head>
 <body onclick="forceFull()">
 
 <div id="safety-gate">
     <div class="safety-box">
-        <h2 style="color:var(--danger); margin-bottom:20px; text-transform:uppercase;">PROIBIDO A UTILIZAÇÃO ENQUANTO DIRIGE</h2>
-        <p style="font-size: 18px; margin-bottom: 30px; font-weight: bold;">SEJA CONSCIENTE</p>
-        <button class="btn-rect" style="background:var(--accent); width:100%;" onclick="startApp()">ESTOU CIENTE</button>
+        <h2>PROIBIDO A UTILIZAÇÃO ENQUANTO DIRIGE</h2>
+        <p>SEJA CONSCIENTE</p>
+        <button class="btn-proceed" onclick="requestAccess()">ESTOU CIENTE</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <h3 style="color:var(--accent); margin-bottom:20px;">CONFIGURAÇÕES</h3>
-    <label style="font-size:10px; color:#666;">CÂMERA</label>
-    <select id="cam-select" onchange="initC(this.value)"></select>
-    <label style="font-size:10px; color:#666;">FOTOS POR LOTE</label>
-    <select id="cfg-lote">
-        <option value="50">50 Fotos</option>
-        <option value="100">100 Fotos</option>
-        <option value="200" selected>200 Fotos</option>
-        <option value="500">500 Fotos</option>
-    </select>
-    <button onclick="toggleSet()" class="btn-rect" style="width:100%; background:#fff; color:#000;">FECHAR</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <span style="font-size: 12px; font-weight: bold; color: #555;">CONFIGURAÇÕES</span>
+    </div>
+    <div class="field">
+        <label>Selecionar Dispositivo</label>
+        <select id="cam-select" onchange="initC(this.value)"></select>
+    </div>
+    <div class="field">
+        <label>Capacidade do Lote (Fotos)</label>
+        <input type="number" id="cfg-lote" value="200">
+    </div>
+    <div class="field">
+        <label>Intervalo (ms)</label>
+        <input type="number" id="cfg-int" value="200">
+    </div>
+    <br>
+    <button class="btn-main" style="width:100%; background: #fff;" onclick="toggleSet()">FECHAR</button>
 </div>
 
-<div id="app-shell" style="display:none;">
+<div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
-    <canvas id="draw-layer"></canvas>
     <div id="km-hud"><h1 id="km-txt">KM ---</h1></div>
-    <div id="rec-status"><div class="dot"></div><span>ON</span></div>
-    <div id="draw-tools">
-        <div class="mini-btn">✏️</div>
-        <div class="mini-btn" id="btn-clear" onclick="clearBoard()">🗑️</div>
-    </div>
+    <div id="rec-status"><div class="dot"></div><span>GRAVANDO</span></div>
     <div id="ui-controls">
         <button id="gear-btn" onclick="toggleSet(); event.stopPropagation();">⚙️</button>
-        <button id="btn-start" class="btn-rect" onclick="initCapture(); event.stopPropagation();">INICIAR CAPTURA</button>
-        <button id="btn-stop" class="btn-rect" onclick="stopCapture(); event.stopPropagation();">PARAR CAPTURA</button>
+        <button id="btn-start" class="btn-main" onclick="initCapture(); event.stopPropagation();">INICIAR CAPTURA</button>
+        <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture(); event.stopPropagation();">FINALIZAR LOTE</button>
     </div>
 </div>
 
-<canvas id="final-canvas"></canvas>
+<canvas id="can_cap"></canvas>
 
 <script>
 let kmDB=[], rec=false, buffer=[], currentStream=null, wakeLock=null, dirHandle=null;
 let kmInicialLote = "";
 const vid=document.getElementById('vid');
-const drawCanvas=document.getElementById('draw-layer'), dctx=drawCanvas.getContext('2d');
-const finalCanvas=document.getElementById('final-canvas'), fctx=finalCanvas.getContext('2d');
+const canCap=document.getElementById('can_cap'), ctxCap=canCap.getContext('2d');
+const canOff = document.createElement('canvas');
+const ctxOff = canOff.getContext('2d');
 
-// --- DESENHO ---
-let drawing = false;
-function setupDraw() {
-    drawCanvas.width = window.innerWidth;
-    drawCanvas.height = window.innerHeight;
-    dctx.strokeStyle = '#ff0000'; dctx.lineWidth = 5; dctx.lineCap = 'round';
-    const getXY = (e) => { const t = e.touches ? e.touches : e; return { x: t.clientX, y: t.clientY }; };
-    drawCanvas.addEventListener('touchstart', (e) => {
-        drawing = true; const p = getXY(e); dctx.beginPath(); dctx.moveTo(p.x, p.y);
-        document.getElementById('btn-clear').style.display = 'flex';
-    });
-    drawCanvas.addEventListener('touchmove', (e) => {
-        if(!drawing) return; const p = getXY(e); dctx.lineTo(p.x, p.y); dctx.stroke();
-    });
-    drawCanvas.addEventListener('touchend', () => { drawing = false; });
-}
+function forceFull() { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {}); }
+function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
-function clearBoard() {
-    dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-    document.getElementById('btn-clear').style.display = 'none';
-}
-
-// --- CORE ---
-function forceFull() { document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(()=>{}); }
-
-async function startApp() {
+async function requestAccess() {
     try {
         dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').style.display = 'none';
-        document.getElementById('app-shell').style.display = 'block';
-        setupDraw(); forceFull();
-        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
-        await listCams(); loadCSV(); initGPS();
-    } catch(e) { alert("Acesso à pasta necessário."); }
+        if (await dirHandle.queryPermission({mode:'readwrite'}) !== 'granted') await dirHandle.requestPermission({mode:'readwrite'});
+        if(dirHandle) {
+            document.getElementById('safety-gate').style.display = 'none';
+            document.getElementById('app-shell').style.display = 'block';
+            forceFull();
+            await listCams();
+            if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+            loadCSV(); initGPS();
+        }
+    } catch (e) { alert("Acesso à pasta é obrigatório."); }
 }
 
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const vids = devices.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
+    // Simplificado para apenas Câmera 1, 2, 3...
     sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">CÂMERA ${i+1}</option>`).join('');
-    if(vids.length) { sel.value = vids[vids.length-1].deviceId; initC(sel.value); }
+    
+    // Tenta iniciar a última da lista (geralmente a traseira em celulares)
+    if(vids.length > 0) {
+        const lastId = vids[vids.length-1].deviceId;
+        sel.value = lastId;
+        initC(lastId);
+    }
 }
 
 async function initC(id) {
@@ -140,10 +137,8 @@ async function initC(id) {
     vid.srcObject = currentStream;
 }
 
-// CORREÇÃO AQUI: Esvazia o buffer totalmente ao iniciar uma nova captura
 function initCapture() {
-    buffer = []; // ZERA TUDO DA SESSÃO ANTERIOR
-    rec = true; 
+    rec = true; buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText.replace("KM ","");
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
@@ -151,58 +146,62 @@ function initCapture() {
     loop();
 }
 
-function loop() {
-    if(!rec) return;
-    if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
-        finalCanvas.width = vid.videoWidth; finalCanvas.height = vid.videoHeight;
-        fctx.drawImage(vid, 0, 0);
-        fctx.drawImage(drawCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
-        
-        const curKm = document.getElementById('km-txt').innerText.replace("KM ","");
-        // Captura com timestamp único para esta sessão
-        buffer.push({ img: finalCanvas.toDataURL('image/jpeg', 0.5), km: curKm, ts: new Date().toLocaleTimeString('pt-BR') });
-        
-        if(buffer.length >= parseInt(document.getElementById('cfg-lote').value)) {
-            const tempBuffer = [...buffer];
-            buffer = []; // Limpa antes de processar o PDF
-            savePDF(tempBuffer, kmInicialLote, curKm);
-            kmInicialLote = curKm;
-        }
-    }
-    setTimeout(loop, 200);
-}
-
 function stopCapture() {
-    if(buffer.length) {
-        savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("KM ",""));
-    }
-    rec = false;
-    buffer = []; // Limpa ao parar
+    if(buffer.length > 0) saveAuto([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("KM ",""));
+    rec = false; buffer = [];
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
     document.getElementById('rec-status').style.display = 'none';
 }
 
-async function savePDF(data, ini, fim) {
-    const doc = new jspdf.jsPDF('l', 'mm', 'a4');
+function loop() {
+    if(!rec) return;
+    if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
+        canCap.width = vid.videoWidth; canCap.height = vid.videoHeight;
+        ctxCap.drawImage(vid, 0, 0);
+        const curKm = document.getElementById('km-txt').innerText.replace("KM ","");
+        buffer.push({ raw: canCap.toDataURL('image/jpeg', 0.4), km: curKm, ts: new Date().toLocaleTimeString('pt-BR') });
+        let limite = parseInt(document.getElementById('cfg-lote').value) || 200;
+        if(buffer.length >= limite) {
+            saveAuto([...buffer], kmInicialLote, curKm);
+            buffer = []; kmInicialLote = curKm;
+        }
+    }
+    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
+}
+
+async function saveAuto(data, ini, fim) {
+    const pdfW = canCap.width, pdfH = canCap.height;
+    canOff.width = pdfW; canOff.height = pdfH;
+    const doc = new jspdf.jsPDF(pdfW > pdfH ? 'l' : 'p', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
+
     for(let i=0; i<data.length; i++){
         if(i > 0) doc.addPage();
-        doc.addImage(data[i].img, 'JPEG', 0, 0, pw, ph);
-        doc.setFillColor(0,0,0,0.6); doc.rect(0, ph-12, 85, 12, 'F');
-        doc.setTextColor(255); doc.setFontSize(10);
-        doc.text(`Km ${data[i].km} | ${data[i].ts}`, 5, ph-5);
+        await new Promise(r => {
+            const img = new Image();
+            img.onload = () => {
+                ctxOff.drawImage(img, 0, 0);
+                const bh = pdfH * 0.12;
+                ctxOff.fillStyle = "rgba(0,0,0,0.8)"; ctxOff.fillRect(0, pdfH-bh, pdfW, bh);
+                ctxOff.fillStyle = "#fff"; ctxOff.font = `bold ${bh*0.4}px Arial`;
+                ctxOff.fillText(`Km ${data[i].km}`, 40, pdfH-(bh*0.45));
+                ctxOff.font = `${bh*0.2}px Arial`;
+                ctxOff.fillText(`${new Date().toLocaleDateString('pt-BR')} | ${data[i].ts}`, 40, pdfH-(bh*0.15));
+                doc.addImage(canOff.toDataURL('image/jpeg', 0.6), 'JPEG', 0, 0, pw, ph); r();
+            };
+            img.src = data[i].raw;
+        });
     }
     const d = new Date();
-    // Nome do arquivo com HORA e MINUTO para não confundir com antigos
-    const nome = `Relat_Km_${ini}_a_Km_${fim}_${d.getDate()}-${d.getMonth()+1}_${d.getHours()}h${d.getMinutes()}m.pdf`;
-    
+    const p = (n) => n.toString().padStart(2, '0');
+    const nome = `K_${ini}_a_${fim}_${p(d.getDate())}${p(d.getMonth()+1)}.pdf`;
     try {
         const fh = await dirHandle.getFileHandle(nome, { create: true });
         const wr = await fh.createWritable();
         await wr.write(doc.output('blob'));
         await wr.close();
-    } catch(e) { console.error("Erro ao salvar PDF:", e); }
+    } catch (e) {}
 }
 
 async function loadCSV() {
@@ -230,8 +229,6 @@ function initGPS() {
         if(b) document.getElementById('km-txt').innerText = "KM " + b.km;
     }, null, {enableHighAccuracy:true});
 }
-
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 </script>
 </body>
 </html>
