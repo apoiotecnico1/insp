@@ -40,7 +40,8 @@
         .btn-main { border: none; border-radius: 15px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 20px 45px; font-size: 16px; background: var(--accent); color: #000; }
         #gear-btn { width: 60px; height: 60px; border-radius: 15px; background: rgba(255,255,255,0.2); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; backdrop-filter: blur(5px); }
         
-        canvas { display: none; }
+        /* Canvas principal (captura) oculto, mas existente na lógica */
+        canvas#can_cap { display: none; }
     </style>
 </head>
 <body onclick="forceFull()">
@@ -60,13 +61,12 @@
     <div class="field"><label>Câmera</label><select id="cam-select" onchange="initC(this.value)"></select></div>
     <div class="field"><label>Fotos por Lote</label><input type="number" id="cfg-lote" value="200"></div>
     <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
-    <button class="btn-main" style="width:100%" onclick="toggleSet()">Fechar AjustES</button>
+    <button class="btn-main" style="width:100%" onclick="toggleSet()">Fechar Ajustes</button>
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
     <div id="km-hud"><h1 id="km-txt">Km ---</h1></div>
-    
     <div id="rec-status"><div class="dot"></div><span>ON</span></div>
 
     <div id="ui-controls">
@@ -76,12 +76,18 @@
     </div>
 </div>
 
-<canvas id="c"></canvas>
+<canvas id="can_cap"></canvas>
 
 <script>
 let kmDB=[], rec=false, buffer=[], currentStream=null, wakeLock=null, dirHandle=null;
 let kmInicialLote = "";
-const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
+const vid=document.getElementById('vid');
+// Canvas principal apenas para captura de frame
+const canCap=document.getElementById('can_cap'), ctxCap=canCap.getContext('2d');
+
+// NOVO: Canvas Offscreen dedicado ao processamento do PDF (Evita duplicação)
+const canOff = document.createElement('canvas');
+const ctxOff = canOff.getContext('2d');
 
 function forceFull() {
     if (document.documentElement.requestFullscreen) {
@@ -152,10 +158,19 @@ function stopCapture() {
 function loop() {
     if(!rec) return;
     if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
-        can.width = vid.videoWidth; can.height = vid.videoHeight;
-        ctx.drawImage(vid, 0, 0);
+        // Define tamanho do canvas de captura baseado no vídeo
+        canCap.width = vid.videoWidth; 
+        canCap.height = vid.videoHeight;
+        ctxCap.drawImage(vid, 0, 0);
+        
         const curKm = document.getElementById('km-txt').innerText.replace("Km ", "");
-        buffer.push({ raw: can.toDataURL('image/jpeg', 0.4), km: curKm, ts: new Date().toLocaleTimeString('pt-BR') });
+        
+        // Salva o frame bruto no buffer
+        buffer.push({ 
+            raw: canCap.toDataURL('image/jpeg', 0.4), 
+            km: curKm, 
+            ts: new Date().toLocaleTimeString('pt-BR') 
+        });
         
         let limite = parseInt(document.getElementById('cfg-lote').value) || 200;
         if(buffer.length >= limite) {
@@ -167,22 +182,37 @@ function loop() {
 }
 
 async function saveAuto(data, ini, fim) {
-    const doc = new jspdf.jsPDF(can.width > can.height ? 'l' : 'p', 'mm', 'a4');
+    // Define tamanho do PDF baseado na imagem capturada (canCap)
+    const pdfW = canCap.width;
+    const pdfH = canCap.height;
+    
+    // Configura canvas offscreen dedicado
+    canOff.width = pdfW;
+    canOff.height = pdfH;
+
+    const doc = new jspdf.jsPDF(pdfW > pdfH ? 'l' : 'p', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
 
     for(let i=0; i<data.length; i++){
         if(i > 0) doc.addPage();
-        const img = new Image();
+        
         await new Promise(r => {
+            const img = new Image();
             img.onload = () => {
-                ctx.drawImage(img, 0, 0);
-                const bh = can.height * 0.12;
-                ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, can.height-bh, can.width, bh);
-                ctx.fillStyle = "#fff"; ctx.font = `bold ${bh*0.4}px Arial`;
-                ctx.fillText(`Km ${data[i].km}`, 40, can.height-(bh*0.45));
-                ctx.font = `${bh*0.2}px Arial`;
-                ctx.fillText(`${new Date().toLocaleDateString('pt-BR')} | ${data[i].ts}`, 40, can.height-(bh*0.15));
-                doc.addImage(can.toDataURL('image/jpeg', 0.6), 'JPEG', 0, 0, pw, ph); r();
+                // Desenha imagem bruta no canvas isolado
+                ctxOff.drawImage(img, 0, 0);
+                
+                // Aplica tarja e textos apenas no canvas isolado
+                const bh = pdfH * 0.12;
+                ctxOff.fillStyle = "rgba(0,0,0,0.8)"; ctxOff.fillRect(0, pdfH-bh, pdfW, bh);
+                ctxOff.fillStyle = "#fff"; ctxOff.font = `bold ${bh*0.4}px Arial`;
+                ctxOff.fillText(`Km ${data[i].km}`, 40, pdfH-(bh*0.45));
+                ctxOff.font = `${bh*0.2}px Arial`;
+                ctxOff.fillText(`${new Date().toLocaleDateString('pt-BR')} | ${data[i].ts}`, 40, pdfH-(bh*0.15));
+                
+                // Adiciona ao PDF a imagem processada deste canvas isolado
+                doc.addImage(canOff.toDataURL('image/jpeg', 0.6), 'JPEG', 0, 0, pw, ph); 
+                r();
             };
             img.src = data[i].raw;
         });
@@ -190,14 +220,15 @@ async function saveAuto(data, ini, fim) {
 
     const d = new Date();
     const p = (n) => n.toString().padStart(2, '0');
-    const nome = `Relat_KM_${ini}_a_${fim}_${p(d.getDate())}${p(d.getMonth()+1)}${d.getFullYear().toString().slice(-2)}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.pdf`;
+    const nome = `Relat_KM_${ini}_a_${fim}_${p(d.getDate())}${p(d.getMonth()+1)}${d.getFullYear().toString().slice(-2)}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.pdf`.replace(/[\s\+]/g, '_');
 
     try {
         const fileHandle = await dirHandle.getFileHandle(nome, { create: true });
         const writable = await fileHandle.createWritable();
         await writable.write(doc.output('blob'));
         await writable.close();
-    } catch (e) { console.error("Erro no salvamento.", e); }
+        console.log("Salvo isolado: " + nome);
+    } catch (e) { console.error("Erro no salvamento isolado.", e); }
 }
 
 async function loadCSV() {
