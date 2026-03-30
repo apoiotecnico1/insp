@@ -10,13 +10,9 @@
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        /* TELA DE ADVERTÊNCIA */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .alert-box { border: 2px solid var(--danger); padding: 30px; border-radius: 15px; max-width: 500px; background: #0a0a0a; text-align: center; box-shadow: 0 0 30px rgba(255,0,0,0.2); }
-        .alert-box h2 { color: var(--danger); margin-bottom: 15px; text-transform: uppercase; font-size: 1.5rem; }
-        .alert-box p { color: #eee; font-size: 14px; line-height: 1.6; margin-bottom: 15px; text-align: left; }
-        .warn-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; margin-bottom: 10px; border-left: 4px solid var(--accent); }
-        .btn-aware { width: 100%; background: var(--accent); color: #000; border: none; padding: 20px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; font-size: 16px; margin-top: 10px; }
+        .alert-box { border: 2px solid var(--danger); padding: 30px; border-radius: 15px; max-width: 500px; background: #0a0a0a; text-align: center; }
+        .btn-proceed { width: 100%; background: var(--accent); color: #000; border: none; padding: 20px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; font-size: 16px; }
 
         #app-shell { display: none; height: 100vh; width: 100vw; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
@@ -37,6 +33,7 @@
         .field { margin-bottom: 20px; }
         .field label { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 8px; display: block; }
         select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; }
+        
         canvas { display: none; }
     </style>
 </head>
@@ -44,15 +41,11 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2>⚠️ ADVERTÊNCIA DE SEGURANÇA</h2>
-        <div class="warn-item">
-            <p><strong>PROIBIDO:</strong> É terminantemente proibido o manuseio deste dispositivo pelo <strong>motorista</strong> com o veículo em movimento.</p>
+        <h2 style="color:var(--danger)">⚠️ SEGURANÇA VIÁRIA</h2>
+        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:8px; margin:15px 0; text-align:left; border-left:4px solid var(--accent);">
+            <p style="font-size:14px; line-height:1.5;">Operação recomendada para o <b>PASSAGEIRO</b>.<br><br>O sistema salvará os arquivos automaticamente. Se o navegador perguntar, selecione <b>"Sempre permitir downloads múltiplos"</b>.</p>
         </div>
-        <div class="warn-item">
-            <p><strong>RECOMENDAÇÃO:</strong> Solicite que o <strong>passageiro</strong> opere o sistema para garantir a segurança viária.</p>
-        </div>
-        <p style="font-size: 12px; text-align: center; color: #888;">Ao avançar, você confirma estar ciente das normas de segurança e assume total responsabilidade pela operação.</p>
-        <button class="btn-aware" onclick="startApp()">Ciente e Avançar</button>
+        <button class="btn-proceed" onclick="startApp()">Ciente e Avançar</button>
     </div>
 </div>
 
@@ -61,7 +54,7 @@
     <div class="field"><label>Câmera</label><select id="cam-select" onchange="initC(this.value)"></select></div>
     <div class="field"><label>Fotos por Lote</label><input type="number" id="cfg-lote" value="200"></div>
     <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
-    <button class="btn-aware" onclick="toggleSet()">Voltar</button>
+    <button class="btn-main" style="width:100%" onclick="toggleSet()">Voltar</button>
 </div>
 
 <div id="app-shell">
@@ -90,10 +83,7 @@ function forceFull() {
 
 async function requestWakeLock() {
     if ('wakeLock' in navigator) {
-        try { 
-            if (wakeLock !== null) await wakeLock.release();
-            wakeLock = await navigator.wakeLock.request('screen'); 
-        } catch (e) {}
+        try { if (wakeLock !== null) await wakeLock.release(); wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
     }
 }
 
@@ -102,10 +92,7 @@ async function startApp() {
         forceFull();
         document.getElementById('safety-gate').style.display = 'none';
         document.getElementById('app-shell').style.display = 'block';
-        await listCams(); 
-        loadCSV(); 
-        initGPS(); 
-        requestWakeLock();
+        await listCams(); loadCSV(); initGPS(); requestWakeLock();
     } catch(e) { alert("Erro ao acessar câmera."); }
 }
 
@@ -152,52 +139,59 @@ function loop() {
         buffer.push({ raw: can.toDataURL('image/jpeg', 0.4), km: curKm, ts: new Date().toLocaleTimeString('pt-BR') });
         
         if(buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 200)) {
-            const temp = [...buffer];
-            const kI = kmInicialLote;
-            savePDF(temp, kI, curKm);
-            buffer = [];
-            kmInicialLote = curKm;
+            savePDF([...buffer], kmInicialLote, curKm);
+            buffer = []; kmInicialLote = curKm;
         }
     }
     setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
 async function savePDF(data, ini, fim) {
-    const doc = new jspdf.jsPDF(can.width > can.height ? 'l' : 'p', 'mm', 'a4');
-    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
+    // Processamento assíncrono para não travar o vídeo
+    setTimeout(async () => {
+        const doc = new jspdf.jsPDF(can.width > can.height ? 'l' : 'p', 'mm', 'a4');
+        const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
 
-    for(let i=0; i<data.length; i++){
-        if(i > 0) doc.addPage();
-        const img = new Image();
-        await new Promise(r => {
-            img.onload = () => {
-                ctx.drawImage(img, 0, 0);
-                const bh = can.height * 0.12;
-                ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, can.height-bh, can.width, bh);
-                ctx.fillStyle = "#fff"; ctx.font = `bold ${bh*0.4}px Arial`;
-                ctx.fillText(`Km ${data[i].km}`, 40, can.height-(bh*0.45));
-                ctx.font = `${bh*0.2}px Arial`;
-                ctx.fillText(`${new Date().toLocaleDateString('pt-BR')} | ${data[i].ts}`, 40, can.height-(bh*0.15));
-                doc.addImage(can.toDataURL('image/jpeg', 0.6), 'JPEG', 0, 0, pw, ph); r();
-            };
-            img.src = data[i].raw;
-        });
-    }
+        for(let i=0; i<data.length; i++){
+            if(i > 0) doc.addPage();
+            const img = new Image();
+            await new Promise(r => {
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0);
+                    const bh = can.height * 0.12;
+                    ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, can.height-bh, can.width, bh);
+                    ctx.fillStyle = "#fff"; ctx.font = `bold ${bh*0.4}px Arial`;
+                    ctx.fillText(`Km ${data[i].km}`, 40, can.height-(bh*0.45));
+                    ctx.font = `${bh*0.2}px Arial`;
+                    ctx.fillText(`${new Date().toLocaleDateString('pt-BR')} | ${data[i].ts}`, 40, can.height-(bh*0.15));
+                    doc.addImage(can.toDataURL('image/jpeg', 0.6), 'JPEG', 0, 0, pw, ph); r();
+                };
+                img.src = data[i].raw;
+            });
+        }
 
-    const d = new Date();
-    const pad = (n) => n.toString().padStart(2, '0');
-    const dataAbrev = pad(d.getDate()) + pad(d.getMonth()+1) + d.getFullYear().toString().substring(2);
-    const horaAbrev = pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
-    
-    // NOME SOLICITADO: Relat_...
-    const nome = `Relat_KM_${ini}_a_${fim}_${dataAbrev}_${horaAbrev}.pdf`.replace(/[\s\+]/g, '_');
+        const d = new Date();
+        const pad = (n) => n.toString().padStart(2, '0');
+        const dt = pad(d.getDate()) + pad(d.getMonth()+1) + d.getFullYear().toString().substring(2);
+        const hr = pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+        
+        const nome = `Relat_KM_${ini}_a_${fim}_${dt}_${hr}.pdf`.replace(/[\s\+]/g, '_');
 
-    const blob = doc.output('blob');
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = nome;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 100);
+        // Download silencioso
+        const blob = doc.output('blob');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nome;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Limpeza de memória rápida
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 1000);
+    }, 10);
 }
 
 async function loadCSV() {
@@ -225,8 +219,6 @@ function initGPS() {
         if(b) document.getElementById('km-txt').innerText = "Km " + b.km;
     }, null, {enableHighAccuracy:true});
 }
-
-document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible') { requestWakeLock(); forceFull(); } });
 </script>
 </body>
 </html>
