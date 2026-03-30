@@ -3,62 +3,65 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>SUPORTE DE CAMPO ELITE</title>
+    <title>SISTEMA DE CAPTURA ELITE</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.98); }
+        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Inter', system-ui, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        /* TELA DE SEGURANÇA INICIAL */
+        /* TELA DE SEGURANÇA */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .alert-box { border: 1px solid #333; padding: 35px; border-radius: 15px; max-width: 450px; background: #0a0a0a; text-align: center; }
-        .btn-aware { width: 100%; background: var(--accent); color: #000; border: none; padding: 22px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; margin-top: 20px; font-size: 14px; }
+        .alert-box { border: 1px solid #333; padding: 30px; border-radius: 15px; max-width: 400px; background: #0a0a0a; text-align: center; }
+        .btn-aware { width: 100%; background: var(--accent); color: #000; border: none; padding: 20px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; font-size: 14px; }
 
-        /* APP PRINCIPAL */
-        #app-shell { display: none; height: 100vh; width: 100vw; position: relative; background: #000; }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        /* APP */
+        #app-shell { display: none; height: 100vh; width: 100vw; position: relative; }
+        video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
 
-        /* HUD KM (ESQUERDA) */
+        /* HUD KM - ADAPTÁVEL */
         #km-hud { 
-            position: absolute; top: env(safe-area-inset-top, 25px); left: 25px; 
-            background: var(--placa-verde); padding: 15px 25px; 
+            position: absolute; top: 20px; left: 20px; 
+            background: var(--placa-verde); padding: 10px 20px; 
             border: 2px solid #fff; border-radius: 8px; z-index: 10;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
         }
-        #km-hud h1 { font-size: 2.2rem; font-weight: 900; }
+        #km-hud h1 { font-size: calc(1.5rem + 1vw); font-weight: 900; }
 
-        /* HUD CONTADOR (DIREITA) */
-        #counter-hud {
-            position: absolute; top: env(safe-area-inset-top, 25px); right: 25px;
-            background: rgba(0,0,0,0.85); padding: 12px 18px; border-radius: 8px;
-            border: 1px solid #444; text-align: right; z-index: 10;
+        /* SINALIZADOR REC PISCANTE */
+        #rec-indicator { 
+            position: absolute; top: 20px; right: 20px; 
+            display: none; align-items: center; gap: 8px; 
+            background: rgba(0,0,0,0.6); padding: 8px 15px; 
+            border-radius: 30px; z-index: 10;
         }
-        #count-txt { font-size: 24px; font-weight: 900; color: var(--accent); font-family: monospace; }
-
-        /* TAG DE GRAVAÇÃO ATIVA */
-        #rec-tag { position: absolute; top: 110px; right: 25px; display: none; align-items: center; gap: 8px; color: #fff; font-size: 11px; font-weight: 900; background: rgba(255,0,0,0.8); padding: 6px 14px; border-radius: 20px; }
-        .dot { width: 10px; height: 10px; background: #fff; border-radius: 50%; animation: blink 0.8s infinite; }
+        .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
+        .rec-text { font-weight: 900; font-size: 14px; letter-spacing: 1px; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* BOTÕES DE CONTROLE */
+        /* CONTROLES */
         #ui-controls { 
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
-            display: flex; align-items: center; gap: 25px; z-index: 100;
+            position: absolute; bottom: 30px; left: 0; width: 100%;
+            display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 100;
+            padding: 0 20px;
         }
-        .btn-main { border: none; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 22px 50px; font-size: 15px; background: var(--accent); color: #000; box-shadow: 0 5px 20px rgba(0,0,0,0.6); }
-        #gear-btn { width: 65px; height: 65px; border-radius: 12px; background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); }
+        /* Ajuste para Horizontal */
+        @media (orientation: landscape) {
+            #ui-controls { bottom: 20px; }
+        }
 
-        /* PAINEL LATERAL (CONFIGS) */
+        .btn-main { border: none; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px 40px; font-size: 14px; background: var(--accent); color: #000; }
+        #gear-btn { width: 55px; height: 55px; border-radius: 12px; background: rgba(255,255,255,0.2); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; backdrop-filter: blur(5px); }
+
+        /* PAINEL CONFIGS */
         #settings-panel { 
-            position: fixed; right: -350px; top: 0; width: 320px; height: 100%; 
-            background: var(--glass); backdrop-filter: blur(25px); z-index: 4000; 
-            padding: 40px 25px; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-left: 1px solid #333;
+            position: fixed; right: -350px; top: 0; width: 300px; height: 100%; 
+            background: rgba(10,10,10,0.95); backdrop-filter: blur(15px); z-index: 4000; 
+            padding: 30px 20px; transition: 0.4s; border-left: 1px solid #333;
         }
         #settings-panel.open { right: 0; }
-        .field { margin-bottom: 25px; }
-        .field label { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 10px; display: block; font-weight: 700; }
-        select, input { width: 100%; background: #151515; border: 1px solid #333; color: #fff; padding: 14px; border-radius: 8px; font-size: 14px; }
+        .field { margin-bottom: 20px; }
+        .field label { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 8px; display: block; }
+        select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; }
         
         canvas { display: none; }
     </style>
@@ -67,20 +70,18 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2 style="color:var(--accent)">SISTEMA DE CAPTURA</h2>
-        <p style="color: #888; margin: 20px 0; font-size: 13px; line-height: 1.6;">
-            1. Selecione a pasta para salvar os PDFs.<br>
-            2. Mantenha o carregador conectado.<br>
-            3. <b>A página não fechará durante a gravação.</b>
+        <h2 style="color:var(--accent); margin-bottom:15px">OPERAÇÃO DE CAMPO</h2>
+        <p style="color: #ccc; font-size: 13px; line-height: 1.5; margin-bottom: 20px;">
+            O sistema impede o desligamento da tela e bloqueia o fechamento da aba durante o REC.
         </p>
-        <button class="btn-aware" onclick="startApp()">Aceitar e Iniciar</button>
+        <button class="btn-aware" onclick="startApp()">Iniciar Sistema</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <h3 style="color:var(--accent); margin-bottom:30px; font-size:14px; letter-spacing:1px;">AJUSTES</h3>
+    <h3 style="color:var(--accent); margin-bottom:25px; font-size:14px;">AJUSTES</h3>
     <div class="field">
-        <label>Lente Ativa</label>
+        <label>Câmera</label>
         <select id="cam-select" onchange="initC(this.value)"></select>
     </div>
     <div class="field">
@@ -91,7 +92,7 @@
         <label>Intervalo (ms)</label>
         <input type="number" id="cfg-int" value="200">
     </div>
-    <button class="btn-aware" onclick="toggleSet()">Voltar para Câmera</button>
+    <button class="btn-aware" onclick="toggleSet()">Voltar</button>
 </div>
 
 <div id="app-shell">
@@ -101,17 +102,15 @@
         <h1 id="km-txt">Km ---</h1>
     </div>
 
-    <div id="counter-hud">
-        <div style="font-size:10px; color:#aaa; font-weight:800; margin-bottom:2px;">LOTE</div>
-        <span id="count-txt">000</span><span style="color:#555; font-size:14px"> / <span id="max-txt">200</span></span>
+    <div id="rec-indicator">
+        <div class="dot"></div>
+        <span class="rec-text">REC</span>
     </div>
-
-    <div id="rec-tag"><div class="dot"></div> CAPTURA ATIVA</div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙️</div>
-        <button id="btn-start" class="btn-main" onclick="initCapture()">Iniciar Captura</button>
-        <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Parar e Gerar PDF</button>
+        <button id="btn-start" class="btn-main" onclick="initCapture()">Iniciar</button>
+        <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture()">Parar</button>
     </div>
 </div>
 
@@ -122,11 +121,10 @@ let kmDB=[], rec=false, buffer=[], hDir=null, currentStream=null, wakeLock=null;
 let kmInicialLote = "";
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// BLOQUEAR FECHAMENTO DURANTE OPERAÇÃO
 window.addEventListener('beforeunload', (e) => {
     if (rec) {
         e.preventDefault();
-        e.returnValue = 'AVISO: Captura ativa. O lote atual será perdido!';
+        e.returnValue = 'Captura ativa!';
     }
 });
 
@@ -139,17 +137,14 @@ async function requestWakeLock() {
 async function startApp() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-        
         document.getElementById('safety-gate').style.display = 'none';
         document.getElementById('app-shell').style.display = 'block';
-        
         await listCams();
         loadCSV();
         initGPS();
         requestWakeLock();
-    } catch(e) { alert("Permissão de pasta necessária para salvar os relatórios."); }
+    } catch(e) { alert("Acesso à pasta necessário."); }
 }
 
 async function listCams() {
@@ -176,8 +171,7 @@ function initCapture() {
     kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'inline-block';
-    document.getElementById('rec-tag').style.display = 'flex';
-    document.getElementById('max-txt').innerText = document.getElementById('cfg-lote').value;
+    document.getElementById('rec-indicator').style.display = 'flex';
     loop();
 }
 
@@ -187,7 +181,7 @@ function stopCapture() {
     buffer = [];
     document.getElementById('btn-start').style.display = 'inline-block';
     document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-tag').style.display = 'none';
+    document.getElementById('rec-indicator').style.display = 'none';
 }
 
 function loop() {
@@ -196,17 +190,9 @@ function loop() {
         can.width = vid.videoWidth; can.height = vid.videoHeight;
         ctx.drawImage(vid, 0, 0);
         const curKm = document.getElementById('km-txt').innerText.replace("Km ", "");
+        buffer.push({ raw: can.toDataURL('image/jpeg', 0.5), km: curKm, ts: new Date().toLocaleTimeString('pt-BR') });
         
-        buffer.push({ 
-            raw: can.toDataURL('image/jpeg', 0.5), 
-            km: curKm, 
-            ts: new Date().toLocaleTimeString('pt-BR') 
-        });
-
-        document.getElementById('count-txt').innerText = buffer.length.toString().padStart(3, '0');
-
-        const limit = parseInt(document.getElementById('cfg-lote').value) || 200;
-        if(buffer.length >= limit) {
+        if(buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 200)) {
             const temp = [...buffer];
             savePDF(temp, kmInicialLote, curKm);
             buffer = [];
@@ -252,7 +238,7 @@ async function savePDF(data, ini, fim) {
         const w = await f.createWritable();
         await w.write(doc.output('blob'));
         await w.close();
-    } catch(e) { console.error("Erro ao salvar PDF."); }
+    } catch(e) {}
 }
 
 async function loadCSV() {
@@ -266,7 +252,7 @@ async function loadCSV() {
             const c = r.split(';');
             return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) { console.warn("Erro ao carregar CSV."); }
+    } catch(e) {}
 }
 
 function initGPS() {
