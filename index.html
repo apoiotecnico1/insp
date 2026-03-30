@@ -10,6 +10,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         html, body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
 
+        /* TELA DE SEGURANÇA E CONFIGURAÇÃO */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 20px; }
         .alert-box { border: 2px solid var(--danger); padding: 30px; border-radius: 15px; max-width: 500px; background: #0a0a0a; text-align: center; }
         .btn-proceed { width: 100%; background: var(--accent); color: #000; border: none; padding: 20px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; font-size: 16px; box-shadow: 0 0 20px rgba(255, 204, 0, 0.3); }
@@ -28,12 +29,6 @@
         .btn-main { border: none; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 18px 40px; font-size: 14px; background: var(--accent); color: #000; }
         #gear-btn { width: 55px; height: 55px; border-radius: 12px; background: rgba(255,255,255,0.2); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; backdrop-filter: blur(5px); }
 
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: rgba(10,10,10,0.95); backdrop-filter: blur(15px); z-index: 4000; padding: 30px 20px; transition: 0.4s; border-left: 1px solid #333; }
-        #settings-panel.open { right: 0; }
-        .field { margin-bottom: 20px; }
-        .field label { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 8px; display: block; }
-        select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; }
-        
         canvas { display: none; }
     </style>
 </head>
@@ -41,20 +36,12 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2 style="color:var(--danger)">⚠️ CONFIGURAÇÃO DE DESTINO</h2>
+        <h2 style="color:var(--danger)">⚠️ CONFIGURAÇÃO DIRETA</h2>
         <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:8px; margin:20px 0; text-align:left; border-left:4px solid var(--accent);">
-            <p style="font-size:14px; line-height:1.5;">1. Operação pelo <b>PASSAGEIRO</b>.<br>2. Ao clicar abaixo, <b>selecione a pasta</b> onde os relatórios serão salvos.<br>3. Confirme a permissão de "Ver arquivos" e "Salvar".</p>
+            <p style="font-size:14px; line-height:1.5;">1. Selecione a <b>Pasta de Destino</b> agora.<br>2. Autorize a gravação para que o sistema salve os arquivos <b>automaticamente sem te interromper</b> durante a direção.</p>
         </div>
-        <button class="btn-proceed" onclick="handleStart()">Ciente e Selecionar Pasta</button>
+        <button class="btn-proceed" onclick="setupStorage()">Ciente e Escolher Pasta</button>
     </div>
-</div>
-
-<div id="settings-panel">
-    <h3 style="color:var(--accent); margin-bottom:25px; font-size:14px;">AJUSTES</h3>
-    <div class="field"><label>Câmera</label><select id="cam-select" onchange="initC(this.value)"></select></div>
-    <div class="field"><label>Fotos por Lote</label><input type="number" id="cfg-lote" value="200"></div>
-    <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
-    <button class="btn-main" style="width:100%" onclick="toggleSet()">Voltar</button>
 </div>
 
 <div id="app-shell">
@@ -62,7 +49,7 @@
     <div id="km-hud"><h1 id="km-txt">Km ---</h1></div>
     <div id="rec-indicator"><div class="dot"></div><span style="font-weight:900;font-size:14px">REC</span></div>
     <div id="ui-controls">
-        <div id="gear-btn" onclick="toggleSet(); event.stopPropagation();">⚙️</div>
+        <div id="gear-btn" onclick="alert('Lote: 200 fotos | Int: 200ms'); event.stopPropagation();">⚙️</div>
         <button id="btn-start" class="btn-main" onclick="initCapture(); event.stopPropagation();">Iniciar Captura</button>
         <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture(); event.stopPropagation();">Finalizar</button>
     </div>
@@ -71,8 +58,8 @@
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], rec=false, buffer=[], currentStream=null, wakeLock=null;
-let kmInicialLote = "", directoryHandle = null;
+let kmDB=[], rec=false, buffer=[], currentStream=null, wakeLock=null, dirHandle=null;
+let kmInicialLote = "";
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
 function forceFull() {
@@ -80,52 +67,38 @@ function forceFull() {
     if (el.requestFullscreen) el.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
 }
 
-// SOLICITA PASTA DE DESTINO LOGO NO INÍCIO
-async function handleStart() {
+async function setupStorage() {
     try {
         if (!window.showDirectoryPicker) {
-            alert("Seu navegador não suporta salvamento direto em pasta. Use o Chrome ou Edge atualizados.");
+            alert("Use o Google Chrome atualizado para permitir o salvamento direto.");
             return;
         }
-        directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        // Após selecionar a pasta, inicia o app
+        // Abre a pasta e pede permissão de escrita
+        dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
         startApp();
     } catch (e) {
-        alert("Você precisa selecionar uma pasta para o sistema funcionar corretamente.");
-    }
-}
-
-async function requestWakeLock() {
-    if ('wakeLock' in navigator) {
-        try { if (wakeLock !== null) await wakeLock.release(); wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+        alert("A pasta é necessária para salvar os relatórios sem interrupção.");
     }
 }
 
 async function startApp() {
-    try {
-        forceFull();
-        document.getElementById('safety-gate').style.display = 'none';
-        document.getElementById('app-shell').style.display = 'block';
-        await listCams(); loadCSV(); initGPS(); requestWakeLock();
-    } catch(e) { alert("Erro ao acessar câmera."); }
-}
-
-async function listCams() {
+    forceFull();
+    document.getElementById('safety-gate').style.display = 'none';
+    document.getElementById('app-shell').style.display = 'block';
+    
+    if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const vids = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Lente ${i+1}</option>`).join('');
-    const back = vids.find(d => d.label.toLowerCase().includes('back')) || vids[vids.length-1];
-    if(back) { sel.value = back.deviceId; initC(back.deviceId); }
-}
-
-async function initC(id) {
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1280, height: 720 } });
+    const backCam = devices.find(d => d.label.toLowerCase().includes('back')) || devices.filter(d => d.kind==='videoinput').pop();
+    
+    currentStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { deviceId: backCam.deviceId, width: 1280, height: 720 } 
+    });
     vid.srcObject = currentStream;
+    
+    loadCSV();
+    initGPS();
 }
-
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
 function initCapture() {
     rec = true; buffer = [];
@@ -137,7 +110,7 @@ function initCapture() {
 }
 
 function stopCapture() {
-    if(buffer.length > 0) savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
+    if(buffer.length > 0) saveDirectly([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
     rec = false; buffer = [];
     document.getElementById('btn-start').style.display = 'inline-block';
     document.getElementById('btn-stop').style.display = 'none';
@@ -152,15 +125,15 @@ function loop() {
         const curKm = document.getElementById('km-txt').innerText.replace("Km ", "");
         buffer.push({ raw: can.toDataURL('image/jpeg', 0.4), km: curKm, ts: new Date().toLocaleTimeString('pt-BR') });
         
-        if(buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 200)) {
-            savePDF([...buffer], kmInicialLote, curKm);
+        if(buffer.length >= 200) {
+            saveDirectly([...buffer], kmInicialLote, curKm);
             buffer = []; kmInicialLote = curKm;
         }
     }
-    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
+    setTimeout(loop, 200);
 }
 
-async function savePDF(data, ini, fim) {
+async function saveDirectly(data, ini, fim) {
     const doc = new jspdf.jsPDF(can.width > can.height ? 'l' : 'p', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
 
@@ -184,20 +157,15 @@ async function savePDF(data, ini, fim) {
 
     const d = new Date();
     const pad = (n) => n.toString().padStart(2, '0');
-    const dt = pad(d.getDate()) + pad(d.getMonth()+1) + d.getFullYear().toString().substring(2);
-    const hr = pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
-    const nome = `Relat_KM_${ini}_a_${fim}_${dt}_${hr}.pdf`.replace(/[\s\+]/g, '_');
+    const nome = `Relat_KM_${ini}_a_${fim}_${pad(d.getDate())}${pad(d.getMonth()+1)}${d.getFullYear().toString().slice(-2)}_${pad(d.getHours())}${pad(d.getMinutes())}.pdf`;
 
-    // SALVAMENTO SILENCIOSO NA PASTA ESCOLHIDA
     try {
-        const fileHandle = await directoryHandle.getFileHandle(nome, { create: true });
+        const fileHandle = await dirHandle.getFileHandle(nome, { create: true });
         const writable = await fileHandle.createWritable();
         await writable.write(doc.output('blob'));
         await writable.close();
-        console.log("Salvo: " + nome);
-    } catch (err) {
-        console.error("Erro ao salvar silenciosamente, tentando download padrão...");
-        doc.save(nome);
+    } catch (e) {
+        console.error("Falha no salvamento direto:", e);
     }
 }
 
@@ -206,8 +174,8 @@ async function loadCSV() {
         const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
         const t = await r.text();
         const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ik = h.indexOf('km'), ilt = h.findIndex(x=>x.includes('lat')), iln = h.findIndex(x=>x.includes('lon'));
+        const h = rows.shift().split(';');
+        const ik = h.findIndex(x=>x.toLowerCase().includes('km')), ilt = h.findIndex(x=>x.toLowerCase().includes('lat')), iln = h.findIndex(x=>x.toLowerCase().includes('lon'));
         kmDB = rows.map(r => {
             const c = r.split(';');
             return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
