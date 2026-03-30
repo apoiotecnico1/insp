@@ -10,13 +10,10 @@
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         html, body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
 
-        /* TELA DE BLOQUEIO (SÓ LIBERA APÓS ESCOLHER PASTA) */
+        /* TELA DE BLOQUEIO */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .alert-box { border: 2px solid var(--danger); padding: 30px; border-radius: 15px; max-width: 500px; background: #0a0a0a; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,1); }
-        .alert-box h2 { color: var(--danger); margin-bottom: 20px; font-size: 1.3rem; text-transform: uppercase; }
-        .warn-msg { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 25px; text-align: left; border-left: 4px solid var(--accent); }
-        .warn-msg p { font-size: 14px; line-height: 1.5; color: #ddd; margin-bottom: 10px; }
-        .btn-setup { width: 100%; background: var(--accent); color: #000; border: none; padding: 22px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; font-size: 16px; box-shadow: 0 5px 15px rgba(255,204,0,0.2); }
+        .alert-box { border: 2px solid var(--danger); padding: 30px; border-radius: 15px; max-width: 500px; background: #0a0a0a; text-align: center; }
+        .btn-setup { width: 100%; background: var(--accent); color: #000; border: none; padding: 22px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; font-size: 16px; }
 
         /* INTERFACE PRINCIPAL */
         #app-shell { display: none; height: 100vh; width: 100vw; position: relative; }
@@ -29,8 +26,17 @@
         .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        #ui-controls { position: absolute; bottom: 50px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; z-index: 100; }
-        .btn-main { border: none; border-radius: 15px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 20px 60px; font-size: 16px; background: var(--accent); color: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        /* PAINEL DE AJUSTES (ENGRENAGEM) */
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: rgba(10,10,10,0.95); backdrop-filter: blur(15px); z-index: 4000; padding: 30px 20px; transition: 0.4s; border-left: 1px solid #333; }
+        #settings-panel.open { right: 0; }
+        .field { margin-bottom: 20px; }
+        .field label { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 8px; display: block; }
+        select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; }
+
+        /* CONTROLES */
+        #ui-controls { position: absolute; bottom: 50px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 100; }
+        .btn-main { border: none; border-radius: 15px; font-weight: 900; cursor: pointer; text-transform: uppercase; padding: 20px 45px; font-size: 16px; background: var(--accent); color: #000; }
+        #gear-btn { width: 60px; height: 60px; border-radius: 15px; background: rgba(255,255,255,0.2); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; backdrop-filter: blur(5px); }
         
         canvas { display: none; }
     </style>
@@ -39,14 +45,20 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2>⚠️ ADVERTÊNCIA E DESTINO</h2>
-        <div class="warn-msg">
-            <p><strong>RECOMENDAÇÃO:</strong> Operação por <b>PASSAGEIRO</b>. Proibido manuseio ao dirigir.</p>
-            <p><strong>PASSO OBRIGATÓRIO:</strong> Selecione a pasta de salvamento para liberar o sistema.</p>
-            <p><strong>PERMISSÃO:</strong> Clique em <b>"Permitir"</b> quando o navegador solicitar a gravação de arquivos.</p>
+        <h2 style="color:var(--danger)">⚠️ CONFIGURAÇÃO OBRIGATÓRIA</h2>
+        <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:8px; margin:20px 0; text-align:left; border-left:4px solid var(--accent);">
+            <p style="font-size:14px; line-height:1.5;">1. Selecione a <b>Pasta de Destino</b>.<br>2. Clique em <b>"Permitir"</b> para salvar os arquivos automaticamente.<br>3. O sistema só será liberado após este passo.</p>
         </div>
         <button class="btn-setup" onclick="requestAccess()">Ciente e Escolher Pasta</button>
     </div>
+</div>
+
+<div id="settings-panel">
+    <h3 style="color:var(--accent); margin-bottom:25px; font-size:14px;">AJUSTES DO SISTEMA</h3>
+    <div class="field"><label>Câmera</label><select id="cam-select" onchange="initC(this.value)"></select></div>
+    <div class="field"><label>Fotos por Lote</label><input type="number" id="cfg-lote" value="200"></div>
+    <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
+    <button class="btn-main" style="width:100%" onclick="toggleSet()">Fechar Ajustes</button>
 </div>
 
 <div id="app-shell">
@@ -54,6 +66,7 @@
     <div id="km-hud"><h1 id="km-txt">Km ---</h1></div>
     <div id="rec-status"><div class="dot"></div><span style="font-weight:900;">GRAVANDO</span></div>
     <div id="ui-controls">
+        <div id="gear-btn" onclick="toggleSet(); event.stopPropagation();">⚙️</div>
         <button id="btn-start" class="btn-main" onclick="initCapture(); event.stopPropagation();">Iniciar Captura</button>
         <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture(); event.stopPropagation();">Finalizar</button>
     </div>
@@ -72,50 +85,49 @@ function forceFull() {
     }
 }
 
-// FORÇA O DIRECIONAMENTO DA PASTA ANTES DE TUDO
+function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+
 async function requestAccess() {
     try {
         if (!window.showDirectoryPicker) {
-            alert("Navegador não compatível com gravação direta. Use o Google Chrome.");
+            alert("Use o Chrome para salvamento direto.");
             return;
         }
-
-        // 1. Abre o seletor de pasta
         dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        
-        // 2. Tenta verificar se tem permissão (Geralmente o Chrome abre o balão de "Permitir" agora)
         const options = { mode: 'readwrite' };
         if (await dirHandle.queryPermission(options) !== 'granted') {
             await dirHandle.requestPermission(options);
         }
-
-        // 3. Só libera o sistema se o dirHandle existir
-        if(dirHandle) {
-            unlockSystem();
-        }
+        if(dirHandle) unlockSystem();
     } catch (e) {
-        alert("Atenção: É necessário selecionar uma pasta e dar permissão de gravação para usar o app sem interrupções.");
+        alert("Atenção: Selecione a pasta e permita a gravação para prosseguir.");
     }
 }
 
 async function unlockSystem() {
     document.getElementById('safety-gate').style.display = 'none';
     document.getElementById('app-shell').style.display = 'block';
-    
     forceFull();
     
-    // Inicia Câmera
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const back = devices.find(d => d.label.toLowerCase().includes('back')) || devices.filter(d => d.kind==='videoinput').pop();
-    currentStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { deviceId: back.deviceId, width: 1280, height: 720 } 
-    });
-    vid.srcObject = currentStream;
-
-    // Inicia GPS e WakeLock
+    await listCams();
     if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
     loadCSV();
     initGPS();
+}
+
+async function listCams() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const vids = devices.filter(d => d.kind === 'videoinput');
+    const sel = document.getElementById('cam-select');
+    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Lente ${i+1}</option>`).join('');
+    const back = vids.find(d => d.label.toLowerCase().includes('back')) || vids[vids.length-1];
+    if(back) { sel.value = back.deviceId; initC(back.deviceId); }
+}
+
+async function initC(id) {
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1280, height: 720 } });
+    vid.srcObject = currentStream;
 }
 
 function initCapture() {
@@ -143,15 +155,15 @@ function loop() {
         const curKm = document.getElementById('km-txt').innerText.replace("Km ", "");
         buffer.push({ raw: can.toDataURL('image/jpeg', 0.4), km: curKm, ts: new Date().toLocaleTimeString('pt-BR') });
         
-        if(buffer.length >= 200) {
+        let limite = parseInt(document.getElementById('cfg-lote').value) || 200;
+        if(buffer.length >= limite) {
             saveAuto([...buffer], kmInicialLote, curKm);
             buffer = []; kmInicialLote = curKm;
         }
     }
-    setTimeout(loop, 200);
+    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
-// GRAVAÇÃO SILENCIOSA NA PASTA ESCOLHIDA
 async function saveAuto(data, ini, fim) {
     const doc = new jspdf.jsPDF(can.width > can.height ? 'l' : 'p', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
@@ -183,9 +195,7 @@ async function saveAuto(data, ini, fim) {
         const writable = await fileHandle.createWritable();
         await writable.write(doc.output('blob'));
         await writable.close();
-    } catch (e) {
-        console.error("Erro no salvamento automático:", e);
-    }
+    } catch (e) { console.error("Erro no salvamento.", e); }
 }
 
 async function loadCSV() {
