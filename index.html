@@ -1,79 +1,7 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>PAINEL KM AO VIVO</title>
-
-<style>
-:root {
-  --placa-verde: #007934;
-  --branco: #ffffff;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  background: var(--placa-verde);
-  color: var(--branco);
-  font-family: Arial, Helvetica, sans-serif;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#painel {
-  border: 12px solid #fff;
-  border-radius: 16px;
-  padding: 40px 80px;
-  text-align: center;
-  box-shadow: 0 0 50px rgba(0,0,0,.6);
-}
-
-#rodovia {
-  font-size: 4vw;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-#km {
-  font-size: 20vw;
-  font-weight: 900;
-  letter-spacing: 6px;
-}
-
-#municipio {
-  font-size: 4vw;
-  margin-top: 10px;
-}
-
-#clock {
-  position: fixed;
-  bottom: 20px;
-  right: 30px;
-  font-size: 2.5vw;
-  opacity: 0.9;
-}
-
-@media (max-width: 600px) {
-  #rodovia, #municipio { font-size: 6vw; }
-  #km { font-size: 28vw; }
-  #clock { font-size: 4vw; }
-}
-</style>
-</head>
-
-<body onclick="goFull()">
+<body>
 
 <div id="painel">
-  <div id="rodovia">BR --</div>
+  <div id="rodovia">BR-116</div>
   <div id="km">Km ---+---</div>
   <div id="municipio"></div>
 </div>
@@ -82,82 +10,18 @@ body {
 
 <script>
 let kmDB = [];
-let brLabel = "BR --";
+let fullscreenAtivado = false;
 
-/* FULLSCREEN */
-function goFull() {
-  document.documentElement.requestFullscreen?.();
-}
-
-/* DETECTA BR PELO NOME DO CSV */
-function detectBR(csvName) {
-  if (csvName.includes("116")) return "BR-116";
-  if (csvName.includes("101")) return "BR-101";
-  return "BR";
-}
-
-/* CARREGA CSV */
-async function loadCSV() {
-  try {
-    const csvFile = "SNVBR116SPRJ.csv"; // altere aqui se usar outro
-    brLabel = detectBR(csvFile);
-    document.getElementById("rodovia").innerText = brLabel;
-
-    const r = await fetch(csvFile + "?v=" + Date.now());
-    const t = await r.text();
-
-    const rows = t.split("\n").filter(l => l.includes(";"));
-    const hdr = rows.shift().split(";").map(h => h.trim().toLowerCase());
-
-    const ik = hdr.findIndex(h => h.includes("km"));
-    const ilt = hdr.findIndex(h => h.includes("lat"));
-    const iln = hdr.findIndex(h => h.includes("lon"));
-    const im = hdr.findIndex(h => h.includes("mun"));
-
-    kmDB = rows.map(r => {
-      const c = r.split(";");
-      return {
-        km: c[ik],
-        lt: parseFloat(c[ilt]?.replace(",", ".")),
-        ln: parseFloat(c[iln]?.replace(",", ".")),
-        mun: im >= 0 ? c[im] : ""
-      };
-    }).filter(p => !isNaN(p.lt));
-  } catch (e) {
-    console.error("Erro ao carregar CSV");
+function entrarFullscreenSeguro() {
+  if (fullscreenAtivado) return;
+  if (document.fullscreenElement == null) {
+    document.documentElement.requestFullscreen()
+      .then(() => fullscreenAtivado = true)
+      .catch(() => {});
   }
 }
 
-/* GPS AO VIVO */
-function initGPS() {
-  navigator.geolocation.watchPosition(pos => {
-    if (!kmDB.length) return;
-
-    let best = null;
-    let min = Infinity;
-
-    for (const p of kmDB) {
-      const d = Math.hypot(
-        p.lt - pos.coords.latitude,
-        p.ln - pos.coords.longitude
-      );
-      if (d < min) {
-        min = d;
-        best = p;
-      }
-    }
-
-    if (best) {
-      document.getElementById("km").innerText = "Km " + best.km;
-      document.getElementById("municipio").innerText = best.mun || "";
-    }
-  }, null, {
-    enableHighAccuracy: true,
-    maximumAge: 500
-  });
-}
-
-/* RELÓGIO */
+/* relógio */
 function clockLoop() {
   const d = new Date();
   document.getElementById("clock").innerText =
@@ -165,14 +29,12 @@ function clockLoop() {
     d.toLocaleTimeString("pt-BR");
 }
 
-/* START */
+/* start */
 window.onload = () => {
-  goFull();
   loadCSV().then(initGPS);
   setInterval(clockLoop, 1000);
+  setTimeout(entrarFullscreenSeguro, 300);
 };
 </script>
 
 </body>
-</html>
-``
