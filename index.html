@@ -3,66 +3,63 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>SISTEMA INSPEÇÃO PRO - ULTRA VISION V6</title>
+    <title>SISTEMA INSPEÇÃO PRO - COMMANDER V7</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { 
             --accent: #00ffcc; 
             --danger: #ff0055; 
-            --panel-bg: rgba(5, 5, 5, 0.98);
+            --panel-bg: rgba(0, 0, 0, 0.95);
+            --ui-font: 'Consolas', 'Courier New', monospace;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { background: #000; color: #fff; font-family: var(--ui-font); overflow: hidden; height: 100vh; }
 
-        /* Gateway de Segurança */
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; align-items: center; justify-content: center; }
-        .alert-box { border: 2px solid var(--accent); padding: 50px; background: #0a0a0a; text-align: center; max-width: 500px; box-shadow: 0 0 100px rgba(0,255,204,0.1); }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 25px; font-weight: 900; cursor: pointer; text-transform: uppercase; width: 100%; font-size: 1.2rem; border-radius: 4px; }
+        /* Gateway de Inicialização */
+        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; align-items: center; justify-content: center; border: 2px solid #222; }
+        .alert-box { border: 1px solid var(--accent); padding: 40px; background: #050505; text-align: center; max-width: 500px; box-shadow: 0 0 80px rgba(0,255,204,0.15); }
+        .btn-aware { background: var(--accent); color: #000; border: none; padding: 22px; font-weight: 900; cursor: pointer; text-transform: uppercase; width: 100%; font-size: 1.2rem; }
 
-        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
-        
-        /* Câmera em Full Screen Total */
-        video { width: 100%; height: 100%; object-fit: cover; transition: filter 0.1s; }
+        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; background: #000; }
+        video { width: 100%; height: 100%; object-fit: cover; transition: filter 0.05s linear; }
 
-        /* HUD Técnico - Posição Estratégica */
+        /* HUD - Telemetria Rodoviária */
         #km-hud { 
-            position: absolute; top: 30px; left: 30px; 
+            position: absolute; top: 20px; left: 20px; 
             background: #fff; color: #000; 
-            padding: 15px 45px; border: 8px solid #000; 
-            z-index: 100; box-shadow: 12px 12px 0 var(--accent);
+            padding: 10px 30px; border: 6px solid #000; 
+            z-index: 100; box-shadow: 8px 8px 0 var(--accent);
         }
-        #km-hud h1 { font-size: 3.5rem; font-weight: 900; font-family: 'Courier New', monospace; line-height: 1; }
+        #km-hud h1 { font-size: 3rem; font-weight: 900; line-height: 1; }
 
-        #rec-tag { 
-            position: absolute; top: 30px; right: 30px; 
-            background: var(--danger); padding: 15px 30px; 
-            font-weight: 900; border-radius: 4px; display: none; align-items: center; gap: 12px;
+        /* Painel de Ajustes Rápidos (Lateral Direita) */
+        #quick-adj {
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 20px; z-index: 500;
+            background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; backdrop-filter: blur(10px);
         }
-        .dot { width: 18px; height: 18px; background: #fff; border-radius: 50%; animation: blink 0.6s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
+        .adj-slider { writing-mode: bt-lr; -webkit-appearance: slider-vertical; width: 30px; height: 150px; }
+        .adj-label { font-size: 10px; text-align: center; color: var(--accent); }
 
-        /* Painel de Filtros (Ocultável) */
+        /* Painel Principal de Configurações (Lateral Esquerda) */
         #settings-panel { 
             position: fixed; left: -400px; top: 0; width: 380px; height: 100%; 
-            background: var(--panel-bg); z-index: 5000; padding: 30px; 
-            transition: 0.5s cubic-bezier(0.19, 1, 0.22, 1); border-right: 4px solid var(--accent);
+            background: var(--panel-bg); z-index: 5000; padding: 25px; 
+            transition: 0.4s cubic-bezier(0.1, 0.7, 0.1, 1); border-right: 2px solid var(--accent);
             overflow-y: auto;
         }
         #settings-panel.open { left: 0; }
-        
-        .section-header { font-size: 12px; color: var(--accent); border-bottom: 1px solid #333; margin: 25px 0 10px; padding-bottom: 8px; text-transform: uppercase; letter-spacing: 2px; }
-        .field { margin-bottom: 20px; }
-        label { display: block; font-size: 11px; margin-bottom: 8px; color: #777; text-transform: uppercase; }
-        select, input { width: 100%; background: #111; border: 1px solid #444; color: #fff; padding: 15px; font-family: 'Consolas', monospace; font-size: 14px; }
+        .section-header { font-size: 11px; color: var(--accent); border-bottom: 1px solid #333; margin: 20px 0 10px; padding-bottom: 5px; text-transform: uppercase; }
+        select, input { width: 100%; background: #111; border: 1px solid #333; color: #fff; padding: 12px; margin-bottom: 10px; }
 
-        /* Controles de Interface */
-        #ui-controls { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; opacity: 0.8; transition: 0.3s; }
-        #ui-controls:hover { opacity: 1; }
-        .btn-main { border: none; padding: 25px 50px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 1.1rem; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        /* Controles de Operação */
+        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 100; }
+        .btn-main { border: none; padding: 20px 40px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 1rem; border-radius: 5px; }
         #btn-start { background: var(--accent); color: #000; }
         #btn-stop { background: var(--danger); color: #fff; display: none; }
-        #gear-btn { width: 80px; background: #222; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 1px solid #444; border-radius: 8px; }
+        #gear-btn { width: 65px; background: #222; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 1px solid #444; }
 
+        #rec-tag { position: absolute; top: 20px; right: 20px; color: var(--danger); font-weight: 900; display: none; background: rgba(0,0,0,0.8); padding: 5px 15px; border: 1px solid var(--danger); }
         canvas { display: none; }
     </style>
 </head>
@@ -70,42 +67,47 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2 style="color:var(--accent); letter-spacing: 5px; margin-bottom: 10px;">ULTRA VISION V6</h2>
-        <p style="color:#666; font-size: 14px; margin-bottom: 40px;">SISTEMA DE INSPEÇÃO TÉCNICA RODOVIÁRIA<br>OTIMIZAÇÃO PARA ALTA VELOCIDADE</p>
-        <button class="btn-aware" onclick="startApp()">ATIVAR FULL SCREEN</button>
+        <h1 style="margin-bottom: 20px;">SISTEMA DE APOIO TÉCNICO V7</h1>
+        <p style="color:#777; margin-bottom: 30px;">Algoritmo de Engenharia de Qualidade Rodoviária.<br>Inspeção Noturna BR-116.</p>
+        <button class="btn-aware" onclick="startApp()">ATIVAR CONSOLE COMMANDER</button>
     </div>
 </div>
 
 <div id="settings-panel">
     <div class="section-header">Hardware do Sensor</div>
-    <div class="field"><label>Câmera Ativa</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Obturação Virtual (ms)</label><input type="number" id="cfg-int" value="100"></div>
-    <div class="field"><label>Fotos por PDF</label><input type="number" id="cfg-lote" value="50"></div>
+    <select id="cam-select" onchange="switchCam(this.value)"></select>
+    <div class="section-header">Parâmetros de Lote</div>
+    <input type="number" id="cfg-int" value="100" placeholder="Intervalo (ms)">
+    <input type="number" id="cfg-lote" value="50" placeholder="Fotos por PDF">
     
-    <div class="section-header">Matriz de 600+ Filtros</div>
-    <div class="field">
-        <label>Seletor de Inteligência Óptica</label>
-        <select id="cfg-filter" onchange="applyFilter(this.value)">
-            <optgroup label="PRESETS DE ENGENHARIA">
-                <option value="brightness(0.3) contrast(3) grayscale(1)">EVIDÊNCIA DE FALHA (ULTRA-BLACK)</option>
-                <option value="contrast(5) saturate(0) brightness(0.6)">SILHUETA DE POSTE (MODO ESTRUTURAL)</option>
-                <option value="sepia(1.2) contrast(2) brightness(0.5)">SUPRESSÃO DE VAPOR DE SÓDIO</option>
-                <option value="invert(1) grayscale(1) contrast(2.5)">RAIO-X (ALTO CONTRASTE)</option>
-            </optgroup>
-            <optgroup id="matrix-filters" label="MATRIZ EXPERIMENTAL (600+ AJUSTES)"></optgroup>
-        </select>
-    </div>
-    <button class="btn-aware" onclick="toggleSet()" style="margin-top:30px;">APLICAR E FECHAR</button>
+    <div class="section-header">Matriz de 1000 Sensores Técnicos</div>
+    <select id="cfg-filter" onchange="applyFilter(this.value)">
+        <optgroup label="MODOS DE ENGENHARIA">
+            <option value="brightness(0.4) contrast(3) grayscale(1)">EVIDÊNCIA DE FALHA (ULTRA-BLACK)</option>
+            <option value="contrast(5) saturate(0) brightness(0.6)">POSTE/ESTRUTURA (SILHUETA)</option>
+            <option value="sepia(1) contrast(2.5) brightness(0.5)">SUPRESSÃO VAPOR DE SÓDIO</option>
+            <option value="invert(1) grayscale(1) contrast(2)">MODO RAIO-X (NEGATIVO)</option>
+        </optgroup>
+        <optgroup id="filter-matrix" label="MATRIZ DE SENSORES 001-1000"></optgroup>
+    </select>
+    <button class="btn-aware" onclick="toggleSet()" style="margin-top:20px;">FECHAR AJUSTES</button>
+</div>
+
+<div id="quick-adj">
+    <div class="adj-label">BRILHO</div>
+    <input type="range" class="adj-slider" id="adj-br" min="0.1" max="2" step="0.1" value="0.8" oninput="updateLiveFilters()">
+    <div class="adj-label">CONTRASTE</div>
+    <input type="range" class="adj-slider" id="adj-ct" min="1" max="5" step="0.2" value="1.5" oninput="updateLiveFilters()">
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
     <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
-    <div id="rec-tag"><div class="dot"></div><span>SCANNING BR-116</span></div>
+    <div id="rec-tag">● REC SCANNING</div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR CAPTURA</button>
+        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR ROTEIRO</button>
         <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR RELATÓRIO</button>
     </div>
 </div>
@@ -117,20 +119,16 @@ let kmDB=[], capturing=false, buffer = [], hDir=null, currentStream=null, wakeLo
 let kmInicialLote = "";
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// Gerador da Matriz de 600 Filtros Técnicos
-function buildFilterMatrix() {
-    const matrix = document.getElementById('matrix-filters');
-    for(let i=1; i<=600; i++) {
-        let opt = document.createElement('option');
-        // Variações complexas de Matiz, Contraste e Exposição
-        let hue = i * 0.6;
-        let cont = 1.2 + (i / 150);
-        let bright = 0.9 - (i / 800);
-        let sat = i % 2 === 0 ? 0 : 2; // Alterna entre P&B e Saturado para testes
-        
-        opt.value = `hue-rotate(${hue}deg) contrast(${cont}) brightness(${bright}) saturate(${sat})`;
-        opt.innerText = `AJUSTE TÉCNICO #${i.toString().padStart(3, '0')}`;
-        matrix.appendChild(opt);
+function buildMatrix() {
+    const matrix = document.getElementById('filter-matrix');
+    for(let i=1; i<=1000; i++) {
+        let o = document.createElement('option');
+        let hue = i * 0.36;
+        let cont = 1.0 + (i/250);
+        let bri = 0.9 - (i/1200);
+        o.value = `hue-rotate(${hue}deg) contrast(${cont}) brightness(${bri})`;
+        o.innerText = `SENSOR TÉCNICO #${i.toString().padStart(4, '0')}`;
+        matrix.appendChild(o);
     }
 }
 
@@ -143,22 +141,17 @@ async function startApp() {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
-        
-        // Ativar Full Screen Real
-        if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen();
-        }
-        
-        buildFilterMatrix();
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+        buildMatrix();
         listCams();
-    } catch(e) { alert("Erro de Permissão: Selecione a pasta de destino."); }
+    } catch(e) { alert("Necessário selecionar pasta de destino."); }
 }
 
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const vids = devices.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Sensor Óptico ${i+1}</option>`).join('');
+    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">LENTE ${i+1}</option>`).join('');
     switchCam(vids[vids.length-1].deviceId);
 }
 
@@ -171,17 +164,23 @@ async function switchCam(id) {
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
-function applyFilter(v) { vid.style.filter = v; }
+function updateLiveFilters() {
+    const br = document.getElementById('adj-br').value;
+    const ct = document.getElementById('adj-ct').value;
+    const baseFilter = document.getElementById('cfg-filter').value;
+    // Sobrescreve o brilho e contraste do filtro base com os sliders manuais
+    vid.style.filter = `${baseFilter} brightness(${br}) contrast(${ct})`;
+}
+
+function applyFilter() { updateLiveFilters(); }
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
 function startCapture() {
-    capturing = true;
-    buffer = [];
+    capturing = true; buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-tag').style.display = 'flex';
-    document.getElementById('ui-controls').style.opacity = "0.2"; // Diminui UI para evitar reflexo
+    document.getElementById('rec-tag').style.display = 'block';
     captureLoop();
 }
 
@@ -192,31 +191,26 @@ function stopCapture() {
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
     document.getElementById('rec-tag').style.display = 'none';
-    document.getElementById('ui-controls').style.opacity = "1";
 }
 
 function captureLoop() {
     if (!capturing) return;
     if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
         const curKm = document.getElementById('km-txt').innerText.replace("Km ", "");
-        const curFil = getComputedStyle(vid).filter;
-        
-        ctx.filter = curFil;
+        ctx.filter = getComputedStyle(vid).filter;
         ctx.drawImage(vid, 0, 0, can.width, can.height);
         
         buffer.push({ 
-            img: can.toDataURL('image/jpeg', 0.5), 
-            km: curKm, 
-            ts: new Date().toLocaleTimeString('pt-BR'),
+            img: can.toDataURL('image/jpeg', 0.6), 
+            km: curKm, ts: new Date().toLocaleTimeString('pt-BR'),
             fLabel: document.getElementById('cfg-filter').options[document.getElementById('cfg-filter').selectedIndex].text
         });
 
         const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
         if (buffer.length >= limit) {
-            const b = [...buffer]; 
-            const kf = curKm; const ki = kmInicialLote;
+            const b = [...buffer]; const ki = kmInicialLote;
             buffer = []; kmInicialLote = curKm;
-            savePDF(b, ki, kf);
+            savePDF(b, ki, curKm);
         }
     }
     setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 100);
@@ -237,19 +231,17 @@ async function savePDF(dataList, kmIni, kmFim) {
                 const tCtx = tCan.getContext('2d');
                 tCtx.drawImage(img, 0, 0);
                 
-                // DATA HUD - ALTA VISIBILIDADE TÉCNICA
-                const bh = tCan.height * 0.18;
+                const bh = tCan.height * 0.16;
                 tCtx.fillStyle = "#000";
                 tCtx.fillRect(0, tCan.height - bh, tCan.width, bh);
                 
                 tCtx.fillStyle = "#00ffcc";
                 tCtx.font = `900 ${bh * 0.5}px Courier New`;
-                tCtx.fillText(`Km ${dataList[i].km}`, 50, tCan.height - (bh * 0.5));
+                tCtx.fillText(`Km ${dataList[i].km}`, 50, tCan.height - (bh * 0.45));
                 
-                tCtx.fillStyle = "#ffffff";
+                tCtx.fillStyle = "#fff";
                 tCtx.font = `bold ${bh * 0.15}px Arial`;
-                tCtx.fillText(`DATA: ${new Date().toLocaleDateString()} | TIME: ${dataList[i].ts}`, 50, tCan.height - (bh * 0.22));
-                tCtx.fillText(`MODO SENSOR: ${dataList[i].fLabel}`, 50, tCan.height - (bh * 0.1));
+                tCtx.fillText(`DATA: ${new Date().toLocaleDateString()} | SENSOR: ${dataList[i].fLabel}`, 50, tCan.height - (bh * 0.15));
                 
                 doc.addImage(tCan.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph);
                 r();
@@ -258,13 +250,13 @@ async function savePDF(dataList, kmIni, kmFim) {
         });
     }
 
-    const nome = `RELATORIO_TECNICO_BR116_Km_${kmIni}_AO_${kmFim}.pdf`;
+    const nome = `INSPECAO_V7_Km_${kmIni}_AO_${kmFim}.pdf`;
     try {
         const h = await hDir.getFileHandle(nome, { create: true });
         const w = await h.createWritable();
         await w.write(doc.output('blob'));
         await w.close();
-    } catch (e) { console.error("PDF SAVE ERROR"); }
+    } catch (e) {}
 }
 
 async function loadCSV() {
