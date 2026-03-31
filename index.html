@@ -3,112 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Log de Atividades - OS Administrativa</title>
+    <title>Sistema de Ordem Administrativa - Seguro</title>
     <style>
         :root {
             --primary: #2c3e50;
             --accent: #27ae60;
+            --warning: #e74c3c;
             --bg: #f4f7f6;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
-        .timer-box { background: #eef2f3; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: center; }
-        #currentTime { font-size: 1.2em; font-weight: bold; color: var(--accent); }
+        .timer-box { background: #34495e; color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
+        #currentTime { font-size: 2em; font-weight: bold; font-family: monospace; }
+
+        .shortcuts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 15px; max-height: 250px; overflow-y: auto; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .btn-shortcut { padding: 8px; font-size: 0.75rem; cursor: pointer; background: #ebf0f1; border: 1px solid #bdc3c7; border-radius: 4px; transition: 0.2s; }
+        .btn-shortcut:hover { background: #d5dbdb; }
 
         .input-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; }
-        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        
-        .shortcuts { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
-        .btn-sm { padding: 5px 10px; font-size: 0.8em; cursor: pointer; background: #ddd; border: none; border-radius: 3px; }
-        .btn-sm:hover { background: #ccc; }
+        input[type="text"] { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
 
-        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .main-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        button { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
         .btn-start { background: var(--primary); color: white; }
         .btn-stop { background: var(--accent); color: white; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background: var(--primary); color: white; }
-        
-        .export-actions { margin-top: 20px; display: flex; gap: 10px; }
-        .btn-export { background: #f39c12; color: white; flex: 1; }
+        .btn-clear { background: var(--warning); color: white; margin-top: 10px; width: 100%; }
+
+        .table-container { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f8f9fa; }
+
+        .footer-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .btn-wa { background: #25D366; color: white; }
+        .btn-copy { background: #3498db; color: white; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Registro de Atividades</h2>
-    
     <div class="timer-box">
-        <div id="status">Aguardando início...</div>
+        <div id="status">Status: Pronto para iniciar</div>
         <div id="currentTime">00:00:00</div>
     </div>
 
     <div class="input-group">
-        <label>Descrição da Atividade</label>
-        <div class="shortcuts">
-            <button class="btn-sm" onclick="setDesc('Retirada de materiais p/ atendimento')">📦 Material</button>
-            <button class="btn-sm" onclick="setDesc('Verificação de ordens e relatórios')">📊 Relatórios</button>
-            <button class="btn-sm" onclick="setDesc('Acompanhamento de terceiro no descarte')">♻️ Descarte</button>
-            <button class="btn-sm" onclick="setDesc('Verificação técnica na portaria/acesso')">🚧 Portaria</button>
-            <button class="btn-sm" onclick="setDesc('Atendimento ao cliente/usuário')">👤 Atendimento</button>
-        </div>
-        <input type="text" id="desc" placeholder="Ex: Manutenção no equipamento X">
+        <label><b>Selecione ou digite a atividade:</b></label>
+        <div class="shortcuts" id="shortcutList">
+            </div>
+        <input type="text" id="desc" placeholder="Ou digite outra atividade aqui...">
     </div>
 
-    <div class="actions">
-        <button class="btn-start" onclick="startTask()">▶ Iniciar Tarefa</button>
+    <div class="main-actions">
+        <button class="btn-start" onclick="startTask()">▶ Iniciar Agora</button>
         <button class="btn-stop" onclick="stopTask()">✔ Finalizar e Salvar</button>
     </div>
 
-    <table id="logTable">
-        <thead>
-            <tr>
-                <th>Início</th>
-                <th>Fim</th>
-                <th>Duração</th>
-                <th>Atividade</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-
-    <div class="export-actions">
-        <button class="btn-export" onclick="exportExcel()">Baixar Excel (CSV)</button>
-        <button class="btn-export" style="background:#34495e" onclick="copyToClipboard()">Copiar p/ OS Adm</button>
+    <div class="table-container">
+        <table id="logTable">
+            <thead>
+                <tr>
+                    <th>Início</th>
+                    <th>Fim</th>
+                    <th>Duração</th>
+                    <th>Atividade</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
+
+    <div class="footer-actions">
+        <button class="btn-wa" onclick="sendWhatsApp()">📱 Enviar WhatsApp</button>
+        <button class="btn-copy" onclick="copyToClipboard()">📋 Copiar Texto</button>
+    </div>
+
+    <button class="btn-clear" onclick="clearAllData()">⚠ Limpar Tela e Dados (Zerar Dia)</button>
 </div>
 
 <script>
-    let startTime;
-    let activities = [];
+    const atalhos = [
+        "Material para Anderson", "Material para Fiber Tech", "Atendimento Fiber Tech", "Atendimento Anderson",
+        "Reuniões de equipe terceira", "Reuniões internas", "Verificação dos sistemas", "E-mails", "Documentação",
+        "Fibra ótica", "Acompanhamento de terceiras", "Descarte de materiais", "Separação de materiais",
+        "Apoio técnico interno", "Apoio ao técnico local", "Inspeção noturna", "Inspeção de passarelas",
+        "Transporte de materiais", "Inspeção elétrica", "Análise comportamental", "Levantamento de material",
+        "Levantamento de procedimentos", "Ajustes", "Programação de obras", "Manutenção de Frota",
+        "Feedback com técnicos", "Apoio local/fone"
+    ];
 
-    function setDesc(text) { document.getElementById('desc').value = text; }
+    let activities = JSON.parse(localStorage.getItem('activities')) || [];
+    let startTime = localStorage.getItem('startTime') ? new Date(localStorage.getItem('startTime')) : null;
 
-    function startTask() {
-        startTime = new Date();
-        document.getElementById('status').innerText = "Tarefa em andamento...";
-        document.getElementById('status').style.color = "#e67e22";
-        updateTime();
+    // Inicialização
+    window.onload = () => {
+        renderShortcuts();
+        renderTable();
+        if (startTime) {
+            document.getElementById('status').innerText = "Status: Tarefa em andamento...";
+            updateTicker();
+        }
+    };
+
+    function renderShortcuts() {
+        const container = document.getElementById('shortcutList');
+        atalhos.forEach(item => {
+            let btn = document.createElement('button');
+            btn.className = 'btn-shortcut';
+            btn.innerText = item;
+            btn.onclick = () => document.getElementById('desc').value = item;
+            container.appendChild(btn);
+        });
     }
 
-    function updateTime() {
+    function startTask() {
+        if (startTime) return alert("Já existe uma tarefa em andamento!");
+        startTime = new Date();
+        localStorage.setItem('startTime', startTime.toISOString());
+        document.getElementById('status').innerText = "Status: Tarefa em andamento...";
+        updateTicker();
+    }
+
+    function updateTicker() {
         if (!startTime) return;
         const now = new Date();
         const diff = new Date(now - startTime);
         document.getElementById('currentTime').innerText = diff.toISOString().substr(11, 8);
-        setTimeout(updateTime, 1000);
+        setTimeout(updateTicker, 1000);
     }
 
     function stopTask() {
         if (!startTime) return alert("Inicie uma tarefa primeiro!");
         
         const endTime = new Date();
-        const desc = document.getElementById('desc').value || "Atividade sem descrição";
+        const desc = document.getElementById('desc').value || "Atividade Geral";
         const duration = document.getElementById('currentTime').innerText;
         
         const entry = {
@@ -119,14 +148,16 @@
         };
 
         activities.push(entry);
-        renderTable();
+        localStorage.setItem('activities', JSON.stringify(activities));
         
         // Reset
         startTime = null;
-        document.getElementById('status').innerText = "Aguardando início...";
-        document.getElementById('status').style.color = "inherit";
+        localStorage.removeItem('startTime');
+        document.getElementById('status').innerText = "Status: Salvo com sucesso!";
         document.getElementById('currentTime').innerText = "00:00:00";
         document.getElementById('desc').value = "";
+        
+        renderTable();
     }
 
     function renderTable() {
@@ -138,25 +169,31 @@
                 <td>${a.duration}</td>
                 <td>${a.desc}</td>
             </tr>
-        `).join('');
+        `).reverse().join(''); // Mais recentes no topo
     }
 
-    function exportExcel() {
-        let csv = "Inicio;Fim;Duracao;Atividade\n";
-        activities.forEach(a => {
-            csv += `${a.start};${a.end};${a.duration};${a.desc}\n`;
-        });
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", "atividades_dia.csv");
-        link.click();
+    function getFormatedReport() {
+        return activities.map(a => `📌 *${a.start} - ${a.end}* (${a.duration})\n_${a.desc}_`).join('\n\n');
+    }
+
+    function sendWhatsApp() {
+        const text = encodeURIComponent("*RELATÓRIO DE ORDENS - ADM*\n\n" + getFormatedReport());
+        window.open(`https://wa.me/?text=${text}`, '_blank');
     }
 
     function copyToClipboard() {
-        let text = activities.map(a => `${a.start} às ${a.end} - ${a.desc} (Duração: ${a.duration})`).join('\n');
+        const text = getFormatedReport().replace(/\*/g, '').replace(/_/g, '');
         navigator.clipboard.writeText(text);
-        alert("Lista copiada! Agora é só colar na sua OS Administrativa.");
+        alert("Relatório copiado!");
+    }
+
+    function clearAllData() {
+        if (confirm("Deseja realmente limpar toda a lista e zerar o dia?")) {
+            localStorage.clear();
+            activities = [];
+            startTime = null;
+            location.reload();
+        }
     }
 </script>
 
