@@ -3,268 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Angstrom - High Performance Technical Support</title>
+    <title>CORE ENGINE | GPS Precision & Tracking</title>
     <style>
         :root {
-            --angstrom-gold: #d4af37;
-            --deep-space: #0b0e14;
-            --tech-card: #161b22;
-            --success-glow: #00ff88;
-            --text-main: #e6edf3;
+            --gold: #d4af37;
+            --dark: #0b0e14;
+            --slate: #1c2128;
+            --accent: #00ff88;
         }
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--deep-space); color: var(--text-main); margin: 0; padding: 10px; }
-        .app-wrapper { max-width: 1100px; margin: auto; }
+        body { font-family: 'Inter', sans-serif; background: var(--dark); color: #e6edf3; margin: 0; padding: 10px; }
+        .app { max-width: 900px; margin: auto; }
+
+        /* Monitor de GPS em Tempo Real */
+        .gps-monitor {
+            background: linear-gradient(145deg, #1c2128, #0d1117);
+            border: 2px solid var(--gold);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+        }
+        .km-display { text-align: center; flex: 1; }
+        .km-value { font-size: 3.5rem; font-weight: 900; color: var(--gold); font-family: 'Courier New', monospace; line-height: 1; }
+        .geo-info { font-size: 0.7rem; opacity: 0.6; font-family: monospace; }
         
-        /* Header Executivo */
-        .header-ceo { 
-            background: linear-gradient(145deg, #1c2128, #0d1117); 
-            border: 1px solid var(--angstrom-gold); 
-            padding: 25px; border-radius: 20px; margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .rank-indicator { text-align: right; border-left: 2px solid var(--angstrom-gold); padding-left: 15px; }
-        .rank-text { color: var(--angstrom-gold); font-weight: 800; font-size: 0.75em; letter-spacing: 2px; text-transform: uppercase; }
+        .status-dot { width: 12px; height: 12px; background: var(--accent); border-radius: 50%; display: inline-block; margin-right: 5px; animation: blink 1s infinite; }
 
-        /* Dashboard de Entrada */
-        .input-panel { background: var(--tech-card); padding: 25px; border-radius: 15px; border: 1px solid #30363d; margin-bottom: 20px; }
-        .km-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        /* Painel de Entrada */
+        .control-panel { background: var(--slate); padding: 20px; border-radius: 15px; border: 1px solid #30363d; }
+        .input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        input, select, textarea { width: 100%; background: #0d1117; border: 1px solid #30363d; color: white; padding: 15px; border-radius: 10px; box-sizing: border-box; font-size: 1rem; }
         
-        input, select, textarea { 
-            width: 100%; background: #0d1117; border: 1px solid #30363d; color: white; 
-            padding: 14px; border-radius: 10px; font-size: 1em; transition: 0.3s;
-        }
-        input:focus { border-color: var(--angstrom-gold); box-shadow: 0 0 10px rgba(212, 175, 55, 0.2); }
+        /* Botão de Ação */
+        .btn-main { width: 100%; padding: 20px; border-radius: 12px; border: none; font-weight: 900; font-size: 1.2rem; cursor: pointer; text-transform: uppercase; margin-top: 10px; transition: 0.3s; }
+        .btn-start { background: var(--gold); color: black; }
+        .btn-stop { background: #f85149; color: white; }
 
-        /* Voz e Comando */
-        .voice-section { text-align: center; margin: 15px 0; }
-        .voice-trigger { 
-            background: #f85149; border: none; width: 65px; height: 65px; border-radius: 50%; 
-            cursor: pointer; box-shadow: 0 0 20px rgba(248, 81, 73, 0.3); transition: 0.3s;
-        }
-        .voice-trigger.active { background: var(--success-glow); transform: scale(1.1); box-shadow: 0 0 30px var(--success-glow); }
+        .history { margin-top: 20px; width: 100%; border-collapse: collapse; }
+        .history th { text-align: left; color: var(--gold); font-size: 0.8rem; padding: 10px; border-bottom: 1px solid var(--gold); }
+        .history td { padding: 10px; border-bottom: 1px solid #30363d; font-size: 0.9rem; }
 
-        /* Categorias Massivas (Botões de Alta Performance) */
-        .category-scroll { 
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
-            gap: 12px; height: 350px; overflow-y: auto; padding: 15px;
-            background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid #30363d;
-        }
-        .btn-elite { 
-            background: #21262d; border: 1px solid #363f4a; color: #8b949e; 
-            padding: 15px; border-radius: 8px; cursor: pointer; text-align: left;
-            transition: 0.2s; font-size: 0.85em; display: flex; flex-direction: column;
-        }
-        .btn-elite:hover { border-color: var(--angstrom-gold); color: white; background: #30363d; }
-        .btn-elite b { color: var(--angstrom-gold); margin-bottom: 4px; }
-
-        /* Tabela de Inteligência */
-        .log-table { width: 100%; border-collapse: collapse; margin-top: 25px; border-radius: 10px; overflow: hidden; }
-        .log-table th { background: #161b22; color: var(--angstrom-gold); padding: 15px; text-align: left; font-size: 0.8em; text-transform: uppercase; }
-        .log-table td { background: #0d1117; padding: 15px; border-bottom: 1px solid #21262d; font-size: 0.9em; }
-        .status-pill { padding: 4px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; background: rgba(0,255,136,0.1); color: var(--success-glow); }
-
-        /* Botões de Ação Final */
-        .footer-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 30px; }
-        .btn-final { padding: 18px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
-        .btn-save { background: var(--angstrom-gold); color: black; }
-        .btn-wa { background: #238636; color: white; }
-        .btn-csv { background: #30363d; color: white; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
 
-<div class="app-wrapper">
-    <div class="header-ceo">
-        <div>
-            <h1 style="margin:0; letter-spacing: -1px; color: var(--angstrom-gold);">ANGSTROM PRECISION</h1>
-            <p id="date-info" style="margin:5px 0; opacity: 0.6; font-size: 0.8em;"></p>
+<div class="app">
+    <div class="gps-monitor">
+        <div style="flex:1">
+            <span class="status-dot"></span>
+            <small style="color:var(--accent); font-weight:bold;">GPS ATIVO</small>
+            <div class="geo-info" id="coords">Lat: -- | Lon: --</div>
         </div>
-        <div class="rank-indicator">
-            <div class="rank-text" id="userRank">Especialista de Apoio Técnico</div>
-            <div style="font-size: 1.2em; font-weight: bold; color: var(--success-glow);" id="dailyScore">0 Ativos Cobertos</div>
+        <div class="km-display">
+            <small>KM ATUAL (ESTIMADO)</small>
+            <div class="km-value" id="liveKM">---</div>
+        </div>
+        <div style="flex:1; text-align:right;">
+            <button onclick="getLocation()" style="background:none; border:1px solid var(--gold); color:var(--gold); padding:5px 10px; border-radius:5px; cursor:pointer; font-size:0.7rem;">CALIBRAR GPS</button>
         </div>
     </div>
 
-    <div class="input-panel">
-        <div class="km-row">
+    <div class="control-panel">
+        <div class="input-group">
             <div>
-                <label><small>LOCALIZAÇÃO (KM)</small></label>
-                <input type="text" id="kmInput" placeholder="Ex: 142+500">
+                <label><small>CONFIRMAR KM DO MARCO</small></label>
+                <input type="text" id="manualKM" placeholder="Ex: 145+500">
             </div>
             <div>
                 <label><small>SENTIDO</small></label>
-                <select id="sentidoInput">
+                <select id="sentido">
                     <option value="Norte">Norte (SP)</option>
                     <option value="Sul">Sul (RJ)</option>
-                    <option value="Interno/ADM">Interno / Administrativo</option>
-                    <option value="Canteiro Central">Canteiro Central</option>
-                    <option value="Pátio/Base">Pátio de Operações</option>
-                </select>
-            </div>
-            <div>
-                <label><small>STATUS DE SEGURANÇA</small></label>
-                <select id="segurancaInput">
-                    <option value="Conforme Normas">Conforme Normas Técnicas</option>
-                    <option value="Sinalização Ativa">Sinalização Ativa Local</option>
-                    <option value="Área Segura">Área de Trabalho Segura</option>
+                    <option value="Interno">Interno/Base</option>
                 </select>
             </div>
         </div>
 
-        <div class="voice-section">
-            <button class="voice-trigger" id="voiceBtn" onclick="toggleVoice()">
-                <svg viewBox="0 0 24 24" width="30" height="30" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-            </button>
-            <div id="timerDisplay" style="font-size: 2em; font-family: monospace; margin: 10px 0; color: var(--angstrom-gold);">00:00:00</div>
-            <textarea id="descInput" rows="3" placeholder="Relatório técnico detalhado..."></textarea>
-        </div>
-
-        <button class="btn-final btn-save" id="mainBtn" onclick="handleMainAction()" style="width:100%">Iniciar Operação Técnica</button>
+        <textarea id="desc" rows="3" placeholder="Descreva a operação técnica aqui..."></textarea>
+        
+        <div id="timer" style="text-align:center; font-size:2rem; margin:10px; font-family:monospace; color:var(--gold);">00:00:00</div>
+        
+        <button id="mainBtn" class="btn-main btn-start" onclick="handleOp()">Iniciar Registro</button>
     </div>
 
-    <h3 style="color:var(--angstrom-gold); margin-bottom: 10px;">MATRIZ DE APOIO TÉCNICO & GESTÃO</h3>
-    <div class="category-scroll" id="catGrid"></div>
-
-    <table class="log-table">
+    <table class="history">
         <thead>
             <tr>
-                <th>KM/LOCAL</th>
-                <th>OPERAÇÃO TÉCNICA</th>
-                <th>ENGENHARIA DE VALOR / IMPACTO</th>
-                <th>TIME</th>
+                <th>KM</th>
+                <th>HORÁRIO</th>
+                <th>OPERAÇÃO</th>
+                <th>COORDENADAS</th>
             </tr>
         </thead>
         <tbody id="logBody"></tbody>
     </table>
 
-    <div class="footer-actions">
-        <button class="btn-final btn-csv" onclick="exportCSV()">Exportar Dados (Excel)</button>
-        <button class="btn-final btn-wa" onclick="sendWA()">Relatório Executivo WhatsApp</button>
-        <button class="btn-final" style="background:#f85149; color:white;" onclick="clearDay()">Encerrar Turno</button>
+    <div style="margin-top: 20px; display: flex; gap: 10px;">
+        <button onclick="sendWA()" style="flex:2; background:#238636; color:white; border:none; padding:15px; border-radius:10px; font-weight:bold; cursor:pointer;">ENVIAR RELATÓRIO WHATSAPP</button>
+        <button onclick="clearData()" style="flex:1; background:#30363d; color:white; border:none; padding:15px; border-radius:10px; cursor:pointer;">LIMPAR</button>
     </div>
 </div>
 
 <script>
-    // Dicionário de Engenharia de Qualidade - Transforma o comum no excepcional
-    const techDictionary = [
-        {cat: "Apoio Técnico", title: "Suporte Técnico de Nível 2", desc: "Apoio consultivo especializado para resolução de falhas complexas em campo.", imp: "Minimização do MTTR (Tempo Médio de Reparo)"},
-        {cat: "Fibra/Redes", title: "Otimização de Backbone Óptico", desc: "Intervenção técnica para garantir a integridade física e lógica dos ativos de rede.", imp: "Continuidade da transmissão de dados críticos"},
-        {cat: "Eletrotécnica", title: "Auditoria de Conformidade Elétrica", desc: "Inspeção e ajuste em quadros e sistemas de alimentação para evitar sobrecarga.", imp: "Eficiência energética e prevenção de sinistros"},
-        {cat: "Logística", title: "Gestão Estratégica de Insumos", desc: "Controle e distribuição de materiais para manutenção preventiva e corretiva.", imp: "Prontidão operacional da equipe de campo"},
-        {cat: "Sistemas", title: "Análise de Telemetria e Alarmes", desc: "Monitoramento de sistemas de controle para detecção precoce de anomalias.", imp: "Ações preditivas e redução de paradas não programadas"},
-        {cat: "Segurança", title: "Inspeção de Segurança em Passarelas", desc: "Avaliação técnica estrutural e de iluminação para segurança do pedestre.", imp: "Mitigação de riscos de acidentes e responsabilidade civil"},
-        {cat: "Qualidade", title: "Ajuste e Padronização de Procedimentos", desc: "Refinamento de processos operacionais para elevar o padrão de entrega técnica.", imp: "Engenharia de qualidade e sucesso operacional"},
-        {cat: "Frota", title: "Gestão de Disponibilidade de Ativos", desc: "Checklist e controle de equipamentos e veículos de apoio técnico.", imp: "Garantia de mobilidade e resposta rápida"},
-        {cat: "Terceiras", title: "Fiscalização e Garantia de Qualidade", desc: "Acompanhamento de equipes terceiras para assegurar o cumprimento de normas.", imp: "Conformidade técnica e rigor operacional"},
-        {cat: "Documentação", title: "Atualização de AS-BUILT e Prontuários", desc: "Registro detalhado de alterações na rede para futuras consultas de engenharia.", imp: "Rastreabilidade e inteligência de ativos"}
-    ];
+    let logs = JSON.parse(localStorage.getItem('gps_logs')) || [];
+    let start = localStorage.getItem('gps_start') ? new Date(localStorage.getItem('gps_start')) : null;
+    let timerId;
+    let watchId;
 
-    let acts = JSON.parse(localStorage.getItem('ang_acts_v3')) || [];
-    let start = localStorage.getItem('ang_start_v3') ? new Date(localStorage.getItem('ang_start_v3')) : null;
-    let timer;
-
+    // Inicia monitoramento de GPS ao carregar
     window.onload = () => {
-        document.getElementById('date-info').innerText = new Date().toLocaleDateString('pt-br', {weekday:'long', day:'2-digit', month:'long', year:'numeric'});
-        renderGrid();
-        renderTable();
+        initGPS();
+        render();
         if(start) startUI();
     };
 
-    function renderGrid() {
-        const grid = document.getElementById('catGrid');
-        techDictionary.forEach(item => {
-            let b = document.createElement('button');
-            b.className = 'btn-elite';
-            b.innerHTML = `<b>${item.title}</b><small>${item.cat}</small>`;
-            b.onclick = () => {
-                document.getElementById('descInput').value = item.desc;
-                document.getElementById('descInput').dataset.impacto = item.imp;
-            };
-            grid.appendChild(b);
-        });
+    function initGPS() {
+        if ("geolocation" in navigator) {
+            watchId = navigator.geolocation.watchPosition(pos => {
+                const lat = pos.coords.latitude.toFixed(5);
+                const lon = pos.coords.longitude.toFixed(5);
+                document.getElementById('coords').innerText = `Lat: ${lat} | Lon: ${lon}`;
+                
+                // Lógica de "Sugestão de KM" (Apenas para exibir movimento)
+                // Aqui você pode integrar uma API de quilometragem real da rodovia se disponível
+                document.getElementById('liveKM').innerText = (Math.abs(lat) * 10).toFixed(0); 
+            }, err => {
+                console.error("Erro GPS:", err);
+            }, { enableHighAccuracy: true });
+        }
     }
 
-    function toggleVoice() {
-        const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        rec.lang = 'pt-BR';
-        const btn = document.getElementById('voiceBtn');
-        rec.onstart = () => btn.classList.add('active');
-        rec.onresult = (e) => {
-            document.getElementById('descInput').value = e.results.transcript;
-            btn.classList.remove('active');
-        };
-        rec.start();
-    }
-
-    function handleMainAction() {
+    function handleOp() {
         const btn = document.getElementById('mainBtn');
         if(!start) {
             start = new Date();
-            localStorage.setItem('ang_start_v3', start.toISOString());
+            localStorage.setItem('gps_start', start.toISOString());
             startUI();
         } else {
             const entry = {
-                km: document.getElementById('kmInput').value || "ADM",
-                sentido: document.getElementById('sentidoInput').value,
-                seg: document.getElementById('segurancaInput').value,
+                km: document.getElementById('manualKM').value || document.getElementById('liveKM').innerText,
+                sentido: document.getElementById('sentido').value,
+                desc: document.getElementById('desc').value || "Operação Técnica",
+                coords: document.getElementById('coords').innerText,
                 inicio: start.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
                 fim: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-                txt: document.getElementById('descInput').value,
-                impacto: document.getElementById('descInput').dataset.impacto || "Otimização Técnica",
-                total: document.getElementById('timerDisplay').innerText
+                total: document.getElementById('timer').innerText
             };
-            acts.push(entry);
-            localStorage.setItem('ang_acts_v3', JSON.stringify(acts));
+            logs.push(entry);
+            localStorage.setItem('gps_logs', JSON.stringify(logs));
             start = null;
-            localStorage.removeItem('ang_start_v3');
+            localStorage.removeItem('gps_start');
             location.reload();
         }
     }
 
     function startUI() {
         const btn = document.getElementById('mainBtn');
-        btn.innerText = "Finalizar e Registrar Valor";
-        btn.style.background = "#f85149";
-        timer = setInterval(() => {
-            const d = new Date(new Date() - start);
-            document.getElementById('timerDisplay').innerText = d.toISOString().substr(11, 8);
+        btn.innerText = "Finalizar e Salvar Local";
+        btn.className = "btn-main btn-stop";
+        timerId = setInterval(() => {
+            const diff = new Date(new Date() - start);
+            document.getElementById('timer').innerText = diff.toISOString().substr(11, 8);
         }, 1000);
     }
 
-    function renderTable() {
-        const b = document.getElementById('logBody');
-        b.innerHTML = acts.map(a => `
+    function render() {
+        const body = document.getElementById('logBody');
+        body.innerHTML = logs.map(l => `
             <tr>
-                <td><b>KM ${a.km}</b><br><small>${a.sentido}</small></td>
-                <td>${a.txt}<br><span class="status-pill">${a.seg}</span></td>
-                <td style="color:var(--angstrom-gold)">🚀 ${a.impacto}</td>
-                <td>${a.inicio} - ${a.fim}<br><small>${a.total}</small></td>
+                <td style="color:var(--gold); font-weight:bold;">KM ${l.km}</td>
+                <td>${l.inicio} - ${l.fim}</td>
+                <td>${l.desc}</td>
+                <td style="font-size:0.6rem; opacity:0.5;">${l.coords}</td>
             </tr>
         `).reverse().join('');
-        document.getElementById('dailyScore').innerText = acts.length + " Ativos Cobertos";
     }
 
     function sendWA() {
-        let t = `*ANGSTROM - RELATÓRIO EXECUTIVO DE ALTO DESEMPENHO*\n`;
-        t += `_Foco: Apoio Técnico Estratégico e Engenharia de Qualidade_\n\n`;
-        acts.forEach(a => {
-            t += `📍 *LOCAL: KM ${a.km} (${a.sentido})*\n🛠 *AÇÃO:* ${a.txt}\n🛡 *SEGURANÇA:* ${a.seg}\n🚀 *IMPACTO:* ${a.impacto}\n⏱ *PERÍODO:* ${a.inicio} às ${a.fim}\n\n`;
+        let t = `*RELATÓRIO TÉCNICO COM EVIDÊNCIA GPS*\n\n`;
+        logs.forEach(l => {
+            t += `📍 *KM ${l.km} (${l.sentido})*\n🛠 ${l.desc}\n🕒 ${l.inicio} às ${l.fim}\n🌎 ${l.coords}\n\n`;
         });
-        t += `*EFICIÊNCIA DO TURNO:* ${acts.length} operações realizadas com sucesso.`;
         window.open(`https://wa.me/?text=${encodeURIComponent(t)}`);
     }
 
-    function exportCSV() {
-        let c = "KM;Sentido;Seguranca;Inicio;Fim;Descricao;Impacto\n";
-        acts.forEach(a => c += `${a.km};${a.sentido};${a.seg};${a.inicio};${a.fim};${a.txt};${a.impacto}\n`);
-        const blob = new Blob([c], {type:'text/csv'});
-        const url = URL.createObjectURL(blob);
-        const l = document.createElement('a');
-        l.href = url; l.download = 'relatorio_angstrom_elite.csv'; l.click();
-    }
-
-    function clearDay() { if(confirm("Encerrar turno e gerar indicadores?")) { localStorage.clear(); location.reload(); } }
+    function clearData() { if(confirm("Zerar dia?")) { localStorage.clear(); location.reload(); } }
 </script>
 
 </body>
