@@ -3,160 +3,135 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sistema de Foto-Captura automatica</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<title>KM AO VIVO</title>
 
 <style>
-:root { --accent:#ffcc00; --placa-verde:#007934; --danger:#ff4444; --glass:rgba(10,10,10,.95); }
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#000;color:#fff;font-family:Inter,sans-serif;overflow:hidden;height:100vh}
-#safety-gate{position:fixed;inset:0;background:#000;z-index:5000;display:flex;align-items:center;justify-content:center}
-.alert-box{border:1px solid #333;padding:40px;border-radius:15px;text-align:center;max-width:90%;background:#0a0a0a}
-.img-proibido{width:120px;margin-bottom:20px}
-.msg-seguranca{color:#ff4444;font-weight:700;margin-bottom:20px;font-size:1.1rem}
-.btn-aware{background:var(--accent);color:#000;border:none;padding:18px 40px;font-weight:900;border-radius:8px;cursor:pointer}
-#app-shell{position:relative;width:100vw;height:100vh;visibility:hidden}
-video{width:100%;height:100%;object-fit:cover}
-#km-hud{position:absolute;top:20px;left:20px;background:var(--placa-verde);padding:15px 25px;border:3px solid #fff;border-radius:8px;z-index:100}
-#km-hud h1{font-size:2.2rem;font-weight:900}
-#rec-tag{position:absolute;top:110px;right:20px;display:flex;gap:10px;background:rgba(0,0,0,.7);padding:8px 15px;border-radius:30px;opacity:0;transition:.3s;z-index:100}
-.dot{width:12px;height:12px;background:#f00;border-radius:50%;animation:blink 1s infinite}
-@keyframes blink{50%{opacity:0}}
-#settings-panel{position:fixed;right:-350px;top:0;width:320px;height:100%;background:var(--glass);z-index:4000;padding:60px 25px;transition:.4s;border-left:1px solid #333}
-#settings-panel.open{right:0}
-.close-settings{position:absolute;top:20px;left:20px;color:var(--accent);cursor:pointer}
-.field{margin-bottom:25px}
-.field label{font-size:12px;color:#888;margin-bottom:8px;display:block}
-input,select{width:100%;background:#1a1a1a;border:1px solid #333;color:#fff;padding:12px;border-radius:5px}
-#ui-controls{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);display:flex;gap:20px;z-index:100}
-.btn-main{border:none;padding:22px 45px;border-radius:10px;font-weight:900;cursor:pointer}
-#btn-start{background:var(--accent);color:#000}
-#btn-stop{background:var(--danger);color:#fff;display:none}
-#gear-btn{width:60px;height:60px;background:rgba(255,255,255,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer}
-canvas{display:none}
+:root {
+  --placa-verde: #007934;
+  --branco: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--placa-verde);
+  color: var(--branco);
+  font-family: Arial, Helvetica, sans-serif;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* PLACA DE KM FULL SCREEN */
+#km-placa {
+  border: 12px solid #fff;
+  border-radius: 16px;
+  padding: 40px 80px;
+  box-shadow: 0 0 50px rgba(0,0,0,0.6);
+  text-align: center;
+}
+
+#km-placa h1 {
+  font-size: 20vw;
+  font-weight: 900;
+  letter-spacing: 6px;
+}
+
+/* AJUSTE PARA TELAS MENORES */
+@media (max-width: 600px) {
+  #km-placa h1 {
+    font-size: 28vw;
+  }
+}
 </style>
 </head>
 
-<body onclick="refreshWakeLock()">
+<body onclick="requestFull()">
 
-<div id="safety-gate">
-  <div class="alert-box">
-    <img src="proibido.png" class="img-proibido">
-    <div class="msg-seguranca">NÃO DIRIJA USANDO O CELULAR</div>
-    <h2 style="color:var(--accent)">SEGURANÇA ATIVA</h2>
-    <button class="btn-aware" onclick="startApp()">ENTRAR NO SISTEMA</button>
-  </div>
+<div id="km-placa">
+  <h1 id="km-txt">Km ---+---</h1>
 </div>
-
-<div id="settings-panel">
-  <div class="close-settings" onclick="toggleSet()">← VOLTAR</div>
-  <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-  <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
-  <div class="field"><label>Fotos por Relatório</label><input type="number" id="cfg-lote" value="50"></div>
-</div>
-
-<div id="app-shell">
-  <video id="vid" autoplay playsinline muted></video>
-  <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
-  <div id="rec-tag"><div class="dot"></div><span>ON</span></div>
-  <div id="ui-controls">
-    <div id="gear-btn" onclick="toggleSet()">⚙</div>
-    <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR CAPTURA</button>
-    <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR TUDO</button>
-  </div>
-</div>
-
-<canvas id="c"></canvas>
 
 <script>
-let kmDB=[],capturing=false,buffer=[],hDir=null,currentStream=null,wakeLock=null;
-let kmInicialLote="";
-const vid=document.getElementById('vid'),can=document.getElementById('c'),ctx=can.getContext('2d');
+let kmDB = [];
 
-async function refreshWakeLock(){
- if('wakeLock'in navigator){try{wakeLock=await navigator.wakeLock.request('screen')}catch(e){}}
+/* FULLSCREEN */
+function requestFull() {
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen();
+  }
 }
 
-async function startApp(){
- hDir=await window.showDirectoryPicker({mode:'readwrite'});
- document.getElementById('safety-gate').remove();
- document.getElementById('app-shell').style.visibility='visible';
- listCams(); refreshWakeLock();
- document.documentElement.requestFullscreen?.();
+/* CARREGA BASE DE KM */
+async function loadCSV() {
+  try {
+    const r = await fetch('SNVBR116SPRJ.csv?v=' + Date.now());
+    const t = await r.text();
+
+    const rows = t.split('\n').filter(l => l.includes(';'));
+    const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
+
+    const ik = h.findIndex(x => x.includes('km'));
+    const ilt = h.findIndex(x => x.includes('lat'));
+    const iln = h.findIndex(x => x.includes('lon'));
+
+    kmDB = rows.map(r => {
+      const c = r.split(';');
+      return {
+        km: c[ik],
+        lt: parseFloat(c[ilt].replace(',', '.')),
+        ln: parseFloat(c[iln].replace(',', '.'))
+      };
+    }).filter(p => !isNaN(p.lt));
+
+  } catch (e) {
+    console.error('Erro ao carregar CSV');
+  }
 }
 
-/* ====== OPÇÕES DE CÂMERA APRIMORADAS ====== */
+/* GPS AO VIVO */
+function initGPS() {
+  navigator.geolocation.watchPosition(pos => {
+    if (!kmDB.length) return;
 
-async function listCams(){
- const devices=await navigator.mediaDevices.enumerateDevices();
- const cams=devices.filter(d=>d.kind==='videoinput');
- const sel=document.getElementById('cam-select'); sel.innerHTML='';
- cams.forEach((c,i)=>{
-  const o=document.createElement('option');
-  o.value=c.deviceId;
-  o.text=c.label||`CÂMERA ${i+1}`;
-  sel.appendChild(o);
- });
- const back=cams.find(c=>/back|rear/i.test(c.label));
- switchCam(back?back.deviceId:cams.at(-1).deviceId);
+    let melhor = null;
+    let menor = Infinity;
+
+    for (const p of kmDB) {
+      const d = Math.hypot(
+        p.lt - pos.coords.latitude,
+        p.ln - pos.coords.longitude
+      );
+      if (d < menor) {
+        menor = d;
+        melhor = p;
+      }
+    }
+
+    if (melhor) {
+      document.getElementById('km-txt').innerText = 'Km ' + melhor.km;
+    }
+  }, null, {
+    enableHighAccuracy: true,
+    maximumAge: 500,
+    timeout: 5000
+  });
 }
 
-async function switchCam(id){
- if(currentStream)currentStream.getTracks().forEach(t=>t.stop());
- currentStream=await navigator.mediaDevices.getUserMedia({
-  video:{
-   deviceId:{exact:id},
-   width:{ideal:1920},
-   height:{ideal:1080},
-   frameRate:{ideal:60,max:60},
-   facingMode:"environment"
-  },
-  audio:false
- });
- vid.srcObject=currentStream;
- vid.onloadedmetadata=()=>{can.width=vid.videoWidth;can.height=vid.videoHeight};
-
- const track=currentStream.getVideoTracks()[0];
- const caps=track.getCapabilities?.();
- if(caps){
-  const adv={};
-  if(caps.focusMode?.includes('continuous'))adv.focusMode='continuous';
-  if(caps.exposureMode?.includes('continuous'))adv.exposureMode='continuous';
-  if(caps.zoom)adv.zoom=caps.zoom.max;
-  Object.keys(adv).length&&track.applyConstraints({advanced:[adv]});
- }
-}
-
-/* ====== RESTANTE DO SISTEMA (INALTERADO) ====== */
-
-function toggleSet(){document.getElementById('settings-panel').classList.toggle('open')}
-
-function startCapture(){
- capturing=true;buffer=[];
- kmInicialLote=document.getElementById('km-txt').innerText.replace("Km ","");
- document.getElementById('btn-start').style.display='none';
- document.getElementById('btn-stop').style.display='block';
- document.getElementById('rec-tag').style.opacity='1';
- captureLoop();
-}
-
-function stopCapture(){
- capturing=false;
- if(buffer.length)savePDF([...buffer],kmInicialLote,document.getElementById('km-txt').innerText.replace("Km ",""));
- buffer=[];
- document.getElementById('btn-start').style.display='block';
- document.getElementById('btn-stop').style.display='none';
- document.getElementById('rec-tag').style.opacity='0';
-}
-
-function captureLoop(){
- if(!capturing)return;
- if(vid.readyState===vid.HAVE_ENOUGH_DATA){
-  ctx.drawImage(vid,0,0,can.width,can.height);
-  buffer.push({img:can.toDataURL('image/jpeg',0.4),km:document.getElementById('km-txt').innerText.replace("Km ",""),ts:new Date().toLocaleString('pt-BR')});
- }
- setTimeout(captureLoop,Number(cfg-int.value)||200);
-}
+/* INICIALIZA */
+window.onload = () => {
+  loadCSV();
+  initGPS();
+  requestFull();
+};
 </script>
+
 </body>
 </html>
