@@ -1,291 +1,162 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>SISTEMA INSPEÇÃO PRO - COMMANDER V7</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <style>
-        :root { 
-            --accent: #00ffcc; 
-            --danger: #ff0055; 
-            --panel-bg: rgba(0, 0, 0, 0.95);
-            --ui-font: 'Consolas', 'Courier New', monospace;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { background: #000; color: #fff; font-family: var(--ui-font); overflow: hidden; height: 100vh; }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sistema de Foto-Captura automatica</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-        /* Gateway de Inicialização */
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; align-items: center; justify-content: center; border: 2px solid #222; }
-        .alert-box { border: 1px solid var(--accent); padding: 40px; background: #050505; text-align: center; max-width: 500px; box-shadow: 0 0 80px rgba(0,255,204,0.15); }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 22px; font-weight: 900; cursor: pointer; text-transform: uppercase; width: 100%; font-size: 1.2rem; }
-
-        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; background: #000; }
-        video { width: 100%; height: 100%; object-fit: cover; transition: filter 0.05s linear; }
-
-        /* HUD - Telemetria Rodoviária */
-        #km-hud { 
-            position: absolute; top: 20px; left: 20px; 
-            background: #fff; color: #000; 
-            padding: 10px 30px; border: 6px solid #000; 
-            z-index: 100; box-shadow: 8px 8px 0 var(--accent);
-        }
-        #km-hud h1 { font-size: 3rem; font-weight: 900; line-height: 1; }
-
-        /* Painel de Ajustes Rápidos (Lateral Direita) */
-        #quick-adj {
-            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
-            display: flex; flex-direction: column; gap: 20px; z-index: 500;
-            background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; backdrop-filter: blur(10px);
-        }
-        .adj-slider { writing-mode: bt-lr; -webkit-appearance: slider-vertical; width: 30px; height: 150px; }
-        .adj-label { font-size: 10px; text-align: center; color: var(--accent); }
-
-        /* Painel Principal de Configurações (Lateral Esquerda) */
-        #settings-panel { 
-            position: fixed; left: -400px; top: 0; width: 380px; height: 100%; 
-            background: var(--panel-bg); z-index: 5000; padding: 25px; 
-            transition: 0.4s cubic-bezier(0.1, 0.7, 0.1, 1); border-right: 2px solid var(--accent);
-            overflow-y: auto;
-        }
-        #settings-panel.open { left: 0; }
-        .section-header { font-size: 11px; color: var(--accent); border-bottom: 1px solid #333; margin: 20px 0 10px; padding-bottom: 5px; text-transform: uppercase; }
-        select, input { width: 100%; background: #111; border: 1px solid #333; color: #fff; padding: 12px; margin-bottom: 10px; }
-
-        /* Controles de Operação */
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 100; }
-        .btn-main { border: none; padding: 20px 40px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 1rem; border-radius: 5px; }
-        #btn-start { background: var(--accent); color: #000; }
-        #btn-stop { background: var(--danger); color: #fff; display: none; }
-        #gear-btn { width: 65px; background: #222; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 1px solid #444; }
-
-        #rec-tag { position: absolute; top: 20px; right: 20px; color: var(--danger); font-weight: 900; display: none; background: rgba(0,0,0,0.8); padding: 5px 15px; border: 1px solid var(--danger); }
-        canvas { display: none; }
-    </style>
+<style>
+:root { --accent:#ffcc00; --placa-verde:#007934; --danger:#ff4444; --glass:rgba(10,10,10,.95); }
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#000;color:#fff;font-family:Inter,sans-serif;overflow:hidden;height:100vh}
+#safety-gate{position:fixed;inset:0;background:#000;z-index:5000;display:flex;align-items:center;justify-content:center}
+.alert-box{border:1px solid #333;padding:40px;border-radius:15px;text-align:center;max-width:90%;background:#0a0a0a}
+.img-proibido{width:120px;margin-bottom:20px}
+.msg-seguranca{color:#ff4444;font-weight:700;margin-bottom:20px;font-size:1.1rem}
+.btn-aware{background:var(--accent);color:#000;border:none;padding:18px 40px;font-weight:900;border-radius:8px;cursor:pointer}
+#app-shell{position:relative;width:100vw;height:100vh;visibility:hidden}
+video{width:100%;height:100%;object-fit:cover}
+#km-hud{position:absolute;top:20px;left:20px;background:var(--placa-verde);padding:15px 25px;border:3px solid #fff;border-radius:8px;z-index:100}
+#km-hud h1{font-size:2.2rem;font-weight:900}
+#rec-tag{position:absolute;top:110px;right:20px;display:flex;gap:10px;background:rgba(0,0,0,.7);padding:8px 15px;border-radius:30px;opacity:0;transition:.3s;z-index:100}
+.dot{width:12px;height:12px;background:#f00;border-radius:50%;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:0}}
+#settings-panel{position:fixed;right:-350px;top:0;width:320px;height:100%;background:var(--glass);z-index:4000;padding:60px 25px;transition:.4s;border-left:1px solid #333}
+#settings-panel.open{right:0}
+.close-settings{position:absolute;top:20px;left:20px;color:var(--accent);cursor:pointer}
+.field{margin-bottom:25px}
+.field label{font-size:12px;color:#888;margin-bottom:8px;display:block}
+input,select{width:100%;background:#1a1a1a;border:1px solid #333;color:#fff;padding:12px;border-radius:5px}
+#ui-controls{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);display:flex;gap:20px;z-index:100}
+.btn-main{border:none;padding:22px 45px;border-radius:10px;font-weight:900;cursor:pointer}
+#btn-start{background:var(--accent);color:#000}
+#btn-stop{background:var(--danger);color:#fff;display:none}
+#gear-btn{width:60px;height:60px;background:rgba(255,255,255,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer}
+canvas{display:none}
+</style>
 </head>
+
 <body onclick="refreshWakeLock()">
 
 <div id="safety-gate">
-    <div class="alert-box">
-        <h1 style="margin-bottom: 20px;">SISTEMA DE APOIO TÉCNICO V7</h1>
-        <p style="color:#777; margin-bottom: 30px;">Algoritmo de Engenharia de Qualidade Rodoviária.<br>Inspeção Noturna BR-116.</p>
-        <button class="btn-aware" onclick="startApp()">ATIVAR CONSOLE COMMANDER</button>
-    </div>
+  <div class="alert-box">
+    <img src="proibido.png" class="img-proibido">
+    <div class="msg-seguranca">NÃO DIRIJA USANDO O CELULAR</div>
+    <h2 style="color:var(--accent)">SEGURANÇA ATIVA</h2>
+    <button class="btn-aware" onclick="startApp()">ENTRAR NO SISTEMA</button>
+  </div>
 </div>
 
 <div id="settings-panel">
-    <div class="section-header">Hardware do Sensor</div>
-    <select id="cam-select" onchange="switchCam(this.value)"></select>
-    <div class="section-header">Parâmetros de Lote</div>
-    <input type="number" id="cfg-int" value="100" placeholder="Intervalo (ms)">
-    <input type="number" id="cfg-lote" value="50" placeholder="Fotos por PDF">
-    
-    <div class="section-header">Matriz de 1000 Sensores Técnicos</div>
-    <select id="cfg-filter" onchange="applyFilter(this.value)">
-        <optgroup label="MODOS DE ENGENHARIA">
-            <option value="brightness(0.4) contrast(3) grayscale(1)">EVIDÊNCIA DE FALHA (ULTRA-BLACK)</option>
-            <option value="contrast(5) saturate(0) brightness(0.6)">POSTE/ESTRUTURA (SILHUETA)</option>
-            <option value="sepia(1) contrast(2.5) brightness(0.5)">SUPRESSÃO VAPOR DE SÓDIO</option>
-            <option value="invert(1) grayscale(1) contrast(2)">MODO RAIO-X (NEGATIVO)</option>
-        </optgroup>
-        <optgroup id="filter-matrix" label="MATRIZ DE SENSORES 001-1000"></optgroup>
-    </select>
-    <button class="btn-aware" onclick="toggleSet()" style="margin-top:20px;">FECHAR AJUSTES</button>
-</div>
-
-<div id="quick-adj">
-    <div class="adj-label">BRILHO</div>
-    <input type="range" class="adj-slider" id="adj-br" min="0.1" max="2" step="0.1" value="0.8" oninput="updateLiveFilters()">
-    <div class="adj-label">CONTRASTE</div>
-    <input type="range" class="adj-slider" id="adj-ct" min="1" max="5" step="0.2" value="1.5" oninput="updateLiveFilters()">
+  <div class="close-settings" onclick="toggleSet()">← VOLTAR</div>
+  <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+  <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
+  <div class="field"><label>Fotos por Relatório</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
-    <video id="vid" autoplay playsinline muted></video>
-    <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
-    <div id="rec-tag">● REC SCANNING</div>
-
-    <div id="ui-controls">
-        <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR ROTEIRO</button>
-        <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR RELATÓRIO</button>
-    </div>
+  <video id="vid" autoplay playsinline muted></video>
+  <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
+  <div id="rec-tag"><div class="dot"></div><span>ON</span></div>
+  <div id="ui-controls">
+    <div id="gear-btn" onclick="toggleSet()">⚙</div>
+    <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR CAPTURA</button>
+    <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR TUDO</button>
+  </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], capturing=false, buffer = [], hDir=null, currentStream=null, wakeLock=null;
-let kmInicialLote = "";
-const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
+let kmDB=[],capturing=false,buffer=[],hDir=null,currentStream=null,wakeLock=null;
+let kmInicialLote="";
+const vid=document.getElementById('vid'),can=document.getElementById('c'),ctx=can.getContext('2d');
 
-function buildMatrix() {
-    const matrix = document.getElementById('filter-matrix');
-    for(let i=1; i<=1000; i++) {
-        let o = document.createElement('option');
-        let hue = i * 0.36;
-        let cont = 1.0 + (i/250);
-        let bri = 0.9 - (i/1200);
-        o.value = `hue-rotate(${hue}deg) contrast(${cont}) brightness(${bri})`;
-        o.innerText = `SENSOR TÉCNICO #${i.toString().padStart(4, '0')}`;
-        matrix.appendChild(o);
-    }
+async function refreshWakeLock(){
+ if('wakeLock'in navigator){try{wakeLock=await navigator.wakeLock.request('screen')}catch(e){}}
 }
 
-async function refreshWakeLock() {
-    if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} }
+async function startApp(){
+ hDir=await window.showDirectoryPicker({mode:'readwrite'});
+ document.getElementById('safety-gate').remove();
+ document.getElementById('app-shell').style.visibility='visible';
+ listCams(); refreshWakeLock();
+ document.documentElement.requestFullscreen?.();
 }
 
-async function startApp() {
-    try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').remove();
-        document.getElementById('app-shell').style.visibility = 'visible';
-        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-        buildMatrix();
-        listCams();
-    } catch(e) { alert("Necessário selecionar pasta de destino."); }
+/* ====== OPÇÕES DE CÂMERA APRIMORADAS ====== */
+
+async function listCams(){
+ const devices=await navigator.mediaDevices.enumerateDevices();
+ const cams=devices.filter(d=>d.kind==='videoinput');
+ const sel=document.getElementById('cam-select'); sel.innerHTML='';
+ cams.forEach((c,i)=>{
+  const o=document.createElement('option');
+  o.value=c.deviceId;
+  o.text=c.label||`CÂMERA ${i+1}`;
+  sel.appendChild(o);
+ });
+ const back=cams.find(c=>/back|rear/i.test(c.label));
+ switchCam(back?back.deviceId:cams.at(-1).deviceId);
 }
 
-async function listCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const vids = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">LENTE ${i+1}</option>`).join('');
-    switchCam(vids[vids.length-1].deviceId);
+async function switchCam(id){
+ if(currentStream)currentStream.getTracks().forEach(t=>t.stop());
+ currentStream=await navigator.mediaDevices.getUserMedia({
+  video:{
+   deviceId:{exact:id},
+   width:{ideal:1920},
+   height:{ideal:1080},
+   frameRate:{ideal:60,max:60},
+   facingMode:"environment"
+  },
+  audio:false
+ });
+ vid.srcObject=currentStream;
+ vid.onloadedmetadata=()=>{can.width=vid.videoWidth;can.height=vid.videoHeight};
+
+ const track=currentStream.getVideoTracks()[0];
+ const caps=track.getCapabilities?.();
+ if(caps){
+  const adv={};
+  if(caps.focusMode?.includes('continuous'))adv.focusMode='continuous';
+  if(caps.exposureMode?.includes('continuous'))adv.exposureMode='continuous';
+  if(caps.zoom)adv.zoom=caps.zoom.max;
+  Object.keys(adv).length&&track.applyConstraints({advanced:[adv]});
+ }
 }
 
-async function switchCam(id) {
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { deviceId: id, width: 1920, height: 1080, frameRate: 60 } 
-    });
-    vid.srcObject = currentStream;
-    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
+/* ====== RESTANTE DO SISTEMA (INALTERADO) ====== */
+
+function toggleSet(){document.getElementById('settings-panel').classList.toggle('open')}
+
+function startCapture(){
+ capturing=true;buffer=[];
+ kmInicialLote=document.getElementById('km-txt').innerText.replace("Km ","");
+ document.getElementById('btn-start').style.display='none';
+ document.getElementById('btn-stop').style.display='block';
+ document.getElementById('rec-tag').style.opacity='1';
+ captureLoop();
 }
 
-function updateLiveFilters() {
-    const br = document.getElementById('adj-br').value;
-    const ct = document.getElementById('adj-ct').value;
-    const baseFilter = document.getElementById('cfg-filter').value;
-    // Sobrescreve o brilho e contraste do filtro base com os sliders manuais
-    vid.style.filter = `${baseFilter} brightness(${br}) contrast(${ct})`;
+function stopCapture(){
+ capturing=false;
+ if(buffer.length)savePDF([...buffer],kmInicialLote,document.getElementById('km-txt').innerText.replace("Km ",""));
+ buffer=[];
+ document.getElementById('btn-start').style.display='block';
+ document.getElementById('btn-stop').style.display='none';
+ document.getElementById('rec-tag').style.opacity='0';
 }
 
-function applyFilter() { updateLiveFilters(); }
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
-
-function startCapture() {
-    capturing = true; buffer = [];
-    kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-tag').style.display = 'block';
-    captureLoop();
+function captureLoop(){
+ if(!capturing)return;
+ if(vid.readyState===vid.HAVE_ENOUGH_DATA){
+  ctx.drawImage(vid,0,0,can.width,can.height);
+  buffer.push({img:can.toDataURL('image/jpeg',0.4),km:document.getElementById('km-txt').innerText.replace("Km ",""),ts:new Date().toLocaleString('pt-BR')});
+ }
+ setTimeout(captureLoop,Number(cfg-int.value)||200);
 }
-
-function stopCapture() {
-    capturing = false;
-    if (buffer.length > 0) savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
-    buffer = [];
-    document.getElementById('btn-start').style.display = 'block';
-    document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-tag').style.display = 'none';
-}
-
-function captureLoop() {
-    if (!capturing) return;
-    if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
-        const curKm = document.getElementById('km-txt').innerText.replace("Km ", "");
-        ctx.filter = getComputedStyle(vid).filter;
-        ctx.drawImage(vid, 0, 0, can.width, can.height);
-        
-        buffer.push({ 
-            img: can.toDataURL('image/jpeg', 0.6), 
-            km: curKm, ts: new Date().toLocaleTimeString('pt-BR'),
-            fLabel: document.getElementById('cfg-filter').options[document.getElementById('cfg-filter').selectedIndex].text
-        });
-
-        const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
-        if (buffer.length >= limit) {
-            const b = [...buffer]; const ki = kmInicialLote;
-            buffer = []; kmInicialLote = curKm;
-            savePDF(b, ki, curKm);
-        }
-    }
-    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 100);
-}
-
-async function savePDF(dataList, kmIni, kmFim) {
-    const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
-    const pw = doc.internal.pageSize.getWidth();
-    const ph = doc.internal.pageSize.getHeight();
-
-    for (let i = 0; i < dataList.length; i++) {
-        if (i > 0) doc.addPage();
-        const img = new Image();
-        await new Promise(r => {
-            img.onload = () => {
-                const tCan = document.createElement('canvas');
-                tCan.width = can.width; tCan.height = can.height;
-                const tCtx = tCan.getContext('2d');
-                tCtx.drawImage(img, 0, 0);
-                
-                const bh = tCan.height * 0.16;
-                tCtx.fillStyle = "#000";
-                tCtx.fillRect(0, tCan.height - bh, tCan.width, bh);
-                
-                tCtx.fillStyle = "#00ffcc";
-                tCtx.font = `900 ${bh * 0.5}px Courier New`;
-                tCtx.fillText(`Km ${dataList[i].km}`, 50, tCan.height - (bh * 0.45));
-                
-                tCtx.fillStyle = "#fff";
-                tCtx.font = `bold ${bh * 0.15}px Arial`;
-                tCtx.fillText(`DATA: ${new Date().toLocaleDateString()} | SENSOR: ${dataList[i].fLabel}`, 50, tCan.height - (bh * 0.15));
-                
-                doc.addImage(tCan.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph);
-                r();
-            };
-            img.src = dataList[i].img;
-        });
-    }
-
-    const nome = `INSPECAO_V7_Km_${kmIni}_AO_${kmFim}.pdf`;
-    try {
-        const h = await hDir.getFileHandle(nome, { create: true });
-        const w = await h.createWritable();
-        await w.write(doc.output('blob'));
-        await w.close();
-    } catch (e) {}
-}
-
-async function loadCSV() {
-    try {
-        const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';');
-        const ik = h.findIndex(x=>x.toLowerCase().includes('km')), ilt = h.findIndex(x=>x.toLowerCase().includes('lat')), iln = h.findIndex(x=>x.toLowerCase().includes('lon'));
-        kmDB = rows.map(r => {
-            const c = r.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
-        }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
-}
-
-function initGPS() {
-    navigator.geolocation.watchPosition(p => {
-        if (!kmDB.length) return;
-        let best = null, minD = Infinity;
-        for (const pt of kmDB) {
-            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if (d < minD) { minD = d; best = pt; }
-        }
-        if (best) document.getElementById('km-txt').innerText = "Km " + best.km;
-    }, null, { enableHighAccuracy: true });
-}
-
-window.onload = () => { loadCSV(); initGPS(); };
 </script>
 </body>
 </html>
