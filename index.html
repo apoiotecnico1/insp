@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KM AO VIVO</title>
+<title>PAINEL KM AO VIVO</title>
 
 <style>
 :root {
@@ -12,9 +12,9 @@
 }
 
 * {
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
 body {
@@ -29,70 +29,102 @@ body {
   justify-content: center;
 }
 
-/* PLACA DE KM FULL SCREEN */
-#km-placa {
+#painel {
   border: 12px solid #fff;
   border-radius: 16px;
   padding: 40px 80px;
-  box-shadow: 0 0 50px rgba(0,0,0,0.6);
   text-align: center;
+  box-shadow: 0 0 50px rgba(0,0,0,.6);
 }
 
-#km-placa h1 {
+#rodovia {
+  font-size: 4vw;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+#km {
   font-size: 20vw;
   font-weight: 900;
   letter-spacing: 6px;
 }
 
-/* AJUSTE PARA TELAS MENORES */
+#municipio {
+  font-size: 4vw;
+  margin-top: 10px;
+}
+
+#clock {
+  position: fixed;
+  bottom: 20px;
+  right: 30px;
+  font-size: 2.5vw;
+  opacity: 0.9;
+}
+
 @media (max-width: 600px) {
-  #km-placa h1 {
-    font-size: 28vw;
-  }
+  #rodovia, #municipio { font-size: 6vw; }
+  #km { font-size: 28vw; }
+  #clock { font-size: 4vw; }
 }
 </style>
 </head>
 
-<body onclick="requestFull()">
+<body onclick="goFull()">
 
-<div id="km-placa">
-  <h1 id="km-txt">Km ---+---</h1>
+<div id="painel">
+  <div id="rodovia">BR --</div>
+  <div id="km">Km ---+---</div>
+  <div id="municipio"></div>
 </div>
+
+<div id="clock"></div>
 
 <script>
 let kmDB = [];
+let brLabel = "BR --";
 
 /* FULLSCREEN */
-function requestFull() {
-  if (document.documentElement.requestFullscreen) {
-    document.documentElement.requestFullscreen();
-  }
+function goFull() {
+  document.documentElement.requestFullscreen?.();
 }
 
-/* CARREGA BASE DE KM */
+/* DETECTA BR PELO NOME DO CSV */
+function detectBR(csvName) {
+  if (csvName.includes("116")) return "BR-116";
+  if (csvName.includes("101")) return "BR-101";
+  return "BR";
+}
+
+/* CARREGA CSV */
 async function loadCSV() {
   try {
-    const r = await fetch('SNVBR116SPRJ.csv?v=' + Date.now());
+    const csvFile = "SNVBR116SPRJ.csv"; // altere aqui se usar outro
+    brLabel = detectBR(csvFile);
+    document.getElementById("rodovia").innerText = brLabel;
+
+    const r = await fetch(csvFile + "?v=" + Date.now());
     const t = await r.text();
 
-    const rows = t.split('\n').filter(l => l.includes(';'));
-    const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
+    const rows = t.split("\n").filter(l => l.includes(";"));
+    const hdr = rows.shift().split(";").map(h => h.trim().toLowerCase());
 
-    const ik = h.findIndex(x => x.includes('km'));
-    const ilt = h.findIndex(x => x.includes('lat'));
-    const iln = h.findIndex(x => x.includes('lon'));
+    const ik = hdr.findIndex(h => h.includes("km"));
+    const ilt = hdr.findIndex(h => h.includes("lat"));
+    const iln = hdr.findIndex(h => h.includes("lon"));
+    const im = hdr.findIndex(h => h.includes("mun"));
 
     kmDB = rows.map(r => {
-      const c = r.split(';');
+      const c = r.split(";");
       return {
         km: c[ik],
-        lt: parseFloat(c[ilt].replace(',', '.')),
-        ln: parseFloat(c[iln].replace(',', '.'))
+        lt: parseFloat(c[ilt]?.replace(",", ".")),
+        ln: parseFloat(c[iln]?.replace(",", ".")),
+        mun: im >= 0 ? c[im] : ""
       };
     }).filter(p => !isNaN(p.lt));
-
   } catch (e) {
-    console.error('Erro ao carregar CSV');
+    console.error("Erro ao carregar CSV");
   }
 }
 
@@ -101,37 +133,46 @@ function initGPS() {
   navigator.geolocation.watchPosition(pos => {
     if (!kmDB.length) return;
 
-    let melhor = null;
-    let menor = Infinity;
+    let best = null;
+    let min = Infinity;
 
     for (const p of kmDB) {
       const d = Math.hypot(
         p.lt - pos.coords.latitude,
         p.ln - pos.coords.longitude
       );
-      if (d < menor) {
-        menor = d;
-        melhor = p;
+      if (d < min) {
+        min = d;
+        best = p;
       }
     }
 
-    if (melhor) {
-      document.getElementById('km-txt').innerText = 'Km ' + melhor.km;
+    if (best) {
+      document.getElementById("km").innerText = "Km " + best.km;
+      document.getElementById("municipio").innerText = best.mun || "";
     }
   }, null, {
     enableHighAccuracy: true,
-    maximumAge: 500,
-    timeout: 5000
+    maximumAge: 500
   });
 }
 
-/* INICIALIZA */
+/* RELÓGIO */
+function clockLoop() {
+  const d = new Date();
+  document.getElementById("clock").innerText =
+    d.toLocaleDateString("pt-BR") + " " +
+    d.toLocaleTimeString("pt-BR");
+}
+
+/* START */
 window.onload = () => {
-  loadCSV();
-  initGPS();
-  requestFull();
+  goFull();
+  loadCSV().then(initGPS);
+  setInterval(clockLoop, 1000);
 };
 </script>
 
 </body>
 </html>
+``
