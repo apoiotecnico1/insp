@@ -1,40 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Angstrom | Apoio Técnico Avançado</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #2980b9;
+            --accent: #e67e22;
+            --bg: #f4f7f6;
+            --text: #333;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        header { border-bottom: 2px solid var(--primary); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        h1 { color: var(--primary); text-transform: uppercase; letter-spacing: 2px; margin: 0; }
+        
+        .grid-form { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        
+        button { background: var(--secondary); color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; transition: 0.3s; font-weight: bold; }
+        button:hover { background: var(--primary); }
+        .btn-pdf { background: #27ae60; margin-top: 10px; }
+
+        .log-table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+        .log-table th { background: var(--primary); color: white; padding: 12px; text-align: left; }
+        .log-table td { padding: 10px; border-bottom: 1px solid #ddd; font-size: 0.9em; }
+        
+        .tag { padding: 4px 8px; border-radius: 4px; font-size: 0.75em; color: white; font-weight: bold; }
+        .tag-fibra { background: #9b59b6; }
+        .tag-clima { background: #3498db; }
+        .tag-luz { background: #f1c40f; color: #000; }
+        .tag-adm { background: #95a5a6; }
+    </style>
+</head>
 <body>
 
-<div id="painel">
-  <div id="rodovia">BR-116</div>
-  <div id="km">Km ---+---</div>
-  <div id="municipio"></div>
+<div class="container">
+    <header>
+        <div>
+            <h1>ANGSTROM</h1>
+            <p>Engenharia de Resultados | Relatório de Gestão Abril 2026</p>
+        </div>
+        <div id="clock" style="font-weight: bold; font-size: 1.2em;"></div>
+    </header>
+
+    <section id="entrada-dados">
+        <div class="grid-form">
+            <select id="setor">
+                <option value="Iluminação">Iluminação Viária</option>
+                <option value="Climatização">Climatização (HVAC)</option>
+                <option value="Fibra Ótica">Fibra Ótica</option>
+                <option value="Administrativo">Geral / ADM</option>
+            </select>
+            <select id="tipo">
+                <option value="Chamada">Ligação Recebida</option>
+                <option value="Pendência">Solicitação/Pendência</option>
+                <option value="Reunião">Reunião / Briefing</option>
+                <option value="Execução">Manutenção em Campo</option>
+            </select>
+            <input type="text" id="interlocutor" placeholder="Quem ligou / Solicitante">
+        </div>
+        <textarea id="descricao" rows="3" placeholder="Descrição detalhada do evento, questionamentos e orientações dadas..."></textarea>
+        <button onclick="registrarEvento()">REGISTRAR NO LOG DIÁRIO</button>
+    </section>
+
+    <hr>
+
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>Log de Atividades Recentes</h3>
+        <button class="btn-pdf" onclick="gerarPDF()">EXPORTAR RELATÓRIO PDF</button>
+    </div>
+
+    <table class="log-table" id="tabelaLogs">
+        <thead>
+            <tr>
+                <th>Hora</th>
+                <th>Setor</th>
+                <th>Tipo</th>
+                <th>Detalhes</th>
+                <th>Interlocutor</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Logs inseridos dinamicamente -->
+        </tbody>
+    </table>
 </div>
 
-<div id="clock"></div>
-
 <script>
-let kmDB = [];
-let fullscreenAtivado = false;
+    // Atualiza relógio
+    setInterval(() => {
+        const now = new Date();
+        document.getElementById('clock').innerText = now.toLocaleTimeString('pt-BR');
+    }, 1000);
 
-function entrarFullscreenSeguro() {
-  if (fullscreenAtivado) return;
-  if (document.fullscreenElement == null) {
-    document.documentElement.requestFullscreen()
-      .then(() => fullscreenAtivado = true)
-      .catch(() => {});
-  }
-}
+    let eventos = JSON.parse(localStorage.getItem('logs_abril')) || [];
 
-/* relógio */
-function clockLoop() {
-  const d = new Date();
-  document.getElementById("clock").innerText =
-    d.toLocaleDateString("pt-BR") + " " +
-    d.toLocaleTimeString("pt-BR");
-}
+    function registrarEvento() {
+        const setor = document.getElementById('setor').value;
+        const tipo = document.getElementById('tipo').value;
+        const interlocutor = document.getElementById('interlocutor').value;
+        const descricao = document.getElementById('descricao').value;
+        const hora = new Date().toLocaleTimeString('pt-BR');
+        const data = new Date().toLocaleDateString('pt-BR');
 
-/* start */
-window.onload = () => {
-  loadCSV().then(initGPS);
-  setInterval(clockLoop, 1000);
-  setTimeout(entrarFullscreenSeguro, 300);
-};
+        if(!descricao || !interlocutor) {
+            alert("Por favor, preencha o interlocutor e a descrição.");
+            return;
+        }
+
+        const novoEvento = { data, hora, setor, tipo, interlocutor, descricao };
+        eventos.unshift(novoEvento);
+        localStorage.setItem('logs_abril', JSON.stringify(eventos));
+        
+        atualizarTabela();
+        limparCampos();
+    }
+
+    function atualizarTabela() {
+        const corpoTabela = document.querySelector('#tabelaLogs tbody');
+        corpoTabela.innerHTML = '';
+
+        eventos.forEach(ev => {
+            const tr = document.createElement('tr');
+            let classeTag = ev.setor === 'Fibra Ótica' ? 'tag-fibra' : 
+                            ev.setor === 'Climatização' ? 'tag-clima' : 
+                            ev.setor === 'Iluminação' ? 'tag-luz' : 'tag-adm';
+
+            tr.innerHTML = `
+                <td>${ev.hora}</td>
+                <td><span class="tag ${classeTag}">${ev.setor}</span></td>
+                <td><strong>${ev.tipo}</strong></td>
+                <td>${ev.descricao}</td>
+                <td>${ev.interlocutor}</td>
+            `;
+            corpoTabela.appendChild(tr);
+        });
+    }
+
+    function limparCampos() {
+        document.getElementById('interlocutor').value = '';
+        document.getElementById('descricao').value = '';
+    }
+
+    function gerarPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text("Relatório de Gestão - Angstrom", 10, 20);
+        doc.setFontSize(12);
+        doc.text("Período: Abril 2026 - Cobertura de Supervisão", 10, 30);
+        
+        let y = 40;
+        eventos.forEach((ev, i) => {
+            if (y > 270) { doc.addPage(); y = 20; }
+            doc.setFontSize(10);
+            doc.text(`${ev.data} ${ev.hora} | ${ev.setor} | ${ev.tipo}`, 10, y);
+            doc.setFontSize(9);
+            doc.text(`Solicitante: ${ev.interlocutor}`, 10, y + 5);
+            doc.text(`Obs: ${ev.descricao}`, 10, y + 10);
+            y += 20;
+        });
+
+        doc.save(`Relatorio_Angstrom_Abril.pdf`);
+    }
+
+    window.onload = atualizarTabela;
 </script>
 
 </body>
+</html>
