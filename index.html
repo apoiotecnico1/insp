@@ -4,215 +4,315 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Anotações de Manutenção</title>
+    <title>SISTEMA ANOTAÇÕES ELITE</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        :root { --p: #0a192f; --s: #172a45; --a: #64ffda; --text: #ccd6f6; --white: #ffffff; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Inter', sans-serif; margin: 0; background: var(--p); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
-        
-        header { padding: 50px 20px 20px; background: var(--s); text-align: center; border-bottom: 2px solid var(--a); }
-        h1 { margin: 0; font-size: 1.5rem; letter-spacing: 3px; color: var(--a); text-transform: uppercase; }
+        :root {
+            --bg: #050505;
+            --card-bg: #121212;
+            --accent: #00f2ff; /* Ciano Neon */
+            --warning: #ffcf00;
+            --danger: #ff0055;
+            --success: #00ff88;
+            --text: #e0e0e0;
+        }
 
-        .content { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 100px; }
-        .card { background: var(--s); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px -15px rgba(2,12,27,0.7); }
-        
-        label { display: block; margin: 10px 0 5px; font-size: 0.8rem; color: var(--a); font-weight: bold; }
+        body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; background: var(--bg); color: var(--text);
+            display: flex; flex-direction: column; height: 100vh;
+        }
+
+        header { 
+            padding: 40px 20px 20px; background: linear-gradient(180deg, #1a1a1a, var(--bg));
+            text-align: center; border-bottom: 1px solid var(--accent);
+        }
+
+        .scroll-area { flex: 1; overflow-y: auto; padding: 15px; }
+
+        .card { 
+            background: var(--card-bg); border-radius: 20px; padding: 20px; 
+            margin-bottom: 20px; border: 1px solid #333;
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.05);
+        }
+
+        /* Botões de Tags (50+ opções implícitas via Grid) */
+        .tag-grid { 
+            display: flex; overflow-x: auto; gap: 8px; padding-bottom: 10px; 
+            margin-bottom: 15px; scrollbar-width: none;
+        }
+        .tag-item { 
+            white-space: nowrap; padding: 8px 15px; border-radius: 20px; 
+            background: #222; border: 1px solid #444; font-size: 0.75rem; color: #aaa;
+        }
+        .tag-item.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
+
+        /* Inputs Estilizados */
         input, select, textarea { 
-            width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #233554;
-            background: #112240; color: white; font-size: 16px; margin-bottom: 10px;
+            width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #333;
+            background: #1a1a1a; color: white; font-size: 16px; margin-bottom: 12px;
         }
 
-        .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .btn { 
-            border: none; border-radius: 8px; padding: 15px; font-weight: bold; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 0.9rem;
+            border: none; border-radius: 12px; padding: 15px; font-weight: 800; 
+            text-transform: uppercase; letter-spacing: 1px; display: flex; 
+            align-items: center; justify-content: center; gap: 8px;
         }
-        .btn-record { background: #f44336; color: white; }
-        .btn-photo { background: #2196F3; color: white; }
-        .btn-save { background: var(--a); color: var(--p); width: 100%; margin-top: 15px; font-size: 1rem; }
+
+        /* Botões Especiais */
+        .btn-dictate { background: var(--warning); color: #000; }
+        .btn-record { background: var(--danger); color: white; }
+        .btn-save { background: var(--accent); color: #000; grid-column: span 2; margin-top: 10px; }
         
-        .recording-active { animation: pulse 1.5s infinite; background: #b71c1c !important; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        /* Prioridades */
+        .priority-row { display: flex; gap: 5px; margin-bottom: 15px; }
+        .prio { flex: 1; padding: 10px; border-radius: 8px; font-size: 0.7rem; text-align: center; border: 1px solid #333; }
+        .prio-critico { color: var(--danger); }
+        .prio-hoje { color: var(--warning); }
+        .prio-depois { color: var(--success); }
 
-        .log-entry { border-left: 3px solid var(--a); padding: 15px; background: #112240; border-radius: 8px; margin-bottom: 15px; }
-        .log-time { font-size: 0.7rem; color: var(--a); margin-bottom: 5px; }
-        .log-title { font-weight: bold; color: var(--white); margin-bottom: 5px; }
-        audio { width: 100%; height: 35px; margin-top: 10px; border-radius: 5px; }
-        img { max-width: 100%; border-radius: 8px; margin-top: 10px; border: 1px solid var(--a); }
+        .log-entry { 
+            background: #1a1a1a; border-radius: 15px; padding: 15px; margin-bottom: 12px;
+            border-left: 5px solid var(--accent);
+        }
+        .log-header { display: flex; justify-content: space-between; font-size: 0.7rem; margin-bottom: 8px; }
+        .log-status { color: var(--accent); font-weight: bold; }
+        
+        audio { width: 100%; height: 30px; margin-top: 10px; }
+        img { width: 100%; border-radius: 10px; margin-top: 10px; }
 
-        #quick-note { border: 1px dashed var(--a); min-height: 80px; }
+        .dictating { animation: glow 1s infinite alternate; }
+        @keyframes glow { from { box-shadow: 0 0 5px var(--warning); } to { box-shadow: 0 0 20px var(--warning); } }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>ANOTAÇÕES</h1>
-    <div id="clock" style="font-size: 0.9rem; margin-top: 5px;"></div>
+    <h1 id="main-title">ANOTAÇÕES</h1>
+    <div style="font-size: 0.8rem; color: #666;" id="live-date"></div>
 </header>
 
-<div class="content">
+<div class="scroll-area">
+    <!-- Bloco de Entrada -->
     <div class="card">
-        <label>SETOR / INTERLOCUTOR</label>
-        <div style="display:flex; gap:5px;">
-            <select id="setor" style="flex:1">
-                <option>Iluminação</option>
-                <option>Climatização</option>
-                <option>Fibra Ótica</option>
-                <option>ADM</option>
-            </select>
-            <input type="text" id="pessoa" placeholder="Quem ligou?" style="flex:1">
+        <div class="priority-row">
+            <div class="prio prio-critico" onclick="setPrio('CRÍTICO', this)">URGENTE</div>
+            <div class="prio prio-hoje" onclick="setPrio('PENDENTE', this)">PARA HOJE</div>
+            <div class="prio prio-depois" onclick="setPrio('PLANEJADO', this)">LEMBRETE</div>
         </div>
 
-        <label>RELATO DO EVENTO</label>
-        <textarea id="relato" rows="3" placeholder="O que aconteceu agora?"></textarea>
+        <div class="tag-grid" id="tagList">
+            <!-- Gerado via JS: 50+ Opções -->
+        </div>
 
-        <div class="btn-row">
-            <button class="btn btn-record" id="btnMic" onclick="toggleMic()">
-                <i class="fas fa-microphone"></i> <span id="micText">Gravar Voz</span>
+        <input type="text" id="interlocutor" placeholder="Interlocutor (Quem ligou?)">
+        
+        <div style="position: relative;">
+            <textarea id="relato" rows="4" placeholder="Descreva a situação ou use a Digitação por Voz..."></textarea>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-dictate" id="btnDictate" onclick="startDictation()">
+                <i class="fas fa-comment-dots"></i> DITAR
             </button>
-            <button class="btn btn-photo" onclick="document.getElementById('fileIn').click()">
-                <i class="fas fa-camera"></i> Foto/Doc
+            <button class="btn btn-record" id="btnMic" onclick="toggleMic()">
+                <i class="fas fa-microphone"></i> GRAVAR
+            </button>
+            <button class="btn" style="background:#555; color:white;" onclick="document.getElementById('fileIn').click()">
+                <i class="fas fa-camera"></i> FOTO
+            </button>
+            <button class="btn" style="background:#333; color:white;" onclick="limpar()">
+                <i class="fas fa-trash"></i>
+            </button>
+            <button class="btn btn-save" onclick="saveEntry()">
+                REGISTRAR NO SISTEMA
             </button>
         </div>
         <input type="file" id="fileIn" hidden accept="image/*" onchange="previewImg()">
-        <div id="imgPreview"></div>
-
-        <button class="btn btn-save" onclick="saveEntry()">
-            <i class="fas fa-check-circle"></i> SALVAR NO DIÁRIO
-        </button>
     </div>
 
-    <div class="card" style="background: #112240;">
-        <label>LEMBRETES / RASCUNHO</label>
-        <textarea id="quick-note" oninput="saveDraft()" placeholder="Anote algo rápido aqui..."></textarea>
-    </div>
-
-    <h3 style="color: var(--a); margin-left: 10px;">HOJE</h3>
+    <!-- Lista de Registros -->
+    <h2 style="font-size: 1rem; color: var(--accent);">HISTÓRICO DO MÊS</h2>
     <div id="logContainer"></div>
-    
-    <button class="btn btn-photo" style="width:100%; background:#455a64" onclick="exportPDF()">
-        <i class="fas fa-file-pdf"></i> GERAR RELATÓRIO FINAL
+
+    <button class="btn btn-save" style="background: var(--success); margin-bottom: 50px;" onclick="exportFinalReport()">
+        GERAR RELATÓRIO DE FEEDBACK (PDF)
     </button>
 </div>
 
 <script>
+    let logs = JSON.parse(localStorage.getItem('logs_elite')) || [];
+    let currentPrio = "NORMAL";
+    let currentTag = "Geral";
     let mediaRecorder;
     let audioChunks = [];
     let currentAudioBase64 = null;
     let currentImgBase64 = null;
-    let logs = JSON.parse(localStorage.getItem('logs_manutencao')) || [];
 
-    // Relógio
-    setInterval(() => {
-        document.getElementById('clock').innerText = new Date().toLocaleString('pt-br');
-    }, 1000);
+    // 50+ Opções de Categorias para o Supervisor ver profissionalismo
+    const categorias = [
+        "Fibra: Rompimento", "Fibra: Fusão", "Luz: Lâmpada Apagada", "Luz: Curto Circuito", "Clima: Vazamento", 
+        "Clima: Compressor", "ADM: Reunião", "ADM: Pedido Compra", "ADM: RH", "Feedback Cliente", 
+        "Vistoria Técnica", "Emergência", "Solicitação Direção", "Manutenção Preventiva", "Manutenção Corretiva",
+        "Ajuste de Cronograma", "Orçamento", "Conferência de Estoque", "Treinamento", "Segurança do Trabalho",
+        "Rede Lógica", "Subestação", "Iluminação Túnel", "Iluminação Praça", "Ar Central", "Split System",
+        "Dúvida Técnica", "Pendência Abril", "Finalizado", "Aguardando Peça", "Equipe Terceirizada",
+        "Medição Mensal", "Relatório Semanal", "Visita In loco", "Chamado Aberto", "Ocorrência Policial",
+        "Interferência Chuva", "Queda de Energia", "Gerador Ligado", "Combustível Gerador", "Fiscalização",
+        "Documentação", "Alvará", "Treinamento NR10", "Treinamento NR35", "Fibra: Backbone", "Fibra: CTO",
+        "Painel Elétrico", "Troca de Reator", "Poda de Árvore", "Limpeza Calhas"
+    ];
 
-    // Gravação de Voz Real
+    // Popular Tags
+    const tagList = document.getElementById('tagList');
+    categorias.forEach(cat => {
+        const div = document.createElement('div');
+        div.className = 'tag-item';
+        div.innerText = cat;
+        div.onclick = function() {
+            document.querySelectorAll('.tag-item').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            currentTag = cat;
+        };
+        tagList.appendChild(div);
+    });
+
+    // Digitação por Voz (Speech to Text)
+    function startDictation() {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'pt-BR';
+        const btn = document.getElementById('btnDictate');
+        
+        recognition.onstart = () => { btn.classList.add('dictating'); btn.innerText = "OUVINDO..."; };
+        recognition.onresult = (event) => {
+            const text = event.results[0][0].transcript;
+            document.getElementById('relate').value += text + " ";
+        };
+        recognition.onend = () => { btn.classList.remove('dictating'); btn.innerText = "DITAR"; };
+        recognition.start();
+    }
+
+    // Gravação de Áudio
     async function toggleMic() {
-        const btn = document.getElementById('btnMic');
-        const text = document.getElementById('micText');
-
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
-            
             mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(audioChunks, { type: 'audio/mp3' });
                 const reader = new FileReader();
-                reader.readAsDataURL(audioBlob);
-                reader.onloadend = () => { currentAudioBase64 = reader.result; };
-                alert("Áudio processado com sucesso!");
+                reader.readAsDataURL(blob);
+                reader.onloadend = () => { currentAudioBase64 = reader.result; alert("Áudio Gravado!"); };
             };
-
             mediaRecorder.start();
-            btn.classList.add('recording-active');
-            text.innerText = "Parar Gravação";
+            document.getElementById('btnMic').style.background = "#fff";
+            document.getElementById('btnMic').style.color = "#000";
         } else {
             mediaRecorder.stop();
-            btn.classList.remove('recording-active');
-            text.innerText = "Gravar Voz";
+            document.getElementById('btnMic').style.background = "var(--danger)";
+            document.getElementById('btnMic').style.color = "#fff";
         }
     }
 
-    // Foto Preview
+    function setPrio(p, el) {
+        document.querySelectorAll('.prio').forEach(x => x.style.background = "transparent");
+        el.style.background = "#333";
+        currentPrio = p;
+    }
+
     function previewImg() {
-        const file = document.getElementById('fileIn').files;
+        const file = document.getElementById('fileIn').files[0];
         const reader = new FileReader();
-        reader.onloadend = () => {
-            currentImgBase64 = reader.result;
-            document.getElementById('imgPreview').innerHTML = `<img src="${currentImgBase64}">`;
-        };
+        reader.onloadend = () => { currentImgBase64 = reader.result; alert("Foto Anexada!"); };
         reader.readAsDataURL(file);
     }
 
-    // Salvar Log
     function saveEntry() {
         const entry = {
             id: Date.now(),
-            time: new Date().toLocaleTimeString('pt-br'),
-            setor: document.getElementById('setor').value,
-            pessoa: document.getElementById('pessoa').value,
-            relato: document.getElementById('relato').value,
+            data: new Date().toLocaleDateString('pt-br'),
+            hora: new Date().toLocaleTimeString('pt-br'),
+            prio: currentPrio,
+            tag: currentTag,
+            pessoa: document.getElementById('interlocutor').value,
+            texto: document.getElementById('relato').value,
             audio: currentAudioBase64,
             img: currentImgBase64
         };
 
-        if(!entry.relato && !entry.audio) return alert("Adicione um relato ou áudio!");
-
         logs.unshift(entry);
-        localStorage.setItem('logs_manutencao', JSON.stringify(logs));
+        localStorage.setItem('logs_elite', JSON.stringify(logs));
         renderLogs();
-        resetForm();
+        limpar();
     }
 
     function renderLogs() {
         const container = document.getElementById('logContainer');
         container.innerHTML = logs.map(l => `
             <div class="log-entry">
-                <div class="log-time">${l.time} - ${l.setor}</div>
-                <div class="log-title">${l.pessoa || 'Sem identificação'}</div>
-                <div>${l.relato}</div>
+                <div class="log-header">
+                    <span>${l.data} às ${l.hora}</span>
+                    <span class="log-status">${l.prio}</span>
+                </div>
+                <div style="color:var(--accent); font-size:0.8rem; margin-bottom:5px;">#${l.tag}</div>
+                <div style="font-weight:bold; margin-bottom:5px;">Interlocutor: ${l.pessoa}</div>
+                <div style="font-size:0.9rem; line-height:1.4;">${l.texto}</div>
                 ${l.audio ? `<audio controls src="${l.audio}"></audio>` : ''}
                 ${l.img ? `<img src="${l.img}">` : ''}
             </div>
         `).join('');
     }
 
-    function resetForm() {
+    function limpar() {
         document.getElementById('relato').value = '';
-        document.getElementById('pessoa').value = '';
-        document.getElementById('imgPreview').innerHTML = '';
+        document.getElementById('interlocutor').value = '';
         currentAudioBase64 = null;
         currentImgBase64 = null;
     }
 
-    function saveDraft() { localStorage.setItem('draft_note', document.getElementById('quick-note').value); }
+    function exportFinalReport() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFillColor(10, 25, 47);
+        doc.rect(0, 0, 210, 40, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.text("RELATÓRIO DE GESTÃO ADMINISTRATIVA", 15, 20);
+        doc.setFontSize(12);
+        doc.text("Mês: Abril | Responsável Substituto", 15, 30);
+
+        let y = 50;
+        doc.setTextColor(0, 0, 0);
+        
+        logs.forEach((l, i) => {
+            if(y > 250) { doc.addPage(); y = 20; }
+            doc.setFont(undefined, 'bold');
+            doc.text(`${l.data} ${l.hora} - [${l.prio}] - TAG: ${l.tag}`, 15, y);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Solicitante: ${l.pessoa}`, 15, y + 7);
+            doc.setFontSize(10);
+            doc.text(`Descrição: ${l.texto}`, 15, y + 13);
+            
+            if(l.audio) doc.text("(Possui anexo de áudio gravado no sistema)", 15, y + 18);
+            if(l.img) doc.text("(Possui registro fotográfico)", 15, y + 23);
+            
+            y += 35;
+        });
+
+        doc.save("Relatorio_Gestao_Abril_Sucesso.pdf");
+        alert("Relatório Gerado! Pronto para impressionar o supervisor.");
+    }
 
     window.onload = () => {
         renderLogs();
-        document.getElementById('quick-note').value = localStorage.getItem('draft_note') || '';
+        document.getElementById('live-date').innerText = new Date().toLocaleDateString('pt-br', { weekday: 'long', day: 'numeric', month: 'long' });
     };
-
-    function exportPDF() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.setFontSize(16);
-        doc.text("RELATÓRIO DE ATIVIDADES - ABRIL", 10, 10);
-        let y = 20;
-        logs.forEach(l => {
-            doc.setFontSize(10);
-            doc.text(`${l.time} | ${l.setor} | De: ${l.pessoa}`, 10, y);
-            doc.text(`Relato: ${l.relato}`, 10, y + 5);
-            y += 15;
-        });
-        doc.save("Relatorio_Diario.pdf");
-    }
 </script>
 
 </body>
