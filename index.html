@@ -12,35 +12,39 @@
 
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; }
         .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; max-width: 90%; background: #0a0a0a; }
-        .img-proibido { width: 120px; height: auto; margin-bottom: 20px; }
-        .msg-seguranca { color: #ff4444; font-weight: bold; margin-bottom: 20px; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; }
         .btn-aware { background: var(--accent); color: #000; border: none; padding: 18px 40px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; margin-top: 20px; }
 
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
-        /* Cursor de câmera para indicar que a tela é clicável */
-        video { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
+        
+        /* Área de toque total */
+        #click-area { position: absolute; inset: 0; z-index: 50; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Ícone e Legenda Discretos (Transparentes) */
+        .tap-hint { opacity: 0.2; text-align: center; pointer-events: none; transition: opacity 0.3s; }
+        .tap-hint i { font-size: 50px; display: block; margin-bottom: 5px; }
+        .tap-hint span { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 300; }
+        #click-area:active .tap-hint { opacity: 0.6; } /* Brilha levemente ao tocar */
 
         #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 10px 25px; border: 3px solid #fff; border-radius: 8px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; pointer-events: none; }
-        #br-txt { font-size: 0.9rem; font-weight: 800; color: #fff; text-transform: uppercase; display: block; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 4px; padding-bottom: 2px; }
+        #br-txt { font-size: 0.9rem; font-weight: 800; color: #fff; text-transform: uppercase; display: block; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 4px; }
         #km-txt { font-size: 2.2rem; font-weight: 900; margin: 0; line-height: 1.1; }
 
-        #rec-tag { position: absolute; top: 130px; right: 20px; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 30px; opacity: 0; transition: 0.3s; z-index: 100; border: 1px solid rgba(255,255,255,0.2); pointer-events: none; }
+        #rec-tag { position: absolute; top: 130px; right: 20px; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 30px; opacity: 0; z-index: 100; pointer-events: none; }
         .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(30px); z-index: 4000; padding: 60px 25px; transition: 0.4s; border-left: 1px solid #333; }
-        #settings-panel.open { right: 0; }
-        .close-settings { position: absolute; top: 20px; left: 20px; color: var(--accent); font-weight: bold; cursor: pointer; }
-
         #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; align-items: center; }
-        .btn-main { border: none; padding: 22px 45px; border-radius: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 14px; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+        .btn-main { border: none; padding: 18px 35px; border-radius: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 12px; }
         #btn-start { background: var(--accent); color: #000; }
         #btn-stop { background: var(--danger); color: #fff; display: none; }
-        #gear-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }
+        #gear-btn { width: 50px; height: 50px; background: rgba(255,255,255,0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; }
+
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(30px); z-index: 4000; padding: 60px 25px; transition: 0.4s; border-left: 1px solid #333; }
+        #settings-panel.open { right: 0; }
+        .close-settings { position: absolute; top: 20px; left: 20px; color: var(--accent); cursor: pointer; }
 
         canvas { display: none; }
-        
-        /* Feedback visual rápido ao clicar */
         .flash { position: fixed; inset: 0; background: #fff; opacity: 0; z-index: 6000; pointer-events: none; }
     </style>
 </head>
@@ -50,32 +54,48 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <img src="proibido.png" alt="Proibido" class="img-proibido">
-        <div class="msg-seguranca">NÃO DIRIJA USANDO O CELULAR</div>
-        <h2 style="color:var(--accent)">SEGURANÇA ATIVA</h2>
-        <button class="btn-aware" onclick="startApp()">ENTRAR NO SISTEMA</button>
+        <h2 style="color:var(--accent); margin-bottom:10px;">MODO OPERAÇÃO</h2>
+        <p style="color:#888; font-size:13px; margin-bottom:20px;">Selecione a pasta para salvar capturas e PDFs.</p>
+        <button class="btn-aware" onclick="startApp()">INICIAR SISTEMA</button>
     </div>
 </div>
 
 <div id="settings-panel">
     <div class="close-settings" onclick="toggleSet()">← VOLTAR</div>
-    <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Intervalo Captura (ms)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="field"><label>Fotos por PDF</label><input type="number" id="cfg-lote" value="50"></div>
+    <div style="margin-top:20px;">
+        <label style="font-size:10px; color:#888;">CÂMERA</label>
+        <select id="cam-select" onchange="switchCam(this.value)" style="width:100%; padding:10px; background:#222; color:#fff; border:none; margin-bottom:20px;"></select>
+        
+        <label style="font-size:10px; color:#888;">INTERVALO PDF (ms)</label>
+        <input type="number" id="cfg-int" value="300" style="width:100%; padding:10px; background:#222; color:#fff; border:none; margin-bottom:20px;">
+        
+        <label style="font-size:10px; color:#888;">FOTOS POR LOTE</label>
+        <input type="number" id="cfg-lote" value="50" style="width:100%; padding:10px; background:#222; color:#fff; border:none;">
+    </div>
 </div>
 
 <div id="app-shell">
-    <video id="vid" autoplay playsinline muted onclick="takeSinglePhoto()"></video>
+    <!-- Área de clique separada do vídeo para melhor controle -->
+    <div id="click-area" onclick="takeSinglePhoto()">
+        <div class="tap-hint">
+            <i>📷</i>
+            <span>Toque para capturar</span>
+        </div>
+    </div>
+    
+    <video id="vid" autoplay playsinline muted></video>
+
     <div id="km-hud">
-        <span id="br-txt">BUSCANDO...</span>
+        <span id="br-txt">---</span>
         <h1 id="km-txt">Km ---</h1>
     </div>
-    <div id="rec-tag"><div class="dot"></div><span id="status-text">ON</span></div>
+
+    <div id="rec-tag"><div class="dot"></div><span>PDF ATIVO</span></div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR PDF</button>
-        <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR PDF</button>
+        <button id="btn-start" class="btn-main" onclick="startCapture()">Iniciar Relatório</button>
+        <button id="btn-stop" class="btn-main" onclick="stopCapture()">Salvar Relatório</button>
     </div>
 </div>
 
@@ -98,42 +118,38 @@ async function startApp() {
         document.getElementById('app-shell').style.visibility = 'visible';
         listCams(); loadCSV(); initGPS(); refreshWakeLock();
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    } catch(e) { alert("Selecione a pasta de destino."); }
+    } catch(e) { alert("Acesso negado."); }
 }
 
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const vids = devices.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Lente ${i+1}</option>`).join('');
+    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
     switchCam(vids[vids.length-1].deviceId);
 }
 
 async function switchCam(id) {
     if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: { ideal: 1920 }, height: { ideal: 1080 } } });
     vid.srcObject = currentStream;
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
-// --- FUNÇÃO DE FOTO ÚNICA AO TOCAR NA TELA ---
+// CAPTURA JPG INSTANTÂNEA
 async function takeSinglePhoto() {
     if (!hDir) return;
-
-    // Feedback visual (Flash)
     const flash = document.getElementById('flash-effect');
-    flash.style.opacity = "0.5";
-    setTimeout(() => flash.style.opacity = "0", 100);
+    flash.style.opacity = "0.4"; setTimeout(() => flash.style.opacity = "0", 80);
 
     const km = document.getElementById('km-txt').innerText.replace("Km ", "");
     const ts = new Date().toLocaleString('pt-BR');
     
-    // Desenha a foto com carimbo
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const bh = can.height * 0.15;
-    ctx.fillStyle = "rgba(0,0,0,0.8)";
+    ctx.fillStyle = "rgba(0,0,0,0.85)";
     ctx.fillRect(0, can.height - bh, can.width, bh);
     ctx.fillStyle = "#fff";
     ctx.font = `bold ${bh * 0.35}px Arial`;
@@ -141,19 +157,18 @@ async function takeSinglePhoto() {
     ctx.font = `${bh * 0.18}px Arial`;
     ctx.fillText(ts.toUpperCase(), 40, can.height - (bh * 0.15));
 
-    // Converte para Blob e salva
     can.toBlob(async (blob) => {
-        const nome = `FOTO_${brAtual}_Km_${km.replace('+','-')}_${Date.now()}.jpg`;
+        const nome = `FOTO_${brAtual}_Km_${km.replace(/\+/g,'-')}_${Date.now()}.jpg`;
         try {
             const handle = await hDir.getFileHandle(nome, { create: true });
             const writable = await handle.createWritable();
             await writable.write(blob);
             await writable.close();
-        } catch (e) { console.error("Erro ao salvar foto individual", e); }
+        } catch (e) {}
     }, 'image/jpeg', 0.9);
 }
 
-// --- FUNÇÕES DE CAPTURA EM PDF (LOTE) ---
+// CAPTURA EM LOTE (PDF)
 function startCapture() {
     capturing = true; buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
@@ -181,17 +196,20 @@ function captureLoop() {
             br: brAtual,
             ts: new Date().toLocaleString('pt-BR')
         });
-        if (buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 50)) {
+        const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
+        if (buffer.length >= limit) {
             const b = [...buffer]; const kF = document.getElementById('km-txt').innerText.replace("Km ", "");
             const kI = kmInicialLote; buffer = []; kmInicialLote = kF;
             savePDF(b, kI, kF);
         }
     }
-    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
+    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 300);
 }
 
 async function savePDF(data, kI, kF) {
     const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
     for (let i = 0; i < data.length; i++) {
         if (i > 0) doc.addPage();
         const img = new Image();
@@ -199,20 +217,20 @@ async function savePDF(data, kI, kF) {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
                 const bh = can.height * 0.15;
-                ctx.fillStyle = "rgba(0,0,0,0.8)";
+                ctx.fillStyle = "rgba(0,0,0,0.85)";
                 ctx.fillRect(0, can.height - bh, can.width, bh);
                 ctx.fillStyle = "#fff";
                 ctx.font = `bold ${bh * 0.35}px Arial`;
                 ctx.fillText(`${data[i].br} - Km ${data[i].km}`, 40, can.height - (bh * 0.45));
                 ctx.font = `${bh * 0.18}px Arial`;
                 ctx.fillText(data[i].ts.toUpperCase(), 40, can.height - (bh * 0.15));
-                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight());
+                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
                 r();
             };
             img.src = data[i].img;
         });
     }
-    const nome = `PDF_${data[0].br}_Km_${kI}_ao_${kF}_${Date.now()}.pdf`;
+    const nome = `RELATORIO_${data[0].br}_Km_${kI}_ao_${kF}_${Date.now()}.pdf`;
     const f = await hDir.getFileHandle(nome, { create: true });
     const s = await f.createWritable(); await s.write(doc.output('blob')); await s.close();
 }
@@ -247,6 +265,7 @@ function initGPS() {
     }, null, { enableHighAccuracy: true });
 }
 
+window.onclick = refreshWakeLock;
 window.onload = () => { loadCSV(); initGPS(); };
 </script>
 </body>
