@@ -3,43 +3,43 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Captura Automática BR-116</title>
+    <title>Inspeção Noturna - BR-116</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa: #007934; --whatsapp: #25D366; --danger: #ff4444; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; }
 
-        /* Gate de Entrada */
+        /* Gate Inicial */
         #gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .box { text-align: center; border: 1px solid #333; padding: 40px; border-radius: 20px; max-width: 90%; }
-        .btn-go { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: bold; border-radius: 10px; cursor: pointer; font-size: 1.2rem; text-transform: uppercase; }
+        .box { text-align: center; border: 2px solid var(--accent); padding: 40px; border-radius: 20px; width: 90%; }
 
         #app { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD KM */
-        #hud { position: absolute; top: 20px; left: 20px; background: var(--placa); padding: 15px 25px; border: 3px solid #fff; border-radius: 10px; z-index: 100; }
-        #hud h1 { font-size: 2.5rem; font-weight: 900; }
+        /* HUD Técnico de Inspeção */
+        #hud { position: absolute; top: 20px; left: 20px; background: var(--placa); padding: 15px 25px; border: 3px solid #fff; border-radius: 10px; z-index: 100; box-shadow: 0 5px 20px rgba(0,0,0,0.8); }
+        #hud h1 { font-size: 2.5rem; font-weight: 900; letter-spacing: -1px; }
+        #coords-display { font-size: 10px; font-family: monospace; display: block; margin-top: 5px; color: #eee; }
 
-        /* Status de Gravação */
-        #status-rec { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 20px; display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: bold; opacity: 0; transition: 0.5s; }
-        .dot { width: 10px; height: 10px; background: red; border-radius: 50%; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
+        /* BOTÃO DE DISPARO WHATSAPP (Ação Principal) */
+        #snap-wa { 
+            position: absolute; bottom: 40px; right: 20px;
+            background: var(--whatsapp); width: 100px; height: 100px; border-radius: 50%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border: 5px solid #fff; z-index: 500; box-shadow: 0 0 30px rgba(37, 211, 102, 0.4);
+            transition: transform 0.1s;
+        }
+        #snap-wa:active { transform: scale(0.9); }
+        #snap-wa span { font-size: 10px; font-weight: bold; color: #fff; margin-top: 5px; text-transform: uppercase; }
 
-        /* Controles */
-        #controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; align-items: center; z-index: 1000; }
-        .btn { padding: 20px 30px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        #start { background: var(--accent); }
-        #stop { background: var(--danger); color: #fff; display: none; }
-        #gear { background: rgba(255,255,255,0.2); font-size: 24px; padding: 15px; border-radius: 10px; border: none; cursor: pointer; }
-
-        /* Painel de Config */
-        #panel { position: fixed; right: -320px; top: 0; width: 300px; height: 100%; background: rgba(0,0,0,0.95); padding: 50px 20px; transition: 0.3s; z-index: 2000; border-left: 1px solid #333; }
+        /* Controles de Relatório (Secundário) */
+        #controls-side { position: absolute; bottom: 40px; left: 20px; display: flex; gap: 15px; z-index: 1000; }
+        .btn-tool { background: rgba(255,255,255,0.15); border: 1px solid #fff; color: #fff; padding: 15px; border-radius: 12px; backdrop-filter: blur(5px); cursor: pointer; }
+        
+        #panel { position: fixed; right: -320px; top: 0; width: 300px; height: 100%; background: rgba(0,0,0,0.95); padding: 50px 20px; transition: 0.3s; z-index: 2000; }
         #panel.open { right: 0; }
-        .field { margin-bottom: 20px; }
-        label { font-size: 11px; color: #aaa; text-transform: uppercase; }
-        input, select { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px; margin-top: 5px; }
+        input, select { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 8px; margin: 10px 0; }
 
         canvas { display: none; }
     </style>
@@ -48,162 +48,143 @@
 
 <div id="gate">
     <div class="box">
-        <h2 style="color:var(--danger); margin-bottom:15px;">OPERAÇÃO AUTOMÁTICA</h2>
-        <p style="margin-bottom:25px; color:#ccc;">O sistema enviará o link do WhatsApp automaticamente ao completar cada lote de fotos.</p>
-        <button class="btn-go" onclick="initApp()">INICIAR SISTEMA</button>
+        <h2 style="color:var(--accent); margin-bottom:15px;">INSPEÇÃO NOTURNA</h2>
+        <p style="margin-bottom:25px;">Fotografe eventos com localização em tempo real.</p>
+        <button onclick="initApp()" style="background:var(--accent); padding:20px 40px; border:none; font-weight:bold; border-radius:10px;">ATIVAR CÂMERA</button>
     </div>
 </div>
 
 <div id="app">
     <video id="v" autoplay playsinline muted></video>
     
-    <div id="hud"><h1 id="km-display">Km ---+---</h1></div>
-    
-    <div id="status-rec"><div class="dot"></div> AUTOMÁTICO: <span id="count">0</span></div>
+    <div id="hud">
+        <h1 id="km-display">Km ---+---</h1>
+        <span id="coords-display">LAT: -- | LON: --</span>
+    </div>
 
-    <div id="controls">
-        <button id="gear" onclick="document.getElementById('panel').classList.toggle('open')">⚙️</button>
-        <button id="start" class="btn" onclick="startAutoMode()">Iniciar Ciclo Automático</button>
-        <button id="stop" class="btn" onclick="stopAutoMode()">Parar Sistema</button>
+    <!-- DISPARO PARA INSPEÇÃO -->
+    <div id="snap-wa" onclick="inspectAndSend()">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="45">
+        <span>FOTOGRAFAR</span>
+    </div>
+
+    <div id="controls-side">
+        <button class="btn-tool" onclick="document.getElementById('panel').classList.toggle('open')">⚙️</button>
+        <button id="btn-rel" class="btn-tool" onclick="toggleRelatorio()" style="background:var(--danger)">GRAVAR LOTE</button>
     </div>
 </div>
 
 <div id="panel">
-    <button onclick="document.getElementById('panel').classList.remove('open')" style="color:var(--accent); background:none; border:none; margin-bottom:30px; cursor:pointer;">← VOLTAR</button>
-    
-    <div class="field">
-        <label>WhatsApp do Fiscal (DDD+Nº):</label>
-        <input type="text" id="wa-num" placeholder="5511999999999">
-    </div>
-
-    <div class="field">
-        <label>Fotos por Relatório (Lote):</label>
-        <input type="number" id="lote-size" value="50">
-    </div>
-
-    <div class="field">
-        <label>Intervalo (Milissegundos):</label>
-        <input type="number" id="intervalo" value="500">
-    </div>
-
-    <div class="field">
-        <label>Selecionar Câmera:</label>
-        <select id="cam-sel" onchange="changeCam(this.value)"></select>
-    </div>
+    <button onclick="document.getElementById('panel').classList.remove('open')" style="color:var(--accent); background:none; border:none; cursor:pointer;">← VOLTAR</button>
+    <label>WhatsApp Fiscal:</label>
+    <input type="text" id="wa-num" placeholder="5511999999999">
+    <label>Lente:</label>
+    <select id="cam-sel" onchange="changeCam(this.value)"></select>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
 let stream, db = [], capturing = false, buffer = [], folder;
-let kmInicialLote = "";
+let lastLat = "0", lastLon = "0";
 const v = document.getElementById('v'), c = document.getElementById('c'), ctx = c.getContext('2d');
 
 async function initApp() {
     try {
-        folder = await window.showDirectoryPicker({ mode: 'readwrite' });
+        folder = await window.showDirectoryPicker();
         document.getElementById('gate').remove();
         document.getElementById('app').style.visibility = 'visible';
-        
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-
+        
         const devices = await navigator.mediaDevices.enumerateDevices();
         const cams = devices.filter(d => d.kind === 'videoinput');
         const sel = document.getElementById('cam-sel');
-        sel.innerHTML = cams.map((d, i) => `<option value="${d.deviceId}">Lente ${i+1}</option>`).join('');
+        sel.innerHTML = cams.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
         
         changeCam(cams[cams.length-1].deviceId);
         loadCSV();
         startGPS();
-    } catch (e) { alert("Configuração de pasta e câmera necessária."); }
+    } catch (e) { alert("Erro de permissão."); }
 }
 
 async function changeCam(id) {
     if (stream) stream.getTracks().forEach(t => t.stop());
-    stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1280, height: 720 } });
+    stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
     v.srcObject = stream;
     v.onloadedmetadata = () => { c.width = v.videoWidth; c.height = v.videoHeight; };
 }
 
-function startAutoMode() {
-    capturing = true;
-    buffer = [];
-    kmInicialLote = document.getElementById('km-display').innerText.replace("Km ", "");
-    document.getElementById('start').style.display = 'none';
-    document.getElementById('stop').style.display = 'block';
-    document.getElementById('status-rec').style.opacity = '1';
-    autoLoop();
+// --- FUNÇÃO DE INSPEÇÃO: FOTO + CARIMBO TÉCNICO ---
+async function inspectAndSend() {
+    const km = document.getElementById('km-display').innerText;
+    const data = new Date().toLocaleString('pt-BR');
+    const local = `LAT: ${lastLat} LON: ${lastLon}`;
+
+    // 1. Captura e Estampa
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+    const h = c.height * 0.18;
+    ctx.fillStyle = "rgba(0,0,0,0.85)";
+    ctx.fillRect(0, c.height - h, c.width, h);
+    
+    ctx.fillStyle = "#fff";
+    ctx.font = `bold ${h * 0.35}px Arial`;
+    ctx.fillText(`INSPEÇÃO: ${km}`, 40, c.height - (h * 0.55));
+    
+    ctx.fillStyle = var(--accent);
+    ctx.font = `${h * 0.15}px Arial`;
+    ctx.fillText(`${data} | ${local}`, 40, c.height - (h * 0.25));
+
+    // 2. Copia a imagem carimbada
+    c.toBlob(async (blob) => {
+        try {
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+            const num = document.getElementById('wa-num').value;
+            // Abre o WhatsApp. O inspetor só clica em "Colar"
+            window.location.href = num ? `https://wa.me/${num}` : `whatsapp://send`;
+        } catch (err) { alert("Erro ao processar imagem."); }
+    }, 'image/png');
 }
 
-function stopAutoMode() {
-    capturing = false;
-    if (buffer.length > 0) finalizeLote();
-    document.getElementById('start').style.display = 'block';
-    document.getElementById('stop').style.display = 'none';
-    document.getElementById('status-rec').style.opacity = '0';
+// --- GESTÃO DE RELATÓRIO PDF EM LOTE ---
+function toggleRelatorio() {
+    capturing = !capturing;
+    const btn = document.getElementById('btn-rel');
+    if(capturing) {
+        buffer = [];
+        btn.innerText = "PARAR LOTE";
+        btn.style.background = "#fff"; btn.style.color = "#000";
+        autoCapture();
+    } else {
+        btn.innerText = "GRAVAR LOTE";
+        btn.style.background = "var(--danger)"; btn.style.color = "#fff";
+        savePDF();
+    }
 }
 
-function autoLoop() {
+function autoCapture() {
     if (!capturing) return;
-
-    const currentKm = document.getElementById('km-display').innerText.replace("Km ", "");
-    const limit = parseInt(document.getElementById('lote-size').value) || 50;
-
     ctx.drawImage(v, 0, 0, c.width, c.height);
     buffer.push({
-        img: c.toDataURL('image/jpeg', 0.5),
-        km: currentKm,
-        ts: new Date().toLocaleString('pt-BR')
+        img: c.toDataURL('image/jpeg', 0.6),
+        km: document.getElementById('km-display').innerText,
+        ts: new Date().toLocaleString()
     });
-
-    document.getElementById('count').innerText = buffer.length;
-
-    // QUANDO ATINGE O LOTE, SALVA E CHAMA O WHATSAPP
-    if (buffer.length >= limit) {
-        finalizeLote(currentKm);
-        buffer = [];
-        kmInicialLote = currentKm;
-    }
-
-    setTimeout(autoLoop, parseInt(document.getElementById('intervalo').value) || 500);
+    setTimeout(autoCapture, 1000);
 }
 
-async function finalizeLote(kmFinal) {
-    const dataParaPdf = [...buffer];
-    const kIni = kmInicialLote;
-    const kFim = kmFinal || document.getElementById('km-display').innerText.replace("Km ", "");
-    
+async function savePDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
-
-    for (let i = 0; i < dataParaPdf.length; i++) {
+    for (let i = 0; i < buffer.length; i++) {
         if (i > 0) doc.addPage();
-        doc.addImage(dataParaPdf[i].img, 'JPEG', 0, 0, 297, 210);
-        
-        // Carimbo no PDF
-        doc.setFillColor(0,0,0,0.8);
-        doc.rect(0, 185, 297, 25, 'F');
-        doc.setTextColor(255,255,255);
-        doc.setFontSize(16);
-        doc.text(`Km ${dataParaPdf[i].km} - ${dataParaPdf[i].ts}`, 10, 200);
+        doc.addImage(buffer[i].img, 'JPEG', 0, 0, 297, 210);
+        doc.setFillColor(0,0,0,0.8); doc.rect(0, 185, 297, 25, 'F');
+        doc.setTextColor(255,255,255); doc.text(`${buffer[i].km} - ${buffer[i].ts}`, 10, 200);
     }
-
-    const nomeArquivo = `Relatorio_Km_${kIni}_ao_${kFim}.pdf`;
-    const blob = doc.output('blob');
-    
-    // Salva na pasta automaticamente
-    const handle = await folder.getFileHandle(nomeArquivo, {create:true});
+    const handle = await folder.getFileHandle(`Inspecao_Lote_${Date.now()}.pdf`, {create:true});
     const writable = await handle.createWritable();
-    await writable.write(blob);
-    await writable.close();
-
-    // DISPARO DO WHATSAPP (Abertura automática)
-    const num = document.getElementById('wa-num').value;
-    const msg = encodeURIComponent(`✅ Relatório Gerado Automático\nTrecho: Km ${kIni} ao ${kFim}\nO arquivo foi salvo na pasta do sistema.`);
-    
-    if (num) {
-        window.open(`https://api.whatsapp.com/send?phone=${num}&text=${msg}`, '_blank');
-    }
+    await writable.write(doc.output('blob')); await writable.close();
+    buffer = [];
 }
 
 async function loadCSV() {
@@ -213,22 +194,23 @@ async function loadCSV() {
         const rows = t.split('\n').slice(1);
         db = rows.map(row => {
             const cols = row.split(';');
-            if (cols.length < 3) return null;
-            return { km: cols, lat: parseFloat(cols.replace(',','.')), lon: parseFloat(cols.replace(',','.')) };
-        }).filter(d => d && !isNaN(d.lat));
-    } catch(e) { console.error("Erro CSV"); }
+            return { km: cols[0], lat: parseFloat(cols[1].replace(',','.')), lon: parseFloat(cols[2].replace(',','.')) };
+        }).filter(d => !isNaN(d.lat));
+    } catch(e) {}
 }
 
 function startGPS() {
     navigator.geolocation.watchPosition(pos => {
-        const { latitude: lat, longitude: lon } = pos.coords;
+        lastLat = pos.coords.latitude.toFixed(6);
+        lastLon = pos.coords.longitude.toFixed(6);
+        document.getElementById('coords-display').innerText = `LAT: ${lastLat} | LON: ${lastLon}`;
         if (!db.length) return;
-        let closest = db, minDist = Infinity;
+        let closest = db[0], minDist = Infinity;
         db.forEach(p => {
-            const d = Math.hypot(p.lat - lat, p.lon - lon);
+            const d = Math.hypot(p.lat - lastLat, p.lon - lastLon);
             if (d < minDist) { minDist = d; closest = p; }
         });
-        if (closest) document.getElementById('km-display').innerText = "Km " + closest.km;
+        document.getElementById('km-display').innerText = "Km " + closest.km;
     }, null, { enableHighAccuracy: true });
 }
 </script>
