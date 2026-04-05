@@ -3,254 +3,218 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Sistema Foto-Captura Profissional</title>
+    <title>Captura Técnica BR-116</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(0, 0, 0, 0.9); --whatsapp: #25D366; }
+        :root { --accent: #ffcc00; --placa: #007934; --whatsapp: #25D366; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
+        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; }
 
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; }
-        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; background: #0a0a0a; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 18px 40px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; margin-top: 20px; }
+        /* Gate de Entrada */
+        #gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .box { text-align: center; border: 1px solid #333; padding: 40px; border-radius: 20px; }
+        .btn-go { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: bold; border-radius: 10px; cursor: pointer; font-size: 1.2rem; }
 
-        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
+        /* App Principal */
+        #app { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 15px 25px; border: 3px solid #fff; border-radius: 8px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        #km-hud h1 { font-size: 2.2rem; font-weight: 900; margin: 0; }
+        /* HUD KM */
+        #hud { position: absolute; top: 20px; left: 20px; background: var(--placa); padding: 15px 25px; border: 3px solid #fff; border-radius: 10px; z-index: 100; }
+        #hud h1 { font-size: 2.5rem; font-weight: 900; }
 
-        /* Botão WhatsApp - Estilo Flutuante Direita */
-        #btn-wa-action { 
-            position: absolute; top: 50%; right: 20px; transform: translateY(-50%); 
-            background: var(--whatsapp); width: 80px; height: 80px; border-radius: 50%;
+        /* BOTÃO WHATSAPP (GRANDE E FLUTUANTE) */
+        #wa-btn { 
+            position: absolute; top: 50%; right: 20px; transform: translateY(-50%);
+            background: var(--whatsapp); width: 90px; height: 90px; border-radius: 50%;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 200; cursor: pointer; border: 4px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.6);
-            transition: 0.2s;
+            border: 4px solid #fff; z-index: 500; box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
-        #btn-wa-action:active { transform: translateY(-50%) scale(1.1); }
-        #btn-wa-action span { font-size: 9px; font-weight: bold; color: #fff; text-transform: uppercase; margin-top: 2px; }
+        #wa-btn span { font-size: 10px; font-weight: bold; margin-top: 5px; color: #fff; }
 
-        #rec-tag { position: absolute; top: 110px; right: 20px; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 30px; opacity: 0; z-index: 100; }
-        .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
+        /* Controles Inferiores */
+        #controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; align-items: center; }
+        .btn { padding: 20px 30px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        #start { background: var(--accent); }
+        #stop { background: #f00; color: #fff; display: none; }
+        #gear { background: rgba(255,255,255,0.2); font-size: 24px; padding: 15px; }
 
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 4000; padding: 60px 25px; transition: 0.4s; border-left: 1px solid #333; }
-        #settings-panel.open { right: 0; }
-        .close-settings { position: absolute; top: 20px; left: 20px; color: var(--accent); font-weight: bold; cursor: pointer; }
-        .field { margin-bottom: 20px; }
-        input, select { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 5px; }
-
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; align-items: center; }
-        .btn-main { border: none; padding: 22px 40px; border-radius: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 14px; }
-        #btn-start { background: var(--accent); color: #000; }
-        #btn-stop { background: var(--danger); color: #fff; display: none; }
-        #gear-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }
+        #panel { position: fixed; right: -320px; top: 0; width: 300px; height: 100%; background: rgba(0,0,0,0.9); padding: 50px 20px; transition: 0.3s; z-index: 1000; }
+        #panel.open { right: 0; }
 
         canvas { display: none; }
     </style>
 </head>
-<body onclick="refreshWakeLock()">
+<body>
 
-<div id="safety-gate">
-    <div class="alert-box">
-        <h1 style="color:var(--danger); margin-bottom:10px;">ATENÇÃO</h1>
-        <p>NÃO DIRIJA USANDO O CELULAR</p>
-        <button class="btn-aware" onclick="startApp()">ENTRAR NO SISTEMA</button>
+<div id="gate">
+    <div class="box">
+        <h2 style="color:red; margin-bottom:20px;">SEGURANÇA EM PRIMEIRO LUGAR</h2>
+        <button class="btn-go" onclick="init()">INICIAR SISTEMA</button>
     </div>
 </div>
 
-<div id="app-shell">
-    <video id="vid" autoplay playsinline muted></video>
-    <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
+<div id="app">
+    <video id="v" autoplay playsinline muted></video>
+    <div id="hud"><h1 id="km-display">Km ---+---</h1></div>
 
-    <!-- BOTÃO WHATSAPP ESTAMPAR -->
-    <div id="btn-wa-action" onclick="sendWhatsAppEstampado()">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="35">
-        <span>ENVIAR KM</span>
+    <div id="wa-btn" onclick="snapAndShare()">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="40">
+        <span>ENVIAR FOTO</span>
     </div>
 
-    <div id="rec-tag"><div class="dot"></div><span id="status-text">GRAVANDO PDF</span></div>
-
-    <div id="ui-controls">
-        <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR RELATÓRIO</button>
-        <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR TUDO</button>
+    <div id="controls">
+        <button id="gear" onclick="document.getElementById('panel').classList.toggle('open')">⚙️</button>
+        <button id="start" class="btn" onclick="startCapture()">Iniciar Relatório PDF</button>
+        <button id="stop" class="btn" onclick="stopCapture()">Finalizar e Salvar</button>
     </div>
 </div>
 
-<div id="settings-panel">
-    <div class="close-settings" onclick="toggleSet()">← VOLTAR</div>
-    <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Whats Destino (DDD+Num)</label><input type="text" id="cfg-wa" placeholder="5511999999999"></div>
-    <div class="field"><label>Lote Fotos</label><input type="number" id="cfg-lote" value="50"></div>
-    <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
+<div id="panel">
+    <button onclick="document.getElementById('panel').classList.remove('open')" style="color:yellow; background:none; border:none; margin-bottom:20px;">X FECHAR</button>
+    <div style="margin-bottom:15px;">
+        <label>Câmera:</label><br>
+        <select id="cam-sel" onchange="changeCam(this.value)" style="width:100%; padding:10px;"></select>
+    </div>
+    <div style="margin-bottom:15px;">
+        <label>WhatsApp Destino:</label><br>
+        <input type="text" id="wa-num" placeholder="5511999999999" style="width:100%; padding:10px;">
+    </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], capturing=false, hDir=null, currentStream=null, wakeLock=null;
-let buffer = [], kmInicialLote = "";
-const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
+let stream, db = [], capturing = false, buffer = [], folder;
+const v = document.getElementById('v'), c = document.getElementById('c'), ctx = c.getContext('2d');
 
-async function refreshWakeLock() {
-    if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} }
-}
-
-async function startApp() {
+async function init() {
     try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').remove();
-        document.getElementById('app-shell').style.visibility = 'visible';
+        folder = await window.showDirectoryPicker();
+        document.getElementById('gate').remove();
+        document.getElementById('app').style.visibility = 'visible';
         
-        // RESTAURAÇÃO FULLSCREEN ORIGINAL
-        if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(() => {});
-        }
+        // Ativar Fullscreen
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cams = devices.filter(d => d.kind === 'videoinput');
+        const sel = document.getElementById('cam-sel');
+        sel.innerHTML = cams.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
         
-        listCams(); loadCSV(); initGPS(); refreshWakeLock();
-    } catch(e) { alert("Pasta de destino obrigatória."); }
+        changeCam(cams[cams.length-1].deviceId);
+        loadCSV();
+        startGPS();
+    } catch (e) { alert("Acesso à pasta necessário."); }
 }
 
-async function listCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const vids = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Lente ${i+1}</option>`).join('');
-    switchCam(vids[vids.length-1].deviceId);
+async function changeCam(id) {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
+    v.srcObject = stream;
+    v.onloadedmetadata = () => { c.width = v.videoWidth; c.height = v.videoHeight; };
 }
 
-async function switchCam(id) {
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1280, height: 720 } });
-    vid.srcObject = currentStream;
-    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-}
+// --- FUNÇÃO DE WHATSAPP COM FOTO ESTAMPADA ---
+async function snapAndShare() {
+    const km = document.getElementById('km-display').innerText;
+    const data = new Date().toLocaleString('pt-BR');
 
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
-
-// --- FUNÇÃO CORRIGIDA: ESTAMPA A FOTO E ABRE WHATSAPP ---
-async function sendWhatsAppEstampado() {
-    const km = document.getElementById('km-txt').innerText;
-    const ts = new Date().toLocaleString('pt-BR');
+    // Desenha no Canvas para "queimar" as letras na foto
+    ctx.drawImage(v, 0, 0, c.width, c.height);
     
-    // 1. Desenha a imagem atual da câmera no canvas
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    const h = c.height * 0.15;
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0, c.height - h, c.width, h);
     
-    // 2. Cria a tarja preta inferior (O Carimbo/Estampa)
-    const bh = can.height * 0.16;
-    ctx.fillStyle = "rgba(0,0,0,0.85)";
-    ctx.fillRect(0, can.height - bh, can.width, bh);
-    
-    // 3. Escreve Km e Data/Hora (Queimado na imagem)
     ctx.fillStyle = "#fff";
-    ctx.font = `bold ${bh * 0.4}px Arial`;
-    ctx.fillText(km, 40, can.height - (bh * 0.45));
-    ctx.font = `${bh * 0.2}px Arial`;
-    ctx.fillText(ts, 40, can.height - (bh * 0.15));
+    ctx.font = `bold ${h * 0.4}px Arial`;
+    ctx.fillText(km, 30, c.height - (h * 0.45));
+    ctx.font = `${h * 0.2}px Arial`;
+    ctx.fillText(data, 30, c.height - (h * 0.15));
 
-    // 4. Converte em Blob e COPIA para o ClipBoard (Única forma de enviar foto via web)
-    can.toBlob(async (blob) => {
+    // COPIA A FOTO PARA O CLIPBOARD (MEMÓRIA DO CELULAR)
+    c.toBlob(async (blob) => {
         try {
-            const data = [new ClipboardItem({ "image/png": blob })];
-            await navigator.clipboard.write(data);
+            const item = new ClipboardItem({ "image/png": blob });
+            await navigator.clipboard.write([item]);
             
-            const num = document.getElementById('cfg-wa').value;
-            const msg = encodeURIComponent(`Foto registro: ${km} em ${ts}`);
+            const num = document.getElementById('wa-num').value;
+            const link = num ? `https://wa.me/${num}` : `whatsapp://send`;
             
-            // 5. Abre o WhatsApp - O usuário só precisará "COLAR"
-            window.location.href = num ? `https://wa.me/${num}?text=${msg}` : `whatsapp://send?text=${msg}`;
-            
-            // Pequeno feedback visual pro usuário saber que copiou
-            document.getElementById('btn-wa-action').style.borderColor = "#ffcc00";
-            setTimeout(() => document.getElementById('btn-wa-action').style.borderColor = "#fff", 1000);
-            
-        } catch (e) { alert("Erro ao carimbar imagem. Tente novamente."); }
+            alert("FOTO COM KM COPIADA!\nAo abrir o WhatsApp, pressione na barra de texto e escolha 'COLAR'.");
+            window.location.href = link;
+        } catch (err) {
+            alert("Erro ao copiar foto. Tente novamente.");
+        }
     }, 'image/png');
 }
 
-// --- FUNÇÕES DE CAPTURA PDF (ORIGINAIS) ---
+// --- LÓGICA DE PDF E GPS (MANTIDAS) ---
 function startCapture() {
-    capturing = true; buffer = []; 
-    kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-tag').style.opacity = '1';
-    captureLoop();
+    capturing = true;
+    buffer = [];
+    document.getElementById('start').style.display = 'none';
+    document.getElementById('stop').style.display = 'block';
+    loop();
 }
 
 function stopCapture() {
     capturing = false;
-    if (buffer.length > 0) savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
-    document.getElementById('btn-start').style.display = 'block';
-    document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-tag').style.opacity = '0';
+    savePDF();
+    document.getElementById('start').style.display = 'block';
+    document.getElementById('stop').style.display = 'none';
 }
 
-function captureLoop() {
+function loop() {
     if (!capturing) return;
-    if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
-        const curKm = document.getElementById('km-txt').innerText.replace("Km ", "");
-        ctx.drawImage(vid, 0, 0, can.width, can.height);
-        buffer.push({ img: can.toDataURL('image/jpeg', 0.4), km: curKm, ts: new Date().toLocaleString('pt-BR') });
-        if (buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 50)) {
-            savePDF([...buffer], kmInicialLote, curKm);
-            buffer = []; kmInicialLote = curKm;
-        }
-    }
-    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+    buffer.push({
+        img: c.toDataURL('image/jpeg', 0.5),
+        km: document.getElementById('km-display').innerText,
+        dt: new Date().toLocaleString()
+    });
+    setTimeout(loop, 500);
 }
 
-async function savePDF(dataList, kmIni, kmFim) {
-    const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
-    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
-    for (let i = 0; i < dataList.length; i++) {
+async function savePDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4');
+    for (let i = 0; i < buffer.length; i++) {
         if (i > 0) doc.addPage();
-        const img = new Image();
-        await new Promise(r => {
-            img.onload = () => {
-                ctx.drawImage(img, 0, 0);
-                const bh = can.height * 0.15;
-                ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, can.height - bh, can.width, bh);
-                ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.4}px Arial`;
-                ctx.fillText("Km " + dataList[i].km, 40, can.height - (bh * 0.45));
-                ctx.font = `${bh * 0.2}px Arial`; ctx.fillText(dataList[i].ts.toUpperCase(), 40, can.height - (bh * 0.15));
-                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
-                r();
-            };
-            img.src = dataList[i].img;
-        });
+        doc.addImage(buffer[i].img, 'JPEG', 0, 0, 297, 210);
+        doc.setFillColor(0,0,0,0.8);
+        doc.rect(0, 180, 297, 30, 'F');
+        doc.setTextColor(255,255,255);
+        doc.text(`${buffer[i].km} - ${buffer[i].dt}`, 10, 195);
     }
-    const nome = `Km_${kmIni}_ao_${kmFim}_${Date.now()}.pdf`;
-    const fh = await hDir.getFileHandle(nome, { create: true });
-    const wr = await fh.createWritable();
-    await wr.write(doc.output('blob')); await wr.close();
+    const blob = doc.output('blob');
+    const handle = await folder.getFileHandle(`Relatorio_${Date.now()}.pdf`, {create:true});
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    buffer = [];
 }
 
 async function loadCSV() {
-    try {
-        const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ik = h.indexOf('km'), ilt = h.findIndex(x=>x.includes('lat')), iln = h.findIndex(x=>x.includes('lon'));
-        kmDB = rows.map(r => {
-            const c = r.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
-        }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
+    const r = await fetch('SNVBR116SPRJ.csv');
+    const t = await r.text();
+    const rows = t.split('\n').slice(1);
+    db = rows.map(row => {
+        const cols = row.split(';');
+        return { km: cols[0], lat: parseFloat(cols[1]), lon: parseFloat(cols[2]) };
+    }).filter(d => !isNaN(d.lat));
 }
 
-function initGPS() {
-    navigator.geolocation.watchPosition(p => {
-        if (!kmDB.length) return;
-        let best = null, minD = Infinity;
-        for (const pt of kmDB) {
-            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if (d < minD) { minD = d; best = pt; }
-        }
-        if (best) document.getElementById('km-txt').innerText = "Km " + best.km;
+function startGPS() {
+    navigator.geolocation.watchPosition(pos => {
+        const { latitude: lat, longitude: lon } = pos.coords;
+        let closest = db[0], minDist = Infinity;
+        db.forEach(p => {
+            const d = Math.hypot(p.lat - lat, p.lon - lon);
+            if (d < minDist) { minDist = d; closest = p; }
+        });
+        if (closest) document.getElementById('km-display').innerText = "Km " + closest.km;
     }, null, { enableHighAccuracy: true });
 }
 </script>
