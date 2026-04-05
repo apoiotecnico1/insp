@@ -3,10 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Sistema de Foto-Captura Profissional</title>
+    <title>Sistema Foto-Captura Profissional</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(0, 0, 0, 0.85); --whatsapp: #25D366; }
+        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(0, 0, 0, 0.9); --whatsapp: #25D366; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
@@ -20,16 +20,16 @@
         #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 15px 25px; border: 3px solid #fff; border-radius: 8px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         #km-hud h1 { font-size: 2.2rem; font-weight: 900; margin: 0; }
 
-        /* Ícone WhatsApp Estratégico (Centro-Direita) */
-        #btn-wa-fast { 
+        /* Botão WhatsApp - Estilo Flutuante Direita */
+        #btn-wa-action { 
             position: absolute; top: 50%; right: 20px; transform: translateY(-50%); 
-            background: var(--whatsapp); width: 70px; height: 70px; border-radius: 50%;
+            background: var(--whatsapp); width: 80px; height: 80px; border-radius: 50%;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 200; cursor: pointer; border: 3px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            opacity: 0.7; transition: 0.2s;
+            z-index: 200; cursor: pointer; border: 4px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.6);
+            transition: 0.2s;
         }
-        #btn-wa-fast:active { transform: translateY(-50%) scale(1.2); opacity: 1; }
-        #btn-wa-fast span { font-size: 8px; font-weight: bold; color: #fff; text-transform: uppercase; margin-top: 2px; }
+        #btn-wa-action:active { transform: translateY(-50%) scale(1.1); }
+        #btn-wa-action span { font-size: 9px; font-weight: bold; color: #fff; text-transform: uppercase; margin-top: 2px; }
 
         #rec-tag { position: absolute; top: 110px; right: 20px; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 30px; opacity: 0; z-index: 100; }
         .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
@@ -62,16 +62,15 @@
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
-    
     <div id="km-hud"><h1 id="km-txt">Km ---+---</h1></div>
 
-    <!-- BOTÃO WHATSAPP ULTRA RÁPIDO -->
-    <div id="btn-wa-fast" onclick="fastWhatsApp()">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="30">
-        <span>ENVIAR</span>
+    <!-- BOTÃO WHATSAPP ESTAMPAR -->
+    <div id="btn-wa-action" onclick="sendWhatsAppEstampado()">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="35">
+        <span>ENVIAR KM</span>
     </div>
 
-    <div id="rec-tag"><div class="dot"></div><span id="status-text">CAPTURA ATIVA</span></div>
+    <div id="rec-tag"><div class="dot"></div><span id="status-text">GRAVANDO PDF</span></div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
@@ -83,9 +82,9 @@
 <div id="settings-panel">
     <div class="close-settings" onclick="toggleSet()">← VOLTAR</div>
     <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>WhatsApp (DDD+Número)</label><input type="text" id="cfg-wa" placeholder="5511999999999"></div>
+    <div class="field"><label>Whats Destino (DDD+Num)</label><input type="text" id="cfg-wa" placeholder="5511999999999"></div>
+    <div class="field"><label>Lote Fotos</label><input type="number" id="cfg-lote" value="50"></div>
     <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="field"><label>Fotos/PDF</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <canvas id="c"></canvas>
@@ -104,8 +103,14 @@ async function startApp() {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
+        
+        // RESTAURAÇÃO FULLSCREEN ORIGINAL
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        }
+        
         listCams(); loadCSV(); initGPS(); refreshWakeLock();
-    } catch(e) { alert("Selecione a pasta de destino."); }
+    } catch(e) { alert("Pasta de destino obrigatória."); }
 }
 
 async function listCams() {
@@ -125,35 +130,47 @@ async function switchCam(id) {
 
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
-// --- FUNÇÃO WHATSAPP ULTRA RÁPIDA ---
-async function fastWhatsApp() {
+// --- FUNÇÃO CORRIGIDA: ESTAMPA A FOTO E ABRE WHATSAPP ---
+async function sendWhatsAppEstampado() {
     const km = document.getElementById('km-txt').innerText;
     const ts = new Date().toLocaleString('pt-BR');
     
-    // 1. Estampa a foto no canvas
+    // 1. Desenha a imagem atual da câmera no canvas
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const bh = can.height * 0.15;
-    ctx.fillStyle = "rgba(0,0,0,0.8)";
+    
+    // 2. Cria a tarja preta inferior (O Carimbo/Estampa)
+    const bh = can.height * 0.16;
+    ctx.fillStyle = "rgba(0,0,0,0.85)";
     ctx.fillRect(0, can.height - bh, can.width, bh);
+    
+    // 3. Escreve Km e Data/Hora (Queimado na imagem)
     ctx.fillStyle = "#fff";
     ctx.font = `bold ${bh * 0.4}px Arial`;
     ctx.fillText(km, 40, can.height - (bh * 0.45));
     ctx.font = `${bh * 0.2}px Arial`;
     ctx.fillText(ts, 40, can.height - (bh * 0.15));
 
-    // 2. Copia a imagem carimbada para a área de transferência
+    // 4. Converte em Blob e COPIA para o ClipBoard (Única forma de enviar foto via web)
     can.toBlob(async (blob) => {
         try {
-            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-            // 3. Abre o WhatsApp imediatamente
+            const data = [new ClipboardItem({ "image/png": blob })];
+            await navigator.clipboard.write(data);
+            
             const num = document.getElementById('cfg-wa').value;
-            const waUrl = num ? `https://wa.me/${num}?text=${encodeURIComponent(km + ' ' + ts)}` : `whatsapp://send?text=${encodeURIComponent(km)}`;
-            window.location.href = waUrl;
-        } catch (e) { console.error("Clipboard Error"); }
+            const msg = encodeURIComponent(`Foto registro: ${km} em ${ts}`);
+            
+            // 5. Abre o WhatsApp - O usuário só precisará "COLAR"
+            window.location.href = num ? `https://wa.me/${num}?text=${msg}` : `whatsapp://send?text=${msg}`;
+            
+            // Pequeno feedback visual pro usuário saber que copiou
+            document.getElementById('btn-wa-action').style.borderColor = "#ffcc00";
+            setTimeout(() => document.getElementById('btn-wa-action').style.borderColor = "#fff", 1000);
+            
+        } catch (e) { alert("Erro ao carimbar imagem. Tente novamente."); }
     }, 'image/png');
 }
 
-// --- FUNÇÕES ORIGINAIS DE RELATÓRIO PDF ---
+// --- FUNÇÕES DE CAPTURA PDF (ORIGINAIS) ---
 function startCapture() {
     capturing = true; buffer = []; 
     kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
@@ -205,7 +222,7 @@ async function savePDF(dataList, kmIni, kmFim) {
             img.src = dataList[i].img;
         });
     }
-    const nome = `Relatorio_Km_${kmIni}_a_${kmFim}_${Date.now()}.pdf`;
+    const nome = `Km_${kmIni}_ao_${kmFim}_${Date.now()}.pdf`;
     const fh = await hDir.getFileHandle(nome, { create: true });
     const wr = await fh.createWritable();
     await wr.write(doc.output('blob')); await wr.close();
