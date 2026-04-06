@@ -1,66 +1,71 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Sistema de Apoio - Captura Pro</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Sistema de Apoio - Captura Pro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <!-- ORIGINAL – CORRETO -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root { 
+    --accent:#ffcc00; 
+    --placa-verde:rgba(0,121,52,.6); 
+    --danger:#ff4444; 
+    --glass:rgba(10,10,10,.9); 
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#000;color:#fff;font-family:sans-serif;overflow:hidden;height:100vh}
 
-    <style>
-        :root { --accent:#ffcc00; --placa-verde:rgba(0,121,52,.6); --danger:#ff4444; --glass:rgba(10,10,10,.9); }
-        *{box-sizing:border-box;margin:0;padding:0;touch-action:manipulation}
-        body{background:#000;color:#fff;font-family:sans-serif;overflow:hidden;height:100vh;width:100vw}
+#safety-gate{position:fixed;inset:0;background:#000;z-index:9999;display:flex;align-items:center;justify-content:center}
+.alert-box{border:1px solid #333;padding:40px;border-radius:15px;text-align:center;background:#0a0a0a}
+.btn-aware{background:var(--accent);color:#000;border:0;padding:20px 50px;font-weight:900;border-radius:8px}
 
-        #safety-gate{position:fixed;inset:0;background:#000;z-index:9999;display:flex;align-items:center;justify-content:center}
-        .alert-box{border:1px solid #333;padding:40px;border-radius:15px;text-align:center;background:#0a0a0a;max-width:90%}
-        .btn-aware{background:var(--accent);color:#000;border:none;padding:20px 50px;font-weight:900;border-radius:8px;cursor:pointer;margin-top:20px}
+#app-shell{width:100vw;height:100vh;visibility:hidden}
+#vid{width:100%;height:100%;object-fit:cover}
 
-        #app-shell{position:relative;width:100vw;height:100vh;visibility:hidden}
-        #vid{width:100%;height:100%;object-fit:cover;cursor:crosshair}
+#km-hud{
+    position:absolute;top:20px;left:20px;
+    background:var(--placa-verde);
+    padding:14px 24px;border-radius:8px;
+    border:3px solid rgba(255,255,255,.7);
+    z-index:100;text-align:center
+}
+#km-txt{font-size:2.2rem;font-weight:900}
 
-        #km-hud{
-            position:absolute;top:20px;left:20px;
-            background:var(--placa-verde);
-            padding:10px 20px;
-            border:3px solid rgba(255,255,255,.7);
-            border-radius:8px;z-index:100;
-            pointer-events:none;
-            min-width:160px;
-            display:flex;flex-direction:column;
-            align-items:center;text-align:center
-        }
+#rec-tag{
+    position:absolute;top:40px;right:15px;
+    display:flex;gap:6px;align-items:center;
+    background:rgba(0,0,0,.5);
+    padding:6px 14px;border-radius:15px;
+    opacity:0
+}
+.dot{width:8px;height:8px;background:red;border-radius:50%;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:0}}
 
-        /* ✅ ÚNICA MUDANÇA VISUAL: BR NÃO APARECE */
-        #br-txt{display:none;}
+#ui-controls{
+    position:absolute;bottom:40px;left:50%;
+    transform:translateX(-50%);
+    display:flex;gap:20px;z-index:500
+}
+.ui-hidden{opacity:0;visibility:hidden}
 
-        #km-txt{font-size:2.2rem;font-weight:900}
+.btn-main{
+    border:0;padding:18px 40px;
+    border-radius:12px;font-weight:900
+}
+#btn-start{background:var(--accent);color:#000}
+#btn-stop{background:var(--danger);color:#fff;display:none}
+#gear-btn{
+    width:60px;height:60px;
+    background:rgba(255,255,255,.2);
+    border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:24px
+}
 
-        #rec-tag{
-            position:absolute;top:40px;right:15px;
-            display:flex;align-items:center;gap:6px;
-            background:rgba(0,0,0,.5);
-            padding:5px 12px;border-radius:15px;
-            opacity:0;pointer-events:none;z-index:100
-        }
-        .dot{width:8px;height:8px;background:#f00;border-radius:50%;animation:blink 1s infinite}
-        @keyframes blink{50%{opacity:0}}
-
-        #ui-controls{
-            position:absolute;bottom:40px;left:50%;
-            transform:translateX(-50%);
-            display:flex;gap:20px;z-index:500
-        }
-
-        .btn-main{border:none;padding:18px 40px;border-radius:12px;font-weight:900;cursor:pointer;min-width:160px}
-        #btn-start{background:var(--accent);color:#000}
-        #btn-stop{background:var(--danger);color:#fff;display:none}
-        #gear-btn{width:60px;height:60px;background:rgba(255,255,255,.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer}
-
-        canvas{display:none}
-        #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:1000}
-    </style>
+canvas{display:none}
+#flash{position:fixed;inset:0;background:#fff;opacity:0;z-index:1000}
+</style>
 </head>
 
 <body>
@@ -79,8 +84,7 @@
     <video id="vid" autoplay playsinline muted onclick="handleTouch()"></video>
 
     <div id="km-hud">
-        <span id="br-txt">BR-116</span><!-- permanece, mas não aparece -->
-        <h1 id="km-txt">Km ---</h1>
+        <div id="km-txt">Km ---</div>
     </div>
 
     <div id="rec-tag">
@@ -89,7 +93,7 @@
     </div>
 
     <div id="ui-controls">
-        <div id="gear-btn" onclick="toggleSet()">⚙</div>
+        <div id="gear-btn">⚙</div>
         <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR</button>
         <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR</button>
     </div>
@@ -98,69 +102,107 @@
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], capturing=false, hDir=null;
-let brAtual="BR-116"; // ✅ mantido (não quebra nada)
-let buffer=[], kmInicialLote="";
-let curLat="0.0000", curLon="0.0000";
+let kmDB=[],buffer=[],capturing=false,hDir=null,currentStream=null;
+let curLat="0.0000",curLon="0.0000";
 
 const vid=document.getElementById('vid');
 const can=document.getElementById('c');
 const ctx=can.getContext('2d');
 
-function handleTouch(){ takeManualPhoto(); }
+async function startApp(){
+    hDir=await window.showDirectoryPicker({mode:'readwrite'});
+    document.getElementById('safety-gate').remove();
+    document.getElementById('app-shell').style.visibility='visible';
+    currentStream=await navigator.mediaDevices.getUserMedia({video:{width:1920,height:1080}});
+    vid.srcObject=currentStream;
+    vid.onloadedmetadata=()=>{can.width=vid.videoWidth;can.height=vid.videoHeight}
+    initGPS(); loadCSV();
+}
+
+function handleTouch(){ takeManualPhoto() }
 
 async function takeManualPhoto(){
     ctx.drawImage(vid,0,0,can.width,can.height);
-    const km=document.getElementById('km-txt').innerText.replace("Km ","");
-    const bh=can.height*0.10;
-
-    ctx.fillStyle="rgba(0,0,0,0.6)";
+    const bh=can.height*0.1;
+    ctx.fillStyle="rgba(0,0,0,.6)";
     ctx.fillRect(0,can.height-bh,can.width,bh);
-
     ctx.fillStyle="#fff";
-    ctx.font=`bold ${bh*0.35}px Arial`;
+    ctx.font=`bold ${bh*.35}px Arial`;
+    ctx.fillText(`Km ${document.getElementById('km-txt').innerText}`,20,can.height-bh*0.55);
+    ctx.font=`${bh*.22}px Arial`;
+    ctx.fillText(`${new Date().toLocaleString('pt-BR')} | GPS ${curLat}, ${curLon}`,20,can.height-bh*.25);
 
-    /* ✅ NÃO MOSTRA BR, SÓ KM */
-    ctx.fillText(`Km ${km}`,20,can.height-(bh*0.55));
-
-    ctx.font=`${bh*0.22}px Arial`;
-    ctx.fillText(`${new Date().toLocaleString('pt-BR')} | GPS: ${curLat}, ${curLon}`,20,can.height-(bh*0.25));
-
-    const blob=await new Promise(r=>can.toBlob(r,'image/jpeg',0.95));
-    const fh=await hDir.getFileHandle(`MANUAL_${Date.now()}.jpg`,{create:true});
-    const w=await fh.createWritable();
-    await w.write(blob); await w.close();
+    const blob=await new Promise(r=>can.toBlob(r,'image/jpeg',.95));
+    const h=await hDir.getFileHandle(`MANUAL_Km_${Date.now()}.jpg`,{create:true});
+    const w=await h.createWritable();
+    await w.write(blob);await w.close();
 }
 
-/* ✅ PDF – MESMA COISA: SÓ NÃO ESCREVE BR */
-async function savePDF(dataList, kmIni, kmFim){
-    const doc=new jspdf.jsPDF(can.width<can.height?'p':'l','mm','a4');
-    const pw=doc.internal.pageSize.getWidth(), ph=doc.internal.pageSize.getHeight();
+function startCapture(){
+    capturing=true;buffer=[];
+    document.getElementById('btn-start').style.display='none';
+    document.getElementById('btn-stop').style.display='block';
+    document.getElementById('rec-tag').style.opacity=1;
+    captureLoop();
+}
 
-    for(let i=0;i<dataList.length;i++){
-        if(i) doc.addPage();
+function stopCapture(){
+    capturing=false;
+    if(buffer.length) savePDF(buffer);
+    buffer=[];
+    document.getElementById('btn-start').style.display='block';
+    document.getElementById('btn-stop').style.display='none';
+    document.getElementById('rec-tag').style.opacity=0;
+}
+
+function captureLoop(){
+    if(!capturing)return;
+    ctx.drawImage(vid,0,0,can.width,can.height);
+    buffer.push({
+        img:can.toDataURL('image/jpeg',.5),
+        km:document.getElementById('km-txt').innerText,
+        ts:new Date().toLocaleString('pt-BR'),
+        gps:`${curLat}, ${curLon}`
+    });
+    setTimeout(captureLoop,200);
+}
+
+async function savePDF(list){
+    const doc=new jspdf.jsPDF();
+    for(let i=0;i<list.length;i++){
+        if(i)doc.addPage();
         const img=new Image();
         await new Promise(r=>{
             img.onload=()=>{
                 ctx.drawImage(img,0,0);
-                const bh=can.height*0.10;
-                ctx.fillStyle="rgba(0,0,0,0.6)";
-                ctx.fillRect(0,can.height-bh,can.width,bh);
-                ctx.fillStyle="#fff";
-                ctx.font=`bold ${bh*0.35}px Arial`;
-                ctx.fillText(`Km ${dataList[i].km}`,20,can.height-(bh*0.55));
-                ctx.font=`${bh*0.22}px Arial`;
-                ctx.fillText(`${dataList[i].ts} | GPS: ${dataList[i].gps}`,20,can.height-(bh*0.25));
-                doc.addImage(can.toDataURL('image/jpeg',0.7),'JPEG',0,0,pw,ph);
+                doc.addImage(can.toDataURL('image/jpeg',.7),'JPEG',0,0,210,297);
                 r();
             };
-            img.src=dataList[i].img;
+            img.src=list[i].img;
         });
     }
+    const h=await hDir.getFileHandle(`RELATORIO_KM_${Date.now()}.pdf`,{create:true});
+    const w=await h.createWritable();
+    await w.write(doc.output('blob'));await w.close();
+}
 
-    const fh=await hDir.getFileHandle(`RELATORIO_${Date.now()}.pdf`,{create:true});
-    const w=await fh.createWritable();
-    await w.write(doc.output('blob')); await w.close();
+function initGPS(){
+navigator.geolocation.watchPosition(p=>{
+    curLat=p.coords.latitude.toFixed(6);
+    curLon=p.coords.longitude.toFixed(6);
+    if(!kmDB.length)return;
+    let best=kmDB.reduce((a,b)=>Math.hypot(b.lt-p.coords.latitude,b.ln-p.coords.longitude)<a.d?{...b,d:Math.hypot(b.lt-p.coords.latitude,b.ln-p.coords.longitude)}:a,{d:999});
+    document.getElementById('km-txt').innerText=best.km;
+});
+}
+
+async function loadCSV(){
+    const r=await fetch('SNVBR116SPRJ.csv');
+    const t=await r.text();
+    kmDB=t.split('\n').slice(1).map(l=>{
+        const c=l.split(';');
+        return{km:c[0],lt:parseFloat(c[1]),ln:parseFloat(c[2])}
+    }).filter(x=>!isNaN(x.lt));
 }
 </script>
 
