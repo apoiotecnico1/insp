@@ -2,265 +2,287 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Sistema de Foto-Captura Técnica Rodoviária</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <title>Monitoramento Rodoviário Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { 
-            --accent: #ffcc00; 
-            /* Placa Verde mais sólida (85%) */
-            --placa-verde: rgba(0, 121, 52, 0.85); 
-            --danger: #ff4444; 
-            --glass-dark: rgba(10, 10, 10, 0.9); 
-        }
+        :root { --accent: #ffcc00; --placa: rgba(0, 121, 52, 0.9); --danger: #ff4444; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
+        
+        /* Preenchimento total da tela */
+        html, body { 
+            background: #000; 
+            color: #fff; 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            overflow: hidden; 
+            width: 100vw; 
+            height: 100vh;
+        }
 
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; }
-        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; max-width: 90%; background: #0a0a0a; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 18px 40px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; margin-top: 20px; }
+        #app-shell { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; }
+        video { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
 
-        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-
-        /* HUD KM ESTILO PLACA DE TRÂNSITO */
+        /* HUD KM ESTILO PLACA REALISTA */
         #km-hud { 
-            position: absolute; top: 20px; left: 20px; 
-            background: var(--placa-verde); 
-            backdrop-filter: blur(10px); 
-            padding: 12px 25px; 
-            border: 4px solid #fff; /* Contorno Branco */
-            border-radius: 12px; 
-            z-index: 100; 
+            position: absolute; top: env(safe-area-inset-top, 20px); left: 20px; 
+            background: var(--placa); 
+            padding: 10px 25px; 
+            border: 4px solid #fff; 
+            border-radius: 12px; z-index: 100;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.8);
             text-align: center;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            min-width: 160px;
         }
-        #br-txt { font-size: 0.9rem; font-weight: 800; color: #fff; text-transform: uppercase; display: block; border-bottom: 2px solid rgba(255,255,255,0.4); margin-bottom: 4px; padding-bottom: 2px; }
-        #km-hud h1 { font-size: 2.6rem; font-weight: 900; margin: 0; line-height: 1.1; color: #fff; letter-spacing: -1px; }
+        #br-txt { font-size: 0.9rem; font-weight: 900; display: block; border-bottom: 2px solid #fff; margin-bottom: 3px; text-transform: uppercase; }
+        #km-txt { font-size: 2.5rem; font-weight: 900; margin: 0; letter-spacing: -1px; }
 
-        /* BOTÃO CENTRAL DISCRETO */
-        #quick-shutter-container {
-            position: absolute; top: 50%; left: 50%; 
-            transform: translate(-50%, -50%);
-            display: flex; flex-direction: column; align-items: center;
-            z-index: 60; cursor: pointer;
+        /* BOTÃO DE CAPTURA JPG (FLUTUANTE E DISCRETO) */
+        #shutter-zone {
+            position: absolute; bottom: 120px; right: 20px;
+            text-align: center; z-index: 100; cursor: pointer;
+            background: rgba(0,0,0,0.4); padding: 10px; border-radius: 15px;
         }
-        #quick-shutter { 
-            width: 75px; height: 75px; 
-            border: 3px solid rgba(255,255,255,0.4);
-            border-radius: 50%;
+        #btn-jpg { 
+            width: 60px; height: 60px; border: 3px solid #fff; border-radius: 50%;
+            background: rgba(255,255,255,0.2); margin: 0 auto 5px;
             display: flex; align-items: center; justify-content: center;
-            background: rgba(255,255,255,0.1);
         }
-        #quick-shutter::after { content: ''; width: 30px; height: 30px; background: #fff; border-radius: 50%; opacity: 0.8; }
-        .shutter-label {
-            margin-top: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase;
-            letter-spacing: 1.5px; color: #fff; text-shadow: 0 2px 4px #000;
-            background: rgba(0,0,0,0.5); padding: 5px 12px; border-radius: 4px;
+        #btn-jpg::after { content: ''; width: 20px; height: 20px; background: #fff; border-radius: 50%; }
+        .label-jpg { font-size: 9px; font-weight: 900; color: #fff; }
+
+        /* CONTROLES PDF INFERIORES */
+        #ui { 
+            position: absolute; bottom: env(safe-area-inset-bottom, 30px); 
+            left: 50%; transform: translateX(-50%); 
+            display: flex; gap: 15px; z-index: 100; width: 90%; justify-content: center;
         }
-
-        #rec-tag { position: absolute; top: 25px; right: 25px; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 30px; opacity: 0; z-index: 100; border: 1px solid var(--danger); }
-        .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
-
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; align-items: center; }
-        .btn-main { border: none; padding: 20px 40px; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 14px; }
-        #btn-start { background: var(--accent); color: #000; }
-        #btn-stop { background: var(--danger); color: #fff; display: none; }
-        #gear-btn { width: 64px; height: 64px; background: rgba(255,255,255,0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); }
-
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass-dark); backdrop-filter: blur(20px); z-index: 4000; padding: 60px 25px; transition: 0.4s; }
-        #settings-panel.open { right: 0; }
-        .flash { position: fixed; inset: 0; background: #fff; opacity: 0; z-index: 6000; pointer-events: none; }
+        .btn { 
+            border: none; padding: 18px 30px; border-radius: 50px; 
+            font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 13px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        #start { background: var(--accent); color: #000; width: 100%; max-width: 300px; }
+        #stop { background: var(--danger); color: #fff; display: none; width: 100%; max-width: 300px; }
+        
+        #rec-status { 
+            position: absolute; top: 25px; right: 20px; 
+            background: rgba(255,0,0,0.8); padding: 8px 15px; 
+            border-radius: 20px; display: none; font-size: 12px;
+            font-weight: bold; z-index: 100; animation: pulse 1s infinite; 
+        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
         canvas { display: none; }
     </style>
 </head>
-<body onclick="refreshWakeLock()">
-
-<div id="flash-effect" class="flash"></div>
-
-<div id="safety-gate">
-    <div class="alert-box">
-        <h2 style="color:var(--accent)">SISTEMA TÉCNICO</h2>
-        <p style="margin: 15px 0;">PROIBIDO OPERAR EM MOVIMENTO</p>
-        <button class="btn-aware" onclick="startApp()">ESTOU CIENTE</button>
-    </div>
-</div>
+<body>
 
 <div id="app-shell">
-    <div id="quick-shutter-container" onclick="takeInstantJPG()">
-        <div id="quick-shutter"></div>
-        <div class="shutter-label">[ CAPTURA FOTO ATUAL .JPG ]</div>
-    </div>
-    
     <video id="vid" autoplay playsinline muted></video>
-    <div id="km-hud"><span id="br-txt">---</span><h1 id="km-txt">Km ---</h1></div>
-    <div id="rec-tag"><div class="dot"></div><span>GRAVANDO PDF</span></div>
-
-    <div id="ui-controls">
-        <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR PDF</button>
-        <button id="btn-stop" class="btn-main" onclick="stopCapture()">PARAR E SALVAR</button>
+    
+    <div id="km-hud">
+        <span id="br-txt">GPS ATIVO</span>
+        <h1 id="km-txt">Km ---</h1>
     </div>
-</div>
 
-<div id="settings-panel">
-    <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; margin-bottom:30px;">← VOLTAR</div>
-    <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="field"><label>Fotos por Lote</label><input type="number" id="cfg-lote" value="50"></div>
+    <div id="shutter-zone" onclick="takePhoto()">
+        <div id="btn-jpg"></div>
+        <div class="label-jpg">FOTO .JPG</div>
+    </div>
+
+    <div id="rec-status">● MONITORANDO</div>
+
+    <div id="ui">
+        <button id="start" class="btn" onclick="activateSystem()">INICIAR MONITORAMENTO</button>
+        <button id="stop" class="btn" onclick="stopPDF()">FINALIZAR RELATÓRIO</button>
+    </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], capturing=false, buffer = [], hDir=null, currentStream=null, wakeLock=null;
-let kmInicialLote = "", brAtual = "RODOVIA";
-
+let kmDB=[], capturing=false, buffer=[], hDir=null, brAtual="RODOVIA", wakeLock=null;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-async function refreshWakeLock() {
-    if ('wakeLock' in navigator) {
-        try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+// 1. FUNÇÃO PARA MANTER A TELA ACESA (WAKE LOCK)
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log("Tela bloqueada: Não irá apagar.");
+        }
+    } catch (err) {
+        console.error("Erro no Wake Lock:", err);
     }
 }
 
-async function startApp() {
-    try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').remove();
-        document.getElementById('app-shell').style.visibility = 'visible';
-        listCams(); loadCSV(); initGPS(); refreshWakeLock();
-    } catch(e) { alert("Acesso à pasta necessário."); }
+// 2. FUNÇÃO FULLSCREEN
+function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(e => console.log(e));
+    }
 }
 
-function stampData(km, br, dataHora) {
-    const bh = can.height * 0.15;
-    ctx.fillStyle = "rgba(0,0,0,0.75)";
-    ctx.fillRect(0, can.height - bh, can.width, bh);
-    
-    // Sombra Estilosa (Drop Shadow técnica)
-    ctx.shadowColor = "black";
-    ctx.shadowBlur = 8;
+// ESTAMPA COM SOMBRA GRADIENTE ESTILOSA
+function drawStamp(km, br, data) {
+    const h = can.height;
+    const w = can.width;
+    const barH = h * 0.15;
+
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0, h - barH, w, barH);
+
+    // Efeito de Sombra e Gradiente nas letras
+    ctx.shadowColor = "rgba(0,0,0,1)";
+    ctx.shadowBlur = 10;
     ctx.shadowOffsetX = 4;
     ctx.shadowOffsetY = 4;
-    
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold ${bh * 0.38}px Arial`;
-    ctx.fillText(`${br} - Km ${km}`, 40, can.height - (bh * 0.48));
-    
-    ctx.font = `${bh * 0.22}px Arial`;
-    ctx.fillText(dataHora, 40, can.height - (bh * 0.18));
-    
-    // Reset sombra
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `bold ${barH * 0.4}px sans-serif`;
+    ctx.fillText(`${br} - KM ${km}`, 40, h - (barH * 0.45));
+
+    ctx.shadowBlur = 4;
+    ctx.fillStyle = "#ffcc00"; // Cor de destaque para data/hora
+    ctx.font = `bold ${barH * 0.2}px sans-serif`;
+    ctx.fillText(data, 40, h - (barH * 0.15));
+
     ctx.shadowColor = "transparent";
-    ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
 }
 
-async function takeInstantJPG() {
-    if (!hDir) return;
-    document.getElementById('flash-effect').style.opacity = '0.6';
-    setTimeout(() => document.getElementById('flash-effect').style.opacity = '0', 100);
+async function activateSystem() {
+    try {
+        if(!hDir) hDir = await window.showDirectoryPicker();
+        
+        toggleFullScreen();
+        await requestWakeLock();
+        await startVideo();
+        loadCSV();
+        initGPS();
+        
+        capturing = true;
+        buffer = [];
+        document.getElementById('start').style.display = 'none';
+        document.getElementById('stop').style.display = 'block';
+        document.getElementById('rec-status').style.display = 'block';
+        
+        loop();
+    } catch(e) { 
+        alert("Permissão necessária para câmera e pasta de arquivos."); 
+    }
+}
+
+async function startVideo() {
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
+    });
+    vid.srcObject = stream;
+    vid.onloadedmetadata = () => { 
+        can.width = vid.videoWidth; 
+        can.height = vid.videoHeight; 
+    };
+}
+
+// Captura manual rápida
+function takePhoto() {
     const km = document.getElementById('km-txt').innerText.replace("Km ", "");
-    const dt = new Date().toLocaleString('pt-BR');
+    const data = new Date().toLocaleString('pt-BR');
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    stampData(km, brAtual, dt);
+    drawStamp(km, brAtual, data);
+
     can.toBlob(async (blob) => {
-        const handle = await hDir.getFileHandle(`FOTO_${brAtual}_KM_${km}_${Date.now()}.jpg`.replace(/ /g,'_'), { create: true });
-        const writable = await handle.createWritable();
-        await writable.write(blob); await writable.close();
+        const name = `MANUAL_${brAtual}_KM_${km}_${Date.now()}.jpg`;
+        const file = await hDir.getFileHandle(name, { create: true });
+        const stream = await file.createWritable();
+        await stream.write(blob);
+        await stream.close();
     }, 'image/jpeg', 0.95);
 }
 
-function startCapture() {
-    capturing = true; buffer = [];
-    kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-tag').style.opacity = '1';
-    captureLoop();
+// Loop de captura automática para o PDF
+function loop() {
+    if(!capturing) return;
+    
+    const km = document.getElementById('km-txt').innerText.replace("Km ", "");
+    const data = new Date().toLocaleString('pt-BR');
+    
+    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    drawStamp(km, brAtual, data);
+    
+    buffer.push({
+        img: can.toDataURL('image/jpeg', 0.6),
+        km: km
+    });
+
+    // Auto-salva a cada 50 fotos para não sobrecarregar a memória
+    if(buffer.length >= 50) {
+        const temp = [...buffer];
+        buffer = [];
+        savePDF(temp);
+    }
+    
+    setTimeout(loop, 1000); // 1 foto por segundo no relatório
 }
 
-function stopCapture() {
+async function stopPDF() {
     capturing = false;
-    if (buffer.length > 0) savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
-    document.getElementById('btn-start').style.display = 'block';
-    document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-tag').style.opacity = '0';
+    document.getElementById('rec-status').style.display = 'none';
+    if(buffer.length > 0) await savePDF(buffer);
+    if(wakeLock) wakeLock.release();
+    alert("Relatório PDF Salvo!");
+    location.reload();
 }
 
-function captureLoop() {
-    if (!capturing) return;
-    if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
-        ctx.drawImage(vid, 0, 0, can.width, can.height);
-        const km = document.getElementById('km-txt').innerText.replace("Km ", "");
-        const dt = new Date().toLocaleString('pt-BR');
-        stampData(km, brAtual, dt);
-        buffer.push({ img: can.toDataURL('image/jpeg', 0.5), km: km });
-        if (buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 50)) {
-            const b = [...buffer]; savePDF(b, kmInicialLote, km);
-            buffer = []; kmInicialLote = km;
-        }
+async function savePDF(lista) {
+    const { jsPDF } = window.jspdf;
+    const orient = can.width > can.height ? 'l' : 'p';
+    const doc = new jsPDF(orient, 'px', [can.width, can.height]);
+
+    for(let i=0; i<lista.length; i++) {
+        if(i > 0) doc.addPage([can.width, can.height], orient);
+        doc.addImage(lista[i].img, 'JPEG', 0, 0, can.width, can.height);
     }
-    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
-}
 
-async function savePDF(dataList, kmI, kmF) {
-    const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
-    const pw = doc.internal.pageSize.getWidth();
-    const ph = doc.internal.pageSize.getHeight();
-    for (let i = 0; i < dataList.length; i++) {
-        if (i > 0) doc.addPage();
-        doc.addImage(dataList[i].img, 'JPEG', 0, 0, pw, ph);
-    }
-    const f = await hDir.getFileHandle(`REL_${brAtual}_KM_${kmI}_ao_${kmF}_${Date.now()}.pdf`.replace(/ /g,'_'), { create: true });
-    const s = await f.createWritable(); await s.write(doc.output('blob')); await s.close();
+    const pdfBlob = doc.output('blob');
+    const name = `PDF_TRECHO_${brAtual}_${Date.now()}.pdf`;
+    const file = await hDir.getFileHandle(name, { create: true });
+    const stream = await file.createWritable();
+    await stream.write(pdfBlob);
+    await stream.close();
 }
-
-async function listCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const vids = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Lente ${i+1}</option>`).join('');
-    switchCam(vids[vids.length-1].deviceId);
-}
-
-async function switchCam(id) {
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: { ideal: 1920 }, height: { ideal: 1080 } } });
-    vid.srcObject = currentStream;
-    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-}
-
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
 function loadCSV() {
     fetch('SNVBR116SPRJ.csv').then(r => r.text()).then(t => {
         const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ik = h.indexOf('km'), ilt = h.findIndex(x=>x.includes('lat')), iln = h.findIndex(x=>x.includes('lon')), ibr = h.indexOf('br');
+        rows.shift();
         kmDB = rows.map(r => {
             const c = r.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')), br: ibr !== -1 ? c[ibr] : "BR-116" };
+            return { km: c[0], lt: parseFloat(c[1].replace(',','.')), ln: parseFloat(c[2].replace(',','.')), br: c[3] || "BR-116" };
         });
     });
 }
 
 function initGPS() {
     navigator.geolocation.watchPosition(p => {
-        if (!kmDB.length) return;
+        if(!kmDB.length) return;
         let best = null, minD = Infinity;
-        for (const pt of kmDB) {
+        kmDB.forEach(pt => {
             const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if (d < minD) { minD = d; best = pt; }
-        }
-        if (best) {
+            if(d < minD) { minD = d; best = pt; }
+        });
+        if(best) {
             document.getElementById('km-txt').innerText = "Km " + best.km;
-            brAtual = best.br || "BR-116";
-            document.getElementById('br-txt').innerText = brAtual;
+            document.getElementById('br-txt').innerText = best.br;
+            brAtual = best.br;
         }
     }, null, { enableHighAccuracy: true });
 }
+
+// Reativar Wake Lock se o usuário minimizar e voltar para o app
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        await requestWakeLock();
+    }
+});
 </script>
 </body>
 </html>
