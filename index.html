@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Sistema de Foto-Captura</title>
+    <title>Sistema de Foto-Captura Profissional</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.8); }
@@ -84,13 +84,14 @@
 <script>
 let kmDB=[], capturing=false, hDir=null, currentStream=null, hideTimeout;
 let kmInicialLote = "", brAtual = "RODOVIA", buffer = [];
+let curLat = "0.0000", curLon = "0.0000";
 
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
 function handleScreenClick(e) {
     const controls = document.querySelector('.auto-hide');
     controls.classList.remove('hidden');
-    captureJPG(); // Salva JPG ao tocar
+    captureJPG();
     clearTimeout(hideTimeout);
     hideTimeout = setTimeout(() => { if(capturing) controls.classList.add('hidden'); }, 3000);
 }
@@ -152,7 +153,13 @@ function captureLoop() {
     if (!capturing) return;
     const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    buffer.push({ img: can.toDataURL('image/jpeg', 0.4), km: currentKm, br: brAtual, ts: new Date().toLocaleString('pt-BR') });
+    buffer.push({ 
+        img: can.toDataURL('image/jpeg', 0.4), 
+        km: currentKm, 
+        br: brAtual, 
+        ts: new Date().toLocaleString('pt-BR'),
+        gps: `${curLat}, ${curLon}`
+    });
 
     const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
     if (buffer.length >= limit) {
@@ -162,25 +169,34 @@ function captureLoop() {
     setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
-// CAPTURA EM JPG (Ao tocar na tela)
+// CAPTURA EM JPG COM CARIMBO COMPLETO
 async function captureJPG() {
     doFlash();
     const km = document.getElementById('km-txt').innerText.replace("Km ", "");
     const agora = new Date();
-    const d = agora.toLocaleDateString('pt-BR').replace(/\//g, '-');
-    const h = agora.toLocaleTimeString('pt-BR').replace(/:/g, '-');
+    const dStr = agora.toLocaleDateString('pt-BR');
+    const tStr = agora.toLocaleTimeString('pt-BR');
     
-    // Desenha e adiciona carimbo na imagem antes de salvar o JPG
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const bh = can.height * 0.15;
+    const bh = can.height * 0.18; // Tarja um pouco maior para caber tudo
     ctx.fillStyle = "rgba(0,0,0,0.7)";
     ctx.fillRect(0, can.height - bh, can.width, bh);
+    
     ctx.fillStyle = "#fff";
-    ctx.font = `bold ${bh * 0.35}px Arial`;
-    ctx.fillText(`${brAtual} - Km ${km}`, 40, can.height - (bh * 0.45));
+    // Linha 1: BR e KM
+    ctx.font = `bold ${bh * 0.30}px Arial`;
+    ctx.fillText(`${brAtual} - Km ${km}`, 30, can.height - (bh * 0.65));
+    
+    // Linha 2: Data e Hora
+    ctx.font = `${bh * 0.20}px Arial`;
+    ctx.fillText(`${dStr} ${tStr}`, 30, can.height - (bh * 0.40));
+    
+    // Linha 3: Coordenadas
+    ctx.font = `italic ${bh * 0.18}px Arial`;
+    ctx.fillText(`GPS: ${curLat}, ${curLon}`, 30, can.height - (bh * 0.15));
     
     const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.9));
-    const nome = `FOTO_${brAtual}_Km_${km}_${d}_${h}.jpg`;
+    const nome = `FOTO_${brAtual}_Km_${km}_${agora.getTime()}.jpg`;
 
     try {
         const fileHandle = await hDir.getFileHandle(nome, { create: true });
@@ -190,7 +206,7 @@ async function captureJPG() {
     } catch (e) {}
 }
 
-// SALVA RELATÓRIO PDF
+// SALVA RELATÓRIO PDF COM CARIMBO DISCRETO
 async function savePDF(dataList, kmIni, kmFim) {
     if (!dataList.length) return;
     const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
@@ -205,11 +221,14 @@ async function savePDF(dataList, kmIni, kmFim) {
                 const bh = can.height * 0.15;
                 ctx.fillStyle = "rgba(0,0,0,0.8)";
                 ctx.fillRect(0, can.height - bh, can.width, bh);
+                
                 ctx.fillStyle = "#fff";
-                ctx.font = `bold ${bh * 0.35}px Arial`;
-                ctx.fillText(dataList[i].br + " - Km " + dataList[i].km, 40, can.height - (bh * 0.45));
-                ctx.font = `${bh * 0.2}px Arial`;
-                ctx.fillText(dataList[i].ts.toUpperCase(), 40, can.height - (bh * 0.15));
+                ctx.font = `bold ${bh * 0.30}px Arial`;
+                ctx.fillText(`${dataList[i].br} - Km ${dataList[i].km}`, 40, can.height - (bh * 0.55));
+                
+                ctx.font = `${bh * 0.18}px Arial`;
+                ctx.fillText(`${dataList[i].ts} | GPS: ${dataList[i].gps}`, 40, can.height - (bh * 0.20));
+                
                 doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
                 res();
             };
@@ -246,6 +265,9 @@ async function loadCSV() {
 
 function initGPS() {
     navigator.geolocation.watchPosition(p => {
+        curLat = p.coords.latitude.toFixed(6);
+        curLon = p.coords.longitude.toFixed(6);
+        
         if (!kmDB.length) return;
         let best = null, minD = Infinity;
         for (const pt of kmDB) {
