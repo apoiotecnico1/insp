@@ -89,17 +89,25 @@ let wakeLock = null;
 
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
+// MANUTENÇÃO ATIVA DA TELA ACESA
 async function activeWakeLock() {
     try {
         if ('wakeLock' in navigator) {
             wakeLock = await navigator.wakeLock.request('screen');
+            wakeLock.addEventListener('release', () => {
+                if (document.visibilityState === 'visible') activeWakeLock();
+            });
         }
-    } catch (err) { console.warn("WakeLock não suportado ou negado."); }
+    } catch (err) { console.warn("WakeLock falhou."); }
 }
 
 function handleScreenClick(e) {
     const controls = document.querySelector('.auto-hide');
     controls.classList.remove('hidden');
+    
+    // Força reativação ao tocar
+    activeWakeLock();
+    
     captureJPG();
     clearTimeout(hideTimeout);
     hideTimeout = setTimeout(() => { if(capturing) controls.classList.add('hidden'); }, 3000);
@@ -117,7 +125,9 @@ async function startApp() {
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
         listCams(); loadCSV(); initGPS();
+        
         await activeWakeLock();
+        
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
     } catch(e) { alert("Selecione a pasta de destino."); }
 }
@@ -137,7 +147,10 @@ async function switchCam(id) {
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+function toggleSet() { 
+    document.getElementById('settings-panel').classList.toggle('open');
+    activeWakeLock(); // Reativa ao abrir configurações
+}
 
 function startCapture() {
     capturing = true;
@@ -146,6 +159,8 @@ function startCapture() {
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
     document.getElementById('rec-tag').style.opacity = '1';
+    
+    activeWakeLock(); // Garante tela acesa no início
     captureLoop();
 }
 
@@ -224,11 +239,14 @@ async function savePDF(dataList, kmIni, kmFim) {
                 const bh = can.height * 0.10;
                 ctx.fillStyle = "rgba(0,0,0,0.8)";
                 ctx.fillRect(0, can.height - bh, can.width, bh);
+                
                 ctx.fillStyle = "#fff";
                 ctx.font = `bold ${bh * 0.35}px Arial`;
                 ctx.fillText(`${dataList[i].br} - Km ${dataList[i].km}`, 20, can.height - (bh * 0.55));
+                
                 ctx.font = `${bh * 0.22}px Arial`;
                 ctx.fillText(`${dataList[i].ts} | GPS: ${dataList[i].gps}`, 20, can.height - (bh * 0.25));
+                
                 doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
                 res();
             };
@@ -267,6 +285,7 @@ function initGPS() {
     navigator.geolocation.watchPosition(p => {
         curLat = p.coords.latitude.toFixed(6);
         curLon = p.coords.longitude.toFixed(6);
+        
         if (!kmDB.length) return;
         let best = null, minD = Infinity;
         for (const pt of kmDB) {
@@ -281,10 +300,9 @@ function initGPS() {
     }, null, { enableHighAccuracy: true });
 }
 
-document.addEventListener('visibilitychange', async () => {
-    if (wakeLock !== null && document.visibilityState === 'visible') {
-        await activeWakeLock();
-    }
+// Escuta retorno do app para reativar brilho
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') activeWakeLock();
 });
 </script>
 </body>
