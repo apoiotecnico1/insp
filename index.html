@@ -3,66 +3,96 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Captura Profissional BR - Dinâmico</title>
+    <title>Captura High-End BR</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --danger: #ff4444; --glass-verde: rgba(0, 121, 52, 0.6); }
+        :root { 
+            --accent: #ffcc00; 
+            --glass-verde: rgba(0, 121, 52, 0.8); 
+            --sombra-3d: 3px 3px 0px #003d1a, 5px 5px 15px rgba(0,0,0,0.7);
+        }
+        
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; }
+        
+        body { 
+            background: #000; 
+            color: #fff; 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            overflow: hidden; 
+            height: 100vh; 
+            width: 100vw;
+        }
 
-        /* Interface do Mapa/Vídeo */
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
-        #vid { width: 100%; height: 100%; object-fit: cover; }
 
-        /* A PLACA BONITA (HUD) */
+        #vid { 
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%; 
+            object-fit: cover; z-index: 1;
+        }
+
+        /* HUD - PLACA COM EFEITO SOMBRA LINDO */
         #km-hud { 
             position: absolute; 
-            top: 25px; 
+            top: env(safe-area-inset-top, 30px); 
             left: 25px; 
             z-index: 100; 
-            pointer-events: none;
         }
-        .placa-3d {
+
+        .placa-container {
             background: var(--glass-verde);
-            padding: 12px 20px;
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            padding: 15px 25px;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 18px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 140px;
+            min-width: 180px;
         }
+
         .br-label { 
-            font-size: 1.1rem; 
+            font-size: 1.4rem; 
             font-weight: 800; 
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            margin-bottom: -5px;
             letter-spacing: 1px;
-            text-shadow: 2px 2px 3px rgba(0,0,0,0.8);
-            margin-bottom: -4px;
         }
+
         .km-label { 
-            font-size: 2.6rem; 
+            font-size: 3rem; 
             font-weight: 900; 
-            /* Efeito de profundidade 3D */
-            text-shadow: 2px 2px 0px #004d21, 4px 4px 6px rgba(0,0,0,0.7);
+            color: #fff;
+            /* Efeito Sombra 3D que você pediu */
+            text-shadow: var(--sombra-3d);
         }
 
-        /* Controles Inferiores */
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 500; }
-        .btn-main { border: none; padding: 18px 35px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
-        #btn-start { background: var(--accent); color: #000; }
-        #btn-stop { background: var(--danger); color: #fff; display: none; }
-        #gear-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
+        /* Controles */
+        #ui { 
+            position: absolute; bottom: env(safe-area-inset-bottom, 35px); 
+            left: 0; width: 100%; display: flex; justify-content: center; 
+            gap: 20px; z-index: 500; align-items: center;
+        }
 
-        /* Configurações */
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: rgba(10,10,10,0.95); backdrop-filter: blur(20px); z-index: 4000; padding: 60px 25px; transition: 0.4s; border-left: 1px solid #333; }
-        #settings-panel.open { right: 0; }
-        #settings-panel input, #settings-panel select { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 8px; margin: 10px 0 20px; }
+        .btn { 
+            border: none; padding: 20px 40px; border-radius: 50px; 
+            font-weight: 900; text-transform: uppercase; cursor: pointer; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+        #btn-go { background: var(--accent); color: #000; }
+        #btn-stop { background: #ff4444; color: #fff; display: none; }
+        
+        .circle-tool {
+            width: 60px; height: 60px; background: rgba(0,0,0,0.6);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2);
+        }
 
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; }
+        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 1000; transition: opacity 0.1s; }
+        #rec-indicator { color: #ff4444; font-weight: bold; display: none; text-shadow: 1px 1px 2px #000; }
         canvas { display: none; }
     </style>
 </head>
@@ -70,32 +100,25 @@
 
 <div id="flash"></div>
 
-<div id="safety-gate">
-    <button class="btn-main" style="background:var(--accent)" onclick="initSystem()">ATIVAR E ESCOLHER PASTA</button>
-</div>
-
-<div id="settings-panel">
-    <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; font-weight:bold;">← VOLTAR</div>
-    <label style="display:block; margin-top:20px;">Câmera Ativa</label>
-    <select id="cam-select" onchange="changeCam(this.value)"></select>
-    <label>Intervalo Lote (ms)</label>
-    <input type="number" id="cfg-int" value="400">
+<div id="gate" style="position:fixed; inset:0; background:#000; z-index:9999; display:flex; align-items:center; justify-content:center;">
+    <button class="btn" id="btn-go" onclick="init()">ATIVAR SISTEMA & PASTA</button>
 </div>
 
 <div id="app-shell">
-    <video id="vid" autoplay playsinline muted onclick="manualShot()"></video>
+    <video id="vid" autoplay playsinline muted onclick="snap()"></video>
     
     <div id="km-hud">
-        <div class="placa-3d">
-            <span class="br-label" id="br-display">BR-000</span>
-            <span class="km-label" id="km-display">Km ---</span>
+        <div class="placa-container">
+            <span class="br-label" id="br-txt">BR ---</span>
+            <span class="km-label" id="km-txt">Km ---</span>
         </div>
     </div>
 
-    <div id="ui-controls">
-        <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-main" onclick="startRec()">INICIAR LOTE</button>
-        <button id="btn-stop" class="btn-main" onclick="stopRec()">SALVAR PDF</button>
+    <div id="ui">
+        <div class="circle-tool" onclick="document.documentElement.requestFullscreen()">⛶</div>
+        <button id="btn-start-rec" class="btn" style="background:var(--accent)" onclick="startLote()">INICIAR LOTE</button>
+        <button id="btn-stop-rec" class="btn" style="background:#ff4444; display:none; color:white;" onclick="stopLote()">GERAR PDF</button>
+        <div id="rec-indicator">● REC</div>
     </div>
 </div>
 
@@ -103,115 +126,112 @@
 
 <script>
 let kmDB=[], capturing=false, hDir=null, stream=null;
-let buffer = [], currentBR = "---", currentLat = "0", currentLon = "0";
+let buffer = [], brGlobal = "---", lat="0", lon="0";
 
 const vid = document.getElementById('vid');
 const can = document.getElementById('c');
 const ctx = can.getContext('2d');
 
-async function initSystem() {
+async function init() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        if ((await hDir.requestPermission({ mode: 'readwrite' })) !== 'granted') return;
-        
-        document.getElementById('safety-gate').remove();
+        document.getElementById('gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
         
-        loadCams(); loadCSV(); startGPS();
-    } catch(e) { alert("Acesso à pasta é necessário para salvar arquivos."); }
+        const d = await navigator.mediaDevices.enumerateDevices();
+        const v = d.filter(i => i.kind === 'videoinput');
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { deviceId: v[v.length-1].deviceId, width: 1920, height: 1080 } 
+        });
+        vid.srcObject = stream;
+        vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
+        
+        loadCSV(); startGPS();
+    } catch(e) { alert("Selecione uma pasta para salvar os arquivos."); }
 }
 
-async function loadCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const vids = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
-    if(vids.length) changeCam(vids[vids.length-1].deviceId);
-}
-
-async function changeCam(id) {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
-    vid.srcObject = stream;
-    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-}
-
-// DESENHA A PLACA NO CANVAS (IGUAL À TELA)
 function drawPlaca(km, br) {
-    const s = can.height / 1080; 
+    const s = can.height / 1080;
     ctx.save();
     
-    // Config da Placa
-    const w = 300 * s, h = 150 * s;
-    ctx.translate(40 * s, 40 * s);
+    const w = 340 * s, h = 170 * s;
+    ctx.translate(50 * s, 50 * s);
     
-    // Sombra e Fundo
-    ctx.shadowColor = "rgba(0,0,0,0.6)";
-    ctx.shadowBlur = 20 * s;
-    ctx.shadowOffsetX = 8 * s;
-    ctx.shadowOffsetY = 8 * s;
-    ctx.fillStyle = "rgba(0, 121, 52, 0.85)";
+    // Sombra da Placa Toda
+    ctx.shadowColor = "rgba(0,0,0,0.7)";
+    ctx.shadowBlur = 25 * s;
+    ctx.shadowOffsetX = 10 * s;
+    ctx.shadowOffsetY = 10 * s;
+    
+    // Fundo Verde
+    ctx.fillStyle = "rgba(0, 121, 52, 0.9)";
     ctx.beginPath();
     ctx.roundRect(0, 0, w, h, 20 * s);
     ctx.fill();
     
-    // Textos
+    // Borda Fina
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 3 * s;
+    ctx.stroke();
+
     ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
     ctx.textAlign = "center";
-    ctx.fillStyle = "white";
     
-    // BR-XXX
-    ctx.font = `bold ${40 * s}px Arial`;
-    ctx.fillText("BR-" + br, w/2, 55 * s);
+    // Texto BR
+    ctx.fillStyle = "#fff";
+    ctx.font = `bold ${48 * s}px Arial`;
+    ctx.fillText("BR " + br, w/2, 60 * s);
     
-    // KM (Efeito 3D)
-    ctx.font = `900 ${85 * s}px Arial`;
+    // Texto KM com Efeito Sombra 3D (IGUAL À TELA)
+    ctx.font = `900 ${95 * s}px Arial`;
     ctx.shadowColor = "#003314";
     ctx.shadowOffsetX = 4 * s;
     ctx.shadowOffsetY = 4 * s;
-    ctx.fillText("Km " + km, w/2, 125 * s);
+    ctx.fillText("Km " + km, w/2, 138 * s);
     
     ctx.restore();
 }
 
-async function manualShot() {
+async function snap() {
     if(!hDir) return;
-    document.getElementById('flash').style.opacity = "0.4";
-    setTimeout(() => document.getElementById('flash').style.opacity = "0", 80);
+    document.getElementById('flash').style.opacity = "1";
+    setTimeout(() => document.getElementById('flash').style.opacity = "0", 100);
 
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const km = document.getElementById('km-display').innerText.replace("Km ", "");
-    drawPlaca(km, currentBR);
+    const km = document.getElementById('km-txt').innerText.replace("Km ", "");
+    drawPlaca(km, brGlobal);
     
     const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
-    const fh = await hDir.getFileHandle(`BR${currentBR}_KM${km}_${Date.now()}.jpg`, { create: true });
-    const s = await fh.createWritable();
-    await s.write(blob); await s.close();
+    const fh = await hDir.getFileHandle(`BR${brGlobal}_KM${km}_${Date.now()}.jpg`, { create: true });
+    const sw = await fh.createWritable();
+    await sw.write(blob); await sw.close();
 }
 
-function startRec() {
+function startLote() {
     capturing = true; buffer = [];
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'block';
-    recLoop();
+    document.getElementById('btn-start-rec').style.display = 'none';
+    document.getElementById('btn-stop-rec').style.display = 'block';
+    document.getElementById('rec-indicator').style.display = 'block';
+    loop();
 }
 
-function stopRec() {
+function stopLote() {
     capturing = false;
-    document.getElementById('btn-start').style.display = 'block';
-    document.getElementById('btn-stop').style.display = 'none';
+    document.getElementById('btn-start-rec').style.display = 'block';
+    document.getElementById('btn-stop-rec').style.display = 'none';
+    document.getElementById('rec-indicator').style.display = 'none';
     if(buffer.length > 0) savePDF([...buffer]);
 }
 
-async function recLoop() {
+async function loop() {
     if (!capturing) return;
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const km = document.getElementById('km-display').innerText.replace("Km ", "");
-    drawPlaca(km, currentBR);
-    
+    const km = document.getElementById('km-txt').innerText.replace("Km ", "");
+    drawPlaca(km, brGlobal);
     buffer.push(can.toDataURL('image/jpeg', 0.6));
+    
     if (buffer.length >= 50) { savePDF([...buffer]); buffer = []; }
-    setTimeout(recLoop, parseInt(document.getElementById('cfg-int').value));
+    setTimeout(loop, 500);
 }
 
 async function savePDF(imgs) {
@@ -220,24 +240,24 @@ async function savePDF(imgs) {
         if (i > 0) pdf.addPage();
         pdf.addImage(imgs[i], 'JPEG', 0, 0, 297, 210);
     }
-    const fh = await hDir.getFileHandle(`LOTE_BR${currentBR}_${Date.now()}.pdf`, { create: true });
-    const s = await fh.createWritable();
-    await s.write(pdf.output('blob')); await s.close();
+    const fh = await hDir.getFileHandle(`LOTE_BR${brGlobal}_${Date.now()}.pdf`, { create: true });
+    const sw = await fh.createWritable();
+    await sw.write(pdf.output('blob')); await sw.close();
 }
 
 function startGPS() {
     navigator.geolocation.watchPosition(p => {
-        currentLat = p.coords.latitude; currentLon = p.coords.longitude;
+        lat = p.coords.latitude.toFixed(6); lon = p.coords.longitude.toFixed(6);
         if (!kmDB.length) return;
-        let best = null, minD = Infinity;
+        let b = null, m = Infinity;
         for (const pt of kmDB) {
             const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if (d < minD) { minD = d; best = pt; }
+            if (d < m) { m = d; b = pt; }
         }
-        if (best) {
-            currentBR = best.br;
-            document.getElementById('br-display').innerText = "BR-" + currentBR;
-            document.getElementById('km-display').innerText = "Km " + best.km;
+        if (b) {
+            brGlobal = b.br;
+            document.getElementById('br-txt').innerText = "BR " + brGlobal;
+            document.getElementById('km-txt').innerText = "Km " + b.km;
         }
     }, null, { enableHighAccuracy: true });
 }
@@ -248,15 +268,13 @@ async function loadCSV() {
         const t = await r.text();
         const rows = t.split('\n').filter(l => l.includes(';'));
         const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ibr = h.indexOf('br'), ikm = h.indexOf('km'), ilat = h.findIndex(x=>x.includes('lat')), iln = h.findIndex(x=>x.includes('lon'));
+        const ibr = h.indexOf('br'), ikm = h.indexOf('km'), ilat = h.findIndex(x=>x.includes('lat')), ilon = h.findIndex(x=>x.includes('lon'));
         kmDB = rows.map(r => {
             const c = r.split(';');
-            return { br: c[ibr], km: c[ikm], lt: parseFloat(c[ilat].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
+            return { br: c[ibr], km: c[ikm], lt: parseFloat(c[ilat].replace(',','.')), ln: parseFloat(c[ilon].replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
+    } catch(e) { console.error("Erro CSV:", e); }
 }
-
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 </script>
 </body>
 </html>
