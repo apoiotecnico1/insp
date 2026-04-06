@@ -2,242 +2,264 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>SISTEMA ELITE PRO</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <title>Captura Pro - Anti-Sleep v3</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #cc0000; }
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
-        html, body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
+        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); }
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        /* TELA DE ADVERTÊNCIA IMPACTANTE */
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 30px; }
-        .safety-box { max-width: 500px; text-align: center; border: 1px solid #444; padding: 40px; border-radius: 8px; }
-        .safety-box h2 { color: #fff; margin-bottom: 25px; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 1px; }
-        .safety-box p { font-size: 18px; line-height: 1.6; color: #ddd; margin-bottom: 35px; font-weight: bold; }
-        .btn-proceed { width: 100%; background: var(--accent); color: #000; border: none; padding: 20px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 16px; border-radius: 4px; }
+        /* Camada de Segurança */
+        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; background: #0a0a0a; }
+        .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 8px; cursor: pointer; }
 
-        /* INTERFACE PRINCIPAL */
-        #app-shell { display: none; height: 100vh; width: 100vw; position: relative; }
-        video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; z-index: 1; }
+        /* Interface Principal */
+        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
+        #vid { width: 100%; height: 100%; object-fit: cover; }
 
-        /* PLACA DE KM */
-        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 12px 25px; border: 3px solid #fff; border-radius: 12px; z-index: 10; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        #km-hud h1 { font-size: 2.5rem; font-weight: 900; letter-spacing: -1px; }
+        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 10px 25px; border: 3px solid #fff; border-radius: 8px; z-index: 100; }
+        #br-txt { font-size: 0.7rem; font-weight: 800; display: block; opacity: 0.9; }
+        #km-txt { font-size: 2rem; font-weight: 900; }
 
-        /* STATUS DE GRAVAÇÃO (APENAS BOLINHA E "ON") */
-        #rec-status { position: absolute; top: 20px; right: 20px; display: none; align-items: center; gap: 8px; background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 4px; z-index: 10; border: 1px solid rgba(255,255,255,0.2); font-weight: bold; letter-spacing: 1px; }
-        .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; box-shadow: 0 0 8px #f00; }
+        #rec-tag { position: absolute; top: 25px; right: 20px; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 20px; opacity: 0; }
+        .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* AJUSTES */
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: rgba(10,10,10,0.98); z-index: 4000; padding: 30px; transition: 0.4s; border-left: 1px solid #333; }
-        #settings-panel.open { right: 0; }
-        .field { margin-bottom: 15px; }
-        .field label { display: block; font-size: 10px; color: #777; text-transform: uppercase; margin-bottom: 5px; }
-        select, input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; font-size: 14px; border-radius: 4px; }
-        
-        #mini-info { display: none; font-size: 12px; color: #888; margin-top: 15px; padding: 15px; background: #000; border: 1px solid #222; line-height: 1.5; }
+        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; }
+        .btn-main { border: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; text-transform: uppercase; }
+        #btn-start { background: var(--accent); color: #000; }
+        #btn-stop { background: var(--danger); color: #fff; display: none; }
+        #gear-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
 
-        /* CONTROLES */
-        #ui-controls { position: absolute; bottom: 40px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 15px; z-index: 100; }
-        .btn-main { border: none; font-weight: 900; cursor: pointer; padding: 20px 40px; font-size: 14px; background: var(--accent); color: #000; text-transform: uppercase; border-radius: 4px; }
-        #gear-btn { width: 55px; height: 55px; background: #222; color: #fff; border: none; cursor: pointer; font-size: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 4000; padding: 60px 25px; transition: 0.4s; }
+        #settings-panel.open { right: 0; }
+        
+        /* O segredo: Vídeo fantasma para enganar o sistema */
+        #no-sleep-video { position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; }
         
         canvas { display: none; }
+        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; }
     </style>
 </head>
-<body onclick="forceFull()">
+<body>
+
+<!-- Vídeo de 1 pixel com base64 de um frame preto curto para forçar o player ativo -->
+<video id="no-sleep-video" playsinline muted loop></video>
+<div id="flash"></div>
 
 <div id="safety-gate">
-    <div class="safety-box">
-        <h2>ADVERTÊNCIA DE SEGURANÇA</h2>
-        <p>A ATENÇÃO AO VOLANTE SALVA VIDAS.<br><br>O uso deste sistema é estritamente proibido para o condutor do veículo em movimento.</p>
-        <button class="btn-proceed" onclick="requestAccess()">ESTOU CIENTE E SOU PASSAGEIRO</button>
+    <div class="alert-box">
+        <h2 style="color:var(--accent); margin-bottom:10px;">MODO OPERAÇÃO</h2>
+        <p style="margin-bottom:20px; font-size: 0.9rem;">A tela será mantida ligada permanentemente.</p>
+        <button class="btn-aware" onclick="startApp()">ATIVAR SISTEMA</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-        <span style="font-size: 12px; font-weight: bold; color: #555;">SISTEMA</span>
-        <button onclick="document.getElementById('mini-info').style.display=(document.getElementById('mini-info').style.display=='none'?'block':'none')" style="background:none; border:none; color:var(--accent); cursor:pointer; font-size: 18px;">ℹ️</button>
-    </div>
-
-    <div id="mini-info">
-        • Selecione a pasta de destino para salvar os PDFs.<br>
-        • GPS sincroniza Km com base no CSV.<br>
-        • Fotos automáticas com marca d'água.<br>
-        • Lotes fechados conforme configuração.
-    </div>
-
-    <div class="field">
-        <label>Dispositivo de Vídeo</label>
-        <select id="cam-select" onchange="initC(this.value)"></select>
-    </div>
-    <div class="field">
-        <label>Capacidade do Lote (Fotos)</label>
-        <input type="number" id="cfg-lote" value="200">
-    </div>
-    <div class="field">
-        <label>Intervalo de Captura (ms)</label>
-        <input type="number" id="cfg-int" value="200">
-    </div>
-    <br>
-    <button class="btn-main" style="width:100%; background: #fff;" onclick="toggleSet()">FECHAR</button>
+    <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; margin-bottom:30px;">← FECHAR</div>
+    <label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select>
+    <br><br>
+    <label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200" style="width:100%; padding:10px;">
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
     
-    <div id="km-hud"><h1 id="km-txt">KM ---</h1></div>
-    
-    <div id="rec-status"><div class="dot"></div><span>ON</span></div>
+    <div id="km-hud">
+        <span id="br-txt">SINAL GPS...</span>
+        <h1 id="km-txt">Km ---</h1>
+    </div>
+
+    <div id="rec-tag"><div class="dot"></div><span>GRAVANDO</span></div>
 
     <div id="ui-controls">
-        <button id="gear-btn" onclick="toggleSet(); event.stopPropagation();">⚙️</button>
-        <button id="btn-start" class="btn-main" onclick="initCapture(); event.stopPropagation();">INICIAR CAPTURA</button>
-        <button id="btn-stop" class="btn-main" style="display:none; background:var(--danger); color:#fff;" onclick="stopCapture(); event.stopPropagation();">FINALIZAR LOTE</button>
+        <div id="gear-btn" onclick="toggleSet()">⚙</div>
+        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR ROTA</button>
+        <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR</button>
     </div>
 </div>
 
-<canvas id="can_cap"></canvas>
+<canvas id="c"></canvas>
 
 <script>
-let kmDB=[], rec=false, buffer=[], currentStream=null, wakeLock=null, dirHandle=null;
-let kmInicialLote = "";
-const vid=document.getElementById('vid');
-const canCap=document.getElementById('can_cap'), ctxCap=canCap.getContext('2d');
-const canOff = document.createElement('canvas');
-const ctxOff = canOff.getContext('2d');
+let kmDB=[], capturing=false, hDir=null, currentStream=null;
+let kmInicialLote = "", brAtual = "RODOVIA", buffer = [];
+let curLat = "0.0000", curLon = "0.0000";
+let wakeLock = null;
 
-function forceFull() { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {}); }
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+const vid = document.getElementById('vid');
+const noSleepVid = document.getElementById('no-sleep-video');
+const can = document.getElementById('c');
+const ctx = can.getContext('2d');
 
-async function requestAccess() {
-    try {
-        dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        if (await dirHandle.queryPermission({mode:'readwrite'}) !== 'granted') await dirHandle.requestPermission({mode:'readwrite'});
-        if(dirHandle) unlockSystem();
-    } catch (e) { alert("Acesso negado."); }
+// ESTRATÉGIA MESTRE: VÍDEO INVISÍVEL + WAKELOCK
+async function keepScreenAlive() {
+    // 1. Tentar WakeLock API (Modo moderno)
+    if ('wakeLock' in navigator) {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {}
+    }
+
+    // 2. Tentar Vídeo "Dummy" (Modo YouTube/Legacy)
+    // Usamos um vídeo minúsculo para enganar o gerenciador de energia do celular
+    if (noSleepVid.paused) {
+        noSleepVid.src = "https://raw.githubusercontent.com/anars/blank-audio/master/250-milliseconds-of-silence.mp3"; // Truque de áudio/vídeo
+        noSleepVid.play().catch(()=>{});
+    }
 }
 
-async function unlockSystem() {
-    document.getElementById('safety-gate').style.display = 'none';
-    document.getElementById('app-shell').style.display = 'block';
-    forceFull();
-    await listCams();
-    if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
-    loadCSV(); initGPS();
+// Reinicia o "fôlego" da tela a cada 15 segundos
+setInterval(keepScreenAlive, 15000);
+
+async function startApp() {
+    try {
+        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('safety-gate').remove();
+        document.getElementById('app-shell').style.visibility = 'visible';
+        
+        keepScreenAlive();
+        listCams(); 
+        loadCSV(); 
+        initGPS();
+        
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    } catch(e) { alert("Permissão de pasta necessária."); }
 }
 
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const vids = devices.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">CÂMERA ${i+1}</option>`).join('');
-    const back = vids.find(d => d.label.toLowerCase().includes('back')) || vids[vids.length-1];
-    if(back) { sel.value = back.deviceId; initC(back.deviceId); }
+    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Lente ${i+1}</option>`).join('');
+    if(vids.length) switchCam(vids[vids.length-1].deviceId);
 }
 
-async function initC(id) {
+async function switchCam(id) {
     if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1280, height: 720 } });
+    currentStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { deviceId: id, width: {ideal: 1280}, height: {ideal: 720}, frameRate: {ideal: 30} } 
+    });
     vid.srcObject = currentStream;
+    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
-function initCapture() {
-    rec = true; buffer = [];
-    kmInicialLote = document.getElementById('km-txt').innerText.replace("KM ","");
+function startCapture() {
+    capturing = true;
+    buffer = [];
+    kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-status').style.display = 'flex';
-    loop();
+    document.getElementById('rec-tag').style.opacity = '1';
+    
+    keepScreenAlive();
+    captureLoop();
 }
 
 function stopCapture() {
-    if(buffer.length > 0) saveAuto([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("KM ",""));
-    rec = false; buffer = [];
+    capturing = false;
+    if(buffer.length > 0) savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
+    buffer = [];
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-status').style.display = 'none';
+    document.getElementById('rec-tag').style.opacity = '0';
 }
 
-function loop() {
-    if(!rec) return;
-    if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
-        canCap.width = vid.videoWidth; canCap.height = vid.videoHeight;
-        ctxCap.drawImage(vid, 0, 0);
-        const curKm = document.getElementById('km-txt').innerText.replace("KM ","");
-        buffer.push({ raw: canCap.toDataURL('image/jpeg', 0.4), km: curKm, ts: new Date().toLocaleTimeString('pt-BR') });
-        let limite = parseInt(document.getElementById('cfg-lote').value) || 200;
-        if(buffer.length >= limite) {
-            saveAuto([...buffer], kmInicialLote, curKm);
-            buffer = []; kmInicialLote = curKm;
-        }
+function captureLoop() {
+    if (!capturing) return;
+    const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
+    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    
+    buffer.push({ 
+        img: can.toDataURL('image/jpeg', 0.5), 
+        km: currentKm, 
+        br: brAtual, 
+        ts: new Date().toLocaleString('pt-BR'),
+        gps: `${curLat}, ${curLon}`
+    });
+
+    if (buffer.length >= (parseInt(document.getElementById('cfg-lote')?.value) || 50)) {
+        savePDF([...buffer], kmInicialLote, currentKm);
+        buffer = []; kmInicialLote = currentKm;
     }
-    setTimeout(loop, parseInt(document.getElementById('cfg-int').value) || 200);
+    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
-// Geração de PDF 100% silenciosa
-async function saveAuto(data, ini, fim) {
-    const pdfW = canCap.width, pdfH = canCap.height;
-    canOff.width = pdfW; canOff.height = pdfH;
-    const doc = new jspdf.jsPDF(pdfW > pdfH ? 'l' : 'p', 'mm', 'a4');
+async function savePDF(dataList, kmIni, kmFim) {
+    const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
 
-    for(let i=0; i<data.length; i++){
-        if(i > 0) doc.addPage();
-        await new Promise(r => {
+    for (let i = 0; i < dataList.length; i++) {
+        if (i > 0) doc.addPage();
+        await new Promise(res => {
             const img = new Image();
             img.onload = () => {
-                ctxOff.drawImage(img, 0, 0);
-                const bh = pdfH * 0.12;
-                ctxOff.fillStyle = "rgba(0,0,0,0.8)"; ctxOff.fillRect(0, pdfH-bh, pdfW, bh);
-                ctxOff.fillStyle = "#fff"; ctxOff.font = `bold ${bh*0.4}px Arial`;
-                ctxOff.fillText(`Km ${data[i].km}`, 40, pdfH-(bh*0.45));
-                ctxOff.font = `${bh*0.2}px Arial`;
-                ctxOff.fillText(`${new Date().toLocaleDateString('pt-BR')} | ${data[i].ts}`, 40, pdfH-(bh*0.15));
-                doc.addImage(canOff.toDataURL('image/jpeg', 0.6), 'JPEG', 0, 0, pw, ph); r();
+                ctx.drawImage(img, 0, 0);
+                const bh = can.height * 0.10;
+                ctx.fillStyle = "rgba(0,0,0,0.8)";
+                ctx.fillRect(0, can.height - bh, can.width, bh);
+                ctx.fillStyle = "#fff";
+                ctx.font = `bold ${bh * 0.35}px Arial`;
+                ctx.fillText(`${dataList[i].br} - Km ${dataList[i].km}`, 20, can.height - (bh * 0.55));
+                ctx.font = `${bh * 0.22}px Arial`;
+                ctx.fillText(`${dataList[i].ts} | GPS: ${dataList[i].gps}`, 20, can.height - (bh * 0.25));
+                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
+                res();
             };
-            img.src = data[i].raw;
+            img.src = dataList[i].img;
         });
     }
-    const d = new Date();
-    const p = (n) => n.toString().padStart(2, '0');
-    const nome = `K_${ini}_a_${fim}_${p(d.getDate())}${p(d.getMonth()+1)}.pdf`;
-    try {
-        const fh = await dirHandle.getFileHandle(nome, { create: true });
-        const wr = await fh.createWritable();
-        await wr.write(doc.output('blob'));
-        await wr.close();
-    } catch (e) {}
-}
 
-async function loadCSV() {
+    const agora = new Date();
+    const nome = `RELATORIO_${brAtual}_Km_${kmIni}_${agora.getTime()}.pdf`;
     try {
-        const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';');
-        const ik = h.findIndex(x=>x.toLowerCase().includes('km')), ilt = h.findIndex(x=>x.toLowerCase().includes('lat')), iln = h.findIndex(x=>x.toLowerCase().includes('lon'));
-        kmDB = rows.map(r => {
-            const c = r.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
-        }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
+        const fileHandle = await hDir.getFileHandle(nome, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(doc.output('blob'));
+        await writable.close();
+    } catch (e) {}
 }
 
 function initGPS() {
     navigator.geolocation.watchPosition(p => {
-        if(!kmDB.length) return;
-        let b = null, mD = Infinity;
-        for(const pt of kmDB) {
+        curLat = p.coords.latitude.toFixed(6);
+        curLon = p.coords.longitude.toFixed(6);
+        if (!kmDB.length) return;
+        let best = null, minD = Infinity;
+        for (const pt of kmDB) {
             const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if(d < mD) { mD = d; b = pt; }
+            if (d < minD) { minD = d; best = pt; }
         }
-        if(b) document.getElementById('km-txt').innerText = "KM " + b.km;
-    }, null, {enableHighAccuracy:true});
+        if (best) {
+            document.getElementById('km-txt').innerText = "Km " + best.km;
+            brAtual = best.br || "BR-116";
+            document.getElementById('br-txt').innerText = brAtual;
+        }
+    }, null, { enableHighAccuracy: true });
 }
+
+async function loadCSV() {
+    try {
+        const r = await fetch('SNVBR116SPRJ.csv');
+        const t = await r.text();
+        const rows = t.split('\n').filter(l => l.includes(';'));
+        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
+        const ik=h.indexOf('km'), ilt=h.findIndex(x=>x.includes('lat')), iln=h.findIndex(x=>x.includes('lon')), ibr=h.indexOf('br');
+        kmDB = rows.map(r => {
+            const c = r.split(';');
+            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')), br: ibr !== -1 ? c[ibr] : null };
+        }).filter(d => !isNaN(d.lt));
+    } catch(e) {}
+}
+
+function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+
+// Se o usuário mudar de aba e voltar, reativa tudo
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') keepScreenAlive();
+});
 </script>
 </body>
 </html>
