@@ -85,8 +85,17 @@
 let kmDB=[], capturing=false, hDir=null, currentStream=null, hideTimeout;
 let kmInicialLote = "", brAtual = "RODOVIA", buffer = [];
 let curLat = "0.0000", curLon = "0.0000";
+let wakeLock = null;
 
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
+
+async function activeWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+        }
+    } catch (err) { console.warn("WakeLock não suportado ou negado."); }
+}
 
 function handleScreenClick(e) {
     const controls = document.querySelector('.auto-hide');
@@ -108,6 +117,7 @@ async function startApp() {
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
         listCams(); loadCSV(); initGPS();
+        await activeWakeLock();
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
     } catch(e) { alert("Selecione a pasta de destino."); }
 }
@@ -184,10 +194,8 @@ async function captureJPG() {
     ctx.fillStyle = "#fff";
     ctx.font = `bold ${bh * 0.30}px Arial`;
     ctx.fillText(`${brAtual} - Km ${km}`, 30, can.height - (bh * 0.65));
-    
     ctx.font = `${bh * 0.20}px Arial`;
     ctx.fillText(`${dStr} ${tStr}`, 30, can.height - (bh * 0.40));
-    
     ctx.font = `italic ${bh * 0.18}px Arial`;
     ctx.fillText(`GPS: ${curLat}, ${curLon}`, 30, can.height - (bh * 0.15));
     
@@ -213,20 +221,14 @@ async function savePDF(dataList, kmIni, kmFim) {
             const img = new Image();
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
-                // Tarja mais fina no PDF (10%)
                 const bh = can.height * 0.10;
                 ctx.fillStyle = "rgba(0,0,0,0.8)";
                 ctx.fillRect(0, can.height - bh, can.width, bh);
-                
                 ctx.fillStyle = "#fff";
-                // Texto Principal menor
                 ctx.font = `bold ${bh * 0.35}px Arial`;
                 ctx.fillText(`${dataList[i].br} - Km ${dataList[i].km}`, 20, can.height - (bh * 0.55));
-                
-                // Texto GPS e Hora bem pequenos na mesma linha para não cortar
                 ctx.font = `${bh * 0.22}px Arial`;
                 ctx.fillText(`${dataList[i].ts} | GPS: ${dataList[i].gps}`, 20, can.height - (bh * 0.25));
-                
                 doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
                 res();
             };
@@ -265,7 +267,6 @@ function initGPS() {
     navigator.geolocation.watchPosition(p => {
         curLat = p.coords.latitude.toFixed(6);
         curLon = p.coords.longitude.toFixed(6);
-        
         if (!kmDB.length) return;
         let best = null, minD = Infinity;
         for (const pt of kmDB) {
@@ -279,6 +280,12 @@ function initGPS() {
         }
     }, null, { enableHighAccuracy: true });
 }
+
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        await activeWakeLock();
+    }
+});
 </script>
 </body>
 </html>
