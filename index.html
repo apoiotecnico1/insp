@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Captura Pro - Anti-Sleep v3</title>
+    <title>Sistema de Apoio - Captura Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); }
@@ -12,8 +12,8 @@
 
         /* Camada de Segurança */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; background: #0a0a0a; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 8px; cursor: pointer; }
+        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; background: #0a0a0a; max-width: 90%; }
+        .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 8px; cursor: pointer; margin-top: 20px; }
 
         /* Interface Principal */
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
@@ -28,7 +28,7 @@
         @keyframes blink { 50% { opacity: 0; } }
 
         #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; }
-        .btn-main { border: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
+        .btn-main { border: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 160px; }
         #btn-start { background: var(--accent); color: #000; }
         #btn-stop { background: var(--danger); color: #fff; display: none; }
         #gear-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
@@ -49,8 +49,11 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2 style="color:var(--accent); margin-bottom:10px;">MODO OPERAÇÃO</h2>
-        <p style="margin-bottom:20px; font-size: 0.9rem;">Toque na tela para capturar foto manual.</p>
+        <h2 style="color:var(--accent); margin-bottom:10px;">SISTEMA DE APOIO</h2>
+        <p style="margin-bottom:10px; font-size: 1rem; font-weight: bold;">Captura Automática (PDF) + Foto Manual</p>
+        <p style="margin-bottom:20px; font-size: 0.85rem; color: #ccc; line-height: 1.4;">
+            Toque na tela a qualquer momento para salvar <br> uma foto individual na pasta do relatório.
+        </p>
         <button class="btn-aware" onclick="startApp()">ATIVAR SISTEMA</button>
     </div>
 </div>
@@ -59,11 +62,10 @@
     <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; margin-bottom:30px;">← FECHAR</div>
     <label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select>
     <br><br>
-    <label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200" style="width:100%; padding:10px;">
+    <label>Intervalo PDF (ms)</label><input type="number" id="cfg-int" value="200" style="width:100%; padding:10px;">
 </div>
 
 <div id="app-shell">
-    <!-- Adicionado evento de clique no vídeo para capturar foto -->
     <video id="vid" autoplay playsinline muted onclick="takeManualPhoto()"></video>
     
     <div id="km-hud">
@@ -71,11 +73,11 @@
         <h1 id="km-txt">Km ---</h1>
     </div>
 
-    <div id="rec-tag"><div class="dot"></div><span>GRAVANDO</span></div>
+    <div id="rec-tag"><div class="dot"></div><span>GRAVANDO PDF</span></div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR ROTA</button>
+        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR</button>
         <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR</button>
     </div>
 </div>
@@ -136,21 +138,15 @@ async function switchCam(id) {
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
-// NOVA FUNÇÃO: CAPTURA FOTO MANUAL AO TOCAR
 async function takeManualPhoto() {
     if(!hDir) return;
 
-    // Efeito Visual
     flashDiv.style.opacity = "1";
     setTimeout(() => { flashDiv.style.opacity = "0"; }, 100);
 
     const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
-    const timeStamp = new Date().toLocaleString('pt-BR').replace(/[/:]/g, '-');
-    
-    // Preparar Canvas
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     
-    // Adicionar Tarja Preta com Dados
     const bh = can.height * 0.10;
     ctx.fillStyle = "rgba(0,0,0,0.8)";
     ctx.fillRect(0, can.height - bh, can.width, bh);
@@ -160,10 +156,9 @@ async function takeManualPhoto() {
     ctx.font = `${bh * 0.22}px Arial`;
     ctx.fillText(`${new Date().toLocaleString('pt-BR')} | GPS: ${curLat}, ${curLon}`, 20, can.height - (bh * 0.25));
 
-    // Salvar como JPG
     try {
-        const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.9));
-        const fileName = `MANUAL_${brAtual}_Km_${currentKm}_${Date.now()}.jpg`;
+        const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
+        const fileName = `FOTO_MANUAL_${brAtual}_Km_${currentKm}_${Date.now()}.jpg`;
         const fileHandle = await hDir.getFileHandle(fileName, { create: true });
         const writable = await fileHandle.createWritable();
         await writable.write(blob);
@@ -239,7 +234,7 @@ async function savePDF(dataList, kmIni, kmFim) {
     }
 
     const agora = Date.now();
-    const nome = `LOTE_${brAtual}_Km_${kmIni}_${agora}.pdf`;
+    const nome = `PDF_${brAtual}_Km_${kmIni}_${agora}.pdf`;
     try {
         const fileHandle = await hDir.getFileHandle(nome, { create: true });
         const writable = await fileHandle.createWritable();
@@ -260,7 +255,7 @@ function initGPS() {
         }
         if (best) {
             document.getElementById('km-txt').innerText = "Km " + best.km;
-            brAtual = best.br || "BR-116";
+            brAtual = best.br || "RODOVIA";
             document.getElementById('br-txt').innerText = brAtual;
         }
     }, null, { enableHighAccuracy: true });
