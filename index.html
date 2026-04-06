@@ -17,7 +17,7 @@
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
 
-        /* PLACA HUD COM TRANSPARÊNCIA E BLUR */
+        /* PLACA HUD COM TRANSPARÊNCIA E ANIMAÇÃO DE FEEDBACK */
         #km-hud { 
             position: absolute; 
             top: 20px; 
@@ -31,7 +31,11 @@
             min-width: 150px;
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
+            transition: transform 0.1s ease;
         }
+        /* Classe acionada via JS no momento do clique */
+        .hud-pulse { transform: scale(1.05); border-color: var(--accent) !important; }
+
         #br-txt { font-size: 0.9rem; font-weight: 800; display: block; margin-bottom: 2px; border-bottom: 1px solid rgba(255,255,255,0.3); }
         #km-txt { font-size: 2.2rem; font-weight: 900; }
 
@@ -51,7 +55,17 @@
         #settings-panel input, #settings-panel select { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px; margin-top: 5px; }
         
         canvas { display: none; }
-        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; transition: opacity 0.15s; }
+        
+        /* FLASH DISCRETO: Apenas 0.3 de opacidade e muito rápido */
+        #flash { 
+            position: fixed; 
+            inset: 0; 
+            background: white; 
+            opacity: 0; 
+            pointer-events: none; 
+            z-index: 1000; 
+            transition: opacity 0.05s ease-out; 
+        }
     </style>
 </head>
 <body>
@@ -114,6 +128,7 @@ const vid = document.getElementById('vid');
 const can = document.getElementById('c');
 const ctx = can.getContext('2d');
 const flashDiv = document.getElementById('flash');
+const kmHud = document.getElementById('km-hud');
 
 async function keepScreenAlive() {
     if ('wakeLock' in navigator) {
@@ -153,14 +168,20 @@ async function switchCam(id) {
 
 async function takeManualPhoto() {
     if(!hDir) return;
-    flashDiv.style.opacity = "1";
-    setTimeout(() => { flashDiv.style.opacity = "0"; }, 100);
+    
+    // FEEDBACK DISCRETO: Flash rápido e Pulso na Placa
+    flashDiv.style.opacity = "0.3"; 
+    kmHud.classList.add('hud-pulse');
+    
+    setTimeout(() => { 
+        flashDiv.style.opacity = "0"; 
+        kmHud.classList.remove('hud-pulse');
+    }, 80);
     
     const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const bh = can.height * 0.10;
     
-    // TARJA DA FOTO MANUAL COM 60% DE OPACIDADE
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.fillRect(0, can.height - bh, can.width, bh);
     
@@ -229,11 +250,8 @@ async function savePDF(dataList, kmIni, kmFim) {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
                 const bh = can.height * 0.10;
-                
-                // TARJA DO PDF COM 60% DE OPACIDADE
                 ctx.fillStyle = "rgba(0,0,0,0.6)"; 
                 ctx.fillRect(0, can.height - bh, can.width, bh);
-                
                 ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.35}px Arial`;
                 ctx.fillText(`${dataList[i].br} - Km ${dataList[i].km}`, 20, can.height - (bh * 0.55));
                 ctx.font = `${bh * 0.22}px Arial`;
