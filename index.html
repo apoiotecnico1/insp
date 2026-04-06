@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Sistema de Foto-Captura automatica</title>
+    <title>Sistema de Foto-Captura</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.8); }
@@ -17,33 +17,34 @@
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD SEMPRE VISÍVEL */
-        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 10px 25px; border: 3px solid #fff; border-radius: 8px; z-index: 100; text-align: center; pointer-events: none; }
-        #br-txt { font-size: 0.9rem; font-weight: 800; display: block; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 4px; }
-        #km-hud h1 { font-size: 2.2rem; font-weight: 900; margin: 0; }
+        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 8px 20px; border: 3px solid #fff; border-radius: 8px; z-index: 100; text-align: center; pointer-events: none; }
+        #br-txt { font-size: 0.8rem; font-weight: 800; display: block; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 2px; }
+        #km-hud h1 { font-size: 1.8rem; font-weight: 900; margin: 0; }
 
-        #rec-tag { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 30px; opacity: 0; z-index: 100; }
-        .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
+        #rec-tag { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 30px; opacity: 0; z-index: 100; }
+        .dot { width: 10px; height: 10px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* CONTROLES QUE SOMEM */
         .auto-hide { transition: opacity 0.5s ease; opacity: 1; }
         .hidden { opacity: 0; pointer-events: none; }
 
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; align-items: center; }
-        .btn-main { border: none; padding: 22px 45px; border-radius: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 14px; }
+        /* CONTROLES INFERIORES REDUZIDOS */
+        #ui-controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 100; align-items: center; }
+        .btn-main { border: none; padding: 15px 35px; border-radius: 8px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }
         #btn-start { background: var(--accent); color: #000; }
         #btn-stop { background: var(--danger); color: #fff; display: none; }
-        #gear-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }
+        #gear-btn { width: 50px; height: 50px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; }
 
-        /* BOTÃO INSTANTÂNEO (QUASE INVISÍVEL) */
-        #btn-instant { position: absolute; bottom: 30px; right: 30px; width: 70px; height: 70px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; z-index: 200; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 24px; backdrop-filter: blur(5px); }
+        /* BOTÃO INSTANTÂNEO NA LATERAL DIREITA */
+        #btn-instant { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); width: 60px; height: 60px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; z-index: 200; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; backdrop-filter: blur(3px); transition: 0.2s; }
+        #btn-instant:active { background: rgba(255,255,255,0.5); }
 
         #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(30px); z-index: 4000; padding: 60px 25px; transition: 0.4s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
         .close-settings { position: absolute; top: 20px; left: 20px; color: var(--accent); font-weight: bold; cursor: pointer; }
-        .field { margin-bottom: 25px; }
-        input, select { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 5px; }
+        .field { margin-bottom: 20px; }
+        label { font-size: 11px; text-transform: uppercase; color: #888; }
+        input, select { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 5px; margin-top: 5px; }
 
         canvas { display: none; }
     </style>
@@ -75,33 +76,33 @@
 
     <div id="rec-tag"><div class="dot"></div><span id="status-text">ON</span></div>
 
-    <!-- Interface que some -->
+    <!-- Botão Instantâneo na lateral -->
+    <div id="btn-instant" class="auto-hide" onclick="captureInstant()">📸</div>
+
+    <!-- Interface Inferior -->
     <div id="ui-controls" class="auto-hide">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-main" onclick="startCapture()">Iniciar Captura Automatica</button>
-        <button id="btn-stop" class="btn-main" onclick="stopCapture()">Finalizar Captura automatica</button>
+        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR</button>
+        <button id="btn-stop" class="btn-main" onclick="stopCapture()">PARAR</button>
     </div>
-
-    <!-- Botão Instantâneo -->
-    <div id="btn-instant" onclick="captureInstant()" title="Captura Rápida">📸</div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
 let kmDB=[], capturing=false, hDir=null, currentStream=null, hideTimeout;
-let kmInicialLote = "", brAtual = "RODOVIA";
+let kmInicialLote = "", brAtual = "RODOVIA", buffer = [];
 
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// Lógica de esconder botões
 function userActivity() {
-    const controls = document.querySelector('.auto-hide');
-    controls.classList.remove('hidden');
+    const controls = document.querySelectorAll('.auto-hide');
+    controls.forEach(el => el.classList.remove('hidden'));
     clearTimeout(hideTimeout);
     hideTimeout = setTimeout(() => {
-        if(!capturing) return; // Só esconde se estiver capturando ou após o uso
-        controls.classList.add('hidden');
+        if(capturing) {
+            controls.forEach(el => el.classList.add('hidden'));
+        }
     }, 3000);
 }
 
@@ -113,7 +114,7 @@ async function startApp() {
         listCams(); loadCSV(); initGPS();
         userActivity();
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    } catch(e) { alert("Autorize a pasta para salvar as fotos."); }
+    } catch(e) { alert("Selecione uma pasta para salvar os arquivos."); }
 }
 
 async function listCams() {
@@ -121,7 +122,7 @@ async function listCams() {
     const vids = devices.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
     sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Lente ${i+1}</option>`).join('');
-    switchCam(vids[vids.length-1].deviceId);
+    if(vids.length) switchCam(vids[vids.length-1].deviceId);
 }
 
 async function switchCam(id) {
@@ -135,6 +136,7 @@ function toggleSet() { document.getElementById('settings-panel').classList.toggl
 
 function startCapture() {
     capturing = true;
+    buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
@@ -145,15 +147,14 @@ function startCapture() {
 
 function stopCapture() {
     capturing = false;
-    savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
+    if(buffer.length > 0) savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
     buffer = [];
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
     document.getElementById('rec-tag').style.opacity = '0';
-    document.querySelector('.auto-hide').classList.remove('hidden');
+    userActivity();
 }
 
-let buffer = [];
 function captureLoop() {
     if (!capturing) return;
     const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
@@ -169,29 +170,22 @@ function captureLoop() {
     setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
-// Captura Instantânea
 async function captureInstant() {
     const km = document.getElementById('km-txt').innerText.replace("Km ", "");
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const shot = { img: can.toDataURL('image/jpeg', 0.5), km: km, br: brAtual, ts: new Date().toLocaleString('pt-BR') };
-    
-    // Feedback visual rápido
-    document.getElementById('btn-instant').style.background = "white";
-    setTimeout(() => document.getElementById('btn-instant').style.background = "rgba(255,255,255,0.15)", 100);
-    
     savePDF([shot], km, km, true);
 }
 
 async function savePDF(dataList, kmIni, kmFim, isInstant = false) {
-    if (dataList.length === 0) return;
+    if (!dataList.length) return;
     const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
-    const pw = doc.internal.pageSize.getWidth();
-    const ph = doc.internal.pageSize.getHeight();
+    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
 
     for (let i = 0; i < dataList.length; i++) {
         if (i > 0) doc.addPage();
-        const img = new Image();
         await new Promise(res => {
+            const img = new Image();
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
                 const bh = can.height * 0.15;
@@ -212,8 +206,7 @@ async function savePDF(dataList, kmIni, kmFim, isInstant = false) {
     const agora = new Date();
     const d = agora.toLocaleDateString('pt-BR').replace(/\//g, '-');
     const h = agora.toLocaleTimeString('pt-BR').replace(/:/g, '-');
-    const tipo = isInstant ? "INSTANTANEA" : "RELATORIO";
-    const nome = `${tipo}_${dataList[0].br}_Km_${kmIni}_ao_${kmFim}_${d}_${h}.pdf`;
+    const nome = `${isInstant ? 'FOTO' : 'LOTE'}_${dataList[0].br}_Km_${kmIni}_ao_${kmFim}_${d}_${h}.pdf`;
 
     try {
         const fileHandle = await hDir.getFileHandle(nome, { create: true });
