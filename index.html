@@ -6,9 +6,14 @@
     <title>Sistema de Apoio - Captura Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: rgba(0, 121, 52, 0.6); --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); }
+        :root { 
+            --accent: #ffcc00; 
+            --placa-verde: linear-gradient(145deg, #005a27, #007934); 
+            --danger: #ff4444; 
+            --glass: rgba(10, 10, 10, 0.9); 
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
         .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; background: #0a0a0a; max-width: 90%; }
@@ -17,29 +22,37 @@
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
 
+        /* HUD - PLACA 3D ESTILO RODOVIÁRIA */
         #km-hud { 
             position: absolute; 
-            top: 20px; 
-            left: 20px; 
+            top: 25px; 
+            left: 25px; 
             background: var(--placa-verde); 
-            padding: 10px 20px; 
-            border: 3px solid rgba(255, 255, 255, 0.7); 
-            border-radius: 8px; 
+            padding: 15px 25px; 
+            border: 4px solid #ffffff; 
+            border-radius: 12px; 
             z-index: 100; 
             pointer-events: none; 
-            min-width: 160px;
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            transition: transform 0.1s ease;
+            min-width: 180px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 0 15px rgba(0,0,0,0.3);
             display: flex;
             flex-direction: column;
             align-items: center; 
             text-align: center;
+            transition: transform 0.1s ease;
         }
-        .hud-pulse { transform: scale(1.05); border-color: var(--accent) !important; }
+        .hud-pulse { transform: scale(1.1); border-color: var(--accent) !important; }
 
-        #br-txt { font-size: 0.85rem; font-weight: 800; display: block; width: 100%; padding-bottom: 2px; margin-bottom: 2px; border-bottom: 1px solid rgba(255,255,255,0.3); }
-        #km-txt { font-size: 2.2rem; font-weight: 900; line-height: 1; }
+        #br-txt { display: none; } /* Removido o texto e o risco */
+        
+        #km-txt { 
+            font-size: 2.8rem; 
+            font-weight: 900; 
+            line-height: 1; 
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: -1px;
+        }
 
         #rec-tag { 
             position: absolute; 
@@ -47,16 +60,17 @@
             right: 15px; 
             display: flex; 
             align-items: center; 
-            gap: 6px; 
-            background: rgba(0,0,0,0.5); 
-            padding: 5px 12px; 
-            border-radius: 15px; 
+            gap: 8px; 
+            background: rgba(0,0,0,0.7); 
+            padding: 8px 15px; 
+            border-radius: 20px; 
             opacity: 0; 
             pointer-events: none; 
             z-index: 100;
+            border: 1px solid rgba(255,255,255,0.2);
         }
-        #rec-tag span { font-size: 0.7rem; font-weight: bold; color: #eee; }
-        .dot { width: 8px; height: 8px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
+        #rec-tag span { font-size: 0.75rem; font-weight: bold; color: #fff; }
+        .dot { width: 10px; height: 10px; background: #f00; border-radius: 50%; animation: blink 1s infinite; box-shadow: 0 0 10px #f00; }
         @keyframes blink { 50% { opacity: 0; } }
 
         #ui-controls { 
@@ -67,19 +81,19 @@
             display: flex; 
             gap: 20px; 
             z-index: 500; 
-            transition: opacity 0.3s ease, visibility 0.3s;
+            transition: opacity 0.3s ease;
         }
-        .ui-hidden { opacity: 0; visibility: hidden; }
+        .ui-hidden { opacity: 0; pointer-events: none; }
 
-        .btn-main { border: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 160px; }
+        .btn-main { border: none; padding: 18px 40px; border-radius: 15px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 160px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
         #btn-start { background: var(--accent); color: #000; }
         #btn-stop { background: var(--danger); color: #fff; display: none; }
-        #gear-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
+        #gear-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; backdrop-filter: blur(10px); }
 
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 4000; padding: 60px 25px; transition: 0.4s; overflow-y: auto; }
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 4000; padding: 60px 25px; transition: 0.4s; overflow-y: auto; border-left: 1px solid rgba(255,255,255,0.1); }
         #settings-panel.open { right: 0; }
         #settings-panel label { display: block; margin-top: 15px; font-size: 0.8rem; color: var(--accent); text-transform: uppercase; font-weight: bold; }
-        #settings-panel input, #settings-panel select { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px; margin-top: 5px; }
+        #settings-panel input, #settings-panel select { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 8px; margin-top: 5px; }
 
         canvas { display: none; }
         #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; transition: opacity 0.05s ease-out; }
@@ -111,11 +125,10 @@
     <video id="vid" autoplay playsinline muted onclick="handleTouch()"></video>
     
     <div id="km-hud">
-        <span id="br-txt"></span>
         <h1 id="km-txt">Km ---</h1>
     </div>
 
-    <div id="rec-tag"><div class="dot"></div><span>Registrando fotos no PDF...</span></div>
+    <div id="rec-tag"><div class="dot"></div><span>Gravando Sequência...</span></div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
@@ -172,25 +185,60 @@ function handleTouch() {
     }
 }
 
+// Função para desenhar a legenda estilizada no Canvas (Foto/PDF)
+function drawStyledLegend(text, subtext) {
+    const bh = can.height * 0.12;
+    
+    // Fundo da legenda com gradiente e borda
+    const grad = ctx.createLinearGradient(0, can.height - bh, 0, can.height);
+    grad.addColorStop(0, "rgba(0, 70, 30, 0.9)");
+    grad.addColorStop(1, "rgba(0, 40, 15, 0.95)");
+    
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, can.height - bh, can.width, bh);
+    
+    // Linha de contorno superior (brilho 3D)
+    ctx.strokeStyle = "rgba(255,255,255,0.3)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, can.height - bh);
+    ctx.lineTo(can.width, can.height - bh);
+    ctx.stroke();
+
+    // Texto Principal (Km)
+    ctx.shadowColor = "rgba(0,0,0,0.8)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 3;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `900 ${bh * 0.4}px Arial`;
+    ctx.fillText(text, 30, can.height - (bh * 0.45));
+
+    // Subtexto (Data/GPS)
+    ctx.shadowBlur = 3;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+    ctx.font = `bold ${bh * 0.18}px Arial`;
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.fillText(subtext, 30, can.height - (bh * 0.2));
+    
+    // Resetar sombra para não afetar outros desenhos
+    ctx.shadowColor = "transparent";
+}
+
 async function takeManualPhoto() {
     if(!hDir) return;
     flashDiv.style.opacity = "0.2"; 
     kmHud.classList.add('hud-pulse');
     setTimeout(() => { flashDiv.style.opacity = "0"; kmHud.classList.remove('hud-pulse'); }, 70);
     
-    const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
+    const currentKm = document.getElementById('km-txt').innerText;
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const bh = can.height * 0.10;
-    ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, can.height - bh, can.width, bh);
-    ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.35}px Arial`;
-    // TEXTO NA FOTO MANUAL: Apenas Km
-    ctx.fillText(`Km ${currentKm}`, 20, can.height - (bh * 0.55));
-    ctx.font = `${bh * 0.22}px Arial`;
-    ctx.fillText(`${new Date().toLocaleString('pt-BR')} | GPS: ${curLat}, ${curLon}`, 20, can.height - (bh * 0.25));
+    
+    drawStyledLegend(currentKm, `${new Date().toLocaleString('pt-BR')} | GPS: ${curLat}, ${curLon}`);
     
     const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
-    // NOME DO ARQUIVO MANUAL: Sem BR
-    const fileName = `MANUAL_Km_${currentKm}_${Date.now()}.jpg`;
+    const fileName = `MANUAL_${currentKm.replace(" ", "_")}_${Date.now()}.jpg`;
     const fileHandle = await hDir.getFileHandle(fileName, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(blob); await writable.close();
@@ -199,7 +247,7 @@ async function takeManualPhoto() {
 function startCapture() {
     capturing = true;
     buffer = [];
-    kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
+    kmInicialLote = document.getElementById('km-txt').innerText;
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
     document.getElementById('rec-tag').style.opacity = '1';
@@ -210,7 +258,7 @@ function startCapture() {
 function stopCapture() {
     capturing = false;
     if(buffer.length > 0) {
-        const kmFim = document.getElementById('km-txt').innerText.replace("Km ", "");
+        const kmFim = document.getElementById('km-txt').innerText;
         savePDF([...buffer], kmInicialLote, kmFim);
     }
     buffer = [];
@@ -222,7 +270,7 @@ function stopCapture() {
 
 function captureLoop() {
     if (!capturing) return;
-    const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
+    const currentKm = document.getElementById('km-txt').innerText;
     const limiteLote = parseInt(document.getElementById('cfg-lote').value) || 50;
 
     ctx.drawImage(vid, 0, 0, can.width, can.height);
@@ -250,21 +298,14 @@ async function savePDF(dataList, kmIni, kmFim) {
             const img = new Image();
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
-                const bh = can.height * 0.10;
-                ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, can.height - bh, can.width, bh);
-                ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.35}px Arial`;
-                // TEXTO NO PDF: Apenas Km
-                ctx.fillText(`Km ${dataList[i].km}`, 20, can.height - (bh * 0.55));
-                ctx.font = `${bh * 0.22}px Arial`;
-                ctx.fillText(`${dataList[i].ts} | GPS: ${dataList[i].gps}`, 20, can.height - (bh * 0.25));
+                drawStyledLegend(dataList[i].km, `${dataList[i].ts} | GPS: ${dataList[i].gps}`);
                 doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
                 res();
             };
             img.src = dataList[i].img;
         });
     }
-    // NOME DO ARQUIVO PDF: Sem BR
-    const fileName = `RELATORIO_Km_${kmIni}_ao_${kmFim}_${Date.now()}.pdf`;
+    const fileName = `RELATORIO_${kmIni.replace(" ","")}_ao_${kmFim.replace(" ","")}_${Date.now()}.pdf`;
     const fileHandle = await hDir.getFileHandle(fileName, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(doc.output('blob'));
@@ -282,8 +323,6 @@ function initGPS() {
         }
         if (best) {
             document.getElementById('km-txt').innerText = "Km " + best.km;
-            // HUD: Não exibe o nome da BR
-            document.getElementById('br-txt').innerText = "";
         }
     }, null, { enableHighAccuracy: true });
 }
