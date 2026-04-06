@@ -16,27 +16,36 @@
 
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         
-        /* Área de toque centralizada */
         #click-area { position: absolute; inset: 0; z-index: 50; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Ícone e Legenda Mais Visíveis */
+        /* Ícone de captura */
         .tap-hint { opacity: 0.5; text-align: center; pointer-events: none; transition: all 0.2s; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        .tap-hint i { font-size: 60px; display: block; margin-bottom: 8px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+        .tap-hint i { font-size: 60px; display: block; margin-bottom: 8px; }
         .tap-hint span { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 800; color: var(--accent); }
-        #click-area:active .tap-hint { opacity: 1; transform: scale(0.95); }
 
-        /* Placa de KM */
-        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 10px 20px; border: 3px solid #fff; border-radius: 8px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; pointer-events: none; }
+        /* PLACA DE KM - AGORA TRANSPARENTE (Opacidade 0.7) */
+        #km-hud { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            background: rgba(0, 121, 52, 0.7); /* Verde da placa com transparência */
+            padding: 10px 20px; 
+            border: 3px solid rgba(255, 255, 255, 0.8); 
+            border-radius: 8px; 
+            z-index: 100; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            text-align: center; 
+            pointer-events: none;
+            backdrop-filter: blur(2px); /* Leve desfoque para manter legibilidade */
+        }
         #br-txt { font-size: 1rem; font-weight: 800; color: #fff; text-transform: uppercase; display: block; border-bottom: 2px solid rgba(255,255,255,0.4); margin-bottom: 4px; }
-        #km-txt { font-size: 2.5rem; font-weight: 900; margin: 0; line-height: 1; }
+        #km-txt { font-size: 2.5rem; font-weight: 900; margin: 0; line-height: 1; color: #fff; }
 
-        /* Indicador de PDF ativo */
-        #rec-tag { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px; background: rgba(255,0,0,0.2); padding: 5px 12px; border-radius: 5px; opacity: 0; z-index: 100; border: 1px solid #f00; font-size: 12px; font-weight: bold; }
+        #rec-tag { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px; background: rgba(255,0,0,0.3); padding: 5px 12px; border-radius: 5px; opacity: 0; z-index: 100; border: 1px solid #f00; font-size: 12px; font-weight: bold; }
         .dot { width: 8px; height: 8px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* Controles Inferiores */
         #ui-controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 100; align-items: center; }
         .btn-main { border: 1px solid rgba(255,255,255,0.2); padding: 12px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 11px; background: rgba(0,0,0,0.6); color: #fff; }
         #btn-start { border-color: var(--accent); color: var(--accent); }
@@ -135,18 +144,14 @@ async function switchCam(id) {
 
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
-// --- FOTO ÚNICA + WHATSAPP ---
 async function takeSinglePhoto() {
     if (!hDir) return;
-    
-    // Efeito Flash
     const flash = document.getElementById('flash-effect');
     flash.style.opacity = "0.5"; setTimeout(() => flash.style.opacity = "0", 100);
 
     const km = document.getElementById('km-txt').innerText;
     const ts = new Date().toLocaleString('pt-BR');
     
-    // Desenhar Carimbo
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const bh = can.height * 0.15;
     ctx.fillStyle = "rgba(0,0,0,0.85)";
@@ -157,7 +162,6 @@ async function takeSinglePhoto() {
     ctx.font = `${bh * 0.18}px Arial`;
     ctx.fillText(ts.toUpperCase(), 40, can.height - (bh * 0.15));
 
-    // Salvar arquivo
     can.toBlob(async (blob) => {
         const nome = `FOTO_${brAtual}_${km.replace(/\+/g,'-')}_${Date.now()}.jpg`;
         try {
@@ -165,16 +169,12 @@ async function takeSinglePhoto() {
             const writable = await handle.createWritable();
             await writable.write(blob);
             await writable.close();
-            
-            // Abrir WhatsApp após salvar
             const msg = encodeURIComponent(`Registro Fotográfico: ${brAtual} - ${km} em ${ts}`);
             window.open(`https://wa.me/?text=${msg}`, '_blank');
-            
         } catch (e) { console.error(e); }
     }, 'image/jpeg', 0.9);
 }
 
-// --- LÓGICA DE PDF ---
 function startCapture() {
     capturing = true; buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText;
