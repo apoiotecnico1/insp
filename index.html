@@ -17,7 +17,6 @@
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
 
-        /* PLACA HUD CENTRALIZADA E TRANSPARENTE */
         #km-hud { 
             position: absolute; 
             top: 20px; 
@@ -34,7 +33,7 @@
             transition: transform 0.1s ease;
             display: flex;
             flex-direction: column;
-            align-items: center; /* Centraliza o conteúdo horizontalmente */
+            align-items: center; 
             text-align: center;
         }
         .hud-pulse { transform: scale(1.05); border-color: var(--accent) !important; }
@@ -50,10 +49,10 @@
         }
         #km-txt { font-size: 2.2rem; font-weight: 900; line-height: 1; }
 
-        /* TAG DE GRAVAÇÃO MENOR E DISCRETA */
+        /* TAG DE GRAVAÇÃO: Agora 40px do topo (~1 linha abaixo) */
         #rec-tag { 
             position: absolute; 
-            top: 15px; 
+            top: 40px; 
             right: 15px; 
             display: flex; 
             align-items: center; 
@@ -65,11 +64,23 @@
             pointer-events: none; 
             z-index: 100;
         }
-        #rec-tag span { font-size: 0.7rem; font-weight: bold; color: #eee; letter-spacing: 0.5px; }
+        #rec-tag span { font-size: 0.7rem; font-weight: bold; color: #eee; }
         .dot { width: 8px; height: 8px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; }
+        /* CONTROLES: Com transição para sumir suavemente */
+        #ui-controls { 
+            position: absolute; 
+            bottom: 40px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            display: flex; 
+            gap: 20px; 
+            z-index: 500; 
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .ui-hidden { opacity: 0; visibility: hidden; }
+
         .btn-main { border: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 160px; }
         #btn-start { background: var(--accent); color: #000; }
         #btn-stop { background: var(--danger); color: #fff; display: none; }
@@ -77,8 +88,6 @@
 
         #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 4000; padding: 60px 25px; transition: 0.4s; overflow-y: auto; }
         #settings-panel.open { right: 0; }
-        #settings-panel label { display: block; margin-top: 15px; font-size: 0.8rem; color: var(--accent); text-transform: uppercase; font-weight: bold; }
-        #settings-panel input, #settings-panel select { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px; margin-top: 5px; }
         
         canvas { display: none; }
         #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; transition: opacity 0.05s ease-out; }
@@ -86,16 +95,12 @@
 </head>
 <body>
 
-<video id="no-sleep-video" playsinline muted loop style="position:absolute; width:1px; height:1px; opacity:0;"></video>
 <div id="flash"></div>
 
 <div id="safety-gate">
     <div class="alert-box">
         <h2 style="color:var(--accent); margin-bottom:10px;">SISTEMA DE APOIO</h2>
-        <p style="margin-bottom:10px; font-size: 1rem; font-weight: bold;">Captura Automática (PDF) + Foto Manual</p>
-        <p style="margin-bottom:20px; font-size: 0.85rem; color: #ccc; line-height: 1.4;">
-            Toque na tela a qualquer momento para salvar uma foto individual na mesma pasta.
-        </p>
+        <p style="margin-bottom:10px; font-size: 1rem; font-weight: bold;">Captura Automática + Foto Manual</p>
         <button class="btn-aware" onclick="startApp()">ATIVAR SISTEMA</button>
     </div>
 </div>
@@ -104,18 +109,17 @@
     <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; margin-bottom:20px; font-weight: bold;">← FECHAR</div>
     <label>Câmera Ativa</label>
     <select id="cam-select" onchange="switchCam(this.value)"></select>
-    <label>Intervalo de Captura (ms)</label>
+    <label>Intervalo (ms)</label>
     <input type="number" id="cfg-int" value="200">
-    <label>Fotos por Relatório (Lote)</label>
+    <label>Fotos/Lote</label>
     <input type="number" id="cfg-lote" value="50">
-    <p style="margin-top:30px; font-size: 0.7rem; color: #888;">As fotos manuais não contam para o limite do lote do PDF.</p>
 </div>
 
 <div id="app-shell">
-    <video id="vid" autoplay playsinline muted onclick="takeManualPhoto()"></video>
+    <video id="vid" autoplay playsinline muted onclick="handleScreenClick()"></video>
     
     <div id="km-hud">
-        <span id="br-txt">GPS...</span>
+        <span id="br-txt">Buscando...</span>
         <h1 id="km-txt">Km ---</h1>
     </div>
 
@@ -141,24 +145,17 @@ const can = document.getElementById('c');
 const ctx = can.getContext('2d');
 const flashDiv = document.getElementById('flash');
 const kmHud = document.getElementById('km-hud');
-
-async function keepScreenAlive() {
-    if ('wakeLock' in navigator) {
-        try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
-    }
-}
+const uiControls = document.getElementById('ui-controls');
 
 async function startApp() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
-        keepScreenAlive();
-        listCams(); 
-        loadCSV(); 
-        initGPS();
+        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+        listCams(); loadCSV(); initGPS();
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    } catch(e) { alert("Permissão de pasta necessária."); }
+    } catch(e) { alert("Permissão necessária."); }
 }
 
 async function listCams() {
@@ -171,39 +168,38 @@ async function listCams() {
 
 async function switchCam(id) {
     if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { deviceId: id, width: {ideal: 1920}, height: {ideal: 1080} } 
-    });
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
     vid.srcObject = currentStream;
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
+}
+
+// Lógica de clique na tela: Tira foto manual e mostra os controles se estiverem escondidos
+function handleScreenClick() {
+    takeManualPhoto();
+    if (capturing) {
+        uiControls.classList.remove('ui-hidden');
+    }
 }
 
 async function takeManualPhoto() {
     if(!hDir) return;
     flashDiv.style.opacity = "0.2"; 
     kmHud.classList.add('hud-pulse');
-    setTimeout(() => { 
-        flashDiv.style.opacity = "0"; 
-        kmHud.classList.remove('hud-pulse');
-    }, 70);
+    setTimeout(() => { flashDiv.style.opacity = "0"; kmHud.classList.remove('hud-pulse'); }, 70);
     
     const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const bh = can.height * 0.10;
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(0, can.height - bh, can.width, bh);
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold ${bh * 0.35}px Arial`;
+    ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, can.height - bh, can.width, bh);
+    ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.35}px Arial`;
     ctx.fillText(`${brAtual} - Km ${currentKm}`, 20, can.height - (bh * 0.55));
     ctx.font = `${bh * 0.22}px Arial`;
     ctx.fillText(`${new Date().toLocaleString('pt-BR')} | GPS: ${curLat}, ${curLon}`, 20, can.height - (bh * 0.25));
     
     const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
-    const fileName = `MANUAL_${brAtual}_Km_${currentKm}_${Date.now()}.jpg`;
-    const fileHandle = await hDir.getFileHandle(fileName, { create: true });
+    const fileHandle = await hDir.getFileHandle(`MANUAL_${brAtual}_Km_${currentKm}_${Date.now()}.jpg`, { create: true });
     const writable = await fileHandle.createWritable();
-    await writable.write(blob);
-    await writable.close();
+    await writable.write(blob); await writable.close();
 }
 
 function startCapture() {
@@ -213,6 +209,7 @@ function startCapture() {
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
     document.getElementById('rec-tag').style.opacity = '1';
+    uiControls.classList.add('ui-hidden'); // ESCONDE BOTÕES AO INICIAR
     captureLoop();
 }
 
@@ -223,6 +220,7 @@ function stopCapture() {
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
     document.getElementById('rec-tag').style.opacity = '0';
+    uiControls.classList.remove('ui-hidden'); // MOSTRA BOTÕES AO PARAR
 }
 
 function captureLoop() {
@@ -231,18 +229,11 @@ function captureLoop() {
     const limiteLote = parseInt(document.getElementById('cfg-lote').value) || 50;
 
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    buffer.push({ 
-        img: can.toDataURL('image/jpeg', 0.5), 
-        km: currentKm, 
-        br: brAtual, 
-        ts: new Date().toLocaleString('pt-BR'),
-        gps: `${curLat}, ${curLon}`
-    });
+    buffer.push({ img: can.toDataURL('image/jpeg', 0.5), km: currentKm, br: brAtual, ts: new Date().toLocaleString('pt-BR'), gps: `${curLat}, ${curLon}` });
 
     if (buffer.length >= limiteLote) {
         savePDF([...buffer], kmInicialLote, currentKm);
-        buffer = []; 
-        kmInicialLote = currentKm;
+        buffer = []; kmInicialLote = currentKm;
     }
     setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
@@ -257,8 +248,7 @@ async function savePDF(dataList, kmIni, kmFim) {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
                 const bh = can.height * 0.10;
-                ctx.fillStyle = "rgba(0,0,0,0.6)"; 
-                ctx.fillRect(0, can.height - bh, can.width, bh);
+                ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, can.height - bh, can.width, bh);
                 ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.35}px Arial`;
                 ctx.fillText(`${dataList[i].br} - Km ${dataList[i].km}`, 20, can.height - (bh * 0.55));
                 ctx.font = `${bh * 0.22}px Arial`;
@@ -271,8 +261,7 @@ async function savePDF(dataList, kmIni, kmFim) {
     }
     const fileHandle = await hDir.getFileHandle(`PDF_${brAtual}_Km_${kmIni}_${Date.now()}.pdf`, { create: true });
     const writable = await fileHandle.createWritable();
-    await writable.write(doc.output('blob'));
-    await writable.close();
+    await writable.write(doc.output('blob')); await writable.close();
 }
 
 function initGPS() {
