@@ -3,64 +3,48 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Captura Técnica Rodoviária - High Performance</title>
+    <title>Captura Técnica - No-Sleep Mode</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #00ff88; --danger: #ff4444; --glass: rgba(15, 15, 15, 0.7); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
 
+        /* Botão de Início (Gatilho para Áudio/Vídeo) */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; }
         .alert-box { border: 1px solid #333; padding: 40px; border-radius: 20px; text-align: center; background: #0a0a0a; }
         .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 12px; cursor: pointer; text-transform: uppercase; }
 
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        video#vid { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Botão Central Discreto */
+        /* Vídeo para Forçar Tela Ligada (Invisível) */
+        #no-sleep-video { position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; }
+
+        /* Botão Central */
         #click-area { position: absolute; inset: 0; z-index: 50; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .shutter-mini { 
-            width: 60px; height: 60px; border: 2px solid rgba(255,255,255,0.4); 
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            background: rgba(255,255,255,0.1); transition: 0.2s;
-        }
+        .shutter-mini { width: 60px; height: 60px; border: 2px solid rgba(255,255,255,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); transition: 0.2s; }
         .shutter-mini::after { content: ''; width: 20px; height: 20px; background: var(--accent); border-radius: 50%; }
         .shutter-label { font-size: 10px; color: #fff; text-transform: uppercase; margin-top: 10px; letter-spacing: 1px; font-weight: bold; opacity: 0.6; text-shadow: 1px 1px 2px #000; }
-        #click-area:active .shutter-mini { transform: scale(0.9); background: var(--accent); }
 
-        /* Placa de KM Menor */
-        #km-hud { 
-            position: absolute; top: 20px; left: 20px; 
-            background: rgba(0, 121, 52, 0.7); 
-            padding: 10px 18px; border: 2px solid rgba(255, 255, 255, 0.8); 
-            border-radius: 10px; z-index: 100; backdrop-filter: blur(5px); text-align: center;
-        }
-        #br-txt { font-size: 0.9rem; font-weight: 800; display: block; opacity: 0.9; margin-bottom: 2px; }
-        #km-txt { font-size: 1.8rem; font-weight: 900; margin: 0; line-height: 1; }
-
-        /* Status PDF */
-        #rec-tag { 
-            position: absolute; top: 20px; right: 20px; 
-            display: flex; align-items: center; gap: 8px; 
-            background: rgba(255, 0, 0, 0.5); padding: 8px 15px; 
-            border-radius: 30px; opacity: 0; z-index: 100; font-size: 11px; font-weight: bold;
-        }
+        /* KM e Status */
+        #km-hud { position: absolute; top: 20px; left: 20px; background: rgba(0, 121, 52, 0.7); padding: 10px 18px; border: 2px solid rgba(255, 255, 255, 0.8); border-radius: 10px; z-index: 100; backdrop-filter: blur(5px); text-align: center; }
+        #km-txt { font-size: 1.8rem; font-weight: 900; margin: 0; }
+        #rec-tag { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px; background: rgba(255, 0, 0, 0.5); padding: 8px 15px; border-radius: 30px; opacity: 0; z-index: 100; font-size: 11px; font-weight: bold; }
         .dot { width: 10px; height: 10px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* Controles Inferiores */
+        /* Interface */
         #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 100; }
         .btn-ui { border: 1px solid rgba(255,255,255,0.3); padding: 15px 25px; border-radius: 12px; font-weight: 800; cursor: pointer; text-transform: uppercase; font-size: 11px; background: var(--glass); color: #fff; backdrop-filter: blur(10px); }
-        #btn-start { border-color: var(--accent); color: var(--accent); }
         #btn-stop { background: var(--danger); border: none; display: none; }
         #gear-btn { width: 50px; height: 50px; background: var(--glass); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; }
 
-        /* Painel de Ajustes */
         #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #0a0a0a; z-index: 4000; padding: 60px 25px; transition: 0.4s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
         .input-group { margin-bottom: 20px; }
         .input-group label { display: block; font-size: 10px; color: var(--accent); margin-bottom: 5px; font-weight: bold; }
-        .input-group select, .input-group input { width: 100%; padding: 12px; background: #1a1a1a; color: #fff; border: 1px solid #333; border-radius: 8px; }
+        .input-group input, select { width: 100%; padding: 12px; background: #1a1a1a; color: #fff; border: 1px solid #333; border-radius: 8px; }
 
         canvas { display: none; }
         .flash { position: fixed; inset: 0; background: #fff; opacity: 0; z-index: 6000; pointer-events: none; transition: 0.1s; }
@@ -70,33 +54,24 @@
 
 <div id="flash-effect" class="flash"></div>
 
+<!-- Vídeo Loop Invisível (Truque para não apagar tela) -->
+<video id="no-sleep-video" playsinline muted loop>
+    <source src="https://raw.githubusercontent.com/anars/blank-audio/master/250-milliseconds-of-silence.mp4" type="video/mp4">
+</video>
+
 <div id="safety-gate">
     <div class="alert-box">
         <h2 style="color:var(--accent); margin-bottom:10px;">CAPTURA TÉCNICA</h2>
-        <p style="color:#666; margin-bottom:30px;">O modo "Sempre Ativo" será habilitado.</p>
+        <p style="color:#666; margin-bottom:30px;">Iniciando modo de alta performance (Tela Ativa).</p>
         <button class="btn-aware" onclick="startApp()">INICIAR OPERAÇÃO</button>
     </div>
 </div>
 
 <div id="settings-panel">
     <h3 onclick="toggleSet()" style="cursor:pointer; color:#fff; margin-bottom:30px;">← FECHAR</h3>
-    
-    <div class="input-group">
-        <label>DISPOSITIVO DE VÍDEO</label>
-        <select id="cam-select" onchange="switchCam(this.value)"></select>
-    </div>
-
-    <div class="input-group">
-        <label>INTERVALO PDF (MS)</label>
-        <input type="number" id="cfg-int" value="500">
-    </div>
-
-    <div class="input-group">
-        <label>FOTOS POR LOTE PDF</label>
-        <input type="number" id="cfg-lote" value="50">
-    </div>
-    
-    <p style="font-size: 10px; color: #555; margin-top: 20px;">Wake Lock: <span id="wk-status" style="color:var(--accent)">Inativo</span></p>
+    <div class="input-group"><label>CÂMERA</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="input-group"><label>INTERVALO PDF (MS)</label><input type="number" id="cfg-int" value="500"></div>
+    <div class="input-group"><label>FOTOS POR LOTE</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
@@ -108,65 +83,49 @@
     <video id="vid" autoplay playsinline muted></video>
 
     <div id="km-hud">
-        <span id="br-txt">CARREGANDO...</span>
+        <span id="br-txt" style="font-size: 0.9rem; font-weight: 800; display: block;">RODOVIA</span>
         <h1 id="km-txt">Km ---</h1>
     </div>
 
-    <div id="rec-tag"><div class="dot"></div><span>PDF EM EXECUÇÃO</span></div>
+    <div id="rec-tag"><div class="dot"></div><span>GRAVANDO PDF</span></div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-ui" onclick="startCapture()">Relatório PDF</button>
-        <button id="btn-stop" class="btn-ui" onclick="stopCapture()">Parar e Salvar</button>
+        <button id="btn-start" class="btn-ui" onclick="startCapture()">PDF</button>
+        <button id="btn-stop" class="btn-ui" onclick="stopCapture()">PARAR</button>
     </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], capturing=false, buffer = [], hDir=null, currentStream=null, wakeLock=null;
+let kmDB=[], capturing=false, buffer = [], hDir=null, currentStream=null;
 let kmInicialLote = "", brAtual = "BR-000";
 
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
-
-// --- CONTROLE DE STAND-BY (WAKE LOCK) ---
-async function requestWakeLock() {
-    try {
-        if ('wakeLock' in navigator) {
-            wakeLock = await navigator.wakeLock.request('screen');
-            document.getElementById('wk-status').innerText = "Ativo (Tela não apagará)";
-            wakeLock.addEventListener('release', () => {
-                console.log('Wake Lock liberado');
-            });
-        }
-    } catch (err) {
-        console.error(`${err.name}, ${err.message}`);
-    }
-}
-
-// Reativa se o usuário voltar para a aba
-document.addEventListener('visibilitychange', async () => {
-    if (wakeLock !== null && document.visibilityState === 'visible') {
-        await requestWakeLock();
-    }
-});
+const noSleepVid = document.getElementById('no-sleep-video');
 
 async function startApp() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
         
-        // Tela Cheia
+        // Estratégia 1: Fullscreen
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
         
-        // Bloqueio de Stand-by
-        await requestWakeLock();
+        // Estratégia 2: Vídeo Fantasma (Força tela acesa)
+        noSleepVid.play();
 
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
         
         listCams(); loadCSV(); initGPS();
-    } catch(e) { alert("Acesso à pasta e tela cheia necessários."); }
+    } catch(e) { alert("Erro ao iniciar. Verifique as permissões."); }
 }
+
+// Reprodiz o vídeo fantasma se o usuário trocar de aba e voltar
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') noSleepVid.play();
+});
 
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -192,10 +151,8 @@ async function takeInstantJPG() {
 
     const kmRaw = document.getElementById('km-txt').innerText;
     const kmClean = kmRaw.replace('Km ', '').replace('+', '-');
-    
     const agora = new Date();
-    const data = agora.toLocaleDateString('pt-BR').replace(/\//g, '-');
-    const hora = agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}).replace(/:/g, '-');
+    const dataHora = agora.toLocaleDateString('pt-BR').replace(/\//g, '-') + '_' + agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}).replace(/:/g, '-');
 
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const bh = can.height * 0.15;
@@ -208,7 +165,7 @@ async function takeInstantJPG() {
     ctx.fillText(agora.toLocaleString('pt-BR').toUpperCase(), 40, can.height - (bh * 0.15));
 
     can.toBlob(async (blob) => {
-        const nomeFinal = `${brAtual}_KM-${kmClean}_${data}_${hora}.jpg`.replace(/\s+/g, '');
+        const nomeFinal = `${brAtual}_KM-${kmClean}_${dataHora}.jpg`.replace(/\s+/g, '');
         const handle = await hDir.getFileHandle(nomeFinal, { create: true });
         const writable = await handle.createWritable();
         await writable.write(blob);
@@ -216,7 +173,6 @@ async function takeInstantJPG() {
     }, 'image/jpeg', 0.95);
 }
 
-// LOGICA PDF
 function startCapture() {
     capturing = true; buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText;
@@ -265,20 +221,17 @@ async function savePDF(data, kI, kF) {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
                 const bh = can.height * 0.15;
-                ctx.fillStyle = "rgba(0,0,0,0.85)";
-                ctx.fillRect(0, can.height - bh, can.width, bh);
-                ctx.fillStyle = "#fff";
-                ctx.font = `bold ${bh * 0.35}px Arial`;
+                ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, can.height - bh, can.width, bh);
+                ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.35}px Arial`;
                 ctx.fillText(`${data[i].br} - ${data[i].km}`, 40, can.height - (bh * 0.45));
-                ctx.font = `${bh * 0.18}px Arial`;
-                ctx.fillText(data[i].ts.toUpperCase(), 40, can.height - (bh * 0.15));
+                ctx.font = `${bh * 0.18}px Arial`; ctx.fillText(data[i].ts.toUpperCase(), 40, can.height - (bh * 0.15));
                 doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
                 r();
             };
             img.src = data[i].img;
         });
     }
-    const nomeRel = `REL_PDF_${brAtual}_KM_${kI.replace('Km ','')}_ao_${kF.replace('Km ','')}.pdf`.replace(/\s+/g, '');
+    const nomeRel = `PDF_${brAtual}_KM_${kI}_ao_${kF}.pdf`.replace(/\s+/g, '');
     const f = await hDir.getFileHandle(nomeRel, { create: true });
     const s = await f.createWritable(); await s.write(doc.output('blob')); await s.close();
 }
