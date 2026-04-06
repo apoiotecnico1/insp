@@ -21,7 +21,6 @@
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD KM COM BR DINÂMICA */
         #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 10px 25px; border: 3px solid #fff; border-radius: 8px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
         #br-txt { font-size: 0.9rem; font-weight: 800; color: #fff; text-transform: uppercase; display: block; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 4px; padding-bottom: 2px; }
         #km-hud h1 { font-size: 2.2rem; font-weight: 900; margin: 0; line-height: 1.1; }
@@ -55,7 +54,7 @@
         <div class="msg-seguranca">NÃO DIRIJA USANDO O CELULAR</div>
         <h2 style="color:var(--accent)">SEGURANÇA ATIVA</h2>
         <p style="margin: 15px 0; font-size: 14px; color: #bbb;">Evite acidentes: não use o celular ao dirigir..</p>
-        <button class="btn-aware" onclick="startApp()">ENTRAR NO SISTEMA</button>
+        <button class="btn-aware" onclick="startApp()">Entrar</button>
     </div>
 </div>
 
@@ -76,18 +75,18 @@
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR CAPTURA</button>
-        <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR TUDO</button>
+        <button id="btn-start" class="btn-main" onclick="startCapture()">Iniciar Captura Automatica</button>
+        <button id="btn-stop" class="btn-main" onclick="stopCapture()">Finalizar Captura automatica</button>
     </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], capturing=false, isSaving=false;
+let kmDB=[], capturing=false;
 let buffer = [], hDir=null, currentStream=null, wakeLock=null;
 let kmInicialLote = "";
-let brAtual = "RODOVIA"; // Variável para armazenar a BR detectada
+let brAtual = "RODOVIA";
 
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
@@ -163,7 +162,7 @@ function captureLoop() {
         buffer.push({
             img: imgData,
             km: currentKm,
-            br: brAtual, // Salva a BR detectada no momento da foto
+            br: brAtual,
             ts: new Date().toLocaleString('pt-BR')
         });
 
@@ -200,7 +199,6 @@ async function savePDF(dataList, kmIni, kmFim) {
                 ctx.fillRect(0, can.height - bh, can.width, bh);
                 ctx.fillStyle = "#fff";
                 ctx.font = `bold ${bh * 0.35}px Arial`;
-                // Carimbo no PDF incluindo a BR detectada
                 ctx.fillText(dataList[i].br + " - Km " + dataList[i].km, 40, can.height - (bh * 0.45));
                 ctx.font = `${bh * 0.2}px Arial`;
                 ctx.fillText(dataList[i].ts.toUpperCase(), 40, can.height - (bh * 0.15));
@@ -215,7 +213,6 @@ async function savePDF(dataList, kmIni, kmFim) {
     const agora = new Date();
     const d = agora.toLocaleDateString('pt-BR').replace(/\//g, '-');
     const h = agora.toLocaleTimeString('pt-BR').replace(/:/g, '-');
-    // Nome do arquivo agora inclui a BR
     const nome = `${dataList[0].br}_Km_${kmIni}_ao_${kmFim}_${d}_${h}.pdf`;
 
     try {
@@ -236,7 +233,7 @@ async function loadCSV() {
         const ik = h.indexOf('km'), 
               ilt = h.findIndex(x=>x.includes('lat')), 
               iln = h.findIndex(x=>x.includes('lon')),
-              ibr = h.indexOf('br'); // Verifica se existe coluna de BR
+              ibr = h.indexOf('br');
 
         kmDB = rows.map(r => {
             const c = r.split(';');
@@ -247,7 +244,7 @@ async function loadCSV() {
                 br: ibr !== -1 ? c[ibr] : null 
             };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) { console.error("CSV não encontrado ou erro leitura."); }
+    } catch(e) { console.error("CSV não encontrado."); }
 }
 
 function initGPS() {
@@ -259,18 +256,13 @@ function initGPS() {
             if (d < minD) { minD = d; best = pt; }
         }
         if (best) {
-            // Atualiza Km
             document.getElementById('km-txt').innerText = "Km " + best.km;
-            
-            // Lógica de Detecção de BR
             if (best.br) {
                 brAtual = best.br;
             } else {
-                // Fallback caso o CSV não tenha coluna BR: tenta extrair do nome do arquivo ou coordenadas
                 brAtual = "BR-116"; 
                 if (p.coords.longitude > -43.5) brAtual = "BR-101";
             }
-            
             document.getElementById('br-txt').innerText = brAtual;
         }
     }, null, { enableHighAccuracy: true });
