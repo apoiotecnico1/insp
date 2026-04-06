@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Captura Técnica Rodoviária</title>
+    <title>Captura Técnica Rodoviária - High Performance</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #00ff88; --danger: #ff4444; --glass: rgba(15, 15, 15, 0.7); }
@@ -25,7 +25,7 @@
             background: rgba(255,255,255,0.1); transition: 0.2s;
         }
         .shutter-mini::after { content: ''; width: 20px; height: 20px; background: var(--accent); border-radius: 50%; }
-        .shutter-label { font-size: 10px; color: #fff; text-transform: uppercase; margin-top: 10px; letter-spacing: 1px; font-weight: bold; opacity: 0.6; }
+        .shutter-label { font-size: 10px; color: #fff; text-transform: uppercase; margin-top: 10px; letter-spacing: 1px; font-weight: bold; opacity: 0.6; text-shadow: 1px 1px 2px #000; }
         #click-area:active .shutter-mini { transform: scale(0.9); background: var(--accent); }
 
         /* Placa de KM Menor */
@@ -38,6 +38,7 @@
         #br-txt { font-size: 0.9rem; font-weight: 800; display: block; opacity: 0.9; margin-bottom: 2px; }
         #km-txt { font-size: 1.8rem; font-weight: 900; margin: 0; line-height: 1; }
 
+        /* Status PDF */
         #rec-tag { 
             position: absolute; top: 20px; right: 20px; 
             display: flex; align-items: center; gap: 8px; 
@@ -54,7 +55,7 @@
         #btn-stop { background: var(--danger); border: none; display: none; }
         #gear-btn { width: 50px; height: 50px; background: var(--glass); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; }
 
-        /* Settings */
+        /* Painel de Ajustes */
         #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #0a0a0a; z-index: 4000; padding: 60px 25px; transition: 0.4s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
         .input-group { margin-bottom: 20px; }
@@ -62,7 +63,7 @@
         .input-group select, .input-group input { width: 100%; padding: 12px; background: #1a1a1a; color: #fff; border: 1px solid #333; border-radius: 8px; }
 
         canvas { display: none; }
-        .flash { position: fixed; inset: 0; background: #fff; opacity: 0; z-index: 6000; pointer-events: none; }
+        .flash { position: fixed; inset: 0; background: #fff; opacity: 0; z-index: 6000; pointer-events: none; transition: 0.1s; }
     </style>
 </head>
 <body>
@@ -72,7 +73,7 @@
 <div id="safety-gate">
     <div class="alert-box">
         <h2 style="color:var(--accent); margin-bottom:10px;">CAPTURA TÉCNICA</h2>
-        <p style="color:#666; margin-bottom:30px;">Pronto para iniciar em tela cheia.</p>
+        <p style="color:#666; margin-bottom:30px;">O modo "Sempre Ativo" será habilitado.</p>
         <button class="btn-aware" onclick="startApp()">INICIAR OPERAÇÃO</button>
     </div>
 </div>
@@ -94,6 +95,8 @@
         <label>FOTOS POR LOTE PDF</label>
         <input type="number" id="cfg-lote" value="50">
     </div>
+    
+    <p style="font-size: 10px; color: #555; margin-top: 20px;">Wake Lock: <span id="wk-status" style="color:var(--accent)">Inativo</span></p>
 </div>
 
 <div id="app-shell">
@@ -105,7 +108,7 @@
     <video id="vid" autoplay playsinline muted></video>
 
     <div id="km-hud">
-        <span id="br-txt">BUSCANDO...</span>
+        <span id="br-txt">CARREGANDO...</span>
         <h1 id="km-txt">Km ---</h1>
     </div>
 
@@ -121,20 +124,48 @@
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], capturing=false, buffer = [], hDir=null, currentStream=null;
+let kmDB=[], capturing=false, buffer = [], hDir=null, currentStream=null, wakeLock=null;
 let kmInicialLote = "", brAtual = "BR-000";
 
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
+// --- CONTROLE DE STAND-BY (WAKE LOCK) ---
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            document.getElementById('wk-status').innerText = "Ativo (Tela não apagará)";
+            wakeLock.addEventListener('release', () => {
+                console.log('Wake Lock liberado');
+            });
+        }
+    } catch (err) {
+        console.error(`${err.name}, ${err.message}`);
+    }
+}
+
+// Reativa se o usuário voltar para a aba
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        await requestWakeLock();
+    }
+});
+
 async function startApp() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        
+        // Tela Cheia
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+        
+        // Bloqueio de Stand-by
+        await requestWakeLock();
+
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
+        
         listCams(); loadCSV(); initGPS();
-        if ('wakeLock' in navigator) await navigator.wakeLock.request('screen');
-    } catch(e) { alert("Acesso à pasta necessário."); }
+    } catch(e) { alert("Acesso à pasta e tela cheia necessários."); }
 }
 
 async function listCams() {
@@ -177,7 +208,6 @@ async function takeInstantJPG() {
     ctx.fillText(agora.toLocaleString('pt-BR').toUpperCase(), 40, can.height - (bh * 0.15));
 
     can.toBlob(async (blob) => {
-        // Nome: BR-116_KM-500_05-04-2026_21-30.jpg
         const nomeFinal = `${brAtual}_KM-${kmClean}_${data}_${hora}.jpg`.replace(/\s+/g, '');
         const handle = await hDir.getFileHandle(nomeFinal, { create: true });
         const writable = await handle.createWritable();
@@ -186,6 +216,7 @@ async function takeInstantJPG() {
     }, 'image/jpeg', 0.95);
 }
 
+// LOGICA PDF
 function startCapture() {
     capturing = true; buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText;
@@ -247,7 +278,7 @@ async function savePDF(data, kI, kF) {
             img.src = data[i].img;
         });
     }
-    const nomeRel = `RELATORIO_${brAtual}_KM_${kI.replace('Km ','')}_ao_${kF.replace('Km ','')}.pdf`.replace(/\s+/g, '');
+    const nomeRel = `REL_PDF_${brAtual}_KM_${kI.replace('Km ','')}_ao_${kF.replace('Km ','')}.pdf`.replace(/\s+/g, '');
     const f = await hDir.getFileHandle(nomeRel, { create: true });
     const s = await f.createWritable(); await s.write(doc.output('blob')); await s.close();
 }
