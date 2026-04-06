@@ -17,30 +17,56 @@
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
 
-        /* PLACA HUD COM TRANSPARÊNCIA E ANIMAÇÃO DE FEEDBACK */
+        /* PLACA HUD CENTRALIZADA E TRANSPARENTE */
         #km-hud { 
             position: absolute; 
             top: 20px; 
             left: 20px; 
             background: var(--placa-verde); 
-            padding: 10px 25px; 
+            padding: 10px 20px; 
             border: 3px solid rgba(255, 255, 255, 0.7); 
             border-radius: 8px; 
             z-index: 100; 
             pointer-events: none; 
-            min-width: 150px;
+            min-width: 160px;
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             transition: transform 0.1s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Centraliza o conteúdo horizontalmente */
+            text-align: center;
         }
-        /* Classe acionada via JS no momento do clique */
         .hud-pulse { transform: scale(1.05); border-color: var(--accent) !important; }
 
-        #br-txt { font-size: 0.9rem; font-weight: 800; display: block; margin-bottom: 2px; border-bottom: 1px solid rgba(255,255,255,0.3); }
-        #km-txt { font-size: 2.2rem; font-weight: 900; }
+        #br-txt { 
+            font-size: 0.85rem; 
+            font-weight: 800; 
+            display: block; 
+            width: 100%;
+            padding-bottom: 2px;
+            margin-bottom: 2px; 
+            border-bottom: 1px solid rgba(255,255,255,0.3); 
+        }
+        #km-txt { font-size: 2.2rem; font-weight: 900; line-height: 1; }
 
-        #rec-tag { position: absolute; top: 25px; right: 20px; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 20px; opacity: 0; pointer-events: none; }
-        .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
+        /* TAG DE GRAVAÇÃO MENOR E DISCRETA */
+        #rec-tag { 
+            position: absolute; 
+            top: 15px; 
+            right: 15px; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            background: rgba(0,0,0,0.5); 
+            padding: 5px 12px; 
+            border-radius: 15px; 
+            opacity: 0; 
+            pointer-events: none; 
+            z-index: 100;
+        }
+        #rec-tag span { font-size: 0.7rem; font-weight: bold; color: #eee; letter-spacing: 0.5px; }
+        .dot { width: 8px; height: 8px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
         #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; }
@@ -55,17 +81,7 @@
         #settings-panel input, #settings-panel select { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px; margin-top: 5px; }
         
         canvas { display: none; }
-        
-        /* FLASH DISCRETO: Apenas 0.3 de opacidade e muito rápido */
-        #flash { 
-            position: fixed; 
-            inset: 0; 
-            background: white; 
-            opacity: 0; 
-            pointer-events: none; 
-            z-index: 1000; 
-            transition: opacity 0.05s ease-out; 
-        }
+        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; transition: opacity 0.05s ease-out; }
     </style>
 </head>
 <body>
@@ -86,16 +102,12 @@
 
 <div id="settings-panel">
     <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; margin-bottom:20px; font-weight: bold;">← FECHAR</div>
-    
     <label>Câmera Ativa</label>
     <select id="cam-select" onchange="switchCam(this.value)"></select>
-    
     <label>Intervalo de Captura (ms)</label>
     <input type="number" id="cfg-int" value="200">
-    
     <label>Fotos por Relatório (Lote)</label>
     <input type="number" id="cfg-lote" value="50">
-
     <p style="margin-top:30px; font-size: 0.7rem; color: #888;">As fotos manuais não contam para o limite do lote do PDF.</p>
 </div>
 
@@ -103,11 +115,11 @@
     <video id="vid" autoplay playsinline muted onclick="takeManualPhoto()"></video>
     
     <div id="km-hud">
-        <span id="br-txt">BUSCANDO GPS...</span>
+        <span id="br-txt">GPS...</span>
         <h1 id="km-txt">Km ---</h1>
     </div>
 
-    <div id="rec-tag"><div class="dot"></div><span>GRAVANDO PDF</span></div>
+    <div id="rec-tag"><div class="dot"></div><span>Registrando fotos no PDF...</span></div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
@@ -168,23 +180,18 @@ async function switchCam(id) {
 
 async function takeManualPhoto() {
     if(!hDir) return;
-    
-    // FEEDBACK DISCRETO: Flash rápido e Pulso na Placa
-    flashDiv.style.opacity = "0.3"; 
+    flashDiv.style.opacity = "0.2"; 
     kmHud.classList.add('hud-pulse');
-    
     setTimeout(() => { 
         flashDiv.style.opacity = "0"; 
         kmHud.classList.remove('hud-pulse');
-    }, 80);
+    }, 70);
     
     const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const bh = can.height * 0.10;
-    
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.fillRect(0, can.height - bh, can.width, bh);
-    
     ctx.fillStyle = "#fff";
     ctx.font = `bold ${bh * 0.35}px Arial`;
     ctx.fillText(`${brAtual} - Km ${currentKm}`, 20, can.height - (bh * 0.55));
