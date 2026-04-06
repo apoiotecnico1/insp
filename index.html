@@ -3,35 +3,27 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Captura High-End BR</title>
+    <title>Captura Premium BR - 3D Real</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { 
             --accent: #ffcc00; 
-            --glass-verde: rgba(0, 121, 52, 0.8); 
-            --sombra-3d: 3px 3px 0px #003d1a, 5px 5px 15px rgba(0,0,0,0.7);
+            --verde-topo: #007934;
+            --verde-base: #004d21;
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
         
         body { 
-            background: #000; 
-            color: #fff; 
-            font-family: 'Segoe UI', Roboto, sans-serif; 
-            overflow: hidden; 
-            height: 100vh; 
-            width: 100vw;
+            background: #000; color: #fff; 
+            font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; 
+            overflow: hidden; height: 100vh; width: 100vw;
         }
 
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
+        #vid { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
 
-        #vid { 
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%; 
-            object-fit: cover; z-index: 1;
-        }
-
-        /* HUD - PLACA COM EFEITO SOMBRA LINDO */
+        /* HUD - PLACA DE TRÂNSITO 3D GRADIENTE */
         #km-hud { 
             position: absolute; 
             top: env(safe-area-inset-top, 30px); 
@@ -39,35 +31,36 @@
             z-index: 100; 
         }
 
-        .placa-container {
-            background: var(--glass-verde);
-            padding: 15px 25px;
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            border-radius: 18px;
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+        .placa-road {
+            background: linear-gradient(135deg, var(--verde-topo) 0%, var(--verde-base) 100%);
+            padding: 12px 28px;
+            border: 3px solid #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.7), inset 0 0 15px rgba(0,0,0,0.3);
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 180px;
+            min-width: 190px;
+            position: relative;
+        }
+
+        /* Reflexo superior para parecer metal/placa real */
+        .placa-road::after {
+            content: ""; position: absolute; top: 0; left: 0; right: 0; height: 50%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.15) 0%, transparent 100%);
+            pointer-events: none; border-radius: 10px 10px 0 0;
         }
 
         .br-label { 
-            font-size: 1.4rem; 
-            font-weight: 800; 
-            color: #fff;
+            font-size: 1.5rem; font-weight: 800; color: #fff;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            margin-bottom: -5px;
-            letter-spacing: 1px;
+            margin-bottom: -5px; letter-spacing: 2px;
         }
 
         .km-label { 
-            font-size: 3rem; 
-            font-weight: 900; 
-            color: #fff;
-            /* Efeito Sombra 3D que você pediu */
-            text-shadow: var(--sombra-3d);
+            font-size: 3.2rem; font-weight: 900; color: #fff;
+            /* Efeito 3D Profundo */
+            text-shadow: 2px 2px 0px #002d14, 4px 4px 0px #001a0b, 6px 6px 12px rgba(0,0,0,0.9);
         }
 
         /* Controles */
@@ -78,21 +71,20 @@
         }
 
         .btn { 
-            border: none; padding: 20px 40px; border-radius: 50px; 
+            border: none; padding: 20px 45px; border-radius: 50px; 
             font-weight: 900; text-transform: uppercase; cursor: pointer; 
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.6);
         }
-        #btn-go { background: var(--accent); color: #000; }
-        #btn-stop { background: #ff4444; color: #fff; display: none; }
         
-        .circle-tool {
-            width: 60px; height: 60px; background: rgba(0,0,0,0.6);
+        .circle-btn {
+            width: 65px; height: 65px; background: rgba(0,0,0,0.7);
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 24px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2);
+            font-size: 26px; cursor: pointer; border: 2px solid rgba(255,255,255,0.3);
         }
 
-        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 1000; transition: opacity 0.1s; }
-        #rec-indicator { color: #ff4444; font-weight: bold; display: none; text-shadow: 1px 1px 2px #000; }
+        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 1000; }
+        #rec-log { color: #ff0000; font-weight: 900; animation: blink 1s infinite; display: none; text-shadow: 0 0 10px rgba(0,0,0,1); }
+        @keyframes blink { 50% { opacity: 0; } }
         canvas { display: none; }
     </style>
 </head>
@@ -100,25 +92,26 @@
 
 <div id="flash"></div>
 
-<div id="gate" style="position:fixed; inset:0; background:#000; z-index:9999; display:flex; align-items:center; justify-content:center;">
-    <button class="btn" id="btn-go" onclick="init()">ATIVAR SISTEMA & PASTA</button>
+<div id="gate" style="position:fixed; inset:0; background:#000; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;">
+    <h1 style="color:var(--accent)">SISTEMA BR PRO</h1>
+    <button class="btn" style="background:var(--accent)" onclick="init()">ATIVAR & ESCOLHER PASTA</button>
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted onclick="snap()"></video>
     
     <div id="km-hud">
-        <div class="placa-container">
+        <div class="placa-road">
             <span class="br-label" id="br-txt">BR ---</span>
             <span class="km-label" id="km-txt">Km ---</span>
         </div>
     </div>
 
     <div id="ui">
-        <div class="circle-tool" onclick="document.documentElement.requestFullscreen()">⛶</div>
-        <button id="btn-start-rec" class="btn" style="background:var(--accent)" onclick="startLote()">INICIAR LOTE</button>
-        <button id="btn-stop-rec" class="btn" style="background:#ff4444; display:none; color:white;" onclick="stopLote()">GERAR PDF</button>
-        <div id="rec-indicator">● REC</div>
+        <div class="circle-btn" onclick="toggleFS()">⛶</div>
+        <button id="btn-start" class="btn" style="background:var(--accent)" onclick="startLote()">INICIAR LOTE</button>
+        <button id="btn-stop" class="btn" style="background:#ff0000; color:#fff; display:none;" onclick="stopLote()">GERAR RELATÓRIO PDF</button>
+        <div id="rec-log">● GRAVANDO</div>
     </div>
 </div>
 
@@ -147,49 +140,71 @@ async function init() {
         vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
         
         loadCSV(); startGPS();
-    } catch(e) { alert("Selecione uma pasta para salvar os arquivos."); }
+    } catch(e) { alert("Pasta necessária para operação."); }
 }
 
-function drawPlaca(km, br) {
+// RENDERIZAÇÃO DA PLACA 3D NO CANVAS (PARA JPG E PDF)
+function drawPlaca3D(km, br) {
     const s = can.height / 1080;
     ctx.save();
     
-    const w = 340 * s, h = 170 * s;
-    ctx.translate(50 * s, 50 * s);
+    const w = 360 * s, h = 180 * s;
+    const x = 50 * s, y = 50 * s;
     
-    // Sombra da Placa Toda
-    ctx.shadowColor = "rgba(0,0,0,0.7)";
-    ctx.shadowBlur = 25 * s;
-    ctx.shadowOffsetX = 10 * s;
-    ctx.shadowOffsetY = 10 * s;
+    // 1. Sombra projetada no asfalto (foto)
+    ctx.shadowColor = "rgba(0,0,0,0.8)";
+    ctx.shadowBlur = 30 * s;
+    ctx.shadowOffsetX = 12 * s;
+    ctx.shadowOffsetY = 12 * s;
     
-    // Fundo Verde
-    ctx.fillStyle = "rgba(0, 121, 52, 0.9)";
+    // 2. Fundo Gradiente Realista
+    const grad = ctx.createLinearGradient(x, y, x + w, y + h);
+    grad.addColorStop(0, "#007934"); // Verde claro topo
+    grad.addColorStop(1, "#004d21"); // Verde escuro base
+    
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.roundRect(0, 0, w, h, 20 * s);
+    ctx.roundRect(x, y, w, h, 15 * s);
     ctx.fill();
     
-    // Borda Fina
-    ctx.strokeStyle = "rgba(255,255,255,0.5)";
-    ctx.lineWidth = 3 * s;
+    // 3. Borda Branca da Placa
+    ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 5 * s;
     ctx.stroke();
 
-    ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+    // 4. Reflexo de brilho superior
+    ctx.fillStyle = "rgba(255,255,255,0.1)";
+    ctx.beginPath();
+    ctx.roundRect(x + 5*s, y + 5*s, w - 10*s, h/2, 10 * s);
+    ctx.fill();
+
     ctx.textAlign = "center";
     
-    // Texto BR
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold ${48 * s}px Arial`;
-    ctx.fillText("BR " + br, w/2, 60 * s);
+    // 5. Texto BR
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `bold ${52 * s}px Arial`;
+    ctx.shadowColor = "rgba(0,0,0,0.9)";
+    ctx.shadowBlur = 5 * s;
+    ctx.fillText("BR " + br, x + w/2, y + 65 * s);
     
-    // Texto KM com Efeito Sombra 3D (IGUAL À TELA)
-    ctx.font = `900 ${95 * s}px Arial`;
-    ctx.shadowColor = "#003314";
+    // 6. Texto KM (3D Camadas)
+    ctx.font = `900 ${100 * s}px Arial`;
+    // Sombra de profundidade (dark green)
+    ctx.shadowColor = "#00240f";
     ctx.shadowOffsetX = 4 * s;
     ctx.shadowOffsetY = 4 * s;
-    ctx.fillText("Km " + km, w/2, 138 * s);
+    ctx.shadowBlur = 0;
+    ctx.fillText("Km " + km, x + w/2, y + 145 * s);
     
     ctx.restore();
+
+    // Rodapé de Dados
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(0, can.height - (50*s), can.width, 50*s);
+    ctx.fillStyle = "#fff";
+    ctx.font = `bold ${24 * s}px Arial`;
+    ctx.fillText(`${new Date().toLocaleString()} | BR ${br} | GPS: ${lat}, ${lon}`, 30*s, can.height - (18*s));
 }
 
 async function snap() {
@@ -199,7 +214,7 @@ async function snap() {
 
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const km = document.getElementById('km-txt').innerText.replace("Km ", "");
-    drawPlaca(km, brGlobal);
+    drawPlaca3D(km, brGlobal);
     
     const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
     const fh = await hDir.getFileHandle(`BR${brGlobal}_KM${km}_${Date.now()}.jpg`, { create: true });
@@ -209,17 +224,17 @@ async function snap() {
 
 function startLote() {
     capturing = true; buffer = [];
-    document.getElementById('btn-start-rec').style.display = 'none';
-    document.getElementById('btn-stop-rec').style.display = 'block';
-    document.getElementById('rec-indicator').style.display = 'block';
+    document.getElementById('btn-start').style.display = 'none';
+    document.getElementById('btn-stop').style.display = 'block';
+    document.getElementById('rec-log').style.display = 'block';
     loop();
 }
 
 function stopLote() {
     capturing = false;
-    document.getElementById('btn-start-rec').style.display = 'block';
-    document.getElementById('btn-stop-rec').style.display = 'none';
-    document.getElementById('rec-indicator').style.display = 'none';
+    document.getElementById('btn-start').style.display = 'block';
+    document.getElementById('btn-stop').style.display = 'none';
+    document.getElementById('rec-log').style.display = 'none';
     if(buffer.length > 0) savePDF([...buffer]);
 }
 
@@ -227,11 +242,11 @@ async function loop() {
     if (!capturing) return;
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const km = document.getElementById('km-txt').innerText.replace("Km ", "");
-    drawPlaca(km, brGlobal);
-    buffer.push(can.toDataURL('image/jpeg', 0.6));
+    drawPlaca3D(km, brGlobal);
+    buffer.push(can.toDataURL('image/jpeg', 0.65));
     
     if (buffer.length >= 50) { savePDF([...buffer]); buffer = []; }
-    setTimeout(loop, 500);
+    setTimeout(loop, 400);
 }
 
 async function savePDF(imgs) {
@@ -273,7 +288,12 @@ async function loadCSV() {
             const c = r.split(';');
             return { br: c[ibr], km: c[ikm], lt: parseFloat(c[ilat].replace(',','.')), ln: parseFloat(c[ilon].replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) { console.error("Erro CSV:", e); }
+    } catch(e) {}
+}
+
+function toggleFS() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
 }
 </script>
 </body>
