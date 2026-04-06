@@ -3,46 +3,75 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Captura Técnica - FORÇAR TELA ATIVA</title>
+    <title>Captura Técnica Rodoviária</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #00ff88; --danger: #ff4444; --glass: rgba(15, 15, 15, 0.8); }
+        :root { 
+            --primary: #0056b3; /* Azul Cobalto Técnico */
+            --accent: #ff8800;  /* Laranja Alerta */
+            --danger: #ff4444; 
+            --bg: #050505;
+            --glass: rgba(20, 20, 20, 0.85); 
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; }
+        body { background: var(--bg); color: #fff; font-family: 'Roboto', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* Camada de Segurança Inicial */
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 25px 50px; font-weight: 900; border-radius: 15px; cursor: pointer; font-size: 1.2rem; }
+        /* TELA DE INÍCIO - NOVAS CORES */
+        #safety-gate { 
+            position: fixed; inset: 0; 
+            background: linear-gradient(135deg, #001f3f 0%, #000 100%); 
+            z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; 
+            border: 10px solid var(--primary);
+        }
+        .alert-box { text-align: center; padding: 30px; }
+        .btn-aware { 
+            background: var(--accent); color: #fff; border: none; 
+            padding: 22px 60px; font-weight: 900; border-radius: 50px; 
+            cursor: pointer; font-size: 1.3rem; text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(255, 136, 0, 0.4);
+            transition: transform 0.2s;
+        }
+        .btn-aware:active { transform: scale(0.95); }
 
-        /* Layout */
+        /* HUD E INTERFACE */
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         video#vid { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Indicador de Status da Tela */
-        #wake-status { position: absolute; top: 10px; right: 10px; font-size: 10px; padding: 5px 10px; border-radius: 5px; background: rgba(0,0,0,0.5); z-index: 200; }
-        .status-on { color: var(--accent); }
-        .status-off { color: var(--danger); }
+        #wake-status { 
+            position: absolute; top: 15px; right: 15px; font-size: 10px; 
+            padding: 6px 12px; border-radius: 20px; background: var(--glass); 
+            border: 1px solid #444; z-index: 200; 
+        }
+        .status-on { color: #00ff88; font-weight: bold; }
 
-        /* Botão Central Discreto */
-        #click-area { position: absolute; inset: 0; z-index: 50; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .shutter-mini { width: 50px; height: 50px; border: 2px solid #fff; border-radius: 50%; background: rgba(255,255,255,0.2); }
-        .shutter-label { font-size: 11px; margin-top: 8px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        #km-hud { 
+            position: absolute; top: 60px; left: 20px; 
+            background: var(--primary); padding: 15px; 
+            border: 3px solid #fff; border-radius: 12px; z-index: 100; 
+            min-width: 140px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        #br-txt { font-size: 0.9rem; font-weight: bold; letter-spacing: 1px; }
+        #km-txt { font-size: 2rem; font-weight: 900; line-height: 1.1; }
 
-        /* Placa KM */
-        #km-hud { position: absolute; top: 50px; left: 20px; background: rgba(0, 121, 52, 0.8); padding: 12px; border: 2px solid #fff; border-radius: 10px; z-index: 100; min-width: 120px; text-align: center; }
-        #br-txt { font-size: 0.8rem; font-weight: bold; display: block; }
-        #km-txt { font-size: 1.6rem; font-weight: 900; }
+        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; }
+        .btn-ui { 
+            padding: 18px 30px; border-radius: 15px; border: 2px solid #fff; 
+            background: var(--glass); color: #fff; font-weight: 800; cursor: pointer; 
+            backdrop-filter: blur(10px);
+        }
+        #btn-start { border-color: var(--accent); color: var(--accent); }
+        #btn-stop { background: var(--danger); border: none; display: none; }
 
-        /* Controles */
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 100; }
-        .btn-ui { padding: 15px 25px; border-radius: 12px; border: 1px solid #fff; background: var(--glass); color: #fff; font-weight: bold; cursor: pointer; }
-        #btn-stop { background: var(--danger); display: none; }
-        
-        #settings-panel { position: fixed; right: -320px; top: 0; width: 300px; height: 100%; background: #111; z-index: 500; padding: 50px 20px; transition: 0.3s; border-left: 1px solid #333; }
+        /* CONFIGURAÇÕES */
+        #settings-panel { 
+            position: fixed; right: -320px; top: 0; width: 300px; height: 100%; 
+            background: #111; z-index: 500; padding: 60px 20px; transition: 0.3s; 
+            border-left: 2px solid var(--primary); 
+        }
         #settings-panel.open { right: 0; }
-        .input-group { margin-bottom: 20px; }
-        .input-group label { display: block; font-size: 11px; color: var(--accent); margin-bottom: 5px; }
-        .input-group input, select { width: 100%; padding: 10px; background: #222; color: #fff; border: 1px solid #444; border-radius: 5px; }
+        .input-group { margin-bottom: 25px; }
+        .input-group label { display: block; font-size: 11px; color: var(--accent); margin-bottom: 8px; font-weight: bold; }
+        .input-group input, select { width: 100%; padding: 12px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; }
 
         canvas { display: none; }
     </style>
@@ -50,38 +79,36 @@
 <body>
 
 <div id="safety-gate">
-    <h1 style="margin-bottom: 20px; color: var(--accent)">PRONTO PARA OPERAÇÃO</h1>
-    <p style="margin-bottom: 30px; text-align: center; color: #ccc; padding: 0 20px;">A tela será bloqueada para permanecer ligada permanentemente durante o uso.</p>
-    <button class="btn-aware" onclick="initFullApp()">ATIVAR E INICIAR</button>
-</div>
-
-<div id="settings-panel">
-    <h2 onclick="toggleSet()" style="cursor:pointer; margin-bottom:20px;">✖ FECHAR</h2>
-    <div class="input-group"><label>INTERVALO (MS)</label><input type="number" id="cfg-int" value="500"></div>
-    <div class="input-group"><label>FOTOS/LOTE</label><input type="number" id="cfg-lote" value="50"></div>
-    <div class="input-group"><label>CÂMERA</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="alert-box">
+        <h1 style="font-size: 2.5rem; margin-bottom: 10px;">CAPTURA <span style="color:var(--accent)">TÉCNICA</span></h1>
+        <p style="color: #aaa; margin-bottom: 40px;">SISTEMA DE MONITORAMENTO RODOVIÁRIO</p>
+        <button class="btn-aware" onclick="initApp()">Ativar Operação</button>
+        <p style="margin-top: 25px; font-size: 0.8rem; color: #555;">BLOQUEIO DE STAND-BY AUTOMÁTICO</p>
+    </div>
 </div>
 
 <div id="app-shell">
-    <div id="wake-status">TELA: <span id="status-txt" class="status-off">INATIVA</span></div>
+    <div id="wake-status">MODO: <span id="status-txt" class="status-on">SOLICITANDO...</span></div>
     
-    <div id="click-area" onclick="takeInstantJPG()">
-        <div class="shutter-mini"></div>
-        <span class="shutter-label">SALVAR FOTO ATUAL</span>
-    </div>
-
     <video id="vid" autoplay playsinline muted></video>
 
     <div id="km-hud">
-        <span id="br-txt">---</span>
+        <span id="br-txt">RODOVIA</span>
         <h1 id="km-txt">Km ---</h1>
     </div>
 
     <div id="ui-controls">
         <button class="btn-ui" onclick="toggleSet()">⚙️</button>
-        <button id="btn-start" class="btn-ui" onclick="startCapture()" style="border-color: var(--accent);">INICIAR PDF</button>
-        <button id="btn-stop" class="btn-ui" onclick="stopCapture()">SALVAR E PARAR</button>
+        <button id="btn-start" class="btn-ui" onclick="startCapture()">INICIAR PDF</button>
+        <button id="btn-stop" class="btn-ui" onclick="stopCapture()">PARAR E SALVAR</button>
     </div>
+</div>
+
+<div id="settings-panel">
+    <h2 onclick="toggleSet()" style="cursor:pointer; margin-bottom:30px; color: var(--danger)">✖ FECHAR</h2>
+    <div class="input-group"><label>INTERVALO ENTRE FOTOS (MS)</label><input type="number" id="cfg-int" value="500"></div>
+    <div class="input-group"><label>LIMITE DE FOTOS POR PDF</label><input type="number" id="cfg-lote" value="50"></div>
+    <div class="input-group"><label>SELECIONAR LENTE</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
 </div>
 
 <canvas id="c"></canvas>
@@ -93,40 +120,27 @@ let brAtual = "BR-000", kmInicialLote = "";
 
 const vid = document.getElementById('vid'), can = document.getElementById('c'), ctx = can.getContext('2d');
 
-// --- SISTEMA OBRIGATÓRIO DE TELA LIGADA ---
+// --- GARANTIA DE TELA LIGADA ---
 async function requestWakeLock() {
     try {
         if ('wakeLock' in navigator) {
             wakeLock = await navigator.wakeLock.request('screen');
-            document.getElementById('status-txt').innerText = "BLOQUEADA (ON)";
+            document.getElementById('status-txt').innerText = "TELA ATIVA";
             document.getElementById('status-txt').className = "status-on";
-            
-            wakeLock.addEventListener('release', () => {
-                document.getElementById('status-txt').innerText = "LIBERADA (RISCO)";
-                document.getElementById('status-txt').className = "status-off";
-            });
         }
     } catch (err) {
-        console.error("Erro WakeLock:", err);
+        document.getElementById('status-txt').innerText = "ERRO WAKE";
     }
 }
 
-// Re-ativa o bloqueio se o usuário sair e voltar para a aba
 document.addEventListener('visibilitychange', async () => {
-    if (wakeLock !== null && document.visibilityState === 'visible') {
-        await requestWakeLock();
-    }
+    if (wakeLock !== null && document.visibilityState === 'visible') await requestWakeLock();
 });
 
-async function initFullApp() {
+async function initApp() {
     try {
-        // Solicita pasta primeiro
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        
-        // Ativa Tela Cheia (ajuda a manter o sistema ativo)
         if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
-        
-        // Ativa Bloqueio de Tela
         await requestWakeLock();
 
         document.getElementById('safety-gate').style.display = 'none';
@@ -134,12 +148,11 @@ async function initFullApp() {
         
         listCams(); loadCSV(); initGPS();
     } catch (e) {
-        alert("Para funcionar, você deve aceitar a permissão de pasta e tela cheia.");
+        alert("Atenção: É necessário aceitar as permissões para a operação.");
     }
 }
 
-// --- RESTANTE DAS FUNCIONALIDADES ---
-
+// --- LÓGICA DE VÍDEO E GPS ---
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const vids = devices.filter(d => d.kind === 'videoinput');
@@ -156,32 +169,6 @@ async function switchCam(id) {
 }
 
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
-
-async function takeInstantJPG() {
-    if (!hDir) return;
-    const agora = new Date();
-    const kmRaw = document.getElementById('km-txt').innerText;
-    const kmLimpo = kmRaw.replace('Km ', '').replace('+', '-');
-    const dataHora = agora.toLocaleDateString('pt-BR').replace(/\//g, '-') + '_' + agora.getHours() + '-' + agora.getMinutes();
-
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const bh = can.height * 0.12;
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillRect(0, can.height - bh, can.width, bh);
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold ${bh * 0.4}px Arial`;
-    ctx.fillText(`${brAtual} - ${kmRaw}`, 30, can.height - (bh * 0.45));
-    ctx.font = `${bh * 0.2}px Arial`;
-    ctx.fillText(agora.toLocaleString(), 30, can.height - (bh * 0.15));
-
-    can.toBlob(async (blob) => {
-        const nome = `${brAtual}_KM-${kmLimpo}_${dataHora}.jpg`;
-        const handle = await hDir.getFileHandle(nome, { create: true });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-    }, 'image/jpeg', 0.9);
-}
 
 function startCapture() {
     capturing = true; buffer = [];
@@ -223,10 +210,9 @@ async function savePDF(data, kI, kF) {
     for (let i = 0; i < data.length; i++) {
         if (i > 0) doc.addPage();
         doc.addImage(data[i].img, 'JPEG', 0, 0, pw, ph);
-        doc.setFillColor(0,0,0, 180);
+        doc.setFillColor(0, 86, 179, 200); // Azul Cobalto no Rodapé
         doc.rect(0, ph-20, pw, 20, 'F');
         doc.setTextColor(255,255,255);
-        doc.setFontSize(12);
         doc.text(`${data[i].br} - ${data[i].km} | ${data[i].ts}`, 10, ph-8);
     }
     const nome = `REL_${brAtual}_KM_${kI}_ao_${kF}.pdf`.replace(/\s+/g, '');
