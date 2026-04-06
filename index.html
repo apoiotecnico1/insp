@@ -3,93 +3,94 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Captura Técnica Rodoviária</title>
+    <title>Captura Técnica Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { 
-            --primary: #0056b3; /* Azul Cobalto Técnico */
-            --accent: #ff8800;  /* Laranja Alerta */
-            --danger: #ff4444; 
+            --primary: #0056b3; 
+            --accent: #ff8800;  
+            --glass: rgba(0, 86, 179, 0.45); /* KM Transparente */
             --bg: #050505;
-            --glass: rgba(20, 20, 20, 0.85); 
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: #fff; font-family: 'Roboto', sans-serif; overflow: hidden; height: 100vh; }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* TELA DE INÍCIO - NOVAS CORES */
+        /* TELA DE INÍCIO */
         #safety-gate { 
             position: fixed; inset: 0; 
             background: linear-gradient(135deg, #001f3f 0%, #000 100%); 
-            z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; 
-            border: 10px solid var(--primary);
+            z-index: 9999; display: flex; align-items: center; justify-content: center; 
         }
-        .alert-box { text-align: center; padding: 30px; }
         .btn-aware { 
             background: var(--accent); color: #fff; border: none; 
             padding: 22px 60px; font-weight: 900; border-radius: 50px; 
             cursor: pointer; font-size: 1.3rem; text-transform: uppercase;
-            box-shadow: 0 0 20px rgba(255, 136, 0, 0.4);
-            transition: transform 0.2s;
+            box-shadow: 0 0 30px rgba(255, 136, 0, 0.3);
         }
-        .btn-aware:active { transform: scale(0.95); }
 
-        /* HUD E INTERFACE */
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         video#vid { width: 100%; height: 100%; object-fit: cover; }
 
-        #wake-status { 
-            position: absolute; top: 15px; right: 15px; font-size: 10px; 
-            padding: 6px 12px; border-radius: 20px; background: var(--glass); 
-            border: 1px solid #444; z-index: 200; 
-        }
-        .status-on { color: #00ff88; font-weight: bold; }
-
+        /* PAINEL KM TRANSPARENTE */
         #km-hud { 
             position: absolute; top: 60px; left: 20px; 
-            background: var(--primary); padding: 15px; 
-            border: 3px solid #fff; border-radius: 12px; z-index: 100; 
-            min-width: 140px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            background: var(--glass); 
+            padding: 15px; 
+            border: 1px solid rgba(255,255,255,0.4); 
+            border-radius: 12px; z-index: 100; 
+            backdrop-filter: blur(8px); /* Efeito de vidro */
+            min-width: 140px; text-align: center;
         }
-        #br-txt { font-size: 0.9rem; font-weight: bold; letter-spacing: 1px; }
-        #km-txt { font-size: 2rem; font-weight: 900; line-height: 1.1; }
+        #br-txt { font-size: 0.8rem; font-weight: bold; opacity: 0.9; }
+        #km-txt { font-size: 2.2rem; font-weight: 900; }
 
+        /* MICROBOTÃO DE CAPTURA RÁPIDA (FOTO ATUAL) */
+        #quick-shutter { 
+            position: absolute; top: 50%; left: 50%; 
+            transform: translate(-50%, -50%);
+            width: 65px; height: 65px; 
+            border: 3px solid rgba(255,255,255,0.5);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.1);
+            z-index: 60; cursor: pointer;
+        }
+        #quick-shutter::after {
+            content: ''; width: 25px; height: 25px; 
+            background: #fff; border-radius: 50%; opacity: 0.8;
+        }
+
+        /* CONTROLES INFERIORES */
         #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; }
         .btn-ui { 
-            padding: 18px 30px; border-radius: 15px; border: 2px solid #fff; 
-            background: var(--glass); color: #fff; font-weight: 800; cursor: pointer; 
-            backdrop-filter: blur(10px);
+            padding: 18px 30px; border-radius: 15px; border: 1px solid #fff; 
+            background: rgba(0,0,0,0.7); color: #fff; font-weight: 800; cursor: pointer; 
         }
         #btn-start { border-color: var(--accent); color: var(--accent); }
-        #btn-stop { background: var(--danger); border: none; display: none; }
+        #btn-stop { background: #ff4444; border: none; display: none; }
 
-        /* CONFIGURAÇÕES */
         #settings-panel { 
             position: fixed; right: -320px; top: 0; width: 300px; height: 100%; 
             background: #111; z-index: 500; padding: 60px 20px; transition: 0.3s; 
             border-left: 2px solid var(--primary); 
         }
         #settings-panel.open { right: 0; }
-        .input-group { margin-bottom: 25px; }
-        .input-group label { display: block; font-size: 11px; color: var(--accent); margin-bottom: 8px; font-weight: bold; }
-        .input-group input, select { width: 100%; padding: 12px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; }
-
         canvas { display: none; }
+        .flash { position: fixed; inset: 0; background: #fff; opacity: 0; z-index: 1000; pointer-events: none; transition: 0.1s; }
     </style>
 </head>
 <body>
 
+<div id="flash-effect" class="flash"></div>
+
 <div id="safety-gate">
-    <div class="alert-box">
-        <h1 style="font-size: 2.5rem; margin-bottom: 10px;">CAPTURA <span style="color:var(--accent)">TÉCNICA</span></h1>
-        <p style="color: #aaa; margin-bottom: 40px;">SISTEMA DE MONITORAMENTO RODOVIÁRIO</p>
-        <button class="btn-aware" onclick="initApp()">Ativar Operação</button>
-        <p style="margin-top: 25px; font-size: 0.8rem; color: #555;">BLOQUEIO DE STAND-BY AUTOMÁTICO</p>
-    </div>
+    <button class="btn-aware" onclick="initApp()">Iniciar Operação</button>
 </div>
 
 <div id="app-shell">
-    <div id="wake-status">MODO: <span id="status-txt" class="status-on">SOLICITANDO...</span></div>
-    
+    <!-- O Microbotão de captura de foto avulsa -->
+    <div id="quick-shutter" onclick="takeInstantJPG()"></div>
+
     <video id="vid" autoplay playsinline muted></video>
 
     <div id="km-hud">
@@ -99,16 +100,19 @@
 
     <div id="ui-controls">
         <button class="btn-ui" onclick="toggleSet()">⚙️</button>
-        <button id="btn-start" class="btn-ui" onclick="startCapture()">INICIAR PDF</button>
-        <button id="btn-stop" class="btn-ui" onclick="stopCapture()">PARAR E SALVAR</button>
+        <button id="btn-start" class="btn-ui" onclick="startCapture()">GRAVAR PDF</button>
+        <button id="btn-stop" class="btn-ui" onclick="stopCapture()">SALVAR PDF</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <h2 onclick="toggleSet()" style="cursor:pointer; margin-bottom:30px; color: var(--danger)">✖ FECHAR</h2>
-    <div class="input-group"><label>INTERVALO ENTRE FOTOS (MS)</label><input type="number" id="cfg-int" value="500"></div>
-    <div class="input-group"><label>LIMITE DE FOTOS POR PDF</label><input type="number" id="cfg-lote" value="50"></div>
-    <div class="input-group"><label>SELECIONAR LENTE</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <h2 onclick="toggleSet()" style="cursor:pointer; color: var(--accent)">✖ FECHAR</h2>
+    <div style="margin-top:30px">
+        <label style="font-size:10px">INTERVALO (MS)</label>
+        <input type="number" id="cfg-int" value="500" style="width:100%; padding:10px; margin-bottom:20px">
+        <label style="font-size:10px">LENTE</label>
+        <select id="cam-select" onchange="switchCam(this.value)" style="width:100%; padding:10px"></select>
+    </div>
 </div>
 
 <canvas id="c"></canvas>
@@ -120,56 +124,50 @@ let brAtual = "BR-000", kmInicialLote = "";
 
 const vid = document.getElementById('vid'), can = document.getElementById('c'), ctx = can.getContext('2d');
 
-// --- GARANTIA DE TELA LIGADA ---
 async function requestWakeLock() {
     try {
-        if ('wakeLock' in navigator) {
-            wakeLock = await navigator.wakeLock.request('screen');
-            document.getElementById('status-txt').innerText = "TELA ATIVA";
-            document.getElementById('status-txt').className = "status-on";
-        }
-    } catch (err) {
-        document.getElementById('status-txt').innerText = "ERRO WAKE";
-    }
+        if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); }
+    } catch (err) {}
 }
-
-document.addEventListener('visibilitychange', async () => {
-    if (wakeLock !== null && document.visibilityState === 'visible') await requestWakeLock();
-});
 
 async function initApp() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
         if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
         await requestWakeLock();
-
         document.getElementById('safety-gate').style.display = 'none';
         document.getElementById('app-shell').style.visibility = 'visible';
-        
         listCams(); loadCSV(); initGPS();
-    } catch (e) {
-        alert("Atenção: É necessário aceitar as permissões para a operação.");
-    }
+    } catch (e) { alert("Permissões necessárias."); }
 }
 
-// --- LÓGICA DE VÍDEO E GPS ---
-async function listCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const vids = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
-    switchCam(vids[vids.length-1].deviceId);
+async function takeInstantJPG() {
+    if (!hDir) return;
+    // Efeito de flash visual
+    const flash = document.getElementById('flash-effect');
+    flash.style.opacity = "0.6"; setTimeout(() => flash.style.opacity = "0", 100);
+
+    const kmRaw = document.getElementById('km-txt').innerText;
+    const agora = new Date();
+    
+    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    const bh = can.height * 0.12;
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0, can.height - bh, can.width, bh);
+    ctx.fillStyle = "#fff";
+    ctx.font = `bold ${bh * 0.4}px Arial`;
+    ctx.fillText(`${brAtual} - ${kmRaw}`, 30, can.height - (bh * 0.45));
+
+    can.toBlob(async (blob) => {
+        const nome = `FOTO_${brAtual}_KM_${kmRaw.replace('Km ','')}_${agora.getTime()}.jpg`;
+        const handle = await hDir.getFileHandle(nome, { create: true });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+    }, 'image/jpeg', 0.95);
 }
 
-async function switchCam(id) {
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: { ideal: 1920 }, height: { ideal: 1080 } } });
-    vid.srcObject = currentStream;
-    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-}
-
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
-
+// Funções de PDF e Sistema
 function startCapture() {
     capturing = true; buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText;
@@ -191,11 +189,9 @@ function captureLoop() {
     buffer.push({
         img: can.toDataURL('image/jpeg', 0.4),
         km: document.getElementById('km-txt').innerText,
-        br: brAtual,
-        ts: new Date().toLocaleString()
+        br: brAtual, ts: new Date().toLocaleString()
     });
-    
-    if (buffer.length >= parseInt(document.getElementById('cfg-lote').value)) {
+    if (buffer.length >= 50) { // Auto-save a cada 50 fotos
         const b = [...buffer]; const kF = document.getElementById('km-txt').innerText;
         const kI = kmInicialLote; buffer = []; kmInicialLote = kF;
         savePDF(b, kI, kF);
@@ -210,15 +206,33 @@ async function savePDF(data, kI, kF) {
     for (let i = 0; i < data.length; i++) {
         if (i > 0) doc.addPage();
         doc.addImage(data[i].img, 'JPEG', 0, 0, pw, ph);
-        doc.setFillColor(0, 86, 179, 200); // Azul Cobalto no Rodapé
-        doc.rect(0, ph-20, pw, 20, 'F');
+        doc.setFillColor(0, 86, 179, 180);
+        doc.rect(0, ph-15, pw, 15, 'F');
         doc.setTextColor(255,255,255);
-        doc.text(`${data[i].br} - ${data[i].km} | ${data[i].ts}`, 10, ph-8);
+        doc.setFontSize(10);
+        doc.text(`${data[i].br} - ${data[i].km} | ${data[i].ts}`, 10, ph-6);
     }
-    const nome = `REL_${brAtual}_KM_${kI}_ao_${kF}.pdf`.replace(/\s+/g, '');
+    const nome = `PDF_${brAtual}_KM_${kI}_AO_${kF}.pdf`.replace(/\s+/g, '');
     const f = await hDir.getFileHandle(nome, { create: true });
     const s = await f.createWritable(); await s.write(doc.output('blob')); await s.close();
 }
+
+async function listCams() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const vids = devices.filter(d => d.kind === 'videoinput');
+    const sel = document.getElementById('cam-select');
+    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Lente ${i+1}</option>`).join('');
+    switchCam(vids[vids.length-1].deviceId);
+}
+
+async function switchCam(id) {
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+    vid.srcObject = currentStream;
+    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
+}
+
+function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
 function loadCSV() {
     fetch('SNVBR116SPRJ.csv').then(r => r.text()).then(t => {
