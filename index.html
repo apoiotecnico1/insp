@@ -3,221 +3,191 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Captura Pro - Detecção Automática</title>
+    <title>INSPEÇÃO PRO - Georreferenciamento</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { 
-            --accent: #ffcc00; 
             --placa-verde: linear-gradient(180deg, #007934 0%, #005a27 100%); 
-            --danger: #ff4444; 
+            --accent: #ffcc00; 
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #000; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; color: #fff; }
 
-        /* HUD - PLACA DE TRÂNSITO 3D */
-        #km-hud { 
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
+        /* PLACA DE RODOVIA 3D */
+        #hud-placa { 
+            position: absolute; top: 20px; left: 20px; 
             background: var(--placa-verde); 
-            padding: 12px 25px; 
-            border: 4px solid #ffffff; 
-            border-radius: 15px; 
-            z-index: 100; 
-            min-width: 180px;
-            box-shadow: 0 8px 15px rgba(0,0,0,0.5), inset 0 2px 5px rgba(255,255,255,0.4);
-            display: flex;
-            flex-direction: column;
-            align-items: center; 
+            padding: 10px 20px; 
+            border: 4px solid #fff; 
+            border-radius: 12px; 
+            z-index: 100;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.5);
             text-align: center;
+            min-width: 160px;
         }
-        #br-txt { 
-            font-size: 1rem; 
-            font-weight: 800; 
-            color: #fff; 
-            text-transform: uppercase;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-            margin-bottom: 2px;
-        }
-        #km-txt { 
-            font-size: 2.8rem; 
-            font-weight: 900; 
-            line-height: 1; 
-            text-shadow: 2px 3px 4px rgba(0,0,0,0.4);
-        }
+        #br-val { font-size: 1.2rem; font-weight: 800; border-bottom: 2px solid rgba(255,255,255,0.3); margin-bottom: 5px; }
+        #km-val { font-size: 2.8rem; font-weight: 900; }
 
-        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
-        #vid { width: 100%; height: 100%; object-fit: cover; }
-
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 500; }
-        .btn-main { border: none; padding: 15px 35px; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
-        #btn-start { background: var(--accent); color: #000; }
-        #btn-stop { background: var(--danger); color: #fff; display: none; }
-
-        canvas { display: none; }
+        #vid { width: 100vw; height: 100vh; object-fit: cover; }
+        #controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 20px; z-index: 200; }
+        
+        .btn { border: none; padding: 15px 30px; border-radius: 10px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
+        #btn-rec { background: var(--accent); color: #000; }
+        #btn-stop { background: #ff4444; color: #fff; display: none; }
+        
+        #gate { position: fixed; inset: 0; background: #111; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
     </style>
 </head>
 <body>
 
-<div id="safety-gate" style="position:fixed; inset:0; background:#000; z-index:9999; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:20px;">
-    <h2 style="color:var(--accent)">SISTEMA DE CAPTURA</h2>
-    <input type="file" id="csv-file" accept=".csv" style="color:#fff">
-    <button onclick="startApp()" style="background:var(--accent); padding:20px 40px; border:none; font-weight:900; border-radius:10px;">ATIVAR CÂMERA E GPS</button>
+<div id="gate">
+    <h2 style="color:var(--accent)">INSPEÇÃO PRO - APOIO TÉCNICO</h2>
+    <p>Selecione o CSV com as colunas BR, KM, LAT, LONG</p>
+    <input type="file" id="csv-input" accept=".csv" style="color:#fff">
+    <button class="btn" id="btn-rec" onclick="initApp()">Iniciar Sistema</button>
 </div>
 
-<div id="app-shell">
-    <video id="vid" autoplay playsinline muted onclick="takeManualPhoto()"></video>
-    <div id="km-hud">
-        <div id="br-txt">RODOVIA</div>
-        <div id="km-txt">Km ---</div>
+<div id="ui" style="visibility: hidden;">
+    <video id="vid" autoplay playsinline muted onclick="clickFoto()"></video>
+    <div id="hud-placa">
+        <div id="br-val">BR ---</div>
+        <div id="km-val">Km ---</div>
     </div>
-    <div id="ui-controls">
-        <button id="btn-start" class="btn-main" onclick="startCapture()">Iniciar Relatório</button>
-        <button id="btn-stop" class="btn-main" onclick="stopCapture()">Finalizar</button>
+    <div id="controls">
+        <button id="btn-start" class="btn" style="background:var(--accent)" onclick="startRelatorio()">Gerar Relatório</button>
+        <button id="btn-stop" class="btn" onclick="stopRelatorio()">Finalizar PDF</button>
     </div>
 </div>
 
-<canvas id="c"></canvas>
+<canvas id="canvas" style="display:none;"></canvas>
 
 <script>
-let kmDB = [], capturing = false, hDir = null, brNomeAutomatico = "RODOVIA";
-let currentKm = "---", curLat = "0.0000", curLon = "0.0000", buffer = [];
+let db = [], dirHandle = null, isCapturing = false, buffer = [];
+let curBR = "BR", curKM = "0", curLat = "0", curLon = "0";
 
-async function startApp() {
-    const fileInput = document.getElementById('csv-file');
-    if (!fileInput.files[0]) { alert("Por favor, selecione o arquivo CSV da rodovia primeiro."); return; }
-    
-    // Pega o nome do arquivo (ex: BR116.csv -> BR116)
-    brNomeAutomatico = fileInput.files[0].name.replace('.csv', '').replace('.CSV', '').toUpperCase();
+async function initApp() {
+    const file = document.getElementById('csv-input').files[0];
+    if(!file) return alert("Selecione o arquivo CSV primeiro.");
 
     try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        await loadCSV(fileInput.files[0]);
-        document.getElementById('safety-gate').remove();
-        document.getElementById('app-shell').style.visibility = 'visible';
-        initGPS();
-        setupCamera();
+        dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        await processCSV(file);
+        document.getElementById('gate').remove();
+        document.getElementById('ui').style.visibility = 'visible';
+        startCamera();
+        startGPS();
     } catch(e) { alert("Permissão de pasta necessária."); }
 }
 
-async function loadCSV(file) {
+async function processCSV(file) {
     const text = await file.text();
-    const rows = text.split('\n').filter(l => l.includes(';'));
-    const header = rows.shift().toLowerCase().split(';');
-    
-    const iKm = header.indexOf('km');
-    const iLat = header.findIndex(x => x.includes('lat'));
-    const iLon = header.findIndex(x => x.includes('lon'));
-    const iBr = header.indexOf('br'); // Procura se existe coluna BR
+    const rows = text.split('\n').filter(r => r.length > 5);
+    const header = rows.shift().toLowerCase();
+    const sep = header.includes(';') ? ';' : ',';
 
-    kmDB = rows.map(r => {
-        const c = r.split(';');
+    db = rows.map(r => {
+        const c = r.split(sep);
         return {
-            // Se existir coluna BR no CSV, usa ela. Se não, usa o nome do arquivo.
-            br: iBr !== -1 ? c[iBr].trim() : brNomeAutomatico,
-            km: c[iKm],
-            lt: parseFloat(c[iLat].replace(',','.')),
-            ln: parseFloat(c[iLon].replace(',','.'))
+            br: c[0].trim(),
+            km: c[1].trim(),
+            // Substitui vírgula por ponto para o cálculo do GPS
+            lat: parseFloat(c[2].replace(',', '.')),
+            lon: parseFloat(c[3].replace(',', '.'))
         };
-    }).filter(d => !isNaN(d.lt));
+    }).filter(d => !isNaN(d.lat));
 }
 
-function initGPS() {
-    navigator.geolocation.watchPosition(p => {
-        curLat = p.coords.latitude.toFixed(6);
-        curLon = p.coords.longitude.toFixed(6);
-        if (kmDB.length === 0) return;
+function startGPS() {
+    navigator.geolocation.watchPosition(pos => {
+        curLat = pos.coords.latitude.toFixed(6);
+        curLon = pos.coords.longitude.toFixed(6);
+        
+        let closest = null, minDist = Infinity;
+        db.forEach(pt => {
+            const d = Math.hypot(pt.lat - pos.coords.latitude, pt.lon - pos.coords.longitude);
+            if(d < minDist) { minDist = d; closest = pt; }
+        });
 
-        let best = null, minD = Infinity;
-        for (const pt of kmDB) {
-            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if (d < minD) { minD = d; best = pt; }
-        }
-        if (best) {
-            document.getElementById('br-txt').innerText = best.br;
-            document.getElementById('km-txt').innerText = "Km " + best.km;
-            currentKm = best.km;
-            brNomeAutomatico = best.br;
+        if(closest) {
+            curBR = "BR-" + closest.br;
+            curKM = closest.km;
+            document.getElementById('br-val').innerText = curBR;
+            document.getElementById('km-val').innerText = "Km " + curKM;
         }
     }, null, { enableHighAccuracy: true });
 }
 
-async function setupCamera() {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
+async function startCamera() {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920 } });
     document.getElementById('vid').srcObject = stream;
 }
 
-// FUNÇÃO PARA DESENHAR A LEGENDA 3D NA FOTO
-function drawLegend(ctx, width, height, br, km, gps) {
-    const bh = height * 0.12;
-    // Fundo Verde Gradiente
-    const g = ctx.createLinearGradient(0, height - bh, 0, height);
-    g.addColorStop(0, "#007934");
-    g.addColorStop(1, "#004d22");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, height - bh, width, bh);
-
-    // Borda Branca Superior
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, height - bh, width, 4);
-
-    // Textos
-    ctx.fillStyle = "#ffffff";
-    ctx.shadowColor = "rgba(0,0,0,0.6)";
-    ctx.shadowBlur = 5;
+function drawStamp(ctx, w, h) {
+    const hStamp = h * 0.15;
+    const grad = ctx.createLinearGradient(0, h-hStamp, 0, h);
+    grad.addColorStop(0, "#007934"); grad.addColorStop(1, "#004d22");
     
-    ctx.font = `bold ${bh * 0.25}px Arial`;
-    ctx.fillText(br, 20, height - (bh * 0.6));
-    
-    ctx.font = `900 ${bh * 0.45}px Arial`;
-    ctx.fillText("Km " + km, 20, height - (bh * 0.2));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, h-hStamp, w, hStamp);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, h-hStamp, w, 4);
 
-    ctx.font = `bold ${bh * 0.15}px monospace`;
-    ctx.fillText(`${new Date().toLocaleString()} | GPS: ${gps}`, width - (width * 0.4), height - (bh * 0.2));
-    ctx.shadowBlur = 0;
+    ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 4;
+    ctx.font = `bold ${hStamp * 0.2}px Arial`;
+    ctx.fillText(curBR, 25, h - (hStamp * 0.65));
+    ctx.font = `900 ${hStamp * 0.45}px Arial`;
+    ctx.fillText("Km " + curKM, 25, h - (hStamp * 0.2));
+    
+    ctx.font = `bold ${hStamp * 0.15}px monospace`;
+    ctx.textAlign = "right";
+    ctx.fillText(`${new Date().toLocaleString()} | LAT:${curLat} LON:${curLon}`, w - 25, h - (hStamp * 0.2));
+    ctx.textAlign = "left";
 }
 
-async function takeManualPhoto() {
-    const vid = document.getElementById('vid');
-    const can = document.getElementById('c');
-    const ctx = can.getContext('2d');
-    can.width = vid.videoWidth; can.height = vid.videoHeight;
-    ctx.drawImage(vid, 0, 0);
+async function clickFoto() {
+    const v = document.getElementById('vid');
+    const c = document.getElementById('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(v, 0, 0);
+    drawStamp(ctx, c.width, c.height);
     
-    drawLegend(ctx, can.width, can.height, brNomeAutomatico, currentKm, `${curLat}, ${curLon}`);
-    
-    const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
-    const fh = await hDir.getFileHandle(`FOTO_${brNomeAutomatico}_KM${currentKm}_${Date.now()}.jpg`, {create:true});
-    const w = await fh.createWritable();
-    await w.write(blob); await w.close();
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.9));
+    const handle = await dirHandle.getFileHandle(`${curBR}_KM${curKM}_${Date.now()}.jpg`, {create:true});
+    const writable = await handle.createWritable();
+    await writable.write(blob); await writable.close();
 }
 
-function startCapture() { capturing = true; document.getElementById('btn-start').style.display='none'; document.getElementById('btn-stop').style.display='block'; captureLoop(); }
-function stopCapture() { capturing = false; document.getElementById('btn-start').style.display='block'; document.getElementById('btn-stop').style.display='none'; generatePDF(); }
-
-function captureLoop() {
-    if(!capturing) return;
-    const can = document.getElementById('c');
-    const vid = document.getElementById('vid');
-    const ctx = can.getContext('2d');
-    can.width = vid.videoWidth; can.height = vid.videoHeight;
-    ctx.drawImage(vid, 0, 0);
-    drawLegend(ctx, can.width, can.height, brNomeAutomatico, currentKm, `${curLat}, ${curLon}`);
-    
-    buffer.push({ img: can.toDataURL('image/jpeg', 0.7) });
-    setTimeout(captureLoop, 1000);
-}
-
-async function generatePDF() {
-    const doc = new jspdf.jsPDF('l', 'mm', 'a4');
-    for(let i=0; i<buffer.length; i++) {
-        if(i > 0) doc.addPage();
-        doc.addImage(buffer[i].img, 'JPEG', 0, 0, 297, 210);
-    }
-    const fh = await hDir.getFileHandle(`RELATORIO_${brNomeAutomatico}_${Date.now()}.pdf`, {create:true});
-    const w = await fh.createWritable();
-    await w.write(doc.output('blob')); await w.close();
+function startRelatorio() {
+    isCapturing = true;
     buffer = [];
+    document.getElementById('btn-start').style.display = 'none';
+    document.getElementById('btn-stop').style.display = 'block';
+    captureFrame();
+}
+
+async function captureFrame() {
+    if(!isCapturing) return;
+    const v = document.getElementById('vid');
+    const c = document.getElementById('canvas');
+    const ctx = c.getContext('2d');
+    ctx.drawImage(v, 0, 0);
+    drawStamp(ctx, c.width, c.height);
+    buffer.push(c.toDataURL('image/jpeg', 0.7));
+    setTimeout(captureFrame, 2000);
+}
+
+async function stopRelatorio() {
+    isCapturing = false;
+    const doc = new jspdf.jsPDF('l', 'mm', 'a4');
+    buffer.forEach((img, i) => {
+        if(i > 0) doc.addPage();
+        doc.addImage(img, 'JPEG', 0, 0, 297, 210);
+    });
+    const handle = await dirHandle.getFileHandle(`RELATORIO_${curBR}_${Date.now()}.pdf`, {create:true});
+    const writable = await handle.createWritable();
+    await writable.write(doc.output('blob')); await writable.close();
+    location.reload();
 }
 </script>
 </body>
