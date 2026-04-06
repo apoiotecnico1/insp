@@ -3,43 +3,44 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Sistema de Captura Técnica - Estabilidade Total</title>
+    <title>Captura Técnica Pro - Anti-Sleep Ativo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); }
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        /* Camada Inicial */
+        /* Tela de Entrada */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; background: #0a0a0a; max-width: 85%; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 22px 60px; font-weight: 900; border-radius: 12px; cursor: pointer; text-transform: uppercase; font-size: 1.1rem; }
+        .btn-aware { background: var(--accent); color: #000; border: none; padding: 25px 60px; font-weight: 900; border-radius: 15px; cursor: pointer; text-transform: uppercase; font-size: 1.2rem; box-shadow: 0 0 20px rgba(255,204,0,0.2); }
 
-        /* Interface Principal */
+        /* App Shell */
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; }
 
+        /* HUD de Quilometragem */
         #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 10px 25px; border: 3px solid #fff; border-radius: 8px; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         #br-txt { font-size: 0.75rem; font-weight: 800; display: block; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 2px; text-transform: uppercase; }
         #km-txt { font-size: 2.2rem; font-weight: 900; margin: 0; letter-spacing: -1px; }
 
+        /* Indicador de Gravação */
         #rec-tag { position: absolute; top: 25px; right: 20px; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 30px; opacity: 0; transition: 0.3s; z-index: 100; border: 1px solid rgba(255,255,255,0.2); }
         .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
+        /* Controles */
         .auto-hide { transition: opacity 0.5s ease; opacity: 1; z-index: 200; }
         .hidden { opacity: 0; pointer-events: none; }
-
         #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; align-items: center; width: 90%; justify-content: center; }
         .btn-main { border: none; padding: 18px 35px; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 14px; flex-grow: 1; max-width: 200px; }
-        #btn-start { background: var(--accent); color: #000; box-shadow: 0 4px 15px rgba(255,204,0,0.3); }
+        #btn-start { background: var(--accent); color: #000; }
         #btn-stop { background: var(--danger); color: #fff; display: none; }
         #gear-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 26px; cursor: pointer; backdrop-filter: blur(10px); }
 
+        /* Painel de Configurações */
         #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(30px); z-index: 4000; padding: 60px 25px; transition: 0.4s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
         .close-settings { position: absolute; top: 20px; left: 20px; color: var(--accent); font-weight: bold; cursor: pointer; }
-        
         .field { margin-bottom: 20px; }
         .field label { display: block; font-size: 0.8rem; margin-bottom: 5px; color: #aaa; }
         input, select { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; }
@@ -47,12 +48,13 @@
         canvas { display: none; }
         #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; }
         
-        /* O motor de manter a tela acesa */
+        /* O "Pixel Ativo" - Vídeo invisível para manter a tela ligada */
         #no-sleep-video { position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; }
     </style>
 </head>
-<body onclick="refreshWakeLock()">
+<body onclick="keepAlive()">
 
+<!-- Vídeo de 1 pixel em loop para impedir o standby -->
 <video id="no-sleep-video" playsinline muted loop></video>
 <div id="flash"></div>
 
@@ -64,20 +66,20 @@
 
 <div id="settings-panel">
     <div class="close-settings" onclick="toggleSet()">← VOLTAR</div>
-    <div class="field"><label>Câmera Disponível</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
+    <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
     <div class="field"><label>Intervalo de Captura (ms)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="field"><label>Fotos por Bloco PDF</label><input type="number" id="cfg-lote" value="50"></div>
+    <div class="field"><label>Fotos por PDF</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted onclick="handleScreenClick(event)"></video>
     
     <div id="km-hud">
-        <span id="br-txt">Localizando...</span>
+        <span id="br-txt">GPS AGUARDANDO...</span>
         <h1 id="km-txt">Km ---</h1>
     </div>
 
-    <div id="rec-tag"><div class="dot"></div><span id="status-text">GRAVANDO</span></div>
+    <div id="rec-tag"><div class="dot"></div><span>GRAVANDO</span></div>
 
     <div id="ui-controls" class="auto-hide">
         <div id="gear-btn" onclick="event.stopPropagation(); toggleSet()">⚙</div>
@@ -97,31 +99,32 @@ let wakeLock = null;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 const noSleepVid = document.getElementById('no-sleep-video');
 
-// --- SISTEMA ANTI-SLEEP (TECNICA MESTRE) ---
-async function refreshWakeLock() {
-    try {
-        if ('wakeLock' in navigator) {
-            if (wakeLock !== null) return;
-            wakeLock = await navigator.wakeLock.request('screen');
-            wakeLock.addEventListener('release', () => { wakeLock = null; });
-        }
-        // Força play no vídeo fantasma (Truque do Youtube)
-        if (noSleepVid.paused) {
-            noSleepVid.src = "https://raw.githubusercontent.com/anars/blank-audio/master/250-milliseconds-of-silence.mp3";
-            noSleepVid.play().catch(()=>{});
-        }
-    } catch (err) {}
+// ESTRATÉGIA ANTI-SONO (PIXEL ATIVO + WAKELOCK)
+async function keepAlive() {
+    // Tenta WakeLock (moderno)
+    if ('wakeLock' in navigator) {
+        try {
+            if (!wakeLock) {
+                wakeLock = await navigator.wakeLock.request('screen');
+                wakeLock.addEventListener('release', () => { wakeLock = null; });
+            }
+        } catch (e) {}
+    }
+    // Tenta Vídeo Dummy (Pixel Ativo)
+    if (noSleepVid.paused) {
+        noSleepVid.src = "https://raw.githubusercontent.com/anars/blank-audio/master/250-milliseconds-of-silence.mp3";
+        noSleepVid.play().catch(() => {});
+    }
 }
 
-// Pulso de vigília a cada 10 segundos
-setInterval(() => { if (document.visibilityState === 'visible') refreshWakeLock(); }, 10000);
+// Pulso de segurança a cada 10s
+setInterval(keepAlive, 10000);
 
-// --- FUNÇÕES DE INTERFACE ---
 function handleScreenClick(e) {
     const controls = document.querySelector('.auto-hide');
     controls.classList.remove('hidden');
-    refreshWakeLock(); // Reativa ao tocar
-    captureJPG(); // Foto manual
+    keepAlive();
+    captureManualJPG();
     clearTimeout(hideTimeout);
     hideTimeout = setTimeout(() => { if(capturing) controls.classList.add('hidden'); }, 3000);
 }
@@ -132,29 +135,26 @@ function doFlash() {
     setTimeout(() => f.style.opacity = '0', 150);
 }
 
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); refreshWakeLock(); }
-
-// --- CORE DO SISTEMA ---
 async function startApp() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
         
-        refreshWakeLock();
+        keepAlive();
         listCams(); 
         loadCSV(); 
         initGPS();
         
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    } catch(e) { alert("Necessário selecionar pasta para salvar os arquivos."); }
+    } catch(e) { alert("Permissão de pasta necessária para salvar os arquivos."); }
 }
 
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const vids = devices.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Lente ${i+1}</option>`).join('');
+    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
     if(vids.length) switchCam(vids[vids.length-1].deviceId);
 }
 
@@ -167,7 +167,6 @@ async function switchCam(id) {
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
-// --- CAPTURA E PROCESSAMENTO ---
 function startCapture() {
     capturing = true;
     buffer = [];
@@ -175,7 +174,7 @@ function startCapture() {
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
     document.getElementById('rec-tag').style.opacity = '1';
-    refreshWakeLock();
+    keepAlive();
     captureLoop();
 }
 
@@ -210,25 +209,20 @@ function captureLoop() {
     setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
-async function captureJPG() {
+async function captureManualJPG() {
     doFlash();
     const km = document.getElementById('km-txt').innerText.replace("Km ", "");
     const agora = new Date();
-    const dStr = agora.toLocaleDateString('pt-BR');
-    const tStr = agora.toLocaleTimeString('pt-BR');
     
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const bh = can.height * 0.18; 
     ctx.fillStyle = "rgba(0,0,0,0.7)";
     ctx.fillRect(0, can.height - bh, can.width, bh);
-    
     ctx.fillStyle = "#fff";
     ctx.font = `bold ${bh * 0.30}px Arial`;
     ctx.fillText(`${brAtual} - Km ${km}`, 30, can.height - (bh * 0.65));
     ctx.font = `${bh * 0.20}px Arial`;
-    ctx.fillText(`${dStr} ${tStr}`, 30, can.height - (bh * 0.40));
-    ctx.font = `italic ${bh * 0.18}px Arial`;
-    ctx.fillText(`GPS: ${curLat}, ${curLon}`, 30, can.height - (bh * 0.15));
+    ctx.fillText(`${agora.toLocaleString('pt-BR')}`, 30, can.height - (bh * 0.40));
     
     const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.9));
     const nome = `FOTO_${brAtual}_Km_${km}_${agora.getTime()}.jpg`;
@@ -242,9 +236,7 @@ async function captureJPG() {
 }
 
 async function savePDF(dataList, kmIni, kmFim) {
-    if (!dataList.length) return;
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
+    const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
 
     for (let i = 0; i < dataList.length; i++) {
@@ -269,10 +261,7 @@ async function savePDF(dataList, kmIni, kmFim) {
     }
 
     const agora = new Date();
-    const d = agora.toLocaleDateString('pt-BR').replace(/\//g, '-');
-    const h = agora.toLocaleTimeString('pt-BR').replace(/:/g, '-');
-    const nome = `RELATORIO_${dataList[0].br}_Km_${kmIni}_ao_${kmFim}_${d}_${h}.pdf`;
-
+    const nome = `PDF_${brAtual}_Km_${kmIni}_${agora.getTime()}.pdf`;
     try {
         const fileHandle = await hDir.getFileHandle(nome, { create: true });
         const writable = await fileHandle.createWritable();
@@ -281,7 +270,6 @@ async function savePDF(dataList, kmIni, kmFim) {
     } catch (e) {}
 }
 
-// --- INTEGRAÇÃO GPS E CSV ---
 function initGPS() {
     navigator.geolocation.watchPosition(p => {
         curLat = p.coords.latitude.toFixed(6);
@@ -314,8 +302,10 @@ async function loadCSV() {
     } catch(e) {}
 }
 
+function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') refreshWakeLock();
+    if (document.visibilityState === 'visible') activeWakeLock();
 });
 </script>
 </body>
