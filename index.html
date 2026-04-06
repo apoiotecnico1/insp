@@ -3,232 +3,177 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Monitoramento Rodoviário Pro</title>
+    <title>Sistema de Captura Técnica</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa: rgba(0, 121, 52, 0.9); --danger: #ff4444; }
+        :root { --accent: #ffcc00; --placa: rgba(0, 121, 52, 0.85); --danger: #ff4444; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        /* Preenchimento total da tela */
-        html, body { 
-            background: #000; 
-            color: #fff; 
-            font-family: 'Segoe UI', Roboto, sans-serif; 
-            overflow: hidden; 
-            width: 100vw; 
-            height: 100vh;
-        }
+        body { background: #000; color: #fff; font-family: 'Arial', sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        #app-shell { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; }
-        video { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        #app-shell { position: relative; width: 100%; height: 100%; }
+        video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD KM ESTILO PLACA REALISTA */
+        /* HUD KM - ESTILO PLACA DE TRÂNSITO */
         #km-hud { 
-            position: absolute; top: env(safe-area-inset-top, 20px); left: 20px; 
+            position: absolute; top: 20px; left: 20px; 
             background: var(--placa); 
-            padding: 10px 25px; 
+            padding: 12px 25px; 
             border: 4px solid #fff; 
             border-radius: 12px; z-index: 100;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.8);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
             text-align: center;
-            min-width: 160px;
         }
-        #br-txt { font-size: 0.9rem; font-weight: 900; display: block; border-bottom: 2px solid #fff; margin-bottom: 3px; text-transform: uppercase; }
-        #km-txt { font-size: 2.5rem; font-weight: 900; margin: 0; letter-spacing: -1px; }
+        #br-txt { font-size: 0.9rem; font-weight: 800; display: block; border-bottom: 2px solid #fff; margin-bottom: 4px; text-transform: uppercase; }
+        #km-txt { font-size: 2.6rem; font-weight: 900; margin: 0; line-height: 1.1; }
 
-        /* BOTÃO DE CAPTURA JPG (FLUTUANTE E DISCRETO) */
+        /* BOTÃO JPG DISCRETO */
         #shutter-zone {
-            position: absolute; bottom: 120px; right: 20px;
-            text-align: center; z-index: 100; cursor: pointer;
-            background: rgba(0,0,0,0.4); padding: 10px; border-radius: 15px;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; z-index: 60; cursor: pointer;
         }
         #btn-jpg { 
-            width: 60px; height: 60px; border: 3px solid #fff; border-radius: 50%;
-            background: rgba(255,255,255,0.2); margin: 0 auto 5px;
+            width: 75px; height: 75px; border: 3px solid rgba(255,255,255,0.4); border-radius: 50%;
+            background: rgba(255,255,255,0.1); margin: 0 auto 10px;
             display: flex; align-items: center; justify-content: center;
         }
-        #btn-jpg::after { content: ''; width: 20px; height: 20px; background: #fff; border-radius: 50%; }
-        .label-jpg { font-size: 9px; font-weight: 900; color: #fff; }
+        #btn-jpg::after { content: ''; width: 30px; height: 30px; background: #fff; border-radius: 50%; opacity: 0.8; }
+        .label-jpg { font-size: 10px; font-weight: 800; background: rgba(0,0,0,0.5); padding: 5px 12px; border-radius: 4px; letter-spacing: 1px; }
 
-        /* CONTROLES PDF INFERIORES */
-        #ui { 
-            position: absolute; bottom: env(safe-area-inset-bottom, 30px); 
-            left: 50%; transform: translateX(-50%); 
-            display: flex; gap: 15px; z-index: 100; width: 90%; justify-content: center;
-        }
-        .btn { 
-            border: none; padding: 18px 30px; border-radius: 50px; 
-            font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 13px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        }
-        #start { background: var(--accent); color: #000; width: 100%; max-width: 300px; }
-        #stop { background: var(--danger); color: #fff; display: none; width: 100%; max-width: 300px; }
-        
-        #rec-status { 
-            position: absolute; top: 25px; right: 20px; 
-            background: rgba(255,0,0,0.8); padding: 8px 15px; 
-            border-radius: 20px; display: none; font-size: 12px;
-            font-weight: bold; z-index: 100; animation: pulse 1s infinite; 
-        }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        /* CONTROLES INFERIORES */
+        #ui { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; align-items: center; }
+        .btn { border: none; padding: 20px 40px; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
+        #start { background: var(--accent); color: #000; }
+        #stop { background: var(--danger); color: #fff; display: none; }
+        #gear { width: 60px; height: 60px; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid #fff; }
+
+        #rec-tag { position: absolute; top: 25px; right: 25px; background: rgba(255,0,0,0.7); padding: 8px 15px; border-radius: 20px; display: none; font-weight: bold; z-index: 100; }
         canvas { display: none; }
     </style>
 </head>
-<body>
+<body onclick="enableWakeLock()">
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
     
     <div id="km-hud">
-        <span id="br-txt">GPS ATIVO</span>
+        <span id="br-txt">RODOVIA</span>
         <h1 id="km-txt">Km ---</h1>
     </div>
 
-    <div id="shutter-zone" onclick="takePhoto()">
+    <div id="shutter-zone" onclick="takeInstantJPG()">
         <div id="btn-jpg"></div>
-        <div class="label-jpg">FOTO .JPG</div>
+        <div class="label-jpg">[ CAPTURA FOTO ATUAL .JPG ]</div>
     </div>
 
-    <div id="rec-status">● MONITORANDO</div>
+    <div id="rec-tag">● GRAVANDO PDF</div>
 
     <div id="ui">
-        <button id="start" class="btn" onclick="activateSystem()">INICIAR MONITORAMENTO</button>
-        <button id="stop" class="btn" onclick="stopPDF()">FINALIZAR RELATÓRIO</button>
+        <div id="gear" onclick="alert('Configurações: Use o código para ajustar tempo/lote')">⚙</div>
+        <button id="start" class="btn" onclick="startSystem()">INICIAR PDF</button>
+        <button id="stop" class="btn" onclick="stopSystem()">PARAR E SALVAR PDF</button>
     </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], capturing=false, buffer=[], hDir=null, brAtual="RODOVIA", wakeLock=null;
+let kmDB=[], capturing=false, buffer=[], hDir=null, brAtual="BR-116", wakeLock=null;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// 1. FUNÇÃO PARA MANTER A TELA ACESA (WAKE LOCK)
-async function requestWakeLock() {
-    try {
-        if ('wakeLock' in navigator) {
-            wakeLock = await navigator.wakeLock.request('screen');
-            console.log("Tela bloqueada: Não irá apagar.");
-        }
-    } catch (err) {
-        console.error("Erro no Wake Lock:", err);
+// MANTER TELA ACESA
+async function enableWakeLock() {
+    if ('wakeLock' in navigator) {
+        try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
     }
 }
 
-// 2. FUNÇÃO FULLSCREEN
-function toggleFullScreen() {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(e => console.log(e));
-    }
-}
-
-// ESTAMPA COM SOMBRA GRADIENTE ESTILOSA
+// ESTAMPA TÉCNICA (JPG E PDF)
 function drawStamp(km, br, data) {
     const h = can.height;
     const w = can.width;
     const barH = h * 0.15;
 
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillStyle = "rgba(0,0,0,0.75)";
     ctx.fillRect(0, h - barH, w, barH);
 
-    // Efeito de Sombra e Gradiente nas letras
-    ctx.shadowColor = "rgba(0,0,0,1)";
+    // SOMBRA ESTILOSA
+    ctx.shadowColor = "black";
     ctx.shadowBlur = 10;
     ctx.shadowOffsetX = 4;
     ctx.shadowOffsetY = 4;
 
     ctx.fillStyle = "#ffffff";
-    ctx.font = `bold ${barH * 0.4}px sans-serif`;
-    ctx.fillText(`${br} - KM ${km}`, 40, h - (barH * 0.45));
+    ctx.font = `bold ${barH * 0.38}px Arial`;
+    ctx.fillText(`${br} - Km ${km}`, 40, h - (barH * 0.48));
 
-    ctx.shadowBlur = 4;
-    ctx.fillStyle = "#ffcc00"; // Cor de destaque para data/hora
-    ctx.font = `bold ${barH * 0.2}px sans-serif`;
-    ctx.fillText(data, 40, h - (barH * 0.15));
+    ctx.font = `${barH * 0.22}px Arial`;
+    ctx.fillText(data, 40, h - (barH * 0.18));
 
     ctx.shadowColor = "transparent";
 }
 
-async function activateSystem() {
+async function startSystem() {
     try {
         if(!hDir) hDir = await window.showDirectoryPicker();
+        document.documentElement.requestFullscreen();
+        enableWakeLock();
         
-        toggleFullScreen();
-        await requestWakeLock();
-        await startVideo();
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
+        });
+        vid.srcObject = stream;
+        vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
+
         loadCSV();
         initGPS();
-        
+
         capturing = true;
         buffer = [];
         document.getElementById('start').style.display = 'none';
         document.getElementById('stop').style.display = 'block';
-        document.getElementById('rec-status').style.display = 'block';
-        
+        document.getElementById('rec-tag').style.display = 'block';
         loop();
-    } catch(e) { 
-        alert("Permissão necessária para câmera e pasta de arquivos."); 
-    }
+    } catch(e) { alert("Selecione a pasta de destino."); }
 }
 
-async function startVideo() {
-    const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
-    });
-    vid.srcObject = stream;
-    vid.onloadedmetadata = () => { 
-        can.width = vid.videoWidth; 
-        can.height = vid.videoHeight; 
-    };
-}
-
-// Captura manual rápida
-function takePhoto() {
+function takeInstantJPG() {
     const km = document.getElementById('km-txt').innerText.replace("Km ", "");
     const data = new Date().toLocaleString('pt-BR');
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     drawStamp(km, brAtual, data);
 
     can.toBlob(async (blob) => {
-        const name = `MANUAL_${brAtual}_KM_${km}_${Date.now()}.jpg`;
-        const file = await hDir.getFileHandle(name, { create: true });
+        const file = await hDir.getFileHandle(`FOTO_${brAtual}_KM_${km}_${Date.now()}.jpg`, { create: true });
         const stream = await file.createWritable();
         await stream.write(blob);
         await stream.close();
     }, 'image/jpeg', 0.95);
 }
 
-// Loop de captura automática para o PDF
 function loop() {
     if(!capturing) return;
-    
     const km = document.getElementById('km-txt').innerText.replace("Km ", "");
     const data = new Date().toLocaleString('pt-BR');
     
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     drawStamp(km, brAtual, data);
     
-    buffer.push({
-        img: can.toDataURL('image/jpeg', 0.6),
-        km: km
-    });
+    buffer.push({ img: can.toDataURL('image/jpeg', 0.6), km: km });
 
-    // Auto-salva a cada 50 fotos para não sobrecarregar a memória
     if(buffer.length >= 50) {
         const temp = [...buffer];
         buffer = [];
         savePDF(temp);
     }
-    
-    setTimeout(loop, 1000); // 1 foto por segundo no relatório
+    setTimeout(loop, 1000); // 1 foto por segundo no PDF
 }
 
-async function stopPDF() {
+async function stopSystem() {
     capturing = false;
-    document.getElementById('rec-status').style.display = 'none';
+    document.getElementById('rec-tag').style.display = 'none';
     if(buffer.length > 0) await savePDF(buffer);
     if(wakeLock) wakeLock.release();
-    alert("Relatório PDF Salvo!");
+    alert("Processo Finalizado!");
     location.reload();
 }
 
@@ -243,8 +188,7 @@ async function savePDF(lista) {
     }
 
     const pdfBlob = doc.output('blob');
-    const name = `PDF_TRECHO_${brAtual}_${Date.now()}.pdf`;
-    const file = await hDir.getFileHandle(name, { create: true });
+    const file = await hDir.getFileHandle(`RELATORIO_${brAtual}_${Date.now()}.pdf`, { create: true });
     const stream = await file.createWritable();
     await stream.write(pdfBlob);
     await stream.close();
@@ -276,13 +220,6 @@ function initGPS() {
         }
     }, null, { enableHighAccuracy: true });
 }
-
-// Reativar Wake Lock se o usuário minimizar e voltar para o app
-document.addEventListener('visibilitychange', async () => {
-    if (wakeLock !== null && document.visibilityState === 'visible') {
-        await requestWakeLock();
-    }
-});
 </script>
 </body>
 </html>
