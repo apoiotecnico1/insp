@@ -3,190 +3,207 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>INSPEÇÃO PRO - Georreferenciamento</title>
+    <title>INSPEÇÃO PRO - LIVE GITHUB</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { 
             --placa-verde: linear-gradient(180deg, #007934 0%, #005a27 100%); 
             --accent: #ffcc00; 
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
         body { background: #000; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; color: #fff; }
 
-        /* PLACA DE RODOVIA 3D */
+        /* HUD PLACA REALISTA */
         #hud-placa { 
             position: absolute; top: 20px; left: 20px; 
             background: var(--placa-verde); 
-            padding: 10px 20px; 
+            padding: 12px 25px; 
             border: 4px solid #fff; 
-            border-radius: 12px; 
+            border-radius: 15px; 
             z-index: 100;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.6);
             text-align: center;
-            min-width: 160px;
+            min-width: 180px;
         }
-        #br-val { font-size: 1.2rem; font-weight: 800; border-bottom: 2px solid rgba(255,255,255,0.3); margin-bottom: 5px; }
-        #km-val { font-size: 2.8rem; font-weight: 900; }
+        #br-val { font-size: 1.1rem; font-weight: 800; border-bottom: 2px solid rgba(255,255,255,0.3); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+        #km-val { font-size: 3.2rem; font-weight: 900; line-height: 1; }
 
         #vid { width: 100vw; height: 100vh; object-fit: cover; }
-        #controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 20px; z-index: 200; }
         
-        .btn { border: none; padding: 15px 30px; border-radius: 10px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
-        #btn-rec { background: var(--accent); color: #000; }
+        #controls { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; gap: 20px; z-index: 200; }
+        .btn { border: none; padding: 20px 45px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; font-size: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        #btn-start { background: var(--accent); color: #000; }
         #btn-stop { background: #ff4444; color: #fff; display: none; }
-        
-        #gate { position: fixed; inset: 0; background: #111; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+
+        #init-screen { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
     </style>
 </head>
-<body>
+<body onload="checkAutoStart()">
 
-<div id="gate">
-    <h2 style="color:var(--accent)">INSPEÇÃO PRO - APOIO TÉCNICO</h2>
-    <p>Selecione o CSV com as colunas BR, KM, LAT, LONG</p>
-    <input type="file" id="csv-input" accept=".csv" style="color:#fff">
-    <button class="btn" id="btn-rec" onclick="initApp()">Iniciar Sistema</button>
+<div id="init-screen">
+    <h2 style="color:var(--accent)">SISTEMA DE INSPEÇÃO</h2>
+    <p>Clique abaixo para liberar a pasta de salvamento</p>
+    <button class="btn" id="btn-start" onclick="runSystem()">ATIVAR CÂMERA E GPS</button>
 </div>
 
-<div id="ui" style="visibility: hidden;">
-    <video id="vid" autoplay playsinline muted onclick="clickFoto()"></video>
-    <div id="hud-placa">
-        <div id="br-val">BR ---</div>
-        <div id="km-val">Km ---</div>
-    </div>
-    <div id="controls">
-        <button id="btn-start" class="btn" style="background:var(--accent)" onclick="startRelatorio()">Gerar Relatório</button>
-        <button id="btn-stop" class="btn" onclick="stopRelatorio()">Finalizar PDF</button>
-    </div>
+<video id="vid" autoplay playsinline muted onclick="takePhoto()"></video>
+
+<div id="hud-placa" style="display:none;">
+    <div id="br-val">CARREGANDO...</div>
+    <div id="km-val">---</div>
+</div>
+
+<div id="controls" style="display:none;">
+    <button id="btn-run" class="btn" style="background:var(--accent)" onclick="startReport()">Gerar PDF</button>
+    <button id="btn-stop" class="btn" onclick="stopReport()">Salvar PDF</button>
 </div>
 
 <canvas id="canvas" style="display:none;"></canvas>
 
 <script>
-let db = [], dirHandle = null, isCapturing = false, buffer = [];
-let curBR = "BR", curKM = "0", curLat = "0", curLon = "0";
+let kmData = [], saveDir = null, reporting = false, pdfBuffer = [];
+let nowBR = "BR", nowKM = "0", nowLat = "0", nowLon = "0";
 
-async function initApp() {
-    const file = document.getElementById('csv-input').files[0];
-    if(!file) return alert("Selecione o arquivo CSV primeiro.");
-
+// 1. INICIALIZAÇÃO
+async function runSystem() {
     try {
-        dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        await processCSV(file);
-        document.getElementById('gate').remove();
-        document.getElementById('ui').style.visibility = 'visible';
-        startCamera();
-        startGPS();
-    } catch(e) { alert("Permissão de pasta necessária."); }
-}
-
-async function processCSV(file) {
-    const text = await file.text();
-    const rows = text.split('\n').filter(r => r.length > 5);
-    const header = rows.shift().toLowerCase();
-    const sep = header.includes(';') ? ';' : ',';
-
-    db = rows.map(r => {
-        const c = r.split(sep);
-        return {
-            br: c[0].trim(),
-            km: c[1].trim(),
-            // Substitui vírgula por ponto para o cálculo do GPS
-            lat: parseFloat(c[2].replace(',', '.')),
-            lon: parseFloat(c[3].replace(',', '.'))
-        };
-    }).filter(d => !isNaN(d.lat));
-}
-
-function startGPS() {
-    navigator.geolocation.watchPosition(pos => {
-        curLat = pos.coords.latitude.toFixed(6);
-        curLon = pos.coords.longitude.toFixed(6);
+        saveDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        await loadRemoteCSV();
+        await startCam();
+        startTracking();
         
-        let closest = null, minDist = Infinity;
-        db.forEach(pt => {
-            const d = Math.hypot(pt.lat - pos.coords.latitude, pt.lon - pos.coords.longitude);
-            if(d < minDist) { minDist = d; closest = pt; }
-        });
+        document.getElementById('init-screen').style.display = 'none';
+        document.getElementById('hud-placa').style.display = 'block';
+        document.getElementById('controls').style.display = 'flex';
+    } catch(e) { alert("Acesso à pasta local negado."); }
+}
 
-        if(closest) {
-            curBR = "BR-" + closest.br;
-            curKM = closest.km;
-            document.getElementById('br-val').innerText = curBR;
-            document.getElementById('km-val').innerText = "Km " + curKM;
+// 2. BUSCA O CSV NO SEU GITHUB PAGES
+async function loadRemoteCSV() {
+    try {
+        // O navegador buscará o arquivo que está na mesma pasta do HTML no GitHub
+        const res = await fetch('SNVBR116SPRJ.csv');
+        const txt = await res.text();
+        const lines = txt.split('\n').filter(l => l.length > 10);
+        const header = lines.shift().toLowerCase();
+        const sep = header.includes(';') ? ';' : ',';
+
+        kmData = lines.map(line => {
+            const cols = line.split(sep);
+            return {
+                br: cols[0].trim(),
+                km: cols[1].trim(),
+                lat: parseFloat(cols[2].replace(',', '.')),
+                lon: parseFloat(cols[3].replace(',', '.'))
+            };
+        }).filter(d => !isNaN(d.lat));
+    } catch(e) { console.error("Falha ao ler CSV remoto", e); }
+}
+
+// 3. GPS E IDENTIFICAÇÃO DE BR
+function startTracking() {
+    navigator.geolocation.watchPosition(pos => {
+        nowLat = pos.coords.latitude.toFixed(6);
+        nowLon = pos.coords.longitude.toFixed(6);
+        
+        if(kmData.length > 0) {
+            let minD = Infinity, best = null;
+            kmData.forEach(p => {
+                const d = Math.hypot(p.lat - pos.coords.latitude, p.lon - pos.coords.longitude);
+                if(d < minD) { minD = d; best = p; }
+            });
+
+            if(best) {
+                nowBR = "BR-" + best.br;
+                nowKM = best.km;
+                document.getElementById('br-val').innerText = nowBR;
+                document.getElementById('km-val').innerText = "Km " + nowKM;
+            }
         }
     }, null, { enableHighAccuracy: true });
 }
 
-async function startCamera() {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920 } });
+// 4. CÂMERA
+async function startCam() {
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment", width: { ideal: 1920 } } 
+    });
     document.getElementById('vid').srcObject = stream;
 }
 
-function drawStamp(ctx, w, h) {
-    const hStamp = h * 0.15;
-    const grad = ctx.createLinearGradient(0, h-hStamp, 0, h);
-    grad.addColorStop(0, "#007934"); grad.addColorStop(1, "#004d22");
+// 5. CARIMBO DA PLACA NA FOTO
+function applyStamp(ctx, w, h) {
+    const sH = h * 0.15;
+    const g = ctx.createLinearGradient(0, h-sH, 0, h);
+    g.addColorStop(0, "#007934"); g.addColorStop(1, "#004d22");
     
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, h-hStamp, w, hStamp);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, h-sH, w, sH);
     ctx.fillStyle = "#fff";
-    ctx.fillRect(0, h-hStamp, w, 4);
+    ctx.fillRect(0, h-sH, w, 5); // Borda branca da placa
 
     ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 4;
-    ctx.font = `bold ${hStamp * 0.2}px Arial`;
-    ctx.fillText(curBR, 25, h - (hStamp * 0.65));
-    ctx.font = `900 ${hStamp * 0.45}px Arial`;
-    ctx.fillText("Km " + curKM, 25, h - (hStamp * 0.2));
+    ctx.font = `bold ${sH * 0.22}px Arial`;
+    ctx.fillText(nowBR, 30, h - (sH * 0.65));
     
-    ctx.font = `bold ${hStamp * 0.15}px monospace`;
+    ctx.font = `900 ${sH * 0.48}px Arial`;
+    ctx.fillText("Km " + nowKM, 30, h - (sH * 0.18));
+    
+    ctx.font = `bold ${sH * 0.15}px monospace`;
     ctx.textAlign = "right";
-    ctx.fillText(`${new Date().toLocaleString()} | LAT:${curLat} LON:${curLon}`, w - 25, h - (hStamp * 0.2));
+    ctx.fillText(`${new Date().toLocaleString('pt-BR')} | GPS: ${nowLat}, ${nowLon}`, w - 30, h - (sH * 0.2));
     ctx.textAlign = "left";
 }
 
-async function clickFoto() {
+// 6. FOTO MANUAL (AO CLICAR NO VÍDEO)
+async function takePhoto() {
     const v = document.getElementById('vid');
     const c = document.getElementById('canvas');
     c.width = v.videoWidth; c.height = v.videoHeight;
     const ctx = c.getContext('2d');
     ctx.drawImage(v, 0, 0);
-    drawStamp(ctx, c.width, c.height);
+    applyStamp(ctx, c.width, c.height);
     
-    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.9));
-    const handle = await dirHandle.getFileHandle(`${curBR}_KM${curKM}_${Date.now()}.jpg`, {create:true});
-    const writable = await handle.createWritable();
-    await writable.write(blob); await writable.close();
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+    const name = `FOTO_${nowBR}_KM${nowKM.replace(',','-')}_${Date.now()}.jpg`;
+    const handle = await saveDir.getFileHandle(name, {create:true});
+    const write = await handle.createWritable();
+    await write.write(blob); await write.close();
+    
+    v.style.opacity = "0.4"; setTimeout(() => v.style.opacity = "1", 100);
 }
 
-function startRelatorio() {
-    isCapturing = true;
-    buffer = [];
-    document.getElementById('btn-start').style.display = 'none';
+// 7. RELATÓRIO PDF AUTOMÁTICO
+function startReport() {
+    reporting = true; pdfBuffer = [];
+    document.getElementById('btn-run').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
-    captureFrame();
+    loopReport();
 }
 
-async function captureFrame() {
-    if(!isCapturing) return;
+async function loopReport() {
+    if(!reporting) return;
     const v = document.getElementById('vid');
     const c = document.getElementById('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
     const ctx = c.getContext('2d');
     ctx.drawImage(v, 0, 0);
-    drawStamp(ctx, c.width, c.height);
-    buffer.push(c.toDataURL('image/jpeg', 0.7));
-    setTimeout(captureFrame, 2000);
+    applyStamp(ctx, c.width, c.height);
+    pdfBuffer.push(c.toDataURL('image/jpeg', 0.7));
+    setTimeout(loopReport, 2000);
 }
 
-async function stopRelatorio() {
-    isCapturing = false;
+async function stopReport() {
+    reporting = false;
+    if(pdfBuffer.length === 0) return;
     const doc = new jspdf.jsPDF('l', 'mm', 'a4');
-    buffer.forEach((img, i) => {
+    pdfBuffer.forEach((img, i) => {
         if(i > 0) doc.addPage();
         doc.addImage(img, 'JPEG', 0, 0, 297, 210);
     });
-    const handle = await dirHandle.getFileHandle(`RELATORIO_${curBR}_${Date.now()}.pdf`, {create:true});
-    const writable = await handle.createWritable();
-    await writable.write(doc.output('blob')); await writable.close();
+    const handle = await saveDir.getFileHandle(`PDF_${nowBR}_${Date.now()}.pdf`, {create:true});
+    const write = await handle.createWritable();
+    await write.write(doc.output('blob')); await write.close();
     location.reload();
 }
 </script>
