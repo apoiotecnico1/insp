@@ -3,60 +3,74 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Sistema de Foto-Captura automatica</title>
+    <title>Captura Técnica Rodoviária</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); }
+        :root { --accent: #00ff88; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(15, 15, 15, 0.85); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; }
 
+        /* Overlay Inicial */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; }
-        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; max-width: 90%; background: #0a0a0a; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 18px 40px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; }
+        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 20px; text-align: center; background: #0a0a0a; box-shadow: 0 0 30px rgba(0,255,136,0.1); }
+        .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 12px; cursor: pointer; text-transform: uppercase; font-size: 1.1rem; transition: 0.3s; }
+        .btn-aware:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--accent); }
 
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
-        
-        #click-area { position: absolute; inset: 0; z-index: 50; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Ícone de captura */
-        .tap-hint { opacity: 0.5; text-align: center; pointer-events: none; transition: all 0.2s; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        .tap-hint i { font-size: 60px; display: block; margin-bottom: 8px; }
-        .tap-hint span { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 800; color: var(--accent); }
-
-        /* PLACA DE KM - AGORA TRANSPARENTE (Opacidade 0.7) */
-        #km-hud { 
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
-            background: rgba(0, 121, 52, 0.7); /* Verde da placa com transparência */
-            padding: 10px 20px; 
-            border: 3px solid rgba(255, 255, 255, 0.8); 
-            border-radius: 8px; 
-            z-index: 100; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
-            text-align: center; 
-            pointer-events: none;
-            backdrop-filter: blur(2px); /* Leve desfoque para manter legibilidade */
+        /* Área de Toque com Ícone Moderno */
+        #click-area { position: absolute; inset: 0; z-index: 50; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .shutter-icon { 
+            width: 100px; height: 100px; border: 4px solid rgba(255,255,255,0.3); 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; position: relative;
         }
-        #br-txt { font-size: 1rem; font-weight: 800; color: #fff; text-transform: uppercase; display: block; border-bottom: 2px solid rgba(255,255,255,0.4); margin-bottom: 4px; }
-        #km-txt { font-size: 2.5rem; font-weight: 900; margin: 0; line-height: 1; color: #fff; }
+        .shutter-icon::after {
+            content: ''; width: 70px; height: 70px; background: rgba(255,255,255,0.2); 
+            border-radius: 50%; border: 2px solid var(--accent);
+        }
+        #click-area:active .shutter-icon { transform: scale(0.9); border-color: var(--accent); }
+        #click-area:active .shutter-icon::after { background: var(--accent); }
 
-        #rec-tag { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px; background: rgba(255,0,0,0.3); padding: 5px 12px; border-radius: 5px; opacity: 0; z-index: 100; border: 1px solid #f00; font-size: 12px; font-weight: bold; }
-        .dot { width: 8px; height: 8px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
+        /* Placa de KM (Transparência 0.7) */
+        #km-hud { 
+            position: absolute; top: 30px; left: 30px; 
+            background: rgba(0, 121, 52, 0.7); 
+            padding: 15px 25px; border: 3px solid rgba(255, 255, 255, 0.9); 
+            border-radius: 12px; z-index: 100; backdrop-filter: blur(8px); 
+            text-align: center; pointer-events: none;
+        }
+        #br-txt { font-size: 1.1rem; font-weight: 800; color: #fff; text-transform: uppercase; display: block; border-bottom: 2px solid rgba(255,255,255,0.3); margin-bottom: 5px; padding-bottom: 2px; }
+        #km-txt { font-size: 3rem; font-weight: 900; margin: 0; line-height: 1; color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+
+        /* Indicador de Gravação de PDF */
+        #rec-tag { 
+            position: absolute; top: 30px; right: 30px; 
+            display: flex; align-items: center; gap: 10px; 
+            background: rgba(255, 0, 0, 0.5); padding: 10px 20px; 
+            border-radius: 40px; opacity: 0; transition: 0.4s; z-index: 100; 
+            border: 1px solid #f00; backdrop-filter: blur(4px); font-size: 13px; font-weight: bold;
+        }
+        .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        #ui-controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 100; align-items: center; }
-        .btn-main { border: 1px solid rgba(255,255,255,0.2); padding: 12px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 11px; background: rgba(0,0,0,0.6); color: #fff; }
+        /* Painel de Controles Inferior */
+        #ui-controls { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; }
+        .btn-ui { border: 1px solid rgba(255,255,255,0.4); padding: 18px 35px; border-radius: 15px; font-weight: 800; cursor: pointer; text-transform: uppercase; font-size: 12px; background: var(--glass); color: #fff; backdrop-filter: blur(10px); transition: 0.3s; }
         #btn-start { border-color: var(--accent); color: var(--accent); }
         #btn-stop { background: var(--danger); border: none; display: none; }
-        #gear-btn { width: 45px; height: 45px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; }
+        #gear-btn { width: 60px; height: 60px; background: var(--glass); border: 1px solid rgba(255,255,255,0.4); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 26px; cursor: pointer; }
 
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 4000; padding: 60px 25px; transition: 0.4s; border-left: 1px solid #333; }
+        /* Configurações */
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: #0a0a0a; z-index: 4000; padding: 60px 25px; transition: 0.4s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
-        
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 10px; color: #888; margin-bottom: 8px; }
+        .input-group select, .input-group input { width: 100%; padding: 12px; background: #1a1a1a; color: #fff; border: 1px solid #333; border-radius: 8px; }
+
         canvas { display: none; }
-        .flash { position: fixed; inset: 0; background: #fff; opacity: 0; z-index: 6000; pointer-events: none; }
+        .flash { position: fixed; inset: 0; background: #fff; opacity: 0; z-index: 6000; pointer-events: none; transition: 0.1s; }
     </style>
 </head>
 <body>
@@ -65,44 +79,43 @@
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2 style="color:var(--accent); margin-bottom:20px;">SISTEMA RODOVIÁRIO</h2>
+        <h1 style="color:var(--accent); margin-bottom:10px;">SISTEMA TÉCNICO</h1>
+        <p style="color:#666; margin-bottom:30px;">Iniciando capturas georreferenciadas...</p>
         <button class="btn-aware" onclick="startApp()">INICIAR OPERAÇÃO</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <div onclick="toggleSet()" style="cursor:pointer; color:var(--accent); margin-bottom:30px;">← FECHAR</div>
-    <label style="font-size:10px; color:#888;">CÂMERA</label>
-    <select id="cam-select" onchange="switchCam(this.value)" style="width:100%; padding:12px; background:#111; color:#fff; border:1px solid #333; margin-bottom:20px;"></select>
-    
-    <label style="font-size:10px; color:#888;">INTERVALO PDF (ms)</label>
-    <input type="number" id="cfg-int" value="400" style="width:100%; padding:12px; background:#111; color:#fff; border:1px solid #333; margin-bottom:20px;">
-    
-    <label style="font-size:10px; color:#888;">FOTOS POR PDF</label>
-    <input type="number" id="cfg-lote" value="50" style="width:100%; padding:12px; background:#111; color:#fff; border:1px solid #333;">
+    <h2 onclick="toggleSet()" style="cursor:pointer; color:var(--accent); margin-bottom:40px;">← FECHAR</h2>
+    <div class="input-group">
+        <label>DISPOSITIVO DE VÍDEO</label>
+        <select id="cam-select" onchange="switchCam(this.value)"></select>
+    </div>
+    <div class="input-group">
+        <label>CAPACIDADE DO PDF (FOTOS)</label>
+        <input type="number" id="cfg-lote" value="50">
+    </div>
 </div>
 
 <div id="app-shell">
-    <div id="click-area" onclick="takeSinglePhoto()">
-        <div class="tap-hint">
-            <i>📸</i>
-            <span>SALVAR E ENVIAR</span>
-        </div>
+    <!-- Clique central para salvar JPG instantâneo -->
+    <div id="click-area" onclick="takeInstantJPG()">
+        <div class="shutter-icon"></div>
     </div>
     
     <video id="vid" autoplay playsinline muted></video>
 
     <div id="km-hud">
         <span id="br-txt">---</span>
-        <h1 id="km-txt">---</h1>
+        <h1 id="km-txt">Km ---</h1>
     </div>
 
-    <div id="rec-tag"><div class="dot"></div><span>PDF EM CURSO</span></div>
+    <div id="rec-tag"><div class="dot"></div><span>GERANDO RELATÓRIO PDF</span></div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-main" onclick="startCapture()">PDF Automático</button>
-        <button id="btn-stop" class="btn-main" onclick="stopCapture()">Finalizar PDF</button>
+        <button id="btn-start" class="btn-ui" onclick="startCapture()">Iniciar Relatório</button>
+        <button id="btn-stop" class="btn-ui" onclick="stopCapture()">Finalizar e Salvar PDF</button>
     </div>
 </div>
 
@@ -114,17 +127,21 @@ let kmInicialLote = "", brAtual = "RODOVIA";
 
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-async function refreshWakeLock() {
-    if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} }
-}
-
 async function startApp() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        
+        // Ativar Tela Cheia
+        const doc = document.documentElement;
+        if (doc.requestFullscreen) doc.requestFullscreen();
+        else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
-        listCams(); loadCSV(); initGPS(); refreshWakeLock();
-    } catch(e) { alert("Permissão de pasta necessária."); }
+        
+        listCams(); loadCSV(); initGPS();
+        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    } catch(e) { alert("Necessário selecionar pasta de destino."); }
 }
 
 async function listCams() {
@@ -144,17 +161,18 @@ async function switchCam(id) {
 
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 
-async function takeSinglePhoto() {
+// SALVAR JPG INSTANTÂNEO (SEM WHATSAPP)
+async function takeInstantJPG() {
     if (!hDir) return;
     const flash = document.getElementById('flash-effect');
-    flash.style.opacity = "0.5"; setTimeout(() => flash.style.opacity = "0", 100);
+    flash.style.opacity = "0.6"; setTimeout(() => flash.style.opacity = "0", 100);
 
     const km = document.getElementById('km-txt').innerText;
     const ts = new Date().toLocaleString('pt-BR');
     
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const bh = can.height * 0.15;
-    ctx.fillStyle = "rgba(0,0,0,0.85)";
+    ctx.fillStyle = "rgba(0,0,0,0.8)";
     ctx.fillRect(0, can.height - bh, can.width, bh);
     ctx.fillStyle = "#fff";
     ctx.font = `bold ${bh * 0.35}px Arial`;
@@ -163,18 +181,15 @@ async function takeSinglePhoto() {
     ctx.fillText(ts.toUpperCase(), 40, can.height - (bh * 0.15));
 
     can.toBlob(async (blob) => {
-        const nome = `FOTO_${brAtual}_${km.replace(/\+/g,'-')}_${Date.now()}.jpg`;
-        try {
-            const handle = await hDir.getFileHandle(nome, { create: true });
-            const writable = await handle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-            const msg = encodeURIComponent(`Registro Fotográfico: ${brAtual} - ${km} em ${ts}`);
-            window.open(`https://wa.me/?text=${msg}`, '_blank');
-        } catch (e) { console.error(e); }
-    }, 'image/jpeg', 0.9);
+        const nome = `INSTANT_IMG_${km.replace(/\s/g,'')}_${Date.now()}.jpg`;
+        const handle = await hDir.getFileHandle(nome, { create: true });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+    }, 'image/jpeg', 0.95);
 }
 
+// LOGICA DOS RELATÓRIOS PDF
 function startCapture() {
     capturing = true; buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText;
@@ -202,17 +217,21 @@ function captureLoop() {
             br: brAtual,
             ts: new Date().toLocaleString('pt-BR')
         });
-        if (buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 50)) {
+        const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
+        if (buffer.length >= limit) {
             const b = [...buffer]; const kF = document.getElementById('km-txt').innerText;
             const kI = kmInicialLote; buffer = []; kmInicialLote = kF;
             savePDF(b, kI, kF);
         }
     }
-    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 400);
+    setTimeout(captureLoop, 500); 
 }
 
 async function savePDF(data, kI, kF) {
     const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    
     for (let i = 0; i < data.length; i++) {
         if (i > 0) doc.addPage();
         const img = new Image();
@@ -227,20 +246,20 @@ async function savePDF(data, kI, kF) {
                 ctx.fillText(`${data[i].br} - ${data[i].km}`, 40, can.height - (bh * 0.45));
                 ctx.font = `${bh * 0.18}px Arial`;
                 ctx.fillText(data[i].ts.toUpperCase(), 40, can.height - (bh * 0.15));
-                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight());
+                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
                 r();
             };
             img.src = data[i].img;
         });
     }
-    const nome = `PDF_${data[0].br}_${Date.now()}.pdf`;
+    const nome = `RELATORIO_${brAtual}_Km_${kI.replace('Km ','')}_ao_${kF.replace('Km ','')}_${Date.now()}.pdf`;
     const f = await hDir.getFileHandle(nome, { create: true });
     const s = await f.createWritable(); await s.write(doc.output('blob')); await s.close();
 }
 
 async function loadCSV() {
     try {
-        const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
+        const r = await fetch('SNVBR116SPRJ.csv');
         const t = await r.text();
         const rows = t.split('\n').filter(l => l.includes(';'));
         const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
@@ -267,8 +286,6 @@ function initGPS() {
         }
     }, null, { enableHighAccuracy: true });
 }
-
-window.onload = () => { loadCSV(); initGPS(); };
 </script>
 </body>
 </html>
