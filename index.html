@@ -2,89 +2,86 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Captura Técnica Pro - Anti-Sleep Ativo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Sistema de Foto-Captura Profissional</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); }
-        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        :root { --accent: #ffcc00; --placa-verde: #007934; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.8); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* Tela de Entrada */
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 25px 60px; font-weight: 900; border-radius: 15px; cursor: pointer; text-transform: uppercase; font-size: 1.2rem; box-shadow: 0 0 20px rgba(255,204,0,0.2); }
+        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; }
+        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; max-width: 90%; background: #0a0a0a; }
+        .btn-aware { background: var(--accent); color: #000; border: none; padding: 18px 40px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; margin-top: 20px; }
 
-        /* App Shell */
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
-        #vid { width: 100%; height: 100%; object-fit: cover; }
+        video#vid { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
 
-        /* HUD de Quilometragem */
-        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 10px 25px; border: 3px solid #fff; border-radius: 8px; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        #br-txt { font-size: 0.75rem; font-weight: 800; display: block; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 2px; text-transform: uppercase; }
-        #km-txt { font-size: 2.2rem; font-weight: 900; margin: 0; letter-spacing: -1px; }
+        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 8px 20px; border: 3px solid #fff; border-radius: 8px; z-index: 100; text-align: center; pointer-events: none; }
+        #br-txt { font-size: 0.8rem; font-weight: 800; display: block; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 2px; }
+        #km-hud h1 { font-size: 1.8rem; font-weight: 900; margin: 0; }
 
-        /* Indicador de Gravação */
-        #rec-tag { position: absolute; top: 25px; right: 20px; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 30px; opacity: 0; transition: 0.3s; z-index: 100; border: 1px solid rgba(255,255,255,0.2); }
-        .dot { width: 12px; height: 12px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
+        #rec-tag { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 30px; opacity: 0; z-index: 100; pointer-events: none; }
+        .dot { width: 10px; height: 10px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* Controles */
         .auto-hide { transition: opacity 0.5s ease; opacity: 1; z-index: 200; }
         .hidden { opacity: 0; pointer-events: none; }
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; align-items: center; width: 90%; justify-content: center; }
-        .btn-main { border: none; padding: 18px 35px; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 14px; flex-grow: 1; max-width: 200px; }
+
+        #ui-controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; align-items: center; }
+        .btn-main { border: none; padding: 15px 35px; border-radius: 8px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 14px; }
         #btn-start { background: var(--accent); color: #000; }
         #btn-stop { background: var(--danger); color: #fff; display: none; }
-        #gear-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 26px; cursor: pointer; backdrop-filter: blur(10px); }
+        #gear-btn { width: 50px; height: 50px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; }
 
-        /* Painel de Configurações */
         #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(30px); z-index: 4000; padding: 60px 25px; transition: 0.4s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
         .close-settings { position: absolute; top: 20px; left: 20px; color: var(--accent); font-weight: bold; cursor: pointer; }
-        .field { margin-bottom: 20px; }
-        .field label { display: block; font-size: 0.8rem; margin-bottom: 5px; color: #aaa; }
-        input, select { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; }
+        input, select { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 5px; margin-top: 5px; }
 
         canvas { display: none; }
         #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; }
-        
-        /* O "Pixel Ativo" - Vídeo invisível para manter a tela ligada */
-        #no-sleep-video { position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; }
+
+        /* CSS DA ESTRATÉGIA DO PIXEL */
+        #pixel-video { position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; }
     </style>
 </head>
-<body onclick="keepAlive()">
+<body>
 
-<!-- Vídeo de 1 pixel em loop para impedir o standby -->
-<video id="no-sleep-video" playsinline muted loop></video>
+<!-- Elemento de vídeo invisível para forçar atividade -->
+<video id="pixel-video" playsinline muted loop></video>
+
 <div id="flash"></div>
 
 <div id="safety-gate">
     <div class="alert-box">
-        <button class="btn-aware" onclick="startApp()">Entrar no Sistema</button>
+        <div class="msg-seguranca">NÃO DIRIJA USANDO O CELULAR</div>
+        <h2 style="color:var(--accent)">SEGURANÇA ATIVA</h2>
+        <button class="btn-aware" onclick="startApp()">Entrar</button>
     </div>
 </div>
 
 <div id="settings-panel">
     <div class="close-settings" onclick="toggleSet()">← VOLTAR</div>
     <div class="field"><label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select></div>
-    <div class="field"><label>Intervalo de Captura (ms)</label><input type="number" id="cfg-int" value="200"></div>
-    <div class="field"><label>Fotos por PDF</label><input type="number" id="cfg-lote" value="50"></div>
+    <div class="field"><label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200"></div>
+    <div class="field"><label>Fotos por Relatório</label><input type="number" id="cfg-lote" value="50"></div>
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted onclick="handleScreenClick(event)"></video>
     
     <div id="km-hud">
-        <span id="br-txt">GPS AGUARDANDO...</span>
+        <span id="br-txt">BUSCANDO BR...</span>
         <h1 id="km-txt">Km ---</h1>
     </div>
 
-    <div id="rec-tag"><div class="dot"></div><span>GRAVANDO</span></div>
+    <div id="rec-tag"><div class="dot"></div><span id="status-text">ON</span></div>
 
     <div id="ui-controls" class="auto-hide">
         <div id="gear-btn" onclick="event.stopPropagation(); toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-main" onclick="event.stopPropagation(); startCapture()">Iniciar Rota</button>
-        <button id="btn-stop" class="btn-main" onclick="event.stopPropagation(); stopCapture()">Finalizar</button>
+        <button id="btn-start" class="btn-main" onclick="event.stopPropagation(); startCapture()">INICIAR</button>
+        <button id="btn-stop" class="btn-main" onclick="event.stopPropagation(); stopCapture()">PARAR</button>
     </div>
 </div>
 
@@ -97,216 +94,30 @@ let curLat = "0.0000", curLon = "0.0000";
 let wakeLock = null;
 
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
-const noSleepVid = document.getElementById('no-sleep-video');
+const pixelVid = document.getElementById('pixel-video');
 
-// ESTRATÉGIA ANTI-SONO (PIXEL ATIVO + WAKELOCK)
-async function keepAlive() {
-    // Tenta WakeLock (moderno)
-    if ('wakeLock' in navigator) {
-        try {
-            if (!wakeLock) {
-                wakeLock = await navigator.wakeLock.request('screen');
-                wakeLock.addEventListener('release', () => { wakeLock = null; });
-            }
-        } catch (e) {}
-    }
-    // Tenta Vídeo Dummy (Pixel Ativo)
-    if (noSleepVid.paused) {
-        noSleepVid.src = "https://raw.githubusercontent.com/anars/blank-audio/master/250-milliseconds-of-silence.mp3";
-        noSleepVid.play().catch(() => {});
-    }
-}
-
-// Pulso de segurança a cada 10s
-setInterval(keepAlive, 10000);
-
-function handleScreenClick(e) {
-    const controls = document.querySelector('.auto-hide');
-    controls.classList.remove('hidden');
-    keepAlive();
-    captureManualJPG();
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(() => { if(capturing) controls.classList.add('hidden'); }, 3000);
-}
-
-function doFlash() {
-    const f = document.getElementById('flash');
-    f.style.opacity = '0.5';
-    setTimeout(() => f.style.opacity = '0', 150);
-}
-
-async function startApp() {
+// ESTRATÉGIA MESTRE: WAKELOCK + PIXEL VIDEO LOOP
+async function activeWakeLock() {
+    // 1. Tentativa via API WakeLock
     try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').remove();
-        document.getElementById('app-shell').style.visibility = 'visible';
-        
-        keepAlive();
-        listCams(); 
-        loadCSV(); 
-        initGPS();
-        
-        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    } catch(e) { alert("Permissão de pasta necessária para salvar os arquivos."); }
-}
-
-async function listCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const vids = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
-    if(vids.length) switchCam(vids[vids.length-1].deviceId);
-}
-
-async function switchCam(id) {
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { deviceId: id, width: {ideal: 1280}, height: {ideal: 720} } 
-    });
-    vid.srcObject = currentStream;
-    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-}
-
-function startCapture() {
-    capturing = true;
-    buffer = [];
-    kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-tag').style.opacity = '1';
-    keepAlive();
-    captureLoop();
-}
-
-function stopCapture() {
-    capturing = false;
-    if(buffer.length > 0) savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
-    buffer = [];
-    document.getElementById('btn-start').style.display = 'block';
-    document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-tag').style.opacity = '0';
-    document.querySelector('.auto-hide').classList.remove('hidden');
-}
-
-function captureLoop() {
-    if (!capturing) return;
-    const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    
-    buffer.push({ 
-        img: can.toDataURL('image/jpeg', 0.4), 
-        km: currentKm, 
-        br: brAtual, 
-        ts: new Date().toLocaleString('pt-BR'),
-        gps: `${curLat}, ${curLon}`
-    });
-
-    const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
-    if (buffer.length >= limit) {
-        savePDF([...buffer], kmInicialLote, currentKm);
-        buffer = []; kmInicialLote = currentKm;
-    }
-    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
-}
-
-async function captureManualJPG() {
-    doFlash();
-    const km = document.getElementById('km-txt').innerText.replace("Km ", "");
-    const agora = new Date();
-    
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const bh = can.height * 0.18; 
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillRect(0, can.height - bh, can.width, bh);
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold ${bh * 0.30}px Arial`;
-    ctx.fillText(`${brAtual} - Km ${km}`, 30, can.height - (bh * 0.65));
-    ctx.font = `${bh * 0.20}px Arial`;
-    ctx.fillText(`${agora.toLocaleString('pt-BR')}`, 30, can.height - (bh * 0.40));
-    
-    const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.9));
-    const nome = `FOTO_${brAtual}_Km_${km}_${agora.getTime()}.jpg`;
-
-    try {
-        const fileHandle = await hDir.getFileHandle(nome, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-    } catch (e) {}
-}
-
-async function savePDF(dataList, kmIni, kmFim) {
-    const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
-    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
-
-    for (let i = 0; i < dataList.length; i++) {
-        if (i > 0) doc.addPage();
-        await new Promise(res => {
-            const img = new Image();
-            img.onload = () => {
-                ctx.drawImage(img, 0, 0);
-                const bh = can.height * 0.10;
-                ctx.fillStyle = "rgba(0,0,0,0.8)";
-                ctx.fillRect(0, can.height - bh, can.width, bh);
-                ctx.fillStyle = "#fff";
-                ctx.font = `bold ${bh * 0.35}px Arial`;
-                ctx.fillText(`${dataList[i].br} - Km ${dataList[i].km}`, 20, can.height - (bh * 0.55));
-                ctx.font = `${bh * 0.22}px Arial`;
-                ctx.fillText(`${dataList[i].ts} | GPS: ${dataList[i].gps}`, 20, can.height - (bh * 0.25));
-                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
-                res();
-            };
-            img.src = dataList[i].img;
-        });
-    }
-
-    const agora = new Date();
-    const nome = `PDF_${brAtual}_Km_${kmIni}_${agora.getTime()}.pdf`;
-    try {
-        const fileHandle = await hDir.getFileHandle(nome, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(doc.output('blob'));
-        await writable.close();
-    } catch (e) {}
-}
-
-function initGPS() {
-    navigator.geolocation.watchPosition(p => {
-        curLat = p.coords.latitude.toFixed(6);
-        curLon = p.coords.longitude.toFixed(6);
-        if (!kmDB.length) return;
-        let best = null, minD = Infinity;
-        for (const pt of kmDB) {
-            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if (d < minD) { minD = d; best = pt; }
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            wakeLock.addEventListener('release', () => {
+                if (document.visibilityState === 'visible') activeWakeLock();
+            });
         }
-        if (best) {
-            document.getElementById('km-txt').innerText = "Km " + best.km;
-            brAtual = best.br || "RODOVIA";
-            document.getElementById('br-txt').innerText = brAtual;
-        }
-    }, null, { enableHighAccuracy: true });
-}
+    } catch (err) { console.warn("WakeLock falhou."); }
 
-async function loadCSV() {
-    try {
-        const r = await fetch('SNVBR116SPRJ.csv?v='+Date.now());
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ik=h.indexOf('km'), ilt=h.findIndex(x=>x.includes('lat')), iln=h.findIndex(x=>x.includes('lon')), ibr=h.indexOf('br');
-        kmDB = rows.map(r => {
-            const c = r.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')), br: ibr !== -1 ? c[ibr] : null };
-        }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
-}
-
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
-
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') activeWakeLock();
-});
-</script>
-</body>
-</html>
+    // 2. Tentativa via Pixel Video (Estratégia do Pixel)
+    if (pixelVid.paused) {
+        // Usamos um base64 de um vídeo de 1 segundo em branco (silencioso e invisível)
+        pixelVid.src = "data:video/mp4;base64,AAAAHGZ0eXBpc29tAAAAAGlzb21tcDQybXAxAAAADHhtbCAAAAArYXBwbGU6c3RyZWFtX2Rlc2NyaXB0b3IgeG1sbnM6YXBwbGU9Imh0dHA6Ly93d3cuYXBwbGUuY29tL0RURHMvaW1zYy8xLjAiPl9fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX2FwX3R5cGUSAAxvdmVyX3Jhc3Rlcl9tYXJrcyIXCiEBaHR0cDovL3N0YXRpYy5nb29nbGUuY29tL21hcHMvc3RhdGljbWFwcy9maS9hYm92ZV9yYXN0ZXJfbWFya3NfcGRmX29ubHkudHh0Ym94X2NhcHRpb24iRgoXCiEBaHR0cDovL3N0YXRpYy5nb29nbGUuY29tL21hcHMvc3RhdGljbWFwcy9maS9hYm92ZV9yYXN0ZXJfbWFya3NfcGRmX29ubHkucG5nIn0" alt="" height="24" width="24" style="vertical-align:middle;">
+        <span>Acima das marcações do raster</span>
+      </div>
+      <div style="padding:4px 0 0 0;">
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAF9JREFUSEtjYKAwYKSZpSCoY6An9P8/A0E5mE3M8Bv6H9IuYgP6of9D2oVsQD/0f0i7iA3oh/4PaRexAf3Q/yHtIjagH/o/pF3EBvRD/4e0i9iAfuj/kHYRG9AP/R8pGAAAtV09U63Lno4AAAAASUVORK5CYII=" alt="" height="24" width="24" style="vertical-align:middle;">
+        <span>Abaixo das marcações do raster</span>
+      </div>
+    </div>
+  </div>
+</div>
