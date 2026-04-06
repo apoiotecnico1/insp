@@ -3,74 +3,73 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Sistema de Captura Técnica</title>
+    <title>Captura Técnica Pro V6 - Hands Free</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa: rgba(0, 121, 52, 0.85); --danger: #ff4444; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Arial', sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        :root { --accent: #ffcc00; --placa: rgba(0, 121, 52, 0.9); --danger: #ff4444; }
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
         #app-shell { position: relative; width: 100%; height: 100%; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD KM - ESTILO PLACA DE TRÂNSITO */
+        /* PLACA DE KM */
         #km-hud { 
             position: absolute; top: 20px; left: 20px; 
             background: var(--placa); 
-            padding: 12px 25px; 
-            border: 4px solid #fff; 
-            border-radius: 12px; z-index: 100;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            padding: 15px 30px; 
+            border: 5px solid #fff; 
+            border-radius: 15px; z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             text-align: center;
         }
-        #br-txt { font-size: 0.9rem; font-weight: 800; display: block; border-bottom: 2px solid #fff; margin-bottom: 4px; text-transform: uppercase; }
-        #km-txt { font-size: 2.6rem; font-weight: 900; margin: 0; line-height: 1.1; }
+        #br-txt { font-size: 1rem; font-weight: 900; display: block; border-bottom: 3px solid #fff; margin-bottom: 5px; }
+        #km-txt { font-size: 3rem; font-weight: 900; margin: 0; letter-spacing: -2px; }
 
-        /* BOTÃO JPG DISCRETO */
+        /* BOTÃO CENTRAL DISCRETO */
         #shutter-zone {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            text-align: center; z-index: 60; cursor: pointer;
+            position: absolute; bottom: 120px; right: 30px;
+            text-align: center; z-index: 60; cursor: pointer; opacity: 0.7;
         }
         #btn-jpg { 
-            width: 75px; height: 75px; border: 3px solid rgba(255,255,255,0.4); border-radius: 50%;
-            background: rgba(255,255,255,0.1); margin: 0 auto 10px;
+            width: 60px; height: 60px; border: 3px solid #fff; border-radius: 50%;
+            background: rgba(255,255,255,0.2); margin-bottom: 5px;
             display: flex; align-items: center; justify-content: center;
         }
-        #btn-jpg::after { content: ''; width: 30px; height: 30px; background: #fff; border-radius: 50%; opacity: 0.8; }
-        .label-jpg { font-size: 10px; font-weight: 800; background: rgba(0,0,0,0.5); padding: 5px 12px; border-radius: 4px; letter-spacing: 1px; }
+        #btn-jpg::after { content: ''; width: 20px; height: 20px; background: #fff; border-radius: 50%; }
+        .label-jpg { font-size: 8px; font-weight: 900; background: #000; padding: 3px 8px; border-radius: 5px; }
 
-        /* CONTROLES INFERIORES */
-        #ui { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; align-items: center; }
-        .btn { border: none; padding: 20px 40px; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
+        /* CONTROLES */
+        #ui { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; }
+        .btn { border: none; padding: 20px 40px; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         #start { background: var(--accent); color: #000; }
         #stop { background: var(--danger); color: #fff; display: none; }
-        #gear { width: 60px; height: 60px; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid #fff; }
-
-        #rec-tag { position: absolute; top: 25px; right: 25px; background: rgba(255,0,0,0.7); padding: 8px 15px; border-radius: 20px; display: none; font-weight: bold; z-index: 100; }
+        
+        #rec-status { position: absolute; top: 25px; right: 25px; background: rgba(255,0,0,0.8); padding: 10px 20px; border-radius: 20px; display: none; font-weight: bold; animation: pulse 1s infinite; z-index: 101; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         canvas { display: none; }
     </style>
 </head>
-<body onclick="enableWakeLock()">
+<body>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
     
     <div id="km-hud">
-        <span id="br-txt">RODOVIA</span>
+        <span id="br-txt">AGUARDANDO GPS</span>
         <h1 id="km-txt">Km ---</h1>
     </div>
 
-    <div id="shutter-zone" onclick="takeInstantJPG()">
+    <div id="shutter-zone" onclick="takePhoto()">
         <div id="btn-jpg"></div>
-        <div class="label-jpg">[ CAPTURA FOTO ATUAL .JPG ]</div>
+        <div class="label-jpg">FOTO MANUAL</div>
     </div>
 
-    <div id="rec-tag">● GRAVANDO PDF</div>
+    <div id="rec-status">● MONITORANDO</div>
 
     <div id="ui">
-        <div id="gear" onclick="alert('Configurações: Use o código para ajustar tempo/lote')">⚙</div>
-        <button id="start" class="btn" onclick="startSystem()">INICIAR PDF</button>
-        <button id="stop" class="btn" onclick="stopSystem()">PARAR E SALVAR PDF</button>
+        <button id="start" class="btn" onclick="initSystem()">ATIVAR TELA / INICIAR</button>
+        <button id="stop" class="btn" onclick="stopPDF()">SALVAR E SAIR</button>
     </div>
 </div>
 
@@ -80,84 +79,102 @@
 let kmDB=[], capturing=false, buffer=[], hDir=null, brAtual="BR-116", wakeLock=null;
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
-// MANTER TELA ACESA
-async function enableWakeLock() {
-    if ('wakeLock' in navigator) {
-        try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+// --- FUNÇÃO PARA NÃO APAGAR A TELA ---
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Wake Lock ativo: a tela não vai apagar.');
+        }
+    } catch (err) {
+        console.error(`${err.name}, ${err.message}`);
     }
 }
 
-// ESTAMPA TÉCNICA (JPG E PDF)
+// --- FUNÇÃO FULLSCREEN ---
+function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+            console.log(`Erro ao tentar modo tela cheia: ${err.message}`);
+        });
+    }
+}
+
 function drawStamp(km, br, data) {
     const h = can.height;
     const w = can.width;
-    const barH = h * 0.15;
-
-    ctx.fillStyle = "rgba(0,0,0,0.75)";
+    const barH = h * 0.16;
+    ctx.fillStyle = "rgba(0,0,0,0.8)";
     ctx.fillRect(0, h - barH, w, barH);
-
-    // SOMBRA ESTILOSA
-    ctx.shadowColor = "black";
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetX = 4;
-    ctx.shadowOffsetY = 4;
-
+    ctx.shadowColor = "rgba(0,0,0,1)";
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetX = 5;
+    ctx.shadowOffsetY = 5;
     ctx.fillStyle = "#ffffff";
-    ctx.font = `bold ${barH * 0.38}px Arial`;
-    ctx.fillText(`${br} - Km ${km}`, 40, h - (barH * 0.48));
-
-    ctx.font = `${barH * 0.22}px Arial`;
-    ctx.fillText(data, 40, h - (barH * 0.18));
-
+    ctx.font = `bold ${barH * 0.4}px Arial`;
+    ctx.fillText(`${br} - Km ${km}`, 50, h - (barH * 0.45));
+    ctx.shadowBlur = 5;
+    ctx.font = `bold ${barH * 0.2}px Arial`;
+    ctx.fillStyle = "#cccccc";
+    ctx.fillText(data, 50, h - (barH * 0.15));
     ctx.shadowColor = "transparent";
 }
 
-async function startSystem() {
+async function initSystem() {
     try {
         if(!hDir) hDir = await window.showDirectoryPicker();
-        document.documentElement.requestFullscreen();
-        enableWakeLock();
         
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
-        });
-        vid.srcObject = stream;
-        vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-
+        // Ativa Tela Cheia e Wake Lock no primeiro clique (requisito de segurança do navegador)
+        toggleFullScreen();
+        await requestWakeLock();
+        
+        await startVideo();
         loadCSV();
         initGPS();
-
-        capturing = true;
-        buffer = [];
-        document.getElementById('start').style.display = 'none';
-        document.getElementById('stop').style.display = 'block';
-        document.getElementById('rec-tag').style.display = 'block';
-        loop();
-    } catch(e) { alert("Selecione a pasta de destino."); }
+        startPDF();
+    } catch(e) { 
+        alert("Necessário selecionar pasta e autorizar permissões."); 
+    }
 }
 
-function takeInstantJPG() {
+async function startVideo() {
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
+    });
+    vid.srcObject = stream;
+    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
+}
+
+function takePhoto() {
     const km = document.getElementById('km-txt').innerText.replace("Km ", "");
     const data = new Date().toLocaleString('pt-BR');
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     drawStamp(km, brAtual, data);
 
     can.toBlob(async (blob) => {
-        const file = await hDir.getFileHandle(`FOTO_${brAtual}_KM_${km}_${Date.now()}.jpg`, { create: true });
+        const name = `FOTO_${brAtual}_KM_${km}_${Date.now()}.jpg`.replace(/\//g, '-');
+        const file = await hDir.getFileHandle(name, { create: true });
         const stream = await file.createWritable();
         await stream.write(blob);
         await stream.close();
-    }, 'image/jpeg', 0.95);
+    }, 'image/jpeg', 0.9);
+}
+
+function startPDF() {
+    capturing = true;
+    buffer = [];
+    document.getElementById('start').style.display = 'none';
+    document.getElementById('stop').style.display = 'block';
+    document.getElementById('rec-status').style.display = 'block';
+    loop();
 }
 
 function loop() {
     if(!capturing) return;
     const km = document.getElementById('km-txt').innerText.replace("Km ", "");
     const data = new Date().toLocaleString('pt-BR');
-    
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     drawStamp(km, brAtual, data);
-    
     buffer.push({ img: can.toDataURL('image/jpeg', 0.6), km: km });
 
     if(buffer.length >= 50) {
@@ -165,16 +182,21 @@ function loop() {
         buffer = [];
         savePDF(temp);
     }
-    setTimeout(loop, 1000); // 1 foto por segundo no PDF
+    setTimeout(loop, 1000); // 1 segundo entre fotos para segurança e autonomia
 }
 
-async function stopSystem() {
+async function stopPDF() {
     capturing = false;
-    document.getElementById('rec-tag').style.display = 'none';
+    document.getElementById('rec-status').style.display = 'none';
     if(buffer.length > 0) await savePDF(buffer);
-    if(wakeLock) wakeLock.release();
-    alert("Processo Finalizado!");
-    location.reload();
+    
+    if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+    }
+
+    alert("Relatório salvo!");
+    location.reload(); 
 }
 
 async function savePDF(lista) {
@@ -188,7 +210,8 @@ async function savePDF(lista) {
     }
 
     const pdfBlob = doc.output('blob');
-    const file = await hDir.getFileHandle(`RELATORIO_${brAtual}_${Date.now()}.pdf`, { create: true });
+    const name = `RELATORIO_${brAtual}_${Date.now()}.pdf`;
+    const file = await hDir.getFileHandle(name, { create: true });
     const stream = await file.createWritable();
     await stream.write(pdfBlob);
     await stream.close();
@@ -220,6 +243,13 @@ function initGPS() {
         }
     }, null, { enableHighAccuracy: true });
 }
+
+// Reativa o Wake Lock se o usuário sair e voltar para a aba
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        await requestWakeLock();
+    }
+});
 </script>
 </body>
 </html>
