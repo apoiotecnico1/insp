@@ -3,14 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Captura Técnica - No-Sleep Mode</title>
+    <title>Captura Técnica - Total Wake</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #00ff88; --danger: #ff4444; --glass: rgba(15, 15, 15, 0.7); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* Botão de Início (Gatilho para Áudio/Vídeo) */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; }
         .alert-box { border: 1px solid #333; padding: 40px; border-radius: 20px; text-align: center; background: #0a0a0a; }
         .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 12px; cursor: pointer; text-transform: uppercase; }
@@ -18,23 +17,22 @@
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         video#vid { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Vídeo para Forçar Tela Ligada (Invisível) */
-        #no-sleep-video { position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; }
+        /* ANTI-ESCURECIMENTO: Elemento que pisca quase invisivelmente para enganar o sensor de ociosidade */
+        #anti-dim { 
+            position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+            background: white; opacity: 0; transition: opacity 0.1s;
+        }
 
         /* Botão Central */
         #click-area { position: absolute; inset: 0; z-index: 50; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .shutter-mini { width: 60px; height: 60px; border: 2px solid rgba(255,255,255,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); transition: 0.2s; }
         .shutter-mini::after { content: ''; width: 20px; height: 20px; background: var(--accent); border-radius: 50%; }
-        .shutter-label { font-size: 10px; color: #fff; text-transform: uppercase; margin-top: 10px; letter-spacing: 1px; font-weight: bold; opacity: 0.6; text-shadow: 1px 1px 2px #000; }
+        .shutter-label { font-size: 10px; color: #fff; text-transform: uppercase; margin-top: 10px; font-weight: bold; opacity: 0.6; text-shadow: 1px 1px 2px #000; }
 
-        /* KM e Status */
+        /* Placa KM */
         #km-hud { position: absolute; top: 20px; left: 20px; background: rgba(0, 121, 52, 0.7); padding: 10px 18px; border: 2px solid rgba(255, 255, 255, 0.8); border-radius: 10px; z-index: 100; backdrop-filter: blur(5px); text-align: center; }
         #km-txt { font-size: 1.8rem; font-weight: 900; margin: 0; }
-        #rec-tag { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px; background: rgba(255, 0, 0, 0.5); padding: 8px 15px; border-radius: 30px; opacity: 0; z-index: 100; font-size: 11px; font-weight: bold; }
-        .dot { width: 10px; height: 10px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
 
-        /* Interface */
         #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 100; }
         .btn-ui { border: 1px solid rgba(255,255,255,0.3); padding: 15px 25px; border-radius: 12px; font-weight: 800; cursor: pointer; text-transform: uppercase; font-size: 11px; background: var(--glass); color: #fff; backdrop-filter: blur(10px); }
         #btn-stop { background: var(--danger); border: none; display: none; }
@@ -52,18 +50,14 @@
 </head>
 <body>
 
+<div id="anti-dim"></div>
 <div id="flash-effect" class="flash"></div>
-
-<!-- Vídeo Loop Invisível (Truque para não apagar tela) -->
-<video id="no-sleep-video" playsinline muted loop>
-    <source src="https://raw.githubusercontent.com/anars/blank-audio/master/250-milliseconds-of-silence.mp4" type="video/mp4">
-</video>
 
 <div id="safety-gate">
     <div class="alert-box">
-        <h2 style="color:var(--accent); margin-bottom:10px;">CAPTURA TÉCNICA</h2>
-        <p style="color:#666; margin-bottom:30px;">Iniciando modo de alta performance (Tela Ativa).</p>
-        <button class="btn-aware" onclick="startApp()">INICIAR OPERAÇÃO</button>
+        <h2 style="color:var(--accent); margin-bottom:10px;">MODO OPERAÇÃO ATIVO</h2>
+        <p style="color:#666; margin-bottom:30px;">Bloqueio de suspensão reforçado (V3).</p>
+        <button class="btn-aware" onclick="startApp()">INICIAR AGORA</button>
     </div>
 </div>
 
@@ -79,16 +73,11 @@
         <div class="shutter-mini"></div>
         <span class="shutter-label">Salvar foto atual</span>
     </div>
-    
     <video id="vid" autoplay playsinline muted></video>
-
     <div id="km-hud">
         <span id="br-txt" style="font-size: 0.9rem; font-weight: 800; display: block;">RODOVIA</span>
         <h1 id="km-txt">Km ---</h1>
     </div>
-
-    <div id="rec-tag"><div class="dot"></div><span>GRAVANDO PDF</span></div>
-
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
         <button id="btn-start" class="btn-ui" onclick="startCapture()">PDF</button>
@@ -99,33 +88,39 @@
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], capturing=false, buffer = [], hDir=null, currentStream=null;
-let kmInicialLote = "", brAtual = "BR-000";
+let kmDB=[], capturing=false, buffer = [], hDir=null, currentStream=null, wakeLock=null;
+let brAtual = "BR-000", kmInicialLote = "";
 
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
-const noSleepVid = document.getElementById('no-sleep-video');
+const antiDim = document.getElementById('anti-dim');
+
+// ESTRATÉGIA REFORÇADA: WakeLock + Pulso de Brilho + Fullscreen
+async function keepAlive() {
+    // 1. Tenta a API oficial
+    if ('wakeLock' in navigator) {
+        try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+    }
+    
+    // 2. Pulso de Brilho (Engana o sensor a cada 15 seg)
+    setInterval(() => {
+        antiDim.style.opacity = "0.01";
+        setTimeout(() => { antiDim.style.opacity = "0"; }, 200);
+    }, 15000);
+}
 
 async function startApp() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        
-        // Estratégia 1: Fullscreen
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
         
-        // Estratégia 2: Vídeo Fantasma (Força tela acesa)
-        noSleepVid.play();
+        await keepAlive();
 
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
         
         listCams(); loadCSV(); initGPS();
-    } catch(e) { alert("Erro ao iniciar. Verifique as permissões."); }
+    } catch(e) { alert("Permissão de pasta e tela cheia necessária."); }
 }
-
-// Reprodiz o vídeo fantasma se o usuário trocar de aba e voltar
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') noSleepVid.play();
-});
 
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -156,13 +151,10 @@ async function takeInstantJPG() {
 
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     const bh = can.height * 0.15;
-    ctx.fillStyle = "rgba(0,0,0,0.8)";
-    ctx.fillRect(0, can.height - bh, can.width, bh);
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold ${bh * 0.35}px Arial`;
+    ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, can.height - bh, can.width, bh);
+    ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.35}px Arial`;
     ctx.fillText(`${brAtual} - ${kmRaw}`, 40, can.height - (bh * 0.45));
-    ctx.font = `${bh * 0.18}px Arial`;
-    ctx.fillText(agora.toLocaleString('pt-BR').toUpperCase(), 40, can.height - (bh * 0.15));
+    ctx.font = `${bh * 0.18}px Arial`; ctx.fillText(agora.toLocaleString('pt-BR').toUpperCase(), 40, can.height - (bh * 0.15));
 
     can.toBlob(async (blob) => {
         const nomeFinal = `${brAtual}_KM-${kmClean}_${dataHora}.jpg`.replace(/\s+/g, '');
@@ -173,12 +165,12 @@ async function takeInstantJPG() {
     }, 'image/jpeg', 0.95);
 }
 
+// LOGICA PDF (Mesma das anteriores, integrada)
 function startCapture() {
     capturing = true; buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText;
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-tag').style.opacity = '1';
     captureLoop();
 }
 
@@ -187,21 +179,14 @@ function stopCapture() {
     if (buffer.length > 0) savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText);
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-tag').style.opacity = '0';
 }
 
 function captureLoop() {
     if (!capturing) return;
     if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
         ctx.drawImage(vid, 0, 0, can.width, can.height);
-        buffer.push({
-            img: can.toDataURL('image/jpeg', 0.4),
-            km: document.getElementById('km-txt').innerText,
-            br: brAtual,
-            ts: new Date().toLocaleString('pt-BR')
-        });
-        const limit = parseInt(document.getElementById('cfg-lote').value) || 50;
-        if (buffer.length >= limit) {
+        buffer.push({ img: can.toDataURL('image/jpeg', 0.4), km: document.getElementById('km-txt').innerText, br: brAtual, ts: new Date().toLocaleString('pt-BR') });
+        if (buffer.length >= (parseInt(document.getElementById('cfg-lote').value) || 50)) {
             const b = [...buffer]; const kF = document.getElementById('km-txt').innerText;
             const kI = kmInicialLote; buffer = []; kmInicialLote = kF;
             savePDF(b, kI, kF);
