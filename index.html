@@ -15,9 +15,7 @@
         .btn-aware { background: var(--accent); color: #000; border: none; padding: 18px 40px; font-weight: 900; border-radius: 8px; cursor: pointer; text-transform: uppercase; margin-top: 20px; }
 
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
-        
-        /* O vídeo ocupa tudo e serve de área de toque para foto */
-        video { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
+        video { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
 
         #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 8px 20px; border: 3px solid #fff; border-radius: 8px; z-index: 100; text-align: center; pointer-events: none; }
         #br-txt { font-size: 0.8rem; font-weight: 800; display: block; border-bottom: 1px solid rgba(255,255,255,0.3); margin-bottom: 2px; }
@@ -42,8 +40,6 @@
         input, select { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 5px; margin-top: 5px; }
 
         canvas { display: none; }
-        
-        /* Flash visual ao capturar */
         #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; }
     </style>
 </head>
@@ -67,7 +63,6 @@
 </div>
 
 <div id="app-shell">
-    <!-- Toque no vídeo dispara a captura e mostra os controles -->
     <video id="vid" autoplay playsinline muted onclick="handleScreenClick(event)"></video>
     
     <div id="km-hud">
@@ -93,21 +88,13 @@ let kmInicialLote = "", brAtual = "RODOVIA", buffer = [];
 const vid=document.getElementById('vid'), can=document.getElementById('c'), ctx=can.getContext('2d');
 
 function handleScreenClick(e) {
-    // 1. Mostra os controles
     const controls = document.querySelector('.auto-hide');
     controls.classList.remove('hidden');
-    
-    // 2. Tira a foto instantânea
-    captureInstant();
-
-    // 3. Reinicia timer para esconder
+    captureJPG(); // Salva JPG ao tocar
     clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(() => {
-        if(capturing) controls.classList.add('hidden');
-    }, 3000);
+    hideTimeout = setTimeout(() => { if(capturing) controls.classList.add('hidden'); }, 3000);
 }
 
-// Flash visual na tela
 function doFlash() {
     const f = document.getElementById('flash');
     f.style.opacity = '0.5';
@@ -175,15 +162,36 @@ function captureLoop() {
     setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
-async function captureInstant() {
+// CAPTURA EM JPG (Ao tocar na tela)
+async function captureJPG() {
     doFlash();
     const km = document.getElementById('km-txt').innerText.replace("Km ", "");
+    const agora = new Date();
+    const d = agora.toLocaleDateString('pt-BR').replace(/\//g, '-');
+    const h = agora.toLocaleTimeString('pt-BR').replace(/:/g, '-');
+    
+    // Desenha e adiciona carimbo na imagem antes de salvar o JPG
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const shot = { img: can.toDataURL('image/jpeg', 0.5), km: km, br: brAtual, ts: new Date().toLocaleString('pt-BR') };
-    savePDF([shot], km, km, true);
+    const bh = can.height * 0.15;
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0, can.height - bh, can.width, bh);
+    ctx.fillStyle = "#fff";
+    ctx.font = `bold ${bh * 0.35}px Arial`;
+    ctx.fillText(`${brAtual} - Km ${km}`, 40, can.height - (bh * 0.45));
+    
+    const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.9));
+    const nome = `FOTO_${brAtual}_Km_${km}_${d}_${h}.jpg`;
+
+    try {
+        const fileHandle = await hDir.getFileHandle(nome, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+    } catch (e) {}
 }
 
-async function savePDF(dataList, kmIni, kmFim, isInstant = false) {
+// SALVA RELATÓRIO PDF
+async function savePDF(dataList, kmIni, kmFim) {
     if (!dataList.length) return;
     const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
@@ -212,7 +220,7 @@ async function savePDF(dataList, kmIni, kmFim, isInstant = false) {
     const agora = new Date();
     const d = agora.toLocaleDateString('pt-BR').replace(/\//g, '-');
     const h = agora.toLocaleTimeString('pt-BR').replace(/:/g, '-');
-    const nome = `${isInstant ? 'FOTO' : 'LOTE'}_${dataList[0].br}_Km_${kmIni}_ao_${kmFim}_${d}_${h}.pdf`;
+    const nome = `RELATORIO_${dataList[0].br}_Km_${kmIni}_ao_${kmFim}_${d}_${h}.pdf`;
 
     try {
         const fileHandle = await hDir.getFileHandle(nome, { create: true });
