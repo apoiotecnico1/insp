@@ -17,50 +17,48 @@
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
 
-        /* PLACA ESTILIZADA: Transparente com efeito 3D */
+        /* PLACA CENTRALIZADA E MENOR */
         #km-hud { 
             position: absolute; 
             top: 20px; 
             left: 20px; 
-            background: rgba(0, 121, 52, 0.5); /* Verde semi-transparente */
-            padding: 12px 25px; 
-            border: 2px solid rgba(255, 255, 255, 0.6); 
-            border-radius: 12px; 
+            background: rgba(0, 121, 52, 0.6); 
+            padding: 8px 20px; 
+            border: 2px solid rgba(255, 255, 255, 0.7); 
+            border-radius: 10px; 
             z-index: 100; 
             pointer-events: none; 
-            min-width: 140px;
+            min-width: 110px;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.2);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
             align-items: center; 
+            justify-content: center;
             text-align: center;
         }
 
         #br-txt { 
-            font-size: 0.9rem; 
+            font-size: 0.75rem; 
             font-weight: 800; 
             color: #eee;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 2px;
-            /* Sombra 3D leve no texto */
+            margin-bottom: 0px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
 
         #km-txt { 
-            font-size: 2.5rem; 
+            font-size: 1.8rem; 
             font-weight: 900; 
-            line-height: 1;
+            line-height: 1.1;
             color: #fff;
-            /* Efeito 3D Profundo no KM */
-            text-shadow: 2px 2px 0px #004d21, 4px 4px 5px rgba(0,0,0,0.7);
+            text-shadow: 2px 2px 0px #004d21, 3px 3px 4px rgba(0,0,0,0.7);
         }
 
         .hud-pulse { transform: scale(1.05); border-color: var(--accent) !important; background: rgba(0, 121, 52, 0.8) !important; }
 
-        /* Restante do UI */
         #rec-tag { position: absolute; top: 40px; right: 15px; display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.5); padding: 5px 12px; border-radius: 15px; opacity: 0; pointer-events: none; z-index: 100; }
         .dot { width: 8px; height: 8px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
@@ -87,7 +85,7 @@
 <div id="safety-gate">
     <div class="alert-box">
         <h2 style="color:var(--accent); margin-bottom:10px;">SISTEMA DE APOIO</h2>
-        <p style="margin-bottom:10px;">Captura com Rodovia e KM (Efeito 3D)</p>
+        <p style="margin-bottom:10px;">Captura de Rodovia e KM</p>
         <button class="btn-aware" onclick="startApp()">ATIVAR SISTEMA</button>
     </div>
 </div>
@@ -107,7 +105,7 @@
     
     <div id="km-hud">
         <span id="br-txt">---</span>
-        <h1 id="km-txt">Km ---</h1>
+        <h1 id="km-txt">---</h1>
     </div>
 
     <div id="rec-tag"><div class="dot"></div><span>Gravando Lote...</span></div>
@@ -166,11 +164,9 @@ function handleTouch() {
 
 async function drawWatermark(km, br) {
     const bh = can.height * 0.12;
-    // Tarja semi-transparente inferior
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.fillRect(0, can.height - bh, can.width, bh);
     
-    // Texto BR e KM com sombra 3D
     ctx.fillStyle = "#fff";
     ctx.shadowColor = "black";
     ctx.shadowBlur = 4;
@@ -180,7 +176,6 @@ async function drawWatermark(km, br) {
     ctx.font = `bold ${bh * 0.4}px Arial`;
     ctx.fillText(`BR-${br}  Km ${km}`, 30, can.height - (bh * 0.5));
     
-    // Info GPS e Data (menor)
     ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
     ctx.font = `${bh * 0.18}px Arial`;
     ctx.fillText(`${new Date().toLocaleString('pt-BR')} | GPS: ${curLat}, ${curLon}`, 30, can.height - (bh * 0.2));
@@ -193,10 +188,11 @@ async function takeManualPhoto() {
     setTimeout(() => { flashDiv.style.opacity = "0"; kmHud.classList.remove('hud-pulse'); }, 100);
     
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    await drawWatermark(document.getElementById('km-txt').innerText.replace("Km ", ""), brAtual);
+    const cleanKm = document.getElementById('km-txt').innerText.replace("Km ", "");
+    await drawWatermark(cleanKm, brAtual);
     
     const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
-    const fileName = `BR_${brAtual}_Km_${document.getElementById('km-txt').innerText.replace("Km ", "")}_${Date.now()}.jpg`;
+    const fileName = `BR_${brAtual}_Km_${cleanKm}_${Date.now()}.jpg`;
     const fileHandle = await hDir.getFileHandle(fileName, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(blob); await writable.close();
@@ -213,7 +209,8 @@ function startCapture() {
 
 function stopCapture() {
     capturing = false;
-    if(buffer.length > 0) savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
+    const cleanKm = document.getElementById('km-txt').innerText.replace("Km ", "");
+    if(buffer.length > 0) savePDF([...buffer], kmInicialLote, cleanKm);
     document.getElementById('btn-start').style.display = 'block';
     document.getElementById('btn-stop').style.display = 'none';
     document.getElementById('rec-tag').style.opacity = '0';
@@ -266,7 +263,7 @@ function initGPS() {
         }
         if (best) {
             brAtual = best.br;
-            document.getElementById('br-txt').innerText = "RODOVIA BR-" + best.br;
+            document.getElementById('br-txt').innerText = "BR-" + best.br;
             document.getElementById('km-txt').innerText = "Km " + best.km;
         }
     }, null, { enableHighAccuracy: true });
@@ -278,8 +275,6 @@ async function loadCSV() {
         const t = await r.text();
         const rows = t.split('\n').filter(l => l.includes(';'));
         const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        
-        // Identifica colunas BR, KM, LAT, LON
         const ibr = h.indexOf('br'), ikm = h.indexOf('km'), ilat = h.findIndex(x=>x.includes('lat')), ilon = h.findIndex(x=>x.includes('lon'));
         
         kmDB = rows.map(r => {
