@@ -3,34 +3,61 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Captura Pro - Foco e Legibilidade</title>
+    <title>Captura Pro - Configurações Ativas</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-bg: rgba(0, 60, 25, 0.7); }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { 
+            --accent: #ffcc00; 
+            --placa-bg: rgba(0, 60, 25, 0.75); 
+            --glass: rgba(15, 15, 15, 0.95); 
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
         body { background: #000; color: #fff; font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; height: 100vh; }
 
+        /* Gate de Inicialização */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
         .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 12px; cursor: pointer; }
 
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
-        #vid { width: 100%; height: 100%; object-fit: contain; }
+        #vid { width: 100%; height: 100%; object-fit: contain; background: #050505; }
 
-        /* Placa de Km no App */
+        /* HUD KM - PLACA DISCRETA */
         #km-hud { 
             position: absolute; top: 25px; left: 25px; 
             background: var(--placa-bg); padding: 12px; 
             border-radius: 10px; z-index: 100; border: 1.5px solid rgba(255,255,255,0.4);
-            backdrop-filter: blur(10px); min-width: 140px; text-align: center;
+            backdrop-filter: blur(10px); min-width: 150px; text-align: center;
         }
-        #br-txt { font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.9); text-transform: uppercase; }
+        #br-txt { font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.9); display: block; }
         #km-txt { font-size: 1.8rem; font-weight: 900; color: #fff; line-height: 1.1; }
 
-        #ui-controls { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; }
-        .btn-main { border: none; padding: 18px 45px; border-radius: 15px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
+        /* PAINEL DE CONFIGURAÇÕES (ENGRENAGEM) */
+        #settings-panel { 
+            position: fixed; right: -350px; top: 0; width: 320px; height: 100%; 
+            background: var(--glass); backdrop-filter: blur(25px); z-index: 4000; 
+            padding: 60px 25px; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            border-left: 1px solid #333;
+        }
+        #settings-panel.open { right: 0; }
+        #settings-panel h3 { color: var(--accent); margin-bottom: 25px; font-size: 1.2rem; }
+        #settings-panel label { display: block; margin-top: 20px; font-size: 0.7rem; font-weight: bold; color: #aaa; text-transform: uppercase; }
+        #settings-panel input, #settings-panel select { 
+            width: 100%; padding: 12px; background: #222; border: 1px solid #444; 
+            color: #fff; border-radius: 8px; margin-top: 8px; font-size: 0.9rem;
+        }
+        .close-set { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #666; }
+
+        /* CONTROLES INFERIORES */
+        #ui-controls { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; }
+        .btn-main { border: none; padding: 18px 45px; border-radius: 15px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 150px; }
         #btn-start { background: var(--accent); color: #000; }
         #btn-stop { background: #ff4444; color: #fff; display: none; }
-        
+        #gear-btn { 
+            width: 60px; height: 60px; background: rgba(255,255,255,0.1); 
+            border-radius: 15px; display: flex; align-items: center; justify-content: center; 
+            font-size: 26px; cursor: pointer; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.2);
+        }
+
         #rec-tag { position: absolute; top: 30px; right: 30px; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 20px; opacity: 0; display: flex; align-items: center; gap: 8px; }
         .dot { width: 10px; height: 10px; background: #ff4444; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
@@ -41,16 +68,42 @@
 <body>
 
 <div id="safety-gate">
-    <button class="btn-aware" onclick="startApp()">INICIAR CÂMERA</button>
+    <button class="btn-aware" onclick="startApp()">ATIVAR SISTEMA</button>
+</div>
+
+<!-- PAINEL LATERAL -->
+<div id="settings-panel">
+    <div class="close-set" onclick="toggleSet()">✕</div>
+    <h3>Configurações</h3>
+    
+    <label>Câmera Disponível</label>
+    <select id="cam-select" onchange="switchCam(this.value)"></select>
+
+    <label>Intervalo entre fotos (ms)</label>
+    <input type="number" id="cfg-int" value="400" step="100" min="100">
+
+    <label>Fotos por Relatório (PDF)</label>
+    <input type="number" id="cfg-lote" value="50" min="1">
+    
+    <p style="font-size: 10px; color: #555; margin-top: 40px;">Captura Pro v3.5 - 2026</p>
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted onclick="takeManualPhoto()"></video>
-    <div id="km-hud"><span id="br-txt">BR ---</span><h1 id="km-txt">Km ---</h1></div>
-    <div id="rec-tag"><div class="dot"></div><span style="font-size:12px; font-weight:bold;">GERANDO PDF</span></div>
     
+    <div id="km-hud">
+        <span id="br-txt">BR ---</span>
+        <h1 id="km-txt">Km ---</h1>
+    </div>
+
+    <div id="rec-tag">
+        <div class="dot"></div>
+        <span style="font-size:12px; font-weight:bold; color:#fff;">LOTE ATIVO</span>
+    </div>
+
     <div id="ui-controls">
-        <button id="btn-start" class="btn-main" onclick="startCapture()">Iniciar Lote</button>
+        <div id="gear-btn" onclick="toggleSet()">⚙</div>
+        <button id="btn-start" class="btn-main" onclick="startCapture()">Iniciar</button>
         <button id="btn-stop" class="btn-main" onclick="stopCapture()">Finalizar</button>
     </div>
 </div>
@@ -58,7 +111,7 @@
 <canvas id="c"></canvas>
 
 <script>
-let kmDB=[], capturing=false, hDir=null, brGlobal="---";
+let kmDB=[], capturing=false, hDir=null, brGlobal="---", currentStream=null;
 let curLat="0.000000", curLon="0.000000", buffer=[], kmInicialLote="";
 
 const vid = document.getElementById('vid');
@@ -70,66 +123,71 @@ async function startApp() {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } });
-        vid.srcObject = stream;
-        vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-        initGPS(); loadCSV();
-    } catch(e) { alert("Permissão de pasta e câmera necessária."); }
+        listCams(); 
+        initGPS(); 
+        loadCSV();
+    } catch(e) { alert("Acesso à pasta e câmera é obrigatório."); }
+}
+
+async function listCams() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const vids = devices.filter(d => d.kind === 'videoinput');
+    const sel = document.getElementById('cam-select');
+    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
+    if(vids.length) switchCam(vids[vids.length-1].deviceId);
+}
+
+async function switchCam(id) {
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+    currentStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { deviceId: id, width: { ideal: 1920 }, height: { ideal: 1080 } } 
+    });
+    vid.srcObject = currentStream;
+    vid.onloadedmetadata = () => {
+        can.width = vid.videoWidth;
+        can.height = vid.videoHeight;
+    };
 }
 
 function drawStamps(br, km) {
     const s = can.height / 1080;
     
-    // --- 1. PLACA DE KM (AJUSTADA E DENTRO DAS DIMENSÕES) ---
-    const pw = 200 * s; 
-    const ph = 100 * s;
-    const px = 40 * s; 
-    const py = 40 * s;
+    // 1. PLACA DE KM (AJUSTADA)
+    const pw = 200 * s, ph = 100 * s;
+    const px = 40 * s, py = 40 * s;
 
     ctx.save();
-    // Fundo da placa
     ctx.fillStyle = "rgba(0, 60, 25, 0.75)";
-    ctx.beginPath();
-    ctx.roundRect(px, py, pw, ph, 12 * s);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.5)";
-    ctx.lineWidth = 2 * s;
-    ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(px, py, pw, ph, 12 * s); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 2 * s; ctx.stroke();
 
-    // Texto da Placa
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center"; ctx.fillStyle = "#ffffff";
     ctx.font = `bold ${24 * s}px Arial`;
     ctx.fillText("BR " + br, px + pw/2, py + 35 * s);
 
-    // Ajuste dinâmico do tamanho do Km para não vazar
     let fontSizeKm = 55 * s;
-    if (km.length > 4) fontSizeKm = 42 * s;
+    if (km.length > 4) fontSizeKm = 40 * s;
     ctx.font = `900 ${fontSizeKm}px Arial`;
     ctx.fillText("Km " + km, px + pw/2, py + ph - 20 * s);
 
-    // --- 2. RODAPÉ (CENTRALIZADO E VISÍVEL) ---
-    const bh = 100 * s; // Altura do rodapé
+    // 2. RODAPÉ CENTRALIZADO E VISÍVEL
+    const bh = 110 * s;
     const grad = ctx.createLinearGradient(0, can.height - bh, 0, can.height);
     grad.addColorStop(0, "rgba(0,0,0,0)");
     grad.addColorStop(1, "rgba(0,0,0,0.85)");
     ctx.fillStyle = grad;
     ctx.fillRect(0, can.height - bh, can.width, bh);
 
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#ffffff";
-    ctx.shadowColor = "black";
-    ctx.shadowBlur = 6 * s;
+    ctx.textAlign = "center"; ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "black"; ctx.shadowBlur = 8 * s;
     
-    // Linha 1: Data e Hora
-    ctx.font = `bold ${28 * s}px Arial`;
-    const dataTxt = new Date().toLocaleString('pt-BR');
-    ctx.fillText(dataTxt, can.width / 2, can.height - 55 * s);
+    // Data e Hora Maior
+    ctx.font = `bold ${30 * s}px Arial`;
+    ctx.fillText(new Date().toLocaleString('pt-BR'), can.width / 2, can.height - 60 * s);
 
-    // Linha 2: GPS
-    ctx.font = `bold ${22 * s}px monospace`;
-    ctx.fillText(`COORDENADAS GPS: ${curLat} , ${curLon}`, can.width / 2, can.height - 25 * s);
-    
+    // GPS em Destaque
+    ctx.font = `bold ${24 * s}px monospace`;
+    ctx.fillText(`GPS: ${curLat} , ${curLon}`, can.width / 2, can.height - 25 * s);
     ctx.restore();
 }
 
@@ -139,7 +197,7 @@ async function takeManualPhoto() {
     ctx.drawImage(vid, 0, 0, can.width, can.height);
     drawStamps(brGlobal, km);
     const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
-    const fh = await hDir.getFileHandle(`FOTO_BR${brGlobal}_KM${km}_${Date.now()}.jpg`, { create: true });
+    const fh = await hDir.getFileHandle(`IMG_BR${brGlobal}_KM${km}_${Date.now()}.jpg`, { create: true });
     const sw = await fh.createWritable();
     await sw.write(blob); await sw.close();
 }
@@ -168,11 +226,13 @@ async function captureLoop() {
     drawStamps(brGlobal, km);
     buffer.push(can.toDataURL('image/jpeg', 0.8));
     
-    if (buffer.length >= 50) {
+    const limite = parseInt(document.getElementById('cfg-lote').value) || 50;
+    if (buffer.length >= limite) {
         savePDF([...buffer], kmInicialLote, km);
         buffer = []; kmInicialLote = km;
     }
-    setTimeout(captureLoop, 300);
+    const ms = parseInt(document.getElementById('cfg-int').value) || 400;
+    setTimeout(captureLoop, ms);
 }
 
 async function savePDF(imgs, k1, k2) {
@@ -182,7 +242,7 @@ async function savePDF(imgs, k1, k2) {
         if (i > 0) doc.addPage();
         doc.addImage(imgs[i], 'JPEG', 0, 0, pw, ph);
     }
-    const fh = await hDir.getFileHandle(`LOTE_BR${brGlobal}_KM${k1}_${k2}.pdf`, { create: true });
+    const fh = await hDir.getFileHandle(`RELAT_BR${brGlobal}_KM${k1}_${k2}.pdf`, { create: true });
     const sw = await fh.createWritable();
     await sw.write(doc.output('blob')); await sw.close();
 }
@@ -216,6 +276,8 @@ async function loadCSV() {
         }).filter(d => !isNaN(d.lt));
     } catch(e) {}
 }
+
+function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 </script>
 </body>
 </html>
