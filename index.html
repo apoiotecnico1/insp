@@ -17,7 +17,7 @@
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
 
-        /* PLACA ESTILIZADA */
+        /* PLACA ESTILIZADA - SEMPRE VISÍVEL */
         #km-hud { 
             position: absolute; 
             top: 20px; 
@@ -26,7 +26,7 @@
             padding: 12px 25px; 
             border: 2px solid rgba(255, 255, 255, 0.6); 
             border-radius: 12px; 
-            z-index: 100; 
+            z-index: 1000; 
             pointer-events: none; 
             min-width: 140px;
             backdrop-filter: blur(10px);
@@ -36,7 +36,6 @@
             flex-direction: column;
             align-items: center; 
             text-align: center;
-            transition: opacity 0.3s;
         }
 
         #br-txt { 
@@ -63,7 +62,7 @@
         .dot { width: 8px; height: 8px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; transition: opacity 0.3s; }
+        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 2000; transition: opacity 0.3s; }
         .ui-hidden { opacity: 0; visibility: hidden !important; }
         .btn-main { border: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 160px; }
         #btn-start { background: var(--accent); color: #000; }
@@ -75,7 +74,7 @@
         #settings-panel input, #settings-panel select { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px; margin-top: 5px; margin-bottom: 15px; }
 
         canvas { display: none; }
-        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; }
+        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1500; }
     </style>
 </head>
 <body>
@@ -103,6 +102,7 @@
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted onclick="handleTouch()"></video>
     
+    <!-- Placa de KM (Sempre visível) -->
     <div id="km-hud">
         <span id="br-txt">---</span>
         <h1 id="km-txt">Km ---</h1>
@@ -159,7 +159,6 @@ async function switchCam(id) {
 
 function handleTouch() {
     takeManualPhoto();
-    // Alterna visibilidade apenas se não estiver capturando lote
     if(!capturing) document.getElementById('ui-controls').classList.toggle('ui-hidden');
 }
 
@@ -175,8 +174,8 @@ async function drawWatermark(km, br) {
     ctx.shadowOffsetY = 3;
     
     ctx.font = `bold ${bh * 0.4}px Arial`;
-    // Removido "BR-" do carimbo
-    ctx.fillText(`${br}  Km ${km}`, 30, can.height - (bh * 0.5));
+    // Adicionado "BR" no carimbo da foto/PDF
+    ctx.fillText(`BR ${br}  Km ${km}`, 30, can.height - (bh * 0.5));
     
     ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
     ctx.font = `${bh * 0.18}px Arial`;
@@ -193,7 +192,7 @@ async function takeManualPhoto() {
     await drawWatermark(document.getElementById('km-txt').innerText.replace("Km ", ""), brAtual);
     
     const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
-    const fileName = `${brAtual}_Km_${document.getElementById('km-txt').innerText.replace("Km ", "")}_${Date.now()}.jpg`;
+    const fileName = `BR_${brAtual}_Km_${document.getElementById('km-txt').innerText.replace("Km ", "")}_${Date.now()}.jpg`;
     const fileHandle = await hDir.getFileHandle(fileName, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(blob); await writable.close();
@@ -204,8 +203,7 @@ function startCapture() {
     buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
     
-    // Esconde HUD e Engrenagem
-    document.getElementById('km-hud').style.opacity = '0';
+    // Esconde apenas a engrenagem, a PLACA (km-hud) permanece
     document.getElementById('gear-btn').classList.add('ui-hidden');
     
     document.getElementById('btn-start').style.display = 'none';
@@ -217,8 +215,7 @@ function startCapture() {
 function stopCapture() {
     capturing = false;
     
-    // Reaparece HUD e Engrenagem
-    document.getElementById('km-hud').style.opacity = '1';
+    // Reaparece a engrenagem
     document.getElementById('gear-btn').classList.remove('ui-hidden');
 
     if(buffer.length > 0) savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
@@ -256,7 +253,7 @@ async function savePDF(dataList, kmIni, kmFim) {
             res();
         };});
     }
-    const fileName = `Relatorio_${brAtual}_Km${kmIni}_ao_${kmFim}.pdf`;
+    const fileName = `Relatorio_BR${brAtual}_Km${kmIni}_ao_${kmFim}.pdf`;
     const fileHandle = await hDir.getFileHandle(fileName, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(doc.output('blob'));
@@ -274,8 +271,8 @@ function initGPS() {
         }
         if (best) {
             brAtual = best.br;
-            // Mostra apenas o número na placa HUD
-            document.getElementById('br-txt').innerText = best.br;
+            // Adicionado "BR" na placa HUD
+            document.getElementById('br-txt').innerText = "BR " + best.br;
             document.getElementById('km-txt').innerText = "Km " + best.km;
         }
     }, null, { enableHighAccuracy: true });
