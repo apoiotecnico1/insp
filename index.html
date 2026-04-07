@@ -2,268 +2,262 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>Captura Pro - Sistema Definitivo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <title>INSPEÇÃO PRO - CORE ENGINE</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { 
-            --accent: #ffcc00; 
-            --placa-bg: rgba(0, 60, 25, 0.7); 
-            --glass: rgba(10, 10, 10, 0.98); 
+            --placa-verde: linear-gradient(180deg, #007934 0%, #005a27 100%); 
+            --accent: #00ff88; 
+            --warning: #ffcc00;
+            --danger: #ff4444;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { background: #000; color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+        body { background: #000; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; height: 100vh; color: #fff; }
 
-        /* Tela de Início */
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 25px 60px; font-weight: 900; border-radius: 50px; cursor: pointer; font-size: 1.3rem; box-shadow: 0 10px 30px rgba(255, 204, 0, 0.2); }
-
-        #app-shell { position: absolute; inset: 0; visibility: hidden; display: flex; align-items: center; justify-content: center; }
-        #vid { width: 100%; height: 100%; object-fit: cover; background: #000; }
-
-        /* Placa de Km Flutuante (App) */
-        #km-hud { 
-            position: absolute; top: env(safe-area-inset-top, 25px); left: 25px; 
-            background: var(--placa-bg); padding: 15px; border-radius: 12px; z-index: 100; 
-            border: 1.5px solid rgba(255,255,255,0.3); backdrop-filter: blur(15px); 
-            min-width: 160px; text-align: center;
+        /* HUD SUPERIOR - PLACA DE RODOVIA */
+        #hud-top {
+            position: absolute; top: 20px; left: 20px; z-index: 100;
+            display: flex; flex-direction: column; gap: 10px;
         }
-        #br-txt { font-size: 0.8rem; font-weight: 700; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 2px; }
-        #km-txt { font-size: 2.2rem; font-weight: 900; color: #fff; line-height: 1; margin-top: 5px; }
-
-        /* Painel Lateral de Ajustes */
-        #settings-panel { 
-            position: fixed; right: -350px; top: 0; width: 320px; height: 100%; 
-            background: var(--glass); backdrop-filter: blur(30px); z-index: 4000; 
-            padding: 80px 25px; transition: 0.5s cubic-bezier(0.19, 1, 0.22, 1); border-left: 1px solid #333;
+        #placa { 
+            background: var(--placa-verde); 
+            padding: 10px 25px; 
+            border: 4px solid #fff; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            text-align: center;
+            min-width: 180px;
+            transition: all 0.3s ease;
         }
-        #settings-panel.open { right: 0; }
-        #settings-panel h2 { color: var(--accent); margin-bottom: 30px; }
-        #settings-panel label { display: block; margin-top: 25px; font-size: 0.75rem; font-weight: bold; color: #888; text-transform: uppercase; }
-        #settings-panel input, #settings-panel select { width: 100%; padding: 14px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 10px; margin-top: 8px; font-size: 1rem; }
-        .close-set { position: absolute; top: 30px; right: 30px; cursor: pointer; font-size: 1.5rem; color: #666; }
+        #br-txt { font-size: 1rem; font-weight: 800; border-bottom: 2px solid rgba(255,255,255,0.3); margin-bottom: 5px; text-transform: uppercase; }
+        #km-txt { font-size: 3.2rem; font-weight: 900; line-height: 1; letter-spacing: -2px; }
 
-        /* Controles Inferiores */
-        #ui-controls { position: absolute; bottom: env(safe-area-inset-bottom, 40px); left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; }
-        .btn-main { border: none; padding: 20px 45px; border-radius: 20px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 160px; font-size: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        #btn-start { background: var(--accent); color: #000; }
-        #btn-stop { background: #ff3333; color: #fff; display: none; }
-        #gear-btn { width: 65px; height: 65px; background: rgba(255,255,255,0.15); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        /* TELEMETRIA LATERAL */
+        #telemetria {
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+            padding: 8px 12px; border-radius: 8px; font-size: 0.7rem; font-family: monospace;
+            border-left: 3px solid var(--accent);
+        }
 
-        /* Tag de Gravação */
-        #rec-tag { position: absolute; top: env(safe-area-inset-top, 25px); right: 25px; background: rgba(255,0,0,0.25); border: 1px solid rgba(255,0,0,0.5); padding: 10px 20px; border-radius: 50px; opacity: 0; display: flex; align-items: center; gap: 10px; pointer-events: none; }
-        .dot { width: 12px; height: 12px; background: #ff3333; border-radius: 50%; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
+        /* VÍDEO FULLSCREEN */
+        #vid { width: 100vw; height: 100vh; object-fit: cover; }
 
-        canvas { display: none; }
+        /* CONTROLES INFERIORES */
+        #controls { 
+            position: absolute; bottom: 40px; width: 100%; 
+            display: flex; justify-content: center; gap: 20px; z-index: 200; 
+        }
+        .btn { 
+            border: none; padding: 20px 40px; border-radius: 18px; 
+            font-weight: 900; text-transform: uppercase; cursor: pointer; 
+            font-size: 1.1rem; letter-spacing: 1px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            transition: transform 0.1s active;
+        }
+        .btn:active { transform: scale(0.95); }
+        #btn-pdf-start { background: #fff; color: #000; }
+        #btn-pdf-stop { background: var(--danger); color: #fff; display: none; }
+
+        /* TELA DE INICIALIZAÇÃO */
+        #splash { 
+            position: fixed; inset: 0; background: #0b0b0b; z-index: 1000; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        }
+        .loader { width: 50px; height: 50px; border: 5px solid #333; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 500; }
     </style>
 </head>
-<body>
+<body onload="checkEnv()">
 
-<div id="safety-gate">
-    <h1 style="margin-bottom:10px;">CAPTURA PRO</h1>
-    <p style="margin-bottom:40px; opacity:0.6;">Sistema de Inspeção Rodoviária</p>
-    <button class="btn-aware" onclick="startApp()">INICIAR SISTEMA</button>
+<div id="flash"></div>
+
+<div id="splash">
+    <div class="loader" id="loader-icon"></div>
+    <h2 style="letter-spacing:4px; margin-bottom:10px;">INSPEÇÃO PRO</h2>
+    <p id="status-msg" style="color:#888; font-size:0.9rem; margin-bottom:30px;">Aguardando permissão de pasta...</p>
+    <button class="btn" style="background:var(--accent); color:#000;" onclick="startEngine()">LIBERAR ACESSO</button>
 </div>
 
-<div id="settings-panel">
-    <div class="close-set" onclick="toggleSet()">✕</div>
-    <h2>Ajustes</h2>
-    <label>Câmera Ativa</label>
-    <select id="cam-select" onchange="switchCam(this.value)"></select>
-    
-    <label>Intervalo de Captura (ms)</label>
-    <input type="number" id="cfg-int" value="400" min="100">
-    
-    <label>Fotos por PDF</label>
-    <input type="number" id="cfg-lote" value="50" min="1">
-    
-    <p style="margin-top:50px; font-size:10px; color:#444; text-align:center;">Versão Definitiva 2026</p>
-</div>
-
-<div id="app-shell">
-    <video id="vid" autoplay playsinline muted onclick="takeManualPhoto()"></video>
-    
-    <div id="km-hud">
-        <span id="br-txt">BR ---</span>
-        <h1 id="km-txt">Km ---</h1>
+<div id="app-ui" style="display:none;">
+    <div id="hud-top">
+        <div id="placa">
+            <div id="br-txt">AGUARDANDO...</div>
+            <div id="km-txt">Km ---</div>
+        </div>
+        <div id="telemetria">
+            GPS: <span id="lat-view">0.000</span>, <span id="lon-view">0.000</span><br>
+            PRECISÃO: <span id="acc-view">--</span>m
+        </div>
     </div>
 
-    <div id="rec-tag">
-        <div class="dot"></div>
-        <span style="font-size:12px; font-weight:900; color:#fff;">GRAVANDO LOTE</span>
-    </div>
+    <video id="vid" autoplay playsinline muted onclick="manualCapture()"></video>
 
-    <div id="ui-controls">
-        <div id="gear-btn" onclick="toggleSet()">⚙</div>
-        <button id="btn-start" class="btn-main" onclick="startCapture()">Iniciar</button>
-        <button id="btn-stop" class="btn-main" onclick="stopCapture()">Finalizar</button>
+    <div id="controls">
+        <button id="btn-pdf-start" class="btn" onclick="startReporting()">Iniciar Relatório</button>
+        <button id="btn-pdf-stop" class="btn" onclick="stopReporting()">Finalizar e Salvar</button>
     </div>
 </div>
 
-<canvas id="c"></canvas>
+<canvas id="c" style="display:none;"></canvas>
 
 <script>
-let kmDB=[], capturing=false, hDir=null, brGlobal="---", currentStream=null;
-let curLat="0.000000", curLon="0.000000", buffer=[], kmInicialLote="";
+let kmDB = [], saveFolder = null, isReporting = false, frames = [];
+let state = { br: "BR", km: "---", lat: 0, lon: 0, acc: 0 };
 
-const vid = document.getElementById('vid');
-const can = document.getElementById('c');
-const ctx = can.getContext('2d');
-
-async function startApp() {
+// 1. CARREGAR AMBIENTE (GITHUB PAGES)
+async function startEngine() {
     try {
-        if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').style.display = 'none';
-        document.getElementById('app-shell').style.visibility = 'visible';
-        listCams(); initGPS(); loadCSV();
-    } catch(e) { alert("Necessário aceitar as permissões."); }
-}
-
-async function listCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const vids = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
-    if(vids.length) switchCam(vids[vids.length-1].deviceId);
-}
-
-async function switchCam(id) {
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { deviceId: id, width: { ideal: 1920 }, height: { ideal: 1080 } } 
-    });
-    vid.srcObject = currentStream;
-    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-}
-
-function drawWatermark(br, km) {
-    const s = can.height / 1080;
-    
-    // --- PLACA KM PREMIUM ---
-    const pw = 210 * s, ph = 105 * s;
-    const px = 50 * s, py = 50 * s;
-    ctx.save();
-    ctx.fillStyle = "rgba(0, 60, 25, 0.75)";
-    ctx.beginPath(); ctx.roundRect(px, py, pw, ph, 15 * s); ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.4)"; ctx.lineWidth = 3 * s; ctx.stroke();
-    
-    ctx.textAlign = "center"; ctx.fillStyle = "#fff";
-    ctx.font = `bold ${26 * s}px Arial`;
-    ctx.fillText("BR " + br, px + pw/2, py + 38 * s);
-    
-    let fontSizeKm = 58 * s;
-    if (km.length > 4) fontSizeKm = 44 * s;
-    ctx.font = `900 ${fontSizeKm}px Arial`;
-    ctx.fillText("Km " + km, px + pw/2, py + ph - 22 * s);
-
-    // --- RODAPÉ CENTRALIZADO (MELHORADO) ---
-    const bh = 120 * s;
-    const grad = ctx.createLinearGradient(0, can.height - bh, 0, can.height);
-    grad.addColorStop(0, "rgba(0,0,0,0)");
-    grad.addColorStop(1, "rgba(0,0,0,0.85)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, can.height - bh, can.width, bh);
-
-    ctx.textAlign = "center"; ctx.fillStyle = "#fff";
-    ctx.shadowColor = "black"; ctx.shadowBlur = 10 * s;
-    
-    // Data e Hora (Linha 1)
-    ctx.font = `bold ${34 * s}px Arial`;
-    ctx.fillText(new Date().toLocaleString('pt-BR'), can.width / 2, can.height - 65 * s);
-
-    // GPS Técnico (Linha 2)
-    ctx.font = `bold ${26 * s}px monospace`;
-    ctx.fillText(`COORDENADAS: ${curLat} , ${curLon}`, can.width / 2, can.height - 25 * s);
-    ctx.restore();
-}
-
-async function takeManualPhoto() {
-    if(!hDir) return;
-    const km = document.getElementById('km-txt').innerText.replace("Km ", "");
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    drawWatermark(brGlobal, km);
-    const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.98));
-    const fh = await hDir.getFileHandle(`FOTO_BR${brGlobal}_KM${km}_${Date.now()}.jpg`, { create: true });
-    const sw = await fh.createWritable();
-    await sw.write(blob); await sw.close();
-}
-
-function startCapture() {
-    capturing = true; buffer = [];
-    kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-tag').style.opacity = '1';
-    captureLoop();
-}
-
-function stopCapture() {
-    capturing = false;
-    if(buffer.length > 0) savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
-    document.getElementById('btn-start').style.display = 'block';
-    document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-tag').style.opacity = '0';
-}
-
-async function captureLoop() {
-    if (!capturing) return;
-    const km = document.getElementById('km-txt').innerText.replace("Km ", "");
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    drawWatermark(brGlobal, km);
-    buffer.push(can.toDataURL('image/jpeg', 0.85));
-    
-    const limite = parseInt(document.getElementById('cfg-lote').value) || 50;
-    if (buffer.length >= limite) {
-        savePDF([...buffer], kmInicialLote, km);
-        buffer = []; kmInicialLote = km;
+        saveFolder = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('status-msg').innerText = "Carregando base de dados...";
+        
+        await loadCSV();
+        await setupMedia();
+        initGPS();
+        
+        document.getElementById('splash').style.display = 'none';
+        document.getElementById('app-ui').style.display = 'block';
+    } catch(e) {
+        document.getElementById('status-msg').innerText = "Erro: Acesso à pasta é obrigatório.";
+        document.getElementById('status-msg').style.color = "var(--danger)";
     }
-    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 400);
-}
-
-async function savePDF(imgs, k1, k2) {
-    const doc = new jspdf.jsPDF('l', 'mm', 'a4');
-    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
-    for (let i = 0; i < imgs.length; i++) {
-        if (i > 0) doc.addPage();
-        doc.addImage(imgs[i], 'JPEG', 0, 0, pw, ph);
-    }
-    const fh = await hDir.getFileHandle(`RELATORIO_BR${brGlobal}_KM${k1}_${k2}.pdf`, { create: true });
-    const sw = await fh.createWritable();
-    await sw.write(doc.output('blob')); await sw.close();
-}
-
-function initGPS() {
-    navigator.geolocation.watchPosition(p => {
-        curLat = p.coords.latitude.toFixed(6); curLon = p.coords.longitude.toFixed(6);
-        if (!kmDB.length) return;
-        let best = kmDB[0], minD = Infinity;
-        for (const pt of kmDB) {
-            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if (d < minD) { minD = d; best = pt; }
-        }
-        brGlobal = best.br;
-        document.getElementById('br-txt').innerText = "BR " + brGlobal;
-        document.getElementById('km-txt').innerText = "Km " + best.km;
-    }, null, { enableHighAccuracy: true });
 }
 
 async function loadCSV() {
     try {
-        const r = await fetch('SNVBR116SPRJ.csv');
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const iB = h.indexOf('br'), iK=h.indexOf('km'), iLt=h.findIndex(x=>x.includes('lat')), iLn=h.findIndex(x=>x.includes('lon'));
-        kmDB = rows.map(r => {
-            const c = r.split(';');
-            return { br: c[iB], km: c[iK], lt: parseFloat(c[iLt].replace(',','.')), ln: parseFloat(c[iLn].replace(',','.')) };
+        const res = await fetch('SNVBR116SPRJ.csv');
+        const txt = await res.text();
+        const lines = txt.split('\n').filter(l => l.length > 5);
+        const head = lines.shift().toLowerCase();
+        const sep = head.includes(';') ? ';' : ',';
+
+        kmDB = lines.map(line => {
+            const c = line.split(sep);
+            return {
+                br: c[0].trim(),
+                km: c[1].trim(),
+                lt: parseFloat(c[2].replace(',', '.')),
+                ln: parseFloat(c[3].replace(',', '.'))
+            };
         }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
+    } catch(e) { console.error("CSV não encontrado no GitHub."); }
 }
 
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+function initGPS() {
+    navigator.geolocation.watchPosition(p => {
+        state.lat = p.coords.latitude;
+        state.lon = p.coords.longitude;
+        state.acc = p.coords.accuracy.toFixed(0);
+        
+        document.getElementById('lat-view').innerText = state.lat.toFixed(4);
+        document.getElementById('lon-view').innerText = state.lon.toFixed(4);
+        document.getElementById('acc-view').innerText = state.acc;
+
+        if(kmDB.length > 0) {
+            let min = Infinity, match = null;
+            kmDB.forEach(pt => {
+                const dist = Math.hypot(pt.lt - state.lat, pt.ln - state.lon);
+                if(dist < min) { min = dist; match = pt; }
+            });
+            if(match) {
+                state.br = "BR-" + match.br;
+                state.km = match.km;
+                document.getElementById('br-txt').innerText = state.br;
+                document.getElementById('km-txt').innerText = "Km " + state.km;
+            }
+        }
+    }, null, { enableHighAccuracy: true });
+}
+
+async function setupMedia() {
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
+    });
+    document.getElementById('vid').srcObject = stream;
+}
+
+function drawBrandedLegend(ctx, w, h) {
+    const hL = h * 0.16;
+    // Faixa Verde Placa
+    const g = ctx.createLinearGradient(0, h-hL, 0, h);
+    g.addColorStop(0, "#007934"); g.addColorStop(1, "#004d22");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, h-hL, w, hL);
+    
+    // Borda Superior
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, h-hL, w, 6);
+
+    ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 10;
+    
+    // BR e KM
+    ctx.fillStyle = "#fff";
+    ctx.font = `bold ${hL * 0.22}px sans-serif`;
+    ctx.fillText(state.br, 40, h - (hL * 0.62));
+    ctx.font = `900 ${hL * 0.48}px sans-serif`;
+    ctx.fillText("Km " + state.km, 40, h - (hL * 0.18));
+
+    // Infos Direita
+    ctx.textAlign = "right";
+    ctx.font = `bold ${hL * 0.14}px monospace`;
+    ctx.fillText(new Date().toLocaleString('pt-BR'), w - 40, h - (hL * 0.45));
+    ctx.fillText(`GPS: ${state.lat.toFixed(6)}, ${state.lon.toFixed(6)} (±${state.acc}m)`, w - 40, h - (hL * 0.22));
+    ctx.textAlign = "left";
+    ctx.shadowBlur = 0;
+}
+
+async function manualCapture() {
+    const f = document.getElementById('flash');
+    f.style.opacity = 1; setTimeout(() => f.style.opacity = 0, 50);
+
+    const v = document.getElementById('vid');
+    const can = document.getElementById('c');
+    can.width = v.videoWidth; can.height = v.videoHeight;
+    const ctx = can.getContext('2d');
+    ctx.drawImage(v, 0, 0);
+    drawBrandedLegend(ctx, can.width, can.height);
+    
+    const blob = await new Promise(r => can.toBlob(r, 'image/jpeg', 0.95));
+    const name = `IMG_${state.br}_KM${state.km.replace(',','-')}_${Date.now()}.jpg`;
+    const handle = await saveFolder.getFileHandle(name, {create:true});
+    const write = await handle.createWritable();
+    await write.write(blob); await write.close();
+}
+
+function startReporting() {
+    isReporting = true; frames = [];
+    document.getElementById('btn-pdf-start').style.display = 'none';
+    document.getElementById('btn-pdf-stop').style.display = 'block';
+    reportLoop();
+}
+
+async function reportLoop() {
+    if(!isReporting) return;
+    const v = document.getElementById('vid');
+    const can = document.getElementById('c');
+    can.width = v.videoWidth; can.height = v.videoHeight;
+    const ctx = can.getContext('2d');
+    ctx.drawImage(v, 0, 0);
+    drawBrandedLegend(ctx, can.width, can.height);
+    frames.push(can.toDataURL('image/jpeg', 0.75));
+    setTimeout(reportLoop, 2500); // Intervalo de captura do PDF
+}
+
+async function stopReporting() {
+    isReporting = false;
+    if(frames.length === 0) return;
+    const pdf = new jspdf.jsPDF('l', 'mm', 'a4');
+    frames.forEach((img, i) => {
+        if(i > 0) pdf.addPage();
+        pdf.addImage(img, 'JPEG', 0, 0, 297, 210);
+    });
+    const handle = await saveFolder.getFileHandle(`REPORT_${state.br}_${Date.now()}.pdf`, {create:true});
+    const write = await handle.createWritable();
+    await write.write(pdf.output('blob')); await write.close();
+    location.reload();
+}
 </script>
 </body>
 </html>
