@@ -3,22 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Sistema de Apoio - Blindado</title>
+    <title>Sistema de Apoio - Ajuste PDF</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa: rgba(0, 121, 52, 0.7); --danger: #ff4444; --glass: rgba(10, 10, 10, 0.95); }
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
         body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        /* Gate Inicial */
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
         .btn-aware { background: var(--accent); color: #000; border: none; padding: 25px 60px; font-weight: 900; border-radius: 12px; cursor: pointer; font-size: 1.2rem; text-transform: uppercase; }
 
-        /* Layout Base */
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Placa HUD */
         #km-hud { 
             position: absolute; top: 20px; left: 20px; 
             background: var(--placa); padding: 12px 25px; 
@@ -28,7 +25,6 @@
         #br-txt { font-size: 0.9rem; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.4); display: block; margin-bottom: 4px; }
         #km-txt { font-size: 2.4rem; font-weight: 900; line-height: 1; }
 
-        /* Indicador PDF */
         #rec-tag { 
             position: absolute; top: 25px; right: 15px; 
             display: flex; align-items: center; gap: 6px; 
@@ -38,7 +34,6 @@
         .dot { width: 8px; height: 8px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* Controles */
         #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; transition: 0.3s; }
         .ui-hidden { opacity: 0; visibility: hidden; }
         .btn-main { border: none; padding: 20px 45px; border-radius: 15px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 160px; font-size: 1rem; }
@@ -46,22 +41,18 @@
         #btn-stop { background: var(--danger); color: #fff; display: none; }
         #gear-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
 
-        /* Opções Lateral */
         #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(15px); z-index: 4000; padding: 60px 25px; transition: 0.4s; border-left: 1px solid #333; }
         #settings-panel.open { right: 0; }
         #settings-panel label { display: block; margin-top: 20px; font-size: 0.8rem; color: var(--accent); font-weight: bold; text-transform: uppercase; }
         #settings-panel select, #settings-panel input { width: 100%; padding: 15px; background: #222; border: 1px solid #444; color: #fff; border-radius: 8px; margin-top: 5px; }
 
-        /* ELEMENTO CRÍTICO: PIXEL LOCK */
         #pixel-lock { position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -1; }
-        
         #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; }
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-<!-- O SEGREDO PARA A TELA NÃO APAGAR -->
 <video id="pixel-lock" playsinline loop muted>
     <source src="https://raw.githubusercontent.com/anars/blank-video/master/250ms.mp4" type="video/mp4">
 </video>
@@ -74,27 +65,15 @@
 
 <div id="settings-panel">
     <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; margin-bottom:30px; font-weight: 900;">← VOLTAR</div>
-    
-    <label>Câmera</label>
-    <select id="cam-select" onchange="switchCam(this.value)"></select>
-
-    <label>Tempo (ms)</label>
-    <input type="number" id="cfg-int" value="200">
-
-    <label>Fotos por PDF</label>
-    <input type="number" id="cfg-lote" value="50">
+    <label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select>
+    <label>Tempo (ms)</label><input type="number" id="cfg-int" value="200">
+    <label>Fotos por PDF</label><input type="number" id="cfg-lote" value="50">
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted onclick="handleTouch()"></video>
-    
-    <div id="km-hud">
-        <span id="br-txt">BR ---</span>
-        <h1 id="km-txt">Km ---</h1>
-    </div>
-
+    <div id="km-hud"><span id="br-txt">BR ---</span><h1 id="km-txt">Km ---</h1></div>
     <div id="rec-tag"><div class="dot"></div><span>Gerando PDF</span></div>
-
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙️</div>
         <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR</button>
@@ -114,30 +93,14 @@ const pixelLock = document.getElementById('pixel-lock');
 async function startApp() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        
-        // Ativa FullScreen
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-        
-        // ESTRATÉGIA ANTI-APAGAMENTO: 
-        // 1. Play no vídeo invisível
         pixelLock.play().catch(() => {});
-        // 2. Solicita WakeLock oficial
         if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen').catch(() => {});
-
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
-        
         listCams(); loadCSV(); initGPS();
     } catch(e) { alert("Permissão de pasta necessária."); }
 }
-
-// Garante que o bloqueio de tela continue se você sair e voltar para a aba
-document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'visible' && hDir) {
-        pixelLock.play();
-        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen').catch(() => {});
-    }
-});
 
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -159,18 +122,39 @@ function handleTouch() {
     document.getElementById('ui-controls').classList.remove('ui-hidden');
 }
 
+// Função centralizada para desenhar a legenda sem cortar
+function drawSafeWatermark(km, br, lat, lon, ts) {
+    const barHeight = can.height * 0.12; // Altura da barra preta
+    const padding = 40; // Recuo lateral e inferior de segurança
+    
+    // Desenha barra de fundo
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillRect(0, can.height - barHeight, can.width, barHeight);
+    
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "left";
+    
+    // Título (BR e KM)
+    const titleSize = barHeight * 0.35;
+    ctx.font = `bold ${titleSize}px Arial`;
+    ctx.fillText(`BR ${br}  Km ${km}`, padding, can.height - (barHeight * 0.55));
+    
+    // Subtítulo (Data e GPS)
+    const subSize = barHeight * 0.18;
+    ctx.font = `${subSize}px Arial`;
+    ctx.fillText(`${ts} | GPS: ${lat}, ${lon}`, padding, can.height - (barHeight * 0.25));
+}
+
 async function takeManualPhoto() {
     document.getElementById('flash').style.opacity = "0.2"; 
     setTimeout(() => { document.getElementById('flash').style.opacity = "0"; }, 70);
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
     
-    const bh = can.height * 0.12;
-    ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, can.height - bh, can.width, bh);
-    ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.4}px Arial`;
-    ctx.fillText(`BR ${brAtual}  Km ${document.getElementById('km-txt').innerText.replace("Km ", "")}`, 30, can.height - (bh * 0.45));
+    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
+    drawSafeWatermark(currentKm, brAtual, curLat, curLon, new Date().toLocaleString('pt-BR'));
     
     const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
-    const fileName = `FOTO_BR${brAtual}_Km${document.getElementById('km-txt').innerText.replace("Km ", "")}_${Date.now()}.jpg`;
+    const fileName = `FOTO_BR${brAtual}_Km${currentKm}_${Date.now()}.jpg`;
     const fileHandle = await hDir.getFileHandle(fileName, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(blob); await writable.close();
@@ -198,8 +182,14 @@ function stopCapture() {
 function captureLoop() {
     if (!capturing) return;
     const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
+    // Salva apenas os dados brutos no buffer (sem legenda ainda para economizar RAM)
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    buffer.push({ img: can.toDataURL('image/jpeg', 0.5), km: currentKm, ts: new Date().toLocaleString('pt-BR') });
+    buffer.push({ 
+        imgData: can.toDataURL('image/jpeg', 0.5), 
+        km: currentKm, 
+        ts: new Date().toLocaleString('pt-BR'),
+        lat: curLat, lon: curLon
+    });
 
     if (buffer.length >= parseInt(document.getElementById('cfg-lote').value)) {
         savePDF([...buffer], kmInicialLote, currentKm);
@@ -211,22 +201,22 @@ function captureLoop() {
 async function savePDF(dataList, kmIni, kmFim) {
     const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
     const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
+    
     for (let i = 0; i < dataList.length; i++) {
         if (i > 0) doc.addPage();
-        const img = new Image(); img.src = dataList[i].img;
-        await new Promise(res => { img.onload = () => {
-            ctx.drawImage(img, 0, 0);
-            const bh = can.height * 0.12;
-            ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, can.height - bh, can.width, bh);
-            ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.35}px Arial`;
-            ctx.fillText(`BR ${brAtual}  Km ${dataList[i].km}`, 25, can.height - (bh * 0.5));
-            ctx.font = `${bh * 0.2}px Arial`;
-            ctx.fillText(`${dataList[i].ts} | GPS: ${curLat}, ${curLon}`, 25, can.height - (bh * 0.2));
-            doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
-            res();
-        };});
+        await new Promise(res => {
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, can.width, can.height);
+                // Desenha a legenda na hora de gerar o PDF para garantir que não corte
+                drawSafeWatermark(dataList[i].km, brAtual, dataList[i].lat, dataList[i].lon, dataList[i].ts);
+                doc.addImage(can.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, pw, ph);
+                res();
+            };
+            img.src = dataList[i].imgData;
+        });
     }
-    const fileName = `Relatorio_BR${brAtual}_Km${kmIni}_ao_${kmFim}.pdf`;
+    const fileName = `REL_BR${brAtual}_Km${kmIni}_ao_${kmFim}_${Date.now()}.pdf`;
     const fileHandle = await hDir.getFileHandle(fileName, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(doc.output('blob')); await writable.close();
