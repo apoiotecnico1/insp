@@ -6,7 +6,7 @@
     <title>Sistema de Apoio - Captura Pro BR</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); }
+        :root { --accent: #ffcc00; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); --highway-green: #007934; }
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
         body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
@@ -17,21 +17,20 @@
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
 
-        /* PLACA CENTRALIZADA E MENOR */
+        /* PLACA ESTILO RODOVIA PADRÃO */
         #km-hud { 
             position: absolute; 
             top: 20px; 
             left: 20px; 
-            background: rgba(0, 121, 52, 0.6); 
-            padding: 8px 20px; 
-            border: 2px solid rgba(255, 255, 255, 0.7); 
-            border-radius: 10px; 
+            background-color: var(--highway-green);
+            padding: 10px 20px; 
+            /* Borda branca espessa e contorno interno para efeito de relevo */
+            border: 3px solid #fff; 
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2), 0 6px 15px rgba(0,0,0,0.6);
+            border-radius: 12px; 
             z-index: 100; 
             pointer-events: none; 
-            min-width: 110px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+            min-width: 120px;
             display: flex;
             flex-direction: column;
             align-items: center; 
@@ -40,27 +39,43 @@
         }
 
         #br-txt { 
-            font-size: 0.75rem; 
+            font-size: 0.8rem; 
             font-weight: 800; 
-            color: #eee;
+            color: #fff;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 0px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            letter-spacing: 1.5px;
+            margin-bottom: 2px;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
         }
 
         #km-txt { 
-            font-size: 1.8rem; 
+            font-size: 2rem; 
             font-weight: 900; 
-            line-height: 1.1;
+            line-height: 1;
             color: #fff;
-            text-shadow: 2px 2px 0px #004d21, 3px 3px 4px rgba(0,0,0,0.7);
+            text-shadow: 2px 2px 2px rgba(0,0,0,0.8);
         }
 
-        .hud-pulse { transform: scale(1.05); border-color: var(--accent) !important; background: rgba(0, 121, 52, 0.8) !important; }
+        .hud-pulse { transform: scale(1.05); border-color: var(--accent) !important; background-color: #008f3d !important; }
 
-        #rec-tag { position: absolute; top: 40px; right: 15px; display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.5); padding: 5px 12px; border-radius: 15px; opacity: 0; pointer-events: none; z-index: 100; }
-        .dot { width: 8px; height: 8px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
+        /* STATUS GERANDO PDF - MENOR E NA PARTE INFERIOR */
+        #rec-tag { 
+            position: absolute; 
+            bottom: 110px; /* Acima dos controles principais */
+            right: 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            background: rgba(0,0,0,0.7); 
+            padding: 6px 12px; 
+            border-radius: 20px; 
+            opacity: 0; 
+            pointer-events: none; 
+            z-index: 90; 
+            font-size: 0.8rem;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .dot { width: 8px; height: 8px; background: var(--danger); border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
         #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; transition: opacity 0.3s; }
@@ -108,7 +123,7 @@
         <h1 id="km-txt">---</h1>
     </div>
 
-    <div id="rec-tag"><div class="dot"></div><span>Gravando Lote...</span></div>
+    <div id="rec-tag"><div class="dot"></div><span>Gerando PDF...</span></div>
 
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
@@ -120,6 +135,7 @@
 <canvas id="c"></canvas>
 
 <script>
+// Mantendo a lógica funcional original inalterada
 let kmDB=[], capturing=false, hDir=null, currentStream=null;
 let kmInicialLote = "", brAtual = "", buffer = [];
 let curLat = "0.0000", curLon = "0.0000";
