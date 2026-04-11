@@ -3,220 +3,275 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Portal Técnico Operacional</title>
+    <title>Sistema de Apoio</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --danger: #ff4444; --glass: rgba(15, 15, 15, 0.95); --success: #25D366; }
+        :root { --accent: #ffcc00; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); }
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; overflow: hidden; }
+        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        /* PAINEL PRINCIPAL */
-        #portal { 
-            position: fixed; inset: 0; z-index: 9000; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); 
-            display: flex; flex-direction: column; align-items: center; padding: 20px; overflow-y: auto;
+        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; background: #0a0a0a; max-width: 90%; }
+        .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 8px; cursor: pointer; margin-top: 20px; }
+
+        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
+        #vid { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
+
+        /* PLACA HUD - SEMPRE VISÍVEL */
+        #km-hud { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            background: rgba(0, 121, 52, 0.5); 
+            padding: 10px 20px; 
+            border: 2px solid rgba(255, 255, 255, 0.6); 
+            border-radius: 12px; 
+            z-index: 1000; 
+            pointer-events: none; 
+            min-width: 130px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center; 
         }
 
-        .header-box { text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; width: 90%; }
-        
-        #hud-global { 
-            background: rgba(0, 77, 33, 0.9); padding: 12px; border-radius: 12px; border: 2px solid #fff;
-            margin-bottom: 20px; text-align: center; min-width: 200px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        #br-txt { font-size: 1rem; font-weight: 800; color: #eee; text-shadow: 1px 1px 2px #000; }
+        #km-txt { font-size: 2.2rem; font-weight: 900; color: #fff; text-shadow: 2px 2px 0px #004d21; line-height: 1; }
+
+        /* INDICADOR GERANDO PDF - PEQUENO */
+        #rec-tag { 
+            position: absolute; 
+            top: 25px; 
+            right: 15px; 
+            display: flex; 
+            align-items: center; 
+            gap: 5px; 
+            background: rgba(0,0,0,0.6); 
+            padding: 4px 10px; 
+            border-radius: 20px; 
+            opacity: 0; 
+            transition: opacity 0.3s;
+            z-index: 1000;
         }
-        #km-display { font-size: 1.8rem; font-weight: 900; display: block; color: #fff; }
+        #rec-tag span { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
+        .dot { width: 6px; height: 6px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
 
-        .grid-tech { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 450px; }
+        /* CONTROLES */
+        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 2000; transition: opacity 0.3s; }
+        .ui-hidden { opacity: 0 !important; visibility: hidden !important; }
+        .btn-main { border: none; padding: 18px 35px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 150px; }
+        #btn-start { background: var(--accent); color: #000; }
+        #btn-stop { background: var(--danger); color: #fff; display: none; }
+        #gear-btn { width: 55px; height: 55px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; }
 
-        .btn-card { 
-            background: #1a1a1a; border: 1px solid #333; border-radius: 15px; padding: 25px 10px;
-            display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer;
-        }
-        .btn-card:active { background: #333; transform: scale(0.98); }
-        .btn-card span { font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: #fff; text-align: center; }
-        .icon { font-size: 2rem; }
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 4000; padding: 50px 20px; transition: 0.4s; }
+        #settings-panel.open { right: 0; }
+        #settings-panel input, #settings-panel select { width: 100%; padding: 10px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px; margin: 5px 0 15px 0; }
 
-        .full-width { grid-column: span 2; background: linear-gradient(145deg, #333, #111); border-left: 6px solid var(--accent); }
-
-        /* MODAIS */
-        .overlay { position: fixed; inset: 0; background: #000; z-index: 10000; display: none; flex-direction: column; }
-        #note-pad { width: 100%; height: 80%; padding: 20px; background: #111; color: #fff; border: none; font-size: 1.2rem; outline: none; }
-        
-        .tool-bar { padding: 20px; display: flex; justify-content: space-around; background: #1a1a1a; border-top: 1px solid #333; }
-        .btn-action { padding: 15px 30px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
-
-        /* SISTEMA DE VÍDEO/PDF (ESCONDIDO) */
-        #app-shell { position: fixed; inset: 0; background: #000; z-index: 9500; display: none; }
-        #vid { width: 100%; height: 100%; object-fit: cover; }
-        #controls-pdf { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 10px; }
+        canvas { display: none; }
+        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1500; }
     </style>
 </head>
 <body>
 
-<div id="portal">
-    <div class="header-box">
-        <h2 style="color:var(--accent)">SISTEMA MOTIVA</h2>
-        <small id="gps-info" style="color:#888">Iniciando sensores...</small>
-    </div>
+<div id="flash"></div>
 
-    <div id="hud-global">
-        <span id="br-label" style="font-size: 0.8rem; font-weight: bold;">BR 116</span>
-        <span id="km-display">Km ---</span>
-    </div>
-
-    <div class="grid-tech">
-        <div class="btn-card full-width" onclick="ativarModulo('pdf')">
-            <div class="icon">📑</div>
-            <span>Relatório em Lote (PDF)</span>
-        </div>
-
-        <div class="btn-card" onclick="ativarModulo('anotacao')">
-            <div class="icon">📝</div>
-            <span>Anotar Serviço</span>
-        </div>
-
-        <div class="btn-card" onclick="ativarModulo('audio')">
-            <div class="icon">🎤</div>
-            <span>Gravar Áudio</span>
-        </div>
-
-        <div class="btn-card" onclick="ativarModulo('foto')">
-            <div class="icon">📸</div>
-            <span>Foto Avulsa</span>
-        </div>
-
-        <div class="btn-card" onclick="location.reload()">
-            <div class="icon">🔄</div>
-            <span>Reiniciar</span>
-        </div>
+<div id="safety-gate">
+    <div class="alert-box">
+        <h2 style="color:var(--accent); margin-bottom:10px;">SISTEMA DE APOIO</h2>
+        <p style="margin-bottom:10px; font-size: 0.9rem; line-height: 1.4;">Captura automatica para PDF e foto instantanea salva ao tocar na tela</p>
+        <button class="btn-aware" onclick="startApp()">ATIVAR SISTEMA</button>
     </div>
 </div>
 
-<div id="modal-note" class="overlay">
-    <textarea id="note-pad" placeholder="Digite aqui os detalhes do serviço ou ocorrência..."></textarea>
-    <div class="tool-bar">
-        <button class="btn-action" style="background:var(--accent)" onclick="salvarNota()">SALVAR E ENVIAR</button>
-        <button class="btn-action" style="background:#444; color:#fff;" onclick="fecharModais()">FECHAR</button>
-    </div>
-</div>
-
-<div id="modal-audio" class="overlay" style="justify-content:center; align-items:center;">
-    <div id="audio-timer" style="font-size:2rem; margin-bottom:20px;">00:00</div>
-    <button id="rec-btn" onclick="toggleAudio()" style="width:120px; height:120px; border-radius:60px; background:var(--danger); border:8px solid #333; font-size:3rem;">🎤</button>
-    <p id="audio-status" style="margin-top:20px; font-weight:bold;">Toque para gravar relato</p>
-    <button class="btn-action" style="margin-top:50px; background:#222; color:#fff" onclick="fecharModais()">VOLTAR AO PORTAL</button>
+<div id="settings-panel">
+    <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; margin-bottom:20px; font-weight: bold;">← FECHAR</div>
+    <label>Câmera</label>
+    <select id="cam-select" onchange="switchCam(this.value)"></select>
+    <label>Intervalo (ms)</label>
+    <input type="number" id="cfg-int" value="200">
+    <label>Fotos/Lote (PDF)</label>
+    <input type="number" id="cfg-lote" value="50">
 </div>
 
 <div id="app-shell">
-    <video id="vid" autoplay playsinline muted></video>
-    <div id="controls-pdf">
-        <button id="btn-snap" class="btn-action" style="background:var(--accent)" onclick="capturarFotoPDF()">TIRAR FOTO</button>
-        <button class="btn-action" style="background:var(--danger); color:#fff" onclick="fecharSistema()">SAIR</button>
+    <video id="vid" autoplay playsinline muted onclick="handleTouch()"></video>
+    
+    <div id="km-hud">
+        <span id="br-txt">BR ---</span>
+        <h1 id="km-txt">Km ---</h1>
+    </div>
+
+    <div id="rec-tag"><div class="dot"></div><span>Gerando PDF</span></div>
+
+    <div id="ui-controls">
+        <div id="gear-btn" onclick="toggleSet()">⚙</div>
+        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR</button>
+        <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR</button>
     </div>
 </div>
 
-<canvas id="c" style="display:none"></canvas>
+<canvas id="c"></canvas>
 
 <script>
-let stream, mediaRecorder, chunks = [];
-let kmDB = [], brAtual = "116", kmAtual = "---";
+let kmDB=[], capturing=false, hDir=null, currentStream=null;
+let kmInicialLote = "", brAtual = "", buffer = [];
+let curLat = "0.0000", curLon = "0.0000";
+let wakeLock = null;
 
-// 1. INICIALIZAÇÃO SEGURA
-async function startMedia(comAudio = false) {
+const vid = document.getElementById('vid');
+const can = document.getElementById('c');
+const ctx = can.getContext('2d');
+const flashDiv = document.getElementById('flash');
+
+async function startApp() {
     try {
-        if (stream) stream.getTracks().forEach(t => t.stop());
-        stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment", width: 1280, height: 720 },
-            audio: comAudio
-        });
-        document.getElementById('vid').srcObject = stream;
-        return true;
-    } catch (e) {
-        alert("Erro: Permita o acesso à câmera/microfone nas configurações do navegador.");
-        return false;
+        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('safety-gate').remove();
+        document.getElementById('app-shell').style.visibility = 'visible';
+        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+        listCams(); loadCSV(); initGPS();
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    } catch(e) { alert("Permissão de pasta necessária."); }
+}
+
+async function listCams() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const vids = devices.filter(d => d.kind === 'videoinput');
+    const sel = document.getElementById('cam-select');
+    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
+    if(vids.length) switchCam(vids[vids.length-1].deviceId);
+}
+
+async function switchCam(id) {
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
+    vid.srcObject = currentStream;
+    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
+}
+
+function handleTouch() {
+    takeManualPhoto();
+    if(!capturing) document.getElementById('ui-controls').classList.toggle('ui-hidden');
+}
+
+async function drawWatermark(km, br) {
+    const bh = can.height * 0.12;
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(0, can.height - bh, can.width, bh);
+    ctx.fillStyle = "#fff";
+    ctx.shadowColor = "black";
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 3;
+    ctx.shadowOffsetY = 3;
+    ctx.font = `bold ${bh * 0.4}px Arial`;
+    ctx.fillText(`BR ${br}  Km ${km}`, 30, can.height - (bh * 0.5));
+    ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+    ctx.font = `${bh * 0.18}px Arial`;
+    ctx.fillText(`${new Date().toLocaleString('pt-BR')} | GPS: ${curLat}, ${curLon}`, 30, can.height - (bh * 0.2));
+}
+
+async function takeManualPhoto() {
+    if(!hDir) return;
+    flashDiv.style.opacity = "0.3"; 
+    setTimeout(() => { flashDiv.style.opacity = "0"; }, 100);
+    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    await drawWatermark(document.getElementById('km-txt').innerText.replace("Km ", ""), brAtual);
+    const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
+    const fileName = `BR_${brAtual}_Km_${document.getElementById('km-txt').innerText.replace("Km ", "")}_${Date.now()}.jpg`;
+    const fileHandle = await hDir.getFileHandle(fileName, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob); await writable.close();
+}
+
+function startCapture() {
+    capturing = true; 
+    buffer = [];
+    kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
+    document.getElementById('gear-btn').classList.add('ui-hidden');
+    document.getElementById('btn-start').style.display = 'none';
+    document.getElementById('btn-stop').style.display = 'block';
+    document.getElementById('rec-tag').style.opacity = '1';
+    captureLoop();
+}
+
+function stopCapture() {
+    capturing = false;
+    document.getElementById('gear-btn').classList.remove('ui-hidden');
+    if(buffer.length > 0) savePDF([...buffer], kmInicialLote, document.getElementById('km-txt').innerText.replace("Km ", ""));
+    document.getElementById('btn-start').style.display = 'block';
+    document.getElementById('btn-stop').style.display = 'none';
+    document.getElementById('rec-tag').style.opacity = '0';
+}
+
+function captureLoop() {
+    if (!capturing) return;
+    const currentKm = document.getElementById('km-txt').innerText.replace("Km ", "");
+    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    buffer.push({ img: can.toDataURL('image/jpeg', 0.5), km: currentKm, br: brAtual, gps: `${curLat}, ${curLon}`, ts: new Date().toLocaleString('pt-BR') });
+    if (buffer.length >= parseInt(document.getElementById('cfg-lote').value)) {
+        savePDF([...buffer], kmInicialLote, currentKm);
+        buffer = []; kmInicialLote = currentKm;
     }
+    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value));
 }
 
-// 2. CONTROLE DOS MÓDULOS
-async function ativarModulo(tipo) {
-    if (tipo === 'pdf' || tipo === 'foto') {
-        const ok = await startMedia(false);
-        if (ok) {
-            document.getElementById('app-shell').style.display = 'block';
-            if (tipo === 'foto') document.getElementById('btn-snap').innerText = "CAPTURAR FOTO";
-        }
-    } else if (tipo === 'anotacao') {
-        document.getElementById('modal-note').style.display = 'flex';
-    } else if (tipo === 'audio') {
-        document.getElementById('modal-audio').style.display = 'flex';
+async function savePDF(dataList, kmIni, kmFim) {
+    const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
+    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
+    for (let i = 0; i < dataList.length; i++) {
+        if (i > 0) doc.addPage();
+        const img = new Image();
+        img.src = dataList[i].img;
+        await new Promise(res => { img.onload = async () => {
+            ctx.drawImage(img, 0, 0, can.width, can.height);
+            await drawWatermark(dataList[i].km, dataList[i].br);
+            doc.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph);
+            res();
+        };});
     }
+    const fileName = `Relatorio_BR${brAtual}_Km${kmIni}_ao_${kmFim}.pdf`;
+    const fileHandle = await hDir.getFileHandle(fileName, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(doc.output('blob'));
+    await writable.close();
 }
 
-function fecharModais() {
-    document.querySelectorAll('.overlay').forEach(el => el.style.display = 'none');
-}
-
-function fecharSistema() {
-    document.getElementById('app-shell').style.display = 'none';
-    if (stream) stream.getTracks().forEach(t => t.stop());
-}
-
-// 3. LÓGICA DE ÁUDIO
-async function toggleAudio() {
-    const btn = document.getElementById('rec-btn');
-    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-        await startMedia(true);
-        mediaRecorder = new MediaRecorder(stream);
-        chunks = [];
-        mediaRecorder.ondataavailable = e => chunks.push(e.data);
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'audio/webm' });
-            const file = new File([blob], `Relato_KM${kmAtual}.webm`, { type: 'audio/webm' });
-            navigator.share({ files: [file], title: 'Relato de Áudio' });
-        };
-        mediaRecorder.start();
-        btn.style.background = "#fff";
-        document.getElementById('audio-status').innerText = "GRAVANDO... Toque para parar";
-    } else {
-        mediaRecorder.stop();
-        btn.style.background = "var(--danger)";
-        document.getElementById('audio-status').innerText = "Salvando...";
-        setTimeout(fecharModais, 1000);
-    }
-}
-
-// 4. LÓGICA DE GPS (IDÊNTICA À SUA)
 function initGPS() {
     navigator.geolocation.watchPosition(p => {
-        const lat = p.coords.latitude;
-        const lon = p.coords.longitude;
-        document.getElementById('gps-info').innerText = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-        
-        // Se o CSV estiver carregado, busca o KM mais próximo aqui
-        if (kmDB.length > 0) {
-            let minD = Infinity;
-            kmDB.forEach(pt => {
-                let d = Math.hypot(pt.lt - lat, pt.ln - lon);
-                if (d < minD) { minD = d; kmAtual = pt.km; brAtual = pt.br; }
-            });
-            document.getElementById('km-display').innerText = `Km ${kmAtual}`;
-            document.getElementById('br-label').innerText = `BR ${brAtual}`;
+        curLat = p.coords.latitude.toFixed(6); curLon = p.coords.longitude.toFixed(6);
+        if (!kmDB.length) return;
+        let best = null, minD = Infinity;
+        for (const pt of kmDB) {
+            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
+            if (d < minD) { minD = d; best = pt; }
         }
-    }, e => console.error(e), { enableHighAccuracy: true });
+        if (best) {
+            brAtual = best.br;
+            document.getElementById('br-txt').innerText = "BR " + best.br;
+            document.getElementById('km-txt').innerText = "Km " + best.km;
+        }
+    }, null, { enableHighAccuracy: true });
 }
 
-// 5. SALVAR NOTA
-function salvarNota() {
-    const msg = document.getElementById('note-pad').value;
-    if (!msg) return alert("Digite algo antes de salvar.");
-    const blob = new Blob([`REGISTRO TÉCNICO\nLocal: BR ${brAtual} Km ${kmAtual}\nData: ${new Date().toLocaleString()}\n\nNota: ${msg}`], { type: 'text/plain' });
-    const file = new File([blob], `Nota_KM${kmAtual}.txt`, { type: 'text/plain' });
-    navigator.share({ files: [file], title: 'Nota de Serviço' });
-    fecharModais();
+async function loadCSV() {
+    try {
+        const r = await fetch('SNVBR116SPRJ.csv');
+        const t = await r.text();
+        const rows = t.split('\n').filter(l => l.includes(';'));
+        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
+        const ibr = h.indexOf('br'), ikm = h.indexOf('km'), ilat = h.findIndex(x=>x.includes('lat')), ilon = h.findIndex(x=>x.includes('lon'));
+        kmDB = rows.map(r => {
+            const c = r.split(';');
+            return { br: c[ibr], km: c[ikm], lt: parseFloat(c[ilat].replace(',','.')), ln: parseFloat(c[ilon].replace(',','.')) };
+        }).filter(d => !isNaN(d.lt));
+    } catch(e) { console.error("Erro CSV:", e); }
 }
 
-window.onload = () => {
-    initGPS();
-    // Aqui você pode carregar seu CSV: fetch('seu_arquivo.csv')...
-};
+function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
 </script>
 </body>
 </html>
