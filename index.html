@@ -6,31 +6,36 @@
     <title>Sistema de Apoio</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); }
+        :root { --accent: #ffcc00; --danger: #ff4444; --glass: rgba(10, 10, 10, 0.8); --success: #25D366; }
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
         body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; background: #0a0a0a; max-width: 90%; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 8px; cursor: pointer; margin-top: 20px; }
+        /* TELA INICIAL REESTRUTURADA */
+        #safety-gate { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 20px; backdrop-filter: blur(5px); }
+        .intro-header { text-align: center; background: var(--glass); padding: 15px; border-radius: 15px; border: 1px solid #444; }
+        
+        .action-area { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 300px; }
+        
+        /* BOTÕES */
+        .btn-aware { background: var(--accent); color: #000; border: none; padding: 18px; font-weight: 900; border-radius: 12px; cursor: pointer; font-size: 1rem; }
+        .btn-whatsapp { background: var(--success); color: #fff; border: none; padding: 18px; font-weight: 900; border-radius: 12px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
 
-        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
+        #app-shell { position: relative; width: 100vw; height: 100vh; }
         #vid { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
 
-        /* PLACA HUD - SEMPRE VISÍVEL */
+        /* HUD PLACA VERDE */
         #km-hud { 
             position: absolute; 
             top: 20px; 
             left: 20px; 
-            background: rgba(0, 121, 52, 0.5); 
+            background: rgba(0, 121, 52, 0.8); 
             padding: 10px 20px; 
             border: 2px solid rgba(255, 255, 255, 0.6); 
             border-radius: 12px; 
-            z-index: 1000; 
+            z-index: 10000; /* Acima do safety gate */
             pointer-events: none; 
             min-width: 130px;
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
@@ -40,34 +45,18 @@
         #br-txt { font-size: 1rem; font-weight: 800; color: #eee; text-shadow: 1px 1px 2px #000; }
         #km-txt { font-size: 2.2rem; font-weight: 900; color: #fff; text-shadow: 2px 2px 0px #004d21; line-height: 1; }
 
-        /* INDICADOR GERANDO PDF - PEQUENO */
-        #rec-tag { 
-            position: absolute; 
-            top: 25px; 
-            right: 15px; 
-            display: flex; 
-            align-items: center; 
-            gap: 5px; 
-            background: rgba(0,0,0,0.6); 
-            padding: 4px 10px; 
-            border-radius: 20px; 
-            opacity: 0; 
-            transition: opacity 0.3s;
-            z-index: 1000;
-        }
-        #rec-tag span { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
+        #rec-tag { position: absolute; top: 25px; right: 15px; display: flex; align-items: center; gap: 5px; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; z-index: 1000; }
         .dot { width: 6px; height: 6px; background: #f00; border-radius: 50%; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* CONTROLES */
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 2000; transition: opacity 0.3s; }
-        .ui-hidden { opacity: 0 !important; visibility: hidden !important; }
+        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 2000; }
+        .ui-hidden { display: none !important; }
         .btn-main { border: none; padding: 18px 35px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 150px; }
         #btn-start { background: var(--accent); color: #000; }
         #btn-stop { background: var(--danger); color: #fff; display: none; }
         #gear-btn { width: 55px; height: 55px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; }
 
-        #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 4000; padding: 50px 20px; transition: 0.4s; }
+        #settings-panel { position: fixed; right: -350px; top: 0; width: 300px; height: 100%; background: var(--glass); backdrop-filter: blur(20px); z-index: 11000; padding: 50px 20px; transition: 0.4s; }
         #settings-panel.open { right: 0; }
         #settings-panel input, #settings-panel select { width: 100%; padding: 10px; background: #222; border: 1px solid #444; color: #fff; border-radius: 5px; margin: 5px 0 15px 0; }
 
@@ -75,15 +64,26 @@
         #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1500; }
     </style>
 </head>
-<body>
+<body onload="preInit()">
 
 <div id="flash"></div>
 
+<div id="km-hud">
+    <span id="br-txt">BR ---</span>
+    <h1 id="km-txt">Km ---</h1>
+</div>
+
 <div id="safety-gate">
-    <div class="alert-box">
-        <h2 style="color:var(--accent); margin-bottom:10px;">SISTEMA DE APOIO</h2>
-        <p style="margin-bottom:10px; font-size: 0.9rem; line-height: 1.4;">Captura automatica para PDF e foto instantanea salva ao tocar na tela</p>
-        <button class="btn-aware" onclick="startApp()">ATIVAR SISTEMA</button>
+    <div class="intro-header">
+        <h2 style="color:var(--accent); font-size: 1.2rem;">SISTEMA DE APOIO</h2>
+        <p style="font-size: 0.8rem; opacity: 0.8;">Câmera Ativa para Relatórios</p>
+    </div>
+
+    <div class="action-area">
+        <button class="btn-whatsapp" onclick="shareWhatsApp()">
+            <span>SINALIZAR NO WHATSAPP</span>
+        </button>
+        <button class="btn-aware" onclick="unlockSystem()">ENTRAR NO SISTEMA PDF</button>
     </div>
 </div>
 
@@ -99,15 +99,8 @@
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted onclick="handleTouch()"></video>
-    
-    <div id="km-hud">
-        <span id="br-txt">BR ---</span>
-        <h1 id="km-txt">Km ---</h1>
-    </div>
-
     <div id="rec-tag"><div class="dot"></div><span>Gerando PDF</span></div>
-
-    <div id="ui-controls">
+    <div id="ui-controls" class="ui-hidden">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
         <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR</button>
         <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR</button>
@@ -127,23 +120,25 @@ const can = document.getElementById('c');
 const ctx = can.getContext('2d');
 const flashDiv = document.getElementById('flash');
 
-async function startApp() {
-    try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').remove();
-        document.getElementById('app-shell').style.visibility = 'visible';
-        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
-        listCams(); loadCSV(); initGPS();
-        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    } catch(e) { alert("Permissão de pasta necessária."); }
-}
-
-async function listCams() {
+// Inicia câmera e GPS assim que abre a página
+async function preInit() {
+    initGPS();
+    loadCSV();
     const devices = await navigator.mediaDevices.enumerateDevices();
     const vids = devices.filter(d => d.kind === 'videoinput');
     const sel = document.getElementById('cam-select');
     sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
     if(vids.length) switchCam(vids[vids.length-1].deviceId);
+}
+
+async function unlockSystem() {
+    try {
+        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('safety-gate').style.display = 'none';
+        document.getElementById('ui-controls').classList.remove('ui-hidden');
+        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    } catch(e) { alert("Para gerar PDF, é necessário selecionar uma pasta."); }
 }
 
 async function switchCam(id) {
@@ -153,9 +148,37 @@ async function switchCam(id) {
     vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
 }
 
-function handleTouch() {
-    takeManualPhoto();
-    if(!capturing) document.getElementById('ui-controls').classList.toggle('ui-hidden');
+// Função para capturar e enviar via WhatsApp
+async function shareWhatsApp() {
+    const km = document.getElementById('km-txt').innerText.replace("Km ", "");
+    const br = brAtual || "---";
+    
+    // Efeito de Flash
+    flashDiv.style.opacity = "0.3"; 
+    setTimeout(() => { flashDiv.style.opacity = "0"; }, 100);
+
+    // Desenha imagem com marca d'água
+    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    await drawWatermark(km, br);
+
+    // Converte para arquivo real
+    const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.90));
+    const file = new File([blob], `Ocorrencia_BR${br}_Km${km}.jpg`, { type: 'image/jpeg' });
+
+    // Tenta usar a API de compartilhamento nativa (Funciona em Android/iOS)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({
+                files: [file],
+                title: `Sinalização BR-${br} Km ${km}`,
+                text: `Registro técnico: BR ${br} Km ${km} - ${new Date().toLocaleString()}`
+            });
+        } catch (err) {
+            console.log("Compartilhamento cancelado");
+        }
+    } else {
+        alert("Seu navegador não suporta compartilhamento de arquivos. Use o sistema de PDF.");
+    }
 }
 
 async function drawWatermark(km, br) {
@@ -174,8 +197,11 @@ async function drawWatermark(km, br) {
     ctx.fillText(`${new Date().toLocaleString('pt-BR')} | GPS: ${curLat}, ${curLon}`, 30, can.height - (bh * 0.2));
 }
 
+function handleTouch() {
+    if(hDir) takeManualPhoto();
+}
+
 async function takeManualPhoto() {
-    if(!hDir) return;
     flashDiv.style.opacity = "0.3"; 
     setTimeout(() => { flashDiv.style.opacity = "0"; }, 100);
     ctx.drawImage(vid, 0, 0, can.width, can.height);
@@ -188,8 +214,7 @@ async function takeManualPhoto() {
 }
 
 function startCapture() {
-    capturing = true; 
-    buffer = [];
+    capturing = true; buffer = [];
     kmInicialLote = document.getElementById('km-txt').innerText.replace("Km ", "");
     document.getElementById('gear-btn').classList.add('ui-hidden');
     document.getElementById('btn-start').style.display = 'none';
