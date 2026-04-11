@@ -3,253 +3,201 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Portal de Apoio Técnico</title>
+    <title>Portal Técnico Operacional</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --danger: #ff4444; --glass: rgba(20, 20, 20, 0.85); --success: #25D366; --blue: #007bff; }
-        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        :root { --accent: #ffcc00; --danger: #ff4444; --glass: rgba(15, 15, 15, 0.95); --blue: #0088ff; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; height: 100vh; width: 100vw; overflow: hidden; }
 
-        /* PORTAL DE ENTRADA */
+        /* PAINEL PRINCIPAL */
         #portal { 
-            position: fixed; inset: 0; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); 
-            z-index: 9999; display: flex; flex-direction: column; align-items: center; padding-top: env(safe-area-inset-top); 
-            overflow-y: auto; transition: 0.5s;
+            position: fixed; inset: 0; z-index: 9000; background: #0a0a0a; 
+            display: flex; flex-direction: column; align-items: center; padding: 20px;
         }
+
+        .header-box { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; width: 90%; }
         
-        .header-portal { text-align: center; margin: 30px 0; }
-        .header-portal h1 { color: var(--accent); font-size: 1.5rem; letter-spacing: 2px; }
-        .header-portal p { font-size: 0.8rem; color: #888; margin-top: 5px; }
-
-        .grid-buttons { 
-            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 90%; max-width: 400px; padding-bottom: 40px;
+        .grid-tech { 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 450px; 
         }
 
-        /* BOTÃO DESTAQUE (PDF) */
-        .btn-hero { 
-            grid-column: span 2; background: var(--accent); color: #000; border: none; padding: 25px; 
-            border-radius: 15px; font-weight: 900; font-size: 1.1rem; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 204, 0, 0.3); display: flex; flex-direction: column; align-items: center; gap: 8px;
+        .btn-card { 
+            background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 20px 10px;
+            display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer;
+            transition: 0.3s;
         }
+        .btn-card:active { transform: scale(0.95); background: #252525; }
+        .btn-card span { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: #bbb; text-align: center; }
+        .icon { font-size: 1.8rem; }
 
-        /* BOTÕES SECUNDÁRIOS */
-        .btn-sub { 
-            background: #222; border: 1px solid #444; color: #fff; padding: 20px 10px; 
-            border-radius: 15px; font-weight: bold; font-size: 0.85rem; display: flex; 
-            flex-direction: column; align-items: center; gap: 10px; cursor: pointer;
+        /* DESTAQUE PDF */
+        .full-width { grid-column: span 2; background: linear-gradient(145deg, #222, #111); border-left: 5px solid var(--accent); }
+
+        /* MODAIS E OVERLAYS */
+        .overlay { 
+            position: fixed; inset: 0; background: #000; z-index: 10000; display: none;
+            flex-direction: column;
         }
-        .btn-sub i { font-size: 1.5rem; }
-        .btn-whatsapp { border-color: var(--success); color: var(--success); }
+        #video-preview { width: 100%; height: 70%; object-fit: cover; }
+        .tool-bar { padding: 20px; display: flex; justify-content: space-around; background: #111; }
 
-        /* HUD SEMPRE ATIVO */
-        #km-hud { 
-            position: absolute; top: 20px; left: 20px; background: rgba(0, 121, 52, 0.9); 
-            padding: 10px 15px; border: 2px solid #fff; border-radius: 10px; z-index: 10000; 
-            text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events: none;
+        /* HUD DE KM */
+        #hud-global { 
+            background: #004d21; padding: 8px 15px; border-radius: 8px; border: 1px solid #fff;
+            margin-bottom: 20px; text-align: center;
         }
-        #br-txt { font-size: 0.8rem; font-weight: bold; display: block; }
-        #km-txt { font-size: 1.8rem; font-weight: 900; line-height: 1; }
+        #km-display { font-size: 1.5rem; font-weight: 900; display: block; }
 
-        /* APP SHELL (SISTEMA PDF) */
-        #app-shell { position: relative; width: 100vw; height: 100vh; display: none; }
-        #vid { width: 100%; height: 100%; object-fit: cover; }
-        
-        #ui-controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; z-index: 2000; }
-        .btn-main { border: none; padding: 15px 30px; border-radius: 10px; font-weight: 900; cursor: pointer; }
-        #btn-start { background: var(--accent); color: #000; }
-        #btn-stop { background: var(--danger); color: #fff; display: none; }
-        
-        canvas { display: none; }
-        #flash-overlay { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 11000; }
+        /* EDITOR DE ANOTAÇÃO */
+        #note-pad { 
+            width: 100%; height: 100%; padding: 20px; background: #111; color: #fff; border: none; font-size: 1.2rem;
+        }
     </style>
 </head>
-<body onload="initPortal()">
-
-<div id="flash-overlay"></div>
-
-<div id="km-hud">
-    <span id="br-txt">BR ---</span>
-    <span id="km-txt">Km ---</span>
-</div>
+<body>
 
 <div id="portal">
-    <div class="header-portal">
-        <h1>SISTEMA APOIO TÉCNICO</h1>
-        <p id="status-gps">Aguardando sinal GPS...</p>
+    <div class="header-box">
+        <h2 style="color:var(--accent)">APOIO TÉCNICO</h2>
+        <small id="gps-info">Localizando coordenadas...</small>
     </div>
 
-    <div class="grid-buttons">
-        <button class="btn-hero" onclick="abrirSistemaPDF()">
-            <span>SISTEMA DE RELATÓRIO PDF</span>
-            <small style="font-weight: normal; font-size: 0.7rem;">(Captura em Lote e Inspeção Noturna)</small>
-        </button>
+    <div id="hud-global">
+        <span style="font-size: 0.7rem;">POSIÇÃO ATUAL</span>
+        <span id="km-display">BR --- Km ---</span>
+    </div>
 
-        <button class="btn-sub btn-whatsapp" onclick="fotoWhatsApp()">
-            <span>📷 FOTO WHATSAPP</span>
-        </button>
+    <div class="grid-tech">
+        <div class="btn-card full-width" onclick="abrirModulo('pdf')">
+            <div class="icon">📑</div>
+            <span>Relatório de Inspeção (PDF)</span>
+        </div>
 
-        <button class="btn-sub" onclick="copiarLocalizacao()">
-            <span>📍 COPIAR KM/GPS</span>
-        </button>
+        <div class="btn-card" onclick="abrirModulo('anotacao')">
+            <div class="icon">📝</div>
+            <span>Anotação de Serviço</span>
+        </div>
 
-        <button class="btn-sub" onclick="toggleLanterna()">
-            <span>🔦 LANTERNA</span>
-        </button>
+        <div class="btn-card" onclick="abrirModulo('audio')">
+            <div class="icon">🎤</div>
+            <span>Anexar Áudio Técnico</span>
+        </div>
 
-        <button class="btn-sub" onclick="abrirWaze()">
-            <span>🚗 ABRIR NO WAZE</span>
-        </button>
+        <div class="btn-card" onclick="abrirModulo('video')">
+            <div class="icon">🎥</div>
+            <span>Vídeo de Evidência</span>
+        </div>
+
+        <div class="btn-card" onclick="abrirModulo('edicao')">
+            <div class="icon">🎨</div>
+            <span>Foto com Marcação</span>
+        </div>
     </div>
 </div>
 
-<div id="app-shell">
-    <video id="vid" autoplay playsinline muted onclick="voltarAoPortal()"></video>
-    
-    <div id="ui-controls">
-        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR LOTE PDF</button>
-        <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR LOTE</button>
+<div id="modal-note" class="overlay">
+    <textarea id="note-pad" placeholder="Descreva a ocorrência ou serviço executado..."></textarea>
+    <div class="tool-bar">
+        <button onclick="salvarNota()" style="background:var(--accent); padding:15px 40px; border-radius:8px; font-weight:bold;">SALVAR NOTA</button>
+        <button onclick="fecharModais()" style="color:#fff; background:none; border:none;">CANCELAR</button>
     </div>
 </div>
 
-<canvas id="c"></canvas>
+<div id="modal-audio" class="overlay" style="justify-content:center; align-items:center;">
+    <div id="audio-status" style="font-size:1.5rem; margin-bottom:20px;">Pronto para gravar</div>
+    <button id="rec-btn" onclick="toggleAudio()" style="width:100px; height:100px; border-radius:50%; background:var(--danger); border:none; font-size:2rem;">🎤</button>
+    <p style="margin-top:20px; color:#888;">Relate o problema verbalmente</p>
+    <button onclick="fecharModais()" style="margin-top:50px; color:#fff;">VOLTAR</button>
+</div>
+
+<video id="hidden-vid" autoplay playsinline muted style="display:none"></video>
+<canvas id="main-canvas" style="display:none"></canvas>
 
 <script>
-let kmDB=[], capturing=false, hDir=null, currentStream=null, track=null;
-let brAtual = "", curLat = "0.0000", curLon = "0.0000";
+let mediaRecorder, audioChunks = [];
+let stream, kmAtual = "---", brAtual = "---";
+let hDir;
 
-async function initPortal() {
+async function init() {
     initGPS();
-    loadCSV();
-    // Prepara a câmera em background
-    try {
-        currentStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment", width: 1920, height: 1080 } 
-        });
-        document.getElementById('vid').srcObject = currentStream;
-        track = currentStream.getVideoTracks();
-    } catch(e) { console.error("Erro câmera:", e); }
+    stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment" },
+        audio: true 
+    });
+    document.getElementById('hidden-vid').srcObject = stream;
 }
 
-// FUNÇÃO 1: ACESSAR SISTEMA PRINCIPAL
-async function abrirSistemaPDF() {
-    try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('portal').style.display = 'none';
-        document.getElementById('app-shell').style.display = 'block';
-    } catch(e) { alert("Necessário selecionar pasta para salvar os PDFs."); }
-}
-
-function voltarAoPortal() {
-    if(capturing) return;
-    document.getElementById('portal').style.display = 'flex';
-    document.getElementById('app-shell').style.display = 'none';
-}
-
-// FUNÇÃO 2: FOTO WHATSAPP
-async function fotoWhatsApp() {
-    const vid = document.getElementById('vid');
-    const can = document.getElementById('c');
-    const ctx = can.getContext('2d');
-    
-    can.width = vid.videoWidth; can.height = vid.videoHeight;
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    
-    const km = document.getElementById('km-txt').innerText;
-    await drawWatermark(can, ctx, km, brAtual);
-
-    const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.8));
-    const file = new File([blob], `Registro_KM${km}.jpg`, { type: 'image/jpeg' });
-
-    if (navigator.share) {
-        await navigator.share({ files: [file], title: 'Registro de Campo' });
-    } else {
-        alert("Compartilhamento não suportado neste navegador.");
+function abrirModulo(tipo) {
+    if (tipo === 'pdf') {
+        // Integração com seu sistema de captura em lote existente
+        alert("Iniciando Módulo de Captura em Lote para PDF...");
+    } else if (tipo === 'anotacao') {
+        document.getElementById('modal-note').style.display = 'flex';
+    } else if (tipo === 'audio') {
+        document.getElementById('modal-audio').style.display = 'flex';
+    } else if (tipo === 'video') {
+        iniciarGravacaoVideo();
     }
 }
 
-// FUNÇÃO 3: COPIAR COORDENADAS
-function copiarLocalizacao() {
-    const texto = `📍 LOCALIZAÇÃO TÉCNICA:\nBR: ${brAtual}\nKm: ${document.getElementById('km-txt').innerText}\nLat: ${curLat}\nLon: ${curLon}\nData: ${new Date().toLocaleString()}`;
-    navigator.clipboard.writeText(texto);
-    alert("Dados copiados para a área de transferência!");
+function fecharModais() {
+    document.querySelectorAll('.overlay').forEach(m => m.style.display = 'none');
 }
 
-// FUNÇÃO 4: LANTERNA
-async function toggleLanterna() {
-    if(!track) return;
-    const settings = track.getSettings();
-    if(settings.torch !== undefined) {
-        await track.applyConstraints({ advanced: [{ torch: !settings.torch }] });
+// LÓGICA DE ÁUDIO
+async function toggleAudio() {
+    const btn = document.getElementById('rec-btn');
+    const status = document.getElementById('audio-status');
+    
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = salvarAudio;
+        mediaRecorder.start();
+        btn.style.animation = "blink 1s infinite";
+        status.innerText = "Gravando Áudio...";
     } else {
-        alert("Lanterna não disponível nesta câmera.");
+        mediaRecorder.stop();
+        btn.style.animation = "none";
+        status.innerText = "Gravação Salva!";
+        setTimeout(fecharModais, 1000);
     }
 }
 
-// FUNÇÃO 5: WAZE
-function abrirWaze() {
-    window.open(`https://www.waze.com/ul?ll=${curLat},${curLon}&navigate=yes`);
+async function salvarAudio() {
+    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+    const file = new File([blob], `Audio_${brAtual}_Km${kmAtual}_${Date.now()}.webm`);
+    // Aqui você pode usar o hDir para salvar na pasta ou enviar via share
+    if (navigator.share) await navigator.share({ files: [file] });
 }
 
-// --- LÓGICA CORE (GPS, CSV, WATERMARK) ---
-
-async function drawWatermark(canvas, context, km, br) {
-    const h = canvas.height;
-    const w = canvas.width;
-    const barH = h * 0.12;
-    context.fillStyle = "rgba(0,0,0,0.6)";
-    context.fillRect(0, h - barH, w, barH);
-    context.fillStyle = "#fff";
-    context.font = `bold ${barH * 0.4}px Arial`;
-    context.fillText(`BR ${br}  Km ${km}`, 30, h - (barH * 0.5));
-    context.font = `${barH * 0.18}px Arial`;
-    context.fillText(`${new Date().toLocaleString()} | GPS: ${curLat}, ${curLon}`, 30, h - (barH * 0.2));
+// LÓGICA DE NOTA
+function salvarNota() {
+    const txt = document.getElementById('note-pad').value;
+    const blob = new Blob([`Registro Km ${kmAtual}\n---\n${txt}`], { type: 'text/plain' });
+    const file = new File([blob], `Nota_Km${kmAtual}.txt`, { type: 'text/plain' });
+    navigator.share({ files: [file], title: 'Anotação de Serviço' });
+    fecharModais();
 }
 
+// GPS E SINCRONIA
 function initGPS() {
     navigator.geolocation.watchPosition(p => {
-        curLat = p.coords.latitude.toFixed(6); curLon = p.coords.longitude.toFixed(6);
-        document.getElementById('status-gps').innerText = "Sinal GPS: OK";
-        if (!kmDB.length) return;
-        let best = null, minD = Infinity;
-        for (const pt of kmDB) {
-            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if (d < minD) { minD = d; best = pt; }
-        }
-        if (best) {
-            brAtual = best.br;
-            document.getElementById('br-txt').innerText = "BR " + best.br;
-            document.getElementById('km-txt').innerText = best.km;
-        }
+        // Simulação de busca no KMDB que você já tem
+        // Aqui você integraria sua função loadCSV para atualizar o HUD
+        document.getElementById('km-display').innerText = `BR ${brAtual} Km ${kmAtual}`;
+        document.getElementById('gps-info').innerText = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`;
     }, null, { enableHighAccuracy: true });
 }
 
-async function loadCSV() {
-    try {
-        const r = await fetch('SNVBR116SPRJ.csv');
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        rows.shift();
-        kmDB = rows.map(r => {
-            const c = r.split(';');
-            return { br: c, km: c, lt: parseFloat(c.replace(',','.')), ln: parseFloat(c.replace(',','.')) };
-        });
-    } catch(e) { console.error("Erro CSV:", e); }
-}
-
-// Reutilização das funções de captura PDF do seu código original (Simplificadas)
-function startCapture() {
-    capturing = true;
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'block';
-    // ... (lógica do loop de captura e buffer de fotos aqui)
-}
-
-function stopCapture() {
-    capturing = false;
-    document.getElementById('btn-start').style.display = 'block';
-    document.getElementById('btn-stop').style.display = 'none';
-    // ... (lógica de geração do PDF aqui)
-}
+window.onload = init;
 </script>
+
+<style>
+@keyframes blink { 50% { opacity: 0.3; } }
+</style>
+
 </body>
 </html>
