@@ -6,198 +6,217 @@
     <title>Portal Técnico Operacional</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --danger: #ff4444; --glass: rgba(15, 15, 15, 0.95); --blue: #0088ff; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; height: 100vh; width: 100vw; overflow: hidden; }
+        :root { --accent: #ffcc00; --danger: #ff4444; --glass: rgba(15, 15, 15, 0.95); --success: #25D366; }
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+        body { background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; overflow: hidden; }
 
         /* PAINEL PRINCIPAL */
         #portal { 
-            position: fixed; inset: 0; z-index: 9000; background: #0a0a0a; 
-            display: flex; flex-direction: column; align-items: center; padding: 20px;
+            position: fixed; inset: 0; z-index: 9000; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); 
+            display: flex; flex-direction: column; align-items: center; padding: 20px; overflow-y: auto;
         }
 
-        .header-box { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; width: 90%; }
+        .header-box { text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; width: 90%; }
         
-        .grid-tech { 
-            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 450px; 
+        #hud-global { 
+            background: rgba(0, 77, 33, 0.9); padding: 12px; border-radius: 12px; border: 2px solid #fff;
+            margin-bottom: 20px; text-align: center; min-width: 200px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
+        #km-display { font-size: 1.8rem; font-weight: 900; display: block; color: #fff; }
+
+        .grid-tech { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 450px; }
 
         .btn-card { 
-            background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 20px 10px;
+            background: #1a1a1a; border: 1px solid #333; border-radius: 15px; padding: 25px 10px;
             display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer;
-            transition: 0.3s;
         }
-        .btn-card:active { transform: scale(0.95); background: #252525; }
-        .btn-card span { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: #bbb; text-align: center; }
-        .icon { font-size: 1.8rem; }
+        .btn-card:active { background: #333; transform: scale(0.98); }
+        .btn-card span { font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: #fff; text-align: center; }
+        .icon { font-size: 2rem; }
 
-        /* DESTAQUE PDF */
-        .full-width { grid-column: span 2; background: linear-gradient(145deg, #222, #111); border-left: 5px solid var(--accent); }
+        .full-width { grid-column: span 2; background: linear-gradient(145deg, #333, #111); border-left: 6px solid var(--accent); }
 
-        /* MODAIS E OVERLAYS */
-        .overlay { 
-            position: fixed; inset: 0; background: #000; z-index: 10000; display: none;
-            flex-direction: column;
-        }
-        #video-preview { width: 100%; height: 70%; object-fit: cover; }
-        .tool-bar { padding: 20px; display: flex; justify-content: space-around; background: #111; }
+        /* MODAIS */
+        .overlay { position: fixed; inset: 0; background: #000; z-index: 10000; display: none; flex-direction: column; }
+        #note-pad { width: 100%; height: 80%; padding: 20px; background: #111; color: #fff; border: none; font-size: 1.2rem; outline: none; }
+        
+        .tool-bar { padding: 20px; display: flex; justify-content: space-around; background: #1a1a1a; border-top: 1px solid #333; }
+        .btn-action { padding: 15px 30px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
 
-        /* HUD DE KM */
-        #hud-global { 
-            background: #004d21; padding: 8px 15px; border-radius: 8px; border: 1px solid #fff;
-            margin-bottom: 20px; text-align: center;
-        }
-        #km-display { font-size: 1.5rem; font-weight: 900; display: block; }
-
-        /* EDITOR DE ANOTAÇÃO */
-        #note-pad { 
-            width: 100%; height: 100%; padding: 20px; background: #111; color: #fff; border: none; font-size: 1.2rem;
-        }
+        /* SISTEMA DE VÍDEO/PDF (ESCONDIDO) */
+        #app-shell { position: fixed; inset: 0; background: #000; z-index: 9500; display: none; }
+        #vid { width: 100%; height: 100%; object-fit: cover; }
+        #controls-pdf { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 10px; }
     </style>
 </head>
 <body>
 
 <div id="portal">
     <div class="header-box">
-        <h2 style="color:var(--accent)">APOIO TÉCNICO</h2>
-        <small id="gps-info">Localizando coordenadas...</small>
+        <h2 style="color:var(--accent)">SISTEMA MOTIVA</h2>
+        <small id="gps-info" style="color:#888">Iniciando sensores...</small>
     </div>
 
     <div id="hud-global">
-        <span style="font-size: 0.7rem;">POSIÇÃO ATUAL</span>
-        <span id="km-display">BR --- Km ---</span>
+        <span id="br-label" style="font-size: 0.8rem; font-weight: bold;">BR 116</span>
+        <span id="km-display">Km ---</span>
     </div>
 
     <div class="grid-tech">
-        <div class="btn-card full-width" onclick="abrirModulo('pdf')">
+        <div class="btn-card full-width" onclick="ativarModulo('pdf')">
             <div class="icon">📑</div>
-            <span>Relatório de Inspeção (PDF)</span>
+            <span>Relatório em Lote (PDF)</span>
         </div>
 
-        <div class="btn-card" onclick="abrirModulo('anotacao')">
+        <div class="btn-card" onclick="ativarModulo('anotacao')">
             <div class="icon">📝</div>
-            <span>Anotação de Serviço</span>
+            <span>Anotar Serviço</span>
         </div>
 
-        <div class="btn-card" onclick="abrirModulo('audio')">
+        <div class="btn-card" onclick="ativarModulo('audio')">
             <div class="icon">🎤</div>
-            <span>Anexar Áudio Técnico</span>
+            <span>Gravar Áudio</span>
         </div>
 
-        <div class="btn-card" onclick="abrirModulo('video')">
-            <div class="icon">🎥</div>
-            <span>Vídeo de Evidência</span>
+        <div class="btn-card" onclick="ativarModulo('foto')">
+            <div class="icon">📸</div>
+            <span>Foto Avulsa</span>
         </div>
 
-        <div class="btn-card" onclick="abrirModulo('edicao')">
-            <div class="icon">🎨</div>
-            <span>Foto com Marcação</span>
+        <div class="btn-card" onclick="location.reload()">
+            <div class="icon">🔄</div>
+            <span>Reiniciar</span>
         </div>
     </div>
 </div>
 
 <div id="modal-note" class="overlay">
-    <textarea id="note-pad" placeholder="Descreva a ocorrência ou serviço executado..."></textarea>
+    <textarea id="note-pad" placeholder="Digite aqui os detalhes do serviço ou ocorrência..."></textarea>
     <div class="tool-bar">
-        <button onclick="salvarNota()" style="background:var(--accent); padding:15px 40px; border-radius:8px; font-weight:bold;">SALVAR NOTA</button>
-        <button onclick="fecharModais()" style="color:#fff; background:none; border:none;">CANCELAR</button>
+        <button class="btn-action" style="background:var(--accent)" onclick="salvarNota()">SALVAR E ENVIAR</button>
+        <button class="btn-action" style="background:#444; color:#fff;" onclick="fecharModais()">FECHAR</button>
     </div>
 </div>
 
 <div id="modal-audio" class="overlay" style="justify-content:center; align-items:center;">
-    <div id="audio-status" style="font-size:1.5rem; margin-bottom:20px;">Pronto para gravar</div>
-    <button id="rec-btn" onclick="toggleAudio()" style="width:100px; height:100px; border-radius:50%; background:var(--danger); border:none; font-size:2rem;">🎤</button>
-    <p style="margin-top:20px; color:#888;">Relate o problema verbalmente</p>
-    <button onclick="fecharModais()" style="margin-top:50px; color:#fff;">VOLTAR</button>
+    <div id="audio-timer" style="font-size:2rem; margin-bottom:20px;">00:00</div>
+    <button id="rec-btn" onclick="toggleAudio()" style="width:120px; height:120px; border-radius:60px; background:var(--danger); border:8px solid #333; font-size:3rem;">🎤</button>
+    <p id="audio-status" style="margin-top:20px; font-weight:bold;">Toque para gravar relato</p>
+    <button class="btn-action" style="margin-top:50px; background:#222; color:#fff" onclick="fecharModais()">VOLTAR AO PORTAL</button>
 </div>
 
-<video id="hidden-vid" autoplay playsinline muted style="display:none"></video>
-<canvas id="main-canvas" style="display:none"></canvas>
+<div id="app-shell">
+    <video id="vid" autoplay playsinline muted></video>
+    <div id="controls-pdf">
+        <button id="btn-snap" class="btn-action" style="background:var(--accent)" onclick="capturarFotoPDF()">TIRAR FOTO</button>
+        <button class="btn-action" style="background:var(--danger); color:#fff" onclick="fecharSistema()">SAIR</button>
+    </div>
+</div>
+
+<canvas id="c" style="display:none"></canvas>
 
 <script>
-let mediaRecorder, audioChunks = [];
-let stream, kmAtual = "---", brAtual = "---";
-let hDir;
+let stream, mediaRecorder, chunks = [];
+let kmDB = [], brAtual = "116", kmAtual = "---";
 
-async function init() {
-    initGPS();
-    stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "environment" },
-        audio: true 
-    });
-    document.getElementById('hidden-vid').srcObject = stream;
+// 1. INICIALIZAÇÃO SEGURA
+async function startMedia(comAudio = false) {
+    try {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment", width: 1280, height: 720 },
+            audio: comAudio
+        });
+        document.getElementById('vid').srcObject = stream;
+        return true;
+    } catch (e) {
+        alert("Erro: Permita o acesso à câmera/microfone nas configurações do navegador.");
+        return false;
+    }
 }
 
-function abrirModulo(tipo) {
-    if (tipo === 'pdf') {
-        // Integração com seu sistema de captura em lote existente
-        alert("Iniciando Módulo de Captura em Lote para PDF...");
+// 2. CONTROLE DOS MÓDULOS
+async function ativarModulo(tipo) {
+    if (tipo === 'pdf' || tipo === 'foto') {
+        const ok = await startMedia(false);
+        if (ok) {
+            document.getElementById('app-shell').style.display = 'block';
+            if (tipo === 'foto') document.getElementById('btn-snap').innerText = "CAPTURAR FOTO";
+        }
     } else if (tipo === 'anotacao') {
         document.getElementById('modal-note').style.display = 'flex';
     } else if (tipo === 'audio') {
         document.getElementById('modal-audio').style.display = 'flex';
-    } else if (tipo === 'video') {
-        iniciarGravacaoVideo();
     }
 }
 
 function fecharModais() {
-    document.querySelectorAll('.overlay').forEach(m => m.style.display = 'none');
+    document.querySelectorAll('.overlay').forEach(el => el.style.display = 'none');
 }
 
-// LÓGICA DE ÁUDIO
+function fecharSistema() {
+    document.getElementById('app-shell').style.display = 'none';
+    if (stream) stream.getTracks().forEach(t => t.stop());
+}
+
+// 3. LÓGICA DE ÁUDIO
 async function toggleAudio() {
     const btn = document.getElementById('rec-btn');
-    const status = document.getElementById('audio-status');
-    
-    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        await startMedia(true);
         mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-        mediaRecorder.onstop = salvarAudio;
+        chunks = [];
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(chunks, { type: 'audio/webm' });
+            const file = new File([blob], `Relato_KM${kmAtual}.webm`, { type: 'audio/webm' });
+            navigator.share({ files: [file], title: 'Relato de Áudio' });
+        };
         mediaRecorder.start();
-        btn.style.animation = "blink 1s infinite";
-        status.innerText = "Gravando Áudio...";
+        btn.style.background = "#fff";
+        document.getElementById('audio-status').innerText = "GRAVANDO... Toque para parar";
     } else {
         mediaRecorder.stop();
-        btn.style.animation = "none";
-        status.innerText = "Gravação Salva!";
+        btn.style.background = "var(--danger)";
+        document.getElementById('audio-status').innerText = "Salvando...";
         setTimeout(fecharModais, 1000);
     }
 }
 
-async function salvarAudio() {
-    const blob = new Blob(audioChunks, { type: 'audio/webm' });
-    const file = new File([blob], `Audio_${brAtual}_Km${kmAtual}_${Date.now()}.webm`);
-    // Aqui você pode usar o hDir para salvar na pasta ou enviar via share
-    if (navigator.share) await navigator.share({ files: [file] });
+// 4. LÓGICA DE GPS (IDÊNTICA À SUA)
+function initGPS() {
+    navigator.geolocation.watchPosition(p => {
+        const lat = p.coords.latitude;
+        const lon = p.coords.longitude;
+        document.getElementById('gps-info').innerText = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+        
+        // Se o CSV estiver carregado, busca o KM mais próximo aqui
+        if (kmDB.length > 0) {
+            let minD = Infinity;
+            kmDB.forEach(pt => {
+                let d = Math.hypot(pt.lt - lat, pt.ln - lon);
+                if (d < minD) { minD = d; kmAtual = pt.km; brAtual = pt.br; }
+            });
+            document.getElementById('km-display').innerText = `Km ${kmAtual}`;
+            document.getElementById('br-label').innerText = `BR ${brAtual}`;
+        }
+    }, e => console.error(e), { enableHighAccuracy: true });
 }
 
-// LÓGICA DE NOTA
+// 5. SALVAR NOTA
 function salvarNota() {
-    const txt = document.getElementById('note-pad').value;
-    const blob = new Blob([`Registro Km ${kmAtual}\n---\n${txt}`], { type: 'text/plain' });
-    const file = new File([blob], `Nota_Km${kmAtual}.txt`, { type: 'text/plain' });
-    navigator.share({ files: [file], title: 'Anotação de Serviço' });
+    const msg = document.getElementById('note-pad').value;
+    if (!msg) return alert("Digite algo antes de salvar.");
+    const blob = new Blob([`REGISTRO TÉCNICO\nLocal: BR ${brAtual} Km ${kmAtual}\nData: ${new Date().toLocaleString()}\n\nNota: ${msg}`], { type: 'text/plain' });
+    const file = new File([blob], `Nota_KM${kmAtual}.txt`, { type: 'text/plain' });
+    navigator.share({ files: [file], title: 'Nota de Serviço' });
     fecharModais();
 }
 
-// GPS E SINCRONIA
-function initGPS() {
-    navigator.geolocation.watchPosition(p => {
-        // Simulação de busca no KMDB que você já tem
-        // Aqui você integraria sua função loadCSV para atualizar o HUD
-        document.getElementById('km-display').innerText = `BR ${brAtual} Km ${kmAtual}`;
-        document.getElementById('gps-info').innerText = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`;
-    }, null, { enableHighAccuracy: true });
-}
-
-window.onload = init;
+window.onload = () => {
+    initGPS();
+    // Aqui você pode carregar seu CSV: fetch('seu_arquivo.csv')...
+};
 </script>
-
-<style>
-@keyframes blink { 50% { opacity: 0.3; } }
-</style>
-
 </body>
 </html>
