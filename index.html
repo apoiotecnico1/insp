@@ -3,389 +3,379 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>SISTEMA APOIO ULTIMATE v4</title>
+    <title>SISTEMA APOIO V5 - ULTIMATE</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
-            --accent: #00ff88;
-            --danger: #ff3b3b;
-            --road-green: #007934;
-            --panel-bg: rgba(10, 10, 10, 0.9);
-            --glass: blur(15px) saturate(180%);
+            --neon: #00ffcc;
+            --danger: #ff2d55;
+            --road: #007934;
+            --dark: #0a0a0b;
+            --glass: rgba(10, 10, 12, 0.85);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-        
-        body { background: #000; color: #fff; overflow: hidden; height: 100vh; width: 100vw; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+        body { background: #000; color: #fff; overflow: hidden; height: 100vh; position: fixed; width: 100vw; }
 
         /* Splash Screen Profissional */
-        #safety-gate {
-            position: fixed; inset: 0; background: radial-gradient(circle at center, #1a1a1a, #000);
-            z-index: 9999; display: flex; align-items: center; justify-content: center; transition: 0.5s;
+        #gate {
+            position: fixed; inset: 0; background: var(--dark); z-index: 10000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .gate-content { text-align: center; max-width: 80%; }
-        .gate-btn {
-            background: var(--accent); color: #000; border: none; padding: 20px 60px;
-            font-size: 1.2rem; font-weight: 900; border-radius: 50px; cursor: pointer;
-            box-shadow: 0 0 30px rgba(0, 255, 136, 0.4); transition: 0.3s;
-        }
-
-        /* HUD Superior - Placa e Telemetria */
-        #hud-top {
-            position: absolute; top: env(safe-area-inset-top, 20px); left: 20px; right: 20px;
-            display: flex; justify-content: space-between; align-items: flex-start; z-index: 1000; pointer-events: none;
+        .start-btn {
+            background: var(--neon); color: #000; border: none; padding: 25px 60px;
+            font-weight: 900; border-radius: 100px; cursor: pointer; font-size: 1.2rem;
+            box-shadow: 0 0 50px rgba(0, 255, 204, 0.3); transition: 0.3s;
         }
 
-        .placa {
-            background: var(--road-green); padding: 10px 30px; border: 4px solid #fff;
-            border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center;
+        /* HUD - Design de Instrumentação */
+        #hud {
+            position: absolute; top: 0; left: 0; width: 100%; padding: env(safe-area-inset-top, 20px) 20px;
+            display: flex; justify-content: space-between; pointer-events: none; z-index: 500;
         }
-        .placa span { font-size: 0.8rem; font-weight: 800; display: block; border-bottom: 2px solid #fff; margin-bottom: 5px; }
-        .placa h1 { font-size: 3rem; font-weight: 900; line-height: 0.9; }
+        .placa-box {
+            background: var(--road); border: 4px solid #fff; border-radius: 12px;
+            padding: 10px 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .placa-box span { display: block; text-align: center; font-weight: 800; border-bottom: 2px solid #fff; margin-bottom: 5px; }
+        #km-txt { font-size: 3.2rem; font-weight: 900; line-height: 1; text-shadow: 2px 2px 0 #004d21; }
 
-        .telemetry {
-            background: rgba(0,0,0,0.6); padding: 15px; border-radius: 12px; 
-            backdrop-filter: var(--glass); font-family: monospace; font-size: 0.75rem;
-            border: 1px solid rgba(255,255,255,0.1);
+        .telemetria {
+            background: var(--glass); backdrop-filter: blur(15px); padding: 15px;
+            border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); font-family: monospace;
         }
 
-        /* Interface de Vídeo */
-        #app-shell { position: relative; width: 100vw; height: 100vh; display: none; }
+        /* Video Container */
+        #viewport { width: 100vw; height: 100vh; background: #000; }
         #vid { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Console de Logs em Tempo Real */
-        #log-console {
-            position: absolute; left: 20px; bottom: 140px; width: 200px; height: 80px;
-            font-size: 0.65rem; color: var(--accent); pointer-events: none;
-            overflow: hidden; display: flex; flex-direction: column-reverse; opacity: 0.7;
+        /* Console e Info Inferior */
+        #info-bar {
+            position: absolute; bottom: 130px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between; align-items: flex-end;
+            pointer-events: none; z-index: 600;
         }
+        #console { font-size: 10px; color: var(--neon); background: rgba(0,0,0,0.4); padding: 8px; border-radius: 5px; }
 
-        /* Controles Flutuantes */
+        /* Controles - Ergonomia Total */
         #controls {
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            display: flex; align-items: center; gap: 25px; z-index: 2000;
+            position: absolute; bottom: env(safe-area-inset-bottom, 30px); left: 0; width: 100%;
+            display: flex; justify-content: center; align-items: center; gap: 40px; z-index: 1000;
         }
-
-        .main-btn {
-            width: 80px; height: 80px; border-radius: 50%; border: none;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        .btn-main {
+            width: 85px; height: 85px; border-radius: 50%; border: 6px solid #fff;
+            background: transparent; cursor: pointer; position: relative; transition: 0.2s;
         }
+        .btn-main::after { content: ''; position: absolute; inset: 5px; background: #fff; border-radius: 50%; transition: 0.3s; }
         
-        #btn-rec { background: #fff; font-weight: 900; color: #000; font-size: 1.2rem; }
-        .recording #btn-rec { background: var(--danger); color: #fff; animation: pulse 1.5s infinite; border-radius: 20px; }
+        .capturing .btn-main { border-color: var(--danger); }
+        .capturing .btn-main::after { background: var(--danger); border-radius: 10px; transform: scale(0.6); }
 
-        .side-btn { 
-            width: 50px; height: 50px; border-radius: 50%; background: var(--panel-bg);
-            backdrop-filter: var(--glass); color: #fff; border: 1px solid #444; cursor: pointer;
+        .btn-sub {
+            width: 55px; height: 55px; border-radius: 50%; border: none;
+            background: var(--glass); backdrop-filter: blur(10px); color: #fff;
+            font-size: 20px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2);
         }
 
-        /* Painel de Configurações Lateral */
-        #settings {
-            position: fixed; right: -100%; top: 0; width: 100%; max-width: 380px; height: 100%;
-            background: var(--panel-bg); backdrop-filter: var(--glass); z-index: 5000;
-            padding: 40px; transition: 0.5s; border-left: 2px solid var(--accent);
+        /* Settings */
+        #side-panel {
+            position: fixed; right: -100%; top: 0; width: 320px; height: 100%;
+            background: var(--glass); backdrop-filter: blur(25px); z-index: 2000;
+            padding: 40px 25px; transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1);
         }
-        #settings.open { right: 0; }
-        .field { margin-bottom: 20px; }
-        .field label { display: block; font-size: 0.7rem; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; font-weight: bold; }
-        .field input, .field select { width: 100%; background: #222; border: 1px solid #444; padding: 12px; color: #fff; border-radius: 8px; }
+        #side-panel.open { right: 0; }
+        .setting-group { margin-bottom: 20px; }
+        .setting-group label { font-size: 11px; text-transform: uppercase; color: var(--neon); letter-spacing: 1px; }
+        select, input { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid #333; color: #fff; border-radius: 8px; margin-top: 5px; }
 
-        @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 59, 59, 0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(255, 59, 59, 0); } 100% { transform: scale(1); } }
-        
-        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 4000; }
+        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 5000; }
         canvas { display: none; }
+        .blink { animation: pulse-red 1.5s infinite; }
+        @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
 <div id="flash"></div>
 
-<div id="safety-gate">
-    <div class="gate-content">
-        <h1 style="letter-spacing: 5px; margin-bottom: 10px;">APOIO PRO</h1>
-        <p style="color: #888; margin-bottom: 40px;">SISTEMA DE INSPEÇÃO GEORREFERENCIADA</p>
-        <button class="gate-btn" onclick="initSystem()">ATIVAR MÓDULO</button>
-    </div>
+<div id="gate">
+    <h1 style="letter-spacing: 10px; margin-bottom: 10px; font-weight: 200;">SISTEMA APOIO</h1>
+    <p style="color: #555; margin-bottom: 40px; font-size: 12px;">MONITORAMENTO DE INFRAESTRUTURA V5.0</p>
+    <button class="start-btn" onclick="bootSystem()">INICIAR ENGINE</button>
 </div>
 
-<div id="settings">
-    <h2 style="margin-bottom: 30px;">⚙️ Configurações de Campo</h2>
-    <div class="field">
-        <label>Sensor de Captura</label>
+<div id="side-panel">
+    <h2 style="margin-bottom: 30px;">Parâmetros</h2>
+    <div class="setting-group">
+        <label>Sensor Ativo</label>
         <select id="cam-select" onchange="switchCam(this.value)"></select>
     </div>
-    <div class="field">
-        <label>Frequência (ms)</label>
+    <div class="setting-group">
+        <label>Intervalo de Captura (ms)</label>
         <input type="number" id="cfg-int" value="500">
     </div>
-    <div class="field">
-        <label>Limite do Lote PDF</label>
+    <div class="setting-group">
+        <label>Fotos por PDF</label>
         <input type="number" id="cfg-lote" value="50">
     </div>
-    <div class="field">
-        <label>Qualidade de Imagem</label>
-        <input type="range" id="cfg-qual" min="0.1" max="1" step="0.1" value="0.8">
-    </div>
-    <button onclick="toggleSettings()" style="width: 100%; padding: 15px; background: var(--accent); border: none; font-weight: bold; border-radius: 10px; cursor: pointer; margin-top: 20px;">CONFIRMAR</button>
+    <button onclick="toggleSettings()" style="width:100%; padding:15px; background:var(--neon); color:#000; border:none; border-radius:10px; font-weight:900; margin-top:30px; cursor:pointer;">APLICAR</button>
 </div>
 
-<div id="app-shell">
-    <video id="vid" autoplay playsinline muted onclick="uiFeedback()"></video>
+<div id="viewport">
+    <video id="vid" autoplay playsinline muted></video>
     
-    <div id="hud-top">
-        <div class="placa">
-            <span id="br-label">RODOVIA</span>
+    <div id="hud">
+        <div class="placa-box">
+            <span id="br-name">BR ---</span>
             <h1 id="km-txt">---</h1>
         </div>
-        <div class="telemetry">
-            <div>GPS: <span id="gps-acc" style="color:var(--accent)">Buscando...</span></div>
-            <div>LAT: <span id="lat-val">0.000000</span></div>
-            <div>LON: <span id="lon-val">0.000000</span></div>
-            <div id="time-val">00:00:00</div>
+        <div class="telemetria">
+            <div style="color:var(--neon)">SINAL GPS: <span id="gps-status">OFF</span></div>
+            <div id="lat-val">LAT: 0.000000</div>
+            <div id="lon-val">LON: 0.000000</div>
+            <div id="clock">00:00:00</div>
         </div>
     </div>
 
-    <div id="log-console"></div>
+    <div id="info-bar">
+        <div id="console">Sistema pronto para inspeção.</div>
+        <div id="rec-indicator" style="display:none; color:var(--danger); font-weight:900;" class="blink">● RECORDING</div>
+    </div>
 
     <div id="controls">
-        <button class="side-btn" onclick="toggleSettings()">⚙️</button>
-        <button id="btn-rec" class="main-btn" onclick="handleCapture()">REC</button>
-        <button class="side-btn" onclick="snapPhoto()">📸</button>
+        <button class="btn-sub" onclick="toggleSettings()">⚙️</button>
+        <button id="btn-trigger" class="btn-main" onclick="toggleCapture()"></button>
+        <button class="btn-sub" onclick="takeSnapshot()">📸</button>
     </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-    let kmDB = [], capturing = false, hDir = null, stream = null;
+    let kmDB = [], capturing = false, hDir = null, currentStream = null;
     let brAtual = "---", curLat = 0, curLon = 0, buffer = [], kmInicial = "";
-    
+
     const vid = document.getElementById('vid');
     const can = document.getElementById('c');
     const ctx = can.getContext('2d');
 
-    async function initSystem() {
+    // Inicialização do Core
+    async function bootSystem() {
         try {
             hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
             
-            // Fullscreen - Técnica obrigatória de interação
+            // Fullscreen Master
             if (document.documentElement.requestFullscreen) {
                 await document.documentElement.requestFullscreen();
             }
 
-            document.getElementById('safety-gate').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('safety-gate').style.display = 'none';
-                document.getElementById('app-shell').style.display = 'block';
-            }, 500);
-
+            document.getElementById('gate').style.display = 'none';
             if ('wakeLock' in navigator) await navigator.wakeLock.request('screen');
             
-            await setupCameras();
-            startGPS();
-            loadDB();
-            updateClock();
-            pushLog("Sistema Iniciado");
-        } catch (err) {
-            alert("Acesso à pasta e câmera negado.");
+            await initCameras();
+            initGPS();
+            loadCSV();
+            startTime();
+            log("Engine online.");
+        } catch (e) {
+            alert("Erro: Necessário permissão de pasta e câmera.");
         }
     }
 
-    function pushLog(msg) {
-        const console = document.getElementById('log-console');
-        const entry = document.createElement('div');
-        entry.textContent = `> ${msg}`;
-        console.prepend(entry);
-        if (console.children.length > 5) console.lastElementChild.remove();
-    }
+    function log(m) { document.getElementById('console').innerText = `> ${m}`; }
 
-    async function setupCameras() {
+    async function initCameras() {
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const video = devices.filter(d => d.kind === 'videoinput');
+        const vids = devices.filter(d => d.kind === 'videoinput');
         const sel = document.getElementById('cam-select');
-        sel.innerHTML = video.map((d, i) => `<option value="${d.deviceId}">Sensor ${i+1}</option>`).join('');
-        switchCam(video[video.length-1].deviceId);
+        sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Sensor ${i+1}</option>`).join('');
+        switchCam(vids[vids.length-1].deviceId);
     }
 
     async function switchCam(id) {
-        if (stream) stream.getTracks().forEach(t => t.stop());
-        stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { deviceId: id, width: 1920, height: 1080 } 
+        if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+        currentStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { deviceId: id, width: { ideal: 1920 }, height: { ideal: 1080 } } 
         });
-        vid.srcObject = stream;
+        vid.srcObject = currentStream;
         vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
     }
 
-    function updateClock() {
-        document.getElementById('time-val').innerText = new Date().toLocaleTimeString();
-        setTimeout(updateClock, 1000);
+    // MARCA D'ÁGUA DINÂMICA (NUNCA CORTA)
+    async function applyWatermark(km, br, canvasObj) {
+        const c = canvasObj;
+        const x = c.getContext('2d');
+        const w = c.width;
+        const h = c.height;
+
+        // Área de segurança (10% da altura)
+        const safeH = h * 0.12;
+        
+        // Fundo com degradê para leitura perfeita
+        const grad = x.createLinearGradient(0, h - safeH, 0, h);
+        grad.addColorStop(0, "rgba(0,0,0,0)");
+        grad.addColorStop(0.2, "rgba(0,0,0,0.8)");
+        grad.addColorStop(1, "rgba(0,0,0,0.95)");
+        x.fillStyle = grad;
+        x.fillRect(0, h - safeH, w, safeH);
+
+        // Barra lateral neon
+        x.fillStyle = "#00ffcc";
+        x.fillRect(w * 0.02, h - (safeH * 0.8), 6, safeH * 0.6);
+
+        // Texto KM Principal
+        const fontSizeKm = safeH * 0.45;
+        x.font = `bold ${fontSizeKm}px 'Inter', sans-serif`;
+        x.fillStyle = "#ffffff";
+        x.textAlign = "left";
+        x.fillText(`BR ${br} | KM ${km}`, w * 0.05, h - (safeH * 0.45));
+
+        // Subtexto Telemetria
+        const fontSizeSub = safeH * 0.18;
+        x.font = `${fontSizeSub}px monospace`;
+        x.fillStyle = "rgba(255,255,255,0.8)";
+        const info = `${new Date().toLocaleString()} | LAT: ${curLat} LON: ${curLon}`;
+        x.fillText(info, w * 0.05, h - (safeH * 0.2));
     }
 
-    async function drawWatermark(km, br, targetCtx, w, h) {
-        const barH = h * 0.15;
-        const gradient = targetCtx.createLinearGradient(0, h - barH, 0, h);
-        gradient.addColorStop(0, 'rgba(0,0,0,0)');
-        gradient.addColorStop(1, 'rgba(0,0,0,0.9)');
+    async function takeSnapshot() {
+        document.getElementById('flash').style.opacity = 1;
+        setTimeout(() => document.getElementById('flash').style.opacity = 0, 100);
         
-        targetCtx.fillStyle = gradient;
-        targetCtx.fillRect(0, h - barH, w, barH);
-
-        targetCtx.fillStyle = varColor('--accent');
-        targetCtx.fillRect(20, h - barH + 20, 10, barH - 40);
-
-        targetCtx.fillStyle = "#fff";
-        targetCtx.font = `bold ${h * 0.05}px sans-serif`;
-        targetCtx.fillText(`BR-${br}  KM ${km}`, 50, h - (barH * 0.45));
-        
-        targetCtx.font = `${h * 0.02}px monospace`;
-        targetCtx.fillStyle = "rgba(255,255,255,0.7)";
-        targetCtx.fillText(`${new Date().toLocaleString()} | GPS: ${curLat}, ${curLon}`, 50, h - (barH * 0.2));
-    }
-
-    function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name); }
-
-    async function snapPhoto() {
-        flashEffect();
         ctx.drawImage(vid, 0, 0, can.width, can.height);
         const currentKm = document.getElementById('km-txt').innerText;
-        await drawWatermark(currentKm, brAtual, ctx, can.width, can.height);
+        await applyWatermark(currentKm, brAtual, can);
         
         const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
-        const name = `SNAP_BR${brAtual}_KM${currentKm}_${Date.now()}.jpg`;
-        await saveFile(blob, name);
-        pushLog("Foto salva");
+        const name = `FOTO_BR${brAtual}_KM${currentKm}_${Date.now()}.jpg`;
+        await saveToFolder(blob, name);
+        log("Snap salvo.");
     }
 
-    function handleCapture() {
+    function toggleCapture() {
         capturing = !capturing;
-        document.body.classList.toggle('recording', capturing);
+        document.body.classList.toggle('capturing', capturing);
+        document.getElementById('rec-indicator').style.display = capturing ? 'block' : 'none';
+
         if (capturing) {
             buffer = [];
             kmInicial = document.getElementById('km-txt').innerText;
-            pushLog("Captura iniciada");
-            captureLoop();
+            log("Captura iniciada.");
+            loop();
         } else {
-            pushLog("Finalizando...");
-            finalizePDF();
+            finalize();
         }
     }
 
-    async function captureLoop() {
+    async function loop() {
         if (!capturing) return;
         
+        // Captura frame bruto
         ctx.drawImage(vid, 0, 0, can.width, can.height);
         const km = document.getElementById('km-txt').innerText;
         
+        // Armazena dados para processamento posterior (não trava a UI)
         buffer.push({ 
-            img: can.toDataURL('image/jpeg', 0.4), 
-            km: km, br: brAtual,
-            lat: curLat, lon: curLon
+            data: can.toDataURL('image/jpeg', 0.5), 
+            km: km, br: brAtual, lat: curLat, lon: curLon 
         });
 
         if (buffer.length >= parseInt(document.getElementById('cfg-lote').value)) {
             const copy = [...buffer];
             buffer = [];
-            await savePDF(copy, kmInicial, km);
+            await generatePDF(copy, kmInicial, km);
             kmInicial = km;
         }
         
-        setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value));
+        setTimeout(loop, parseInt(document.getElementById('cfg-int').value));
     }
 
-    async function finalizePDF() {
-        if(buffer.length > 0) {
-            await savePDF([...buffer], kmInicial, document.getElementById('km-txt').innerText);
+    async function finalize() {
+        if (buffer.length > 0) {
+            await generatePDF([...buffer], kmInicial, document.getElementById('km-txt').innerText);
         }
         buffer = [];
-        pushLog("PDF Finalizado");
+        log("Processo finalizado.");
     }
 
-    async function savePDF(data, k1, k2) {
+    async function generatePDF(data, k1, k2) {
+        log("Gerando PDF...");
         const pdf = new jspdf.jsPDF('l', 'mm', 'a4');
         const pw = pdf.internal.pageSize.getWidth();
         const ph = pdf.internal.pageSize.getHeight();
 
-        for(let i=0; i<data.length; i++) {
-            if(i > 0) pdf.addPage();
+        for (let i = 0; i < data.length; i++) {
+            if (i > 0) pdf.addPage();
             const img = new Image();
-            img.src = data[i].img;
+            img.src = data[i].data;
             await new Promise(res => {
                 img.onload = async () => {
+                    // Re-renderiza no canvas com marca d'água correta para o PDF
                     ctx.drawImage(img, 0, 0, can.width, can.height);
-                    await drawWatermark(data[i].km, data[i].br, ctx, can.width, can.height);
-                    pdf.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
+                    await applyWatermark(data[i].km, data[i].br, can);
+                    pdf.addImage(can.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pw, ph);
                     res();
                 }
             });
         }
-        const blob = pdf.output('blob');
         const name = `RELAT_BR${brAtual}_KM${k1}_A_${k2}_${Date.now()}.pdf`;
-        await saveFile(blob, name);
-        pushLog("Lote PDF salvo");
+        await saveToFolder(pdf.output('blob'), name);
+        log("PDF salvo com sucesso.");
     }
 
-    async function saveFile(blob, name) {
-        const handle = await hDir.getFileHandle(name, { create: true });
-        const writable = await handle.createWritable();
+    async function saveToFolder(blob, name) {
+        const file = await hDir.getFileHandle(name, { create: true });
+        const writable = await file.createWritable();
         await writable.write(blob);
         await writable.close();
     }
 
-    function startGPS() {
+    function initGPS() {
         navigator.geolocation.watchPosition(p => {
             curLat = p.coords.latitude.toFixed(6);
             curLon = p.coords.longitude.toFixed(6);
-            document.getElementById('lat-val').innerText = curLat;
-            document.getElementById('lon-val').innerText = curLon;
-            document.getElementById('gps-acc').innerText = p.coords.accuracy.toFixed(1) + "m";
-            
-            updateKM(p.coords.latitude, p.coords.longitude);
+            document.getElementById('gps-status').innerText = p.coords.accuracy.toFixed(0) + "m";
+            document.getElementById('lat-val').innerText = `LAT: ${curLat}`;
+            document.getElementById('lon-val').innerText = `LON: ${curLon}`;
+            findKM(p.coords.latitude, p.coords.longitude);
         }, null, { enableHighAccuracy: true });
     }
 
-    function updateKM(lat, lon) {
+    function findKM(lt, ln) {
         if (!kmDB.length) return;
-        let best = null, dist = Infinity;
+        let b = null, md = Infinity;
         for (const pt of kmDB) {
-            const d = Math.hypot(pt.lt - lat, pt.ln - lon);
-            if (d < dist) { dist = d; best = pt; }
+            const d = Math.hypot(pt.lt - lt, pt.ln - ln);
+            if (d < md) { md = d; b = pt; }
         }
-        if (best) {
-            brAtual = best.br;
-            document.getElementById('br-label').innerText = "BR-" + best.br;
-            document.getElementById('km-txt').innerText = best.km;
+        if (b) {
+            brAtual = b.br;
+            document.getElementById('br-name').innerText = "BR " + b.br;
+            document.getElementById('km-txt').innerText = b.km;
         }
     }
 
-    async function loadDB() {
+    async function loadCSV() {
         try {
             const r = await fetch('SNVBR116SPRJ.csv');
             const t = await r.text();
-            const lines = t.split('\n').filter(l => l.includes(';'));
-            const h = lines.shift().toLowerCase().split(';');
-            const iBr=h.indexOf('br'), iKm=h.indexOf('km'), iLat=h.findIndex(x=>x.includes('lat')), iLon=h.findIndex(x=>x.includes('lon'));
-            
-            kmDB = lines.map(l => {
-                const c = l.split(';');
-                return { br: c[iBr], km: c[iKm], lt: parseFloat(c[iLat]?.replace(',','.')), ln: parseFloat(c[iLon]?.replace(',','.')) };
+            const rows = t.split('\n').filter(l => l.includes(';'));
+            const h = rows.shift().toLowerCase().split(';');
+            const iB=h.indexOf('br'), iK=h.indexOf('km'), iLa=h.findIndex(x=>x.includes('lat')), iLo=h.findIndex(x=>x.includes('lon'));
+            kmDB = rows.map(r => {
+                const c = r.split(';');
+                return { br: c[iB], km: c[iK], lt: parseFloat(c[iLa]?.replace(',','.')), ln: parseFloat(c[iLo]?.replace(',','.')) };
             }).filter(d => !isNaN(d.lt));
-            pushLog("Base CSV ok");
-        } catch(e) { pushLog("Erro CSV"); }
+        } catch (e) { log("Falha ao ler CSV."); }
     }
 
-    function flashEffect() {
-        const f = document.getElementById('flash');
-        f.style.opacity = '0.8';
-        setTimeout(() => f.style.opacity = '0', 100);
+    function startTime() {
+        document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+        setTimeout(startTime, 1000);
     }
 
-    function toggleSettings() { document.getElementById('settings').classList.toggle('open'); }
-    function uiFeedback() {
-        const ctrl = document.getElementById('controls');
-        ctrl.style.opacity = ctrl.style.opacity === '0' ? '1' : '0';
-    }
+    function toggleSettings() { document.getElementById('side-panel').classList.toggle('open'); }
+    toggleSettings(); // Começa aberto para o usuário configurar
 </script>
 </body>
 </html>
