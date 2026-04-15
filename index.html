@@ -2,126 +2,156 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Registro de Atividades - Apoio Técnico</title>
+    <title>Gerador de Scripts VBS - Apoio Técnico</title>
     <style>
-        body { font-family: sans-serif; background-color: #e9ecef; display: flex; justify-content: center; padding: 40px; }
-        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        h2 { color: #2c3e50; text-align: center; margin-bottom: 25px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        :root { --primary: #0078d4; --success: #28a745; --bg: #f3f4f6; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
         
-        .status { font-size: 11px; text-align: center; margin-bottom: 15px; padding: 5px; border-radius: 4px; }
-        .off { background: #f8d7da; color: #721c24; cursor: pointer; }
-        .on { background: #d4edda; color: #155724; }
+        h2 { color: #333; text-align: center; margin-bottom: 20px; font-size: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        
+        .btn-config { width: 100%; padding: 12px; background: #606770; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; }
+        .status { font-size: 12px; text-align: center; margin-bottom: 15px; padding: 8px; border-radius: 6px; }
+        .status.off { background: #ffdada; color: #a30000; }
+        .status.on { background: #d4ffd6; color: #007a06; }
 
-        .field-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 14px; }
-        input, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
-        textarea { height: 80px; resize: vertical; }
+        .group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 5px; }
         
-        .row { display: flex; gap: 10px; }
-        .row > div { flex: 1; }
+        .os-row { display: flex; gap: 8px; }
+        input, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
+        
+        .lock-btn { width: 50px; background: #eee; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .lock-btn.active { background: var(--primary); color: white; border-color: #005a9e; }
 
-        button { width: 100%; padding: 15px; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-folder { background: #6c757d; color: white; margin-bottom: 20px; font-size: 14px; }
-        .btn-save { background: #27ae60; color: white; margin-top: 10px; }
-        button:hover { filter: brightness(90%); }
+        .time-row { display: flex; gap: 10px; }
+        .time-row > div { flex: 1; }
+
+        textarea { height: 80px; resize: none; }
+
+        .save-btn { width: 100%; padding: 16px; background: var(--success); color: white; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 0 #1e7e34; }
+        .save-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1e7e34; }
         
-        #log { margin-top: 15px; font-size: 12px; color: #666; text-align: center; }
+        #console { margin-top: 15px; font-size: 12px; color: #666; text-align: center; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>Registro de Atividade</h2>
-    
-    <button id="btnDir" class="btn-folder" onclick="selectFolder()">📁 1. Definir Pasta de Arquivos</button>
-    <div id="statusBox" class="status off">Pasta não selecionada</div>
+<div class="container">
+    <h2>Lançamento de Atividades</h2>
 
-    <div class="field-group">
+    <button id="btnDir" class="btn-config" onclick="configurarPasta()">📁 SELECIONAR PASTA DE DESTINO</button>
+    <div id="status" class="status off">Pasta não configurada</div>
+
+    <div class="group">
         <label>Número da Ordem:</label>
-        <input type="text" id="numOrdem" placeholder="Ex: 123456">
-    </div>
-
-    <div class="field-group">
-        <label>Data:</label>
-        <input type="date" id="dataAtividade">
-    </div>
-
-    <div class="row">
-        <div class="field-group">
-            <label>Hora Inicial:</label>
-            <input type="time" id="horaIni">
-        </div>
-        <div class="field-group">
-            <label>Hora Final:</label>
-            <input type="time" id="horaFim">
+        <div class="os-row">
+            <input type="text" id="os" placeholder="000000">
+            <button id="lockBtn" class="lock-btn" onclick="toggleLock()" title="Fixar OS">🔓</button>
         </div>
     </div>
 
-    <div class="field-group">
-        <label>Descrição da Atividade:</label>
-        <textarea id="desc"></textarea>
+    <div class="group">
+        <label>Data da Atividade:</label>
+        <input type="date" id="data">
     </div>
 
-    <button class="btn-save" onclick="salvarArquivo()">SALVAR REGISTRO</button>
-    <div id="log"></div>
+    <div class="time-row">
+        <div class="group">
+            <label>Início:</label>
+            <input type="time" id="hIni">
+        </div>
+        <div class="group">
+            <label>Fim:</label>
+            <input type="time" id="hFim">
+        </div>
+    </div>
+
+    <div class="group">
+        <label>Descrição:</label>
+        <textarea id="desc" placeholder="Descreva a atividade..."></textarea>
+    </div>
+
+    <button class="save-btn" onclick="gerarVBS()">SALVAR .VBS</button>
+    
+    <div id="console">Aguardando ação...</div>
 </div>
 
 <script>
-    let pastaHandle;
+    let pastaDestino;
+    let osFixa = false;
 
-    // Define a data de hoje automaticamente ao abrir
-    document.getElementById('dataAtividade').valueAsDate = new Date();
+    // Inicia com a data de hoje
+    document.getElementById('data').valueAsDate = new Date();
 
-    async function selectFolder() {
+    function toggleLock() {
+        osFixa = !osFixa;
+        const btn = document.getElementById('lockBtn');
+        const input = document.getElementById('os');
+        btn.classList.toggle('active');
+        btn.innerText = osFixa ? '🔒' : '🔓';
+        input.style.background = osFixa ? '#eef6ff' : '#fff';
+    }
+
+    async function configurarPasta() {
         try {
-            pastaHandle = await window.showDirectoryPicker();
-            document.getElementById('statusBox').innerText = "✔ Pasta: " + pastaHandle.name;
-            document.getElementById('statusBox').className = "status on";
+            pastaDestino = await window.showDirectoryPicker();
+            document.getElementById('status').innerText = "✔ Salvando em: " + pastaDestino.name;
+            document.getElementById('status').className = "status on";
             document.getElementById('btnDir').style.display = 'none';
-        } catch (err) {
-            console.error(err);
+        } catch (e) {
+            console.log("Seleção cancelada");
         }
     }
 
-    async function salvarArquivo() {
-        if (!pastaHandle) {
-            alert("Clique no botão cinza para selecionar a pasta primeiro!");
+    async function gerarVBS() {
+        if (!pastaDestino) {
+            alert("Selecione a pasta primeiro!");
             return;
         }
 
-        const ordem = document.getElementById('numOrdem').value;
-        const data = document.getElementById('dataAtividade').value;
-        const hIni = document.getElementById('horaIni').value;
-        const hFim = document.getElementById('horaFim').value;
-        const desc = document.getElementById('desc').value;
+        const dados = {
+            os: document.getElementById('os').value,
+            data: document.getElementById('data').value,
+            ini: document.getElementById('hIni').value,
+            fim: document.getElementById('hFim').value,
+            desc: document.getElementById('desc').value
+        };
 
-        if(!ordem || !hIni || !hFim) {
-            alert("Preencha a Ordem e os Horários!");
+        if (!dados.os || !dados.ini || !dados.fim) {
+            alert("Preencha a OS e os Horários!");
             return;
         }
 
-        // Formata o conteúdo exatamente para o seu script capturar
-        const conteudo = `ORDEM: ${ordem}\nDATA: ${data}\nINICIO: ${hIni}\nFIM: ${hFim}\nDESCRICAO: ${desc}`;
+        // Template do VBS (Substituiremos pelo seu script oficial depois)
+        const templateVBS = `' Script Gerado Automaticamente
+MsgBox "Lancando OS: ${dados.os}" & vbCrLf & "Periodo: ${dados.ini} ate ${dados.fim}"
+' Aqui entrarão os seus comandos SendKeys que você vai me enviar`;
 
         try {
-            // Nome do arquivo com timestamp para não sobrescrever
-            const agora = new Date();
-            const nomeArquivo = `OS_${ordem}_${agora.getHours()}${agora.getMinutes()}${agora.getSeconds()}.txt`;
+            // Nome do arquivo: DATA_HORAINI_HORAFIM.vbs
+            const nomeArquivo = `${dados.data}_${dados.ini.replace(':','-')}_${dados.fim.replace(':','-')}.vbs`;
             
-            const fileHandle = await pastaHandle.getFileHandle(nomeArquivo, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(conteudo);
-            await writable.close();
+            const handleArquivo = await pastaDestino.getFileHandle(nomeArquivo, { create: true });
+            const gravador = await handleArquivo.createWritable();
+            await gravador.write(templateVBS);
+            await gravador.close();
 
-            document.getElementById('log').innerText = "Arquivo " + nomeArquivo + " salvo!";
-            
-            // Limpa apenas a ordem e descrição para o próximo lançamento
-            document.getElementById('numOrdem').value = '';
+            document.getElementById('console').innerText = "✅ Gerado: " + nomeArquivo;
+
+            // Limpeza lógica
+            if (!osFixa) document.getElementById('os').value = '';
             document.getElementById('desc').value = '';
-            document.getElementById('numOrdem').focus();
             
+            // Foco inteligente
+            if (osFixa) {
+                document.getElementById('hIni').focus();
+            } else {
+                document.getElementById('os').focus();
+            }
+
         } catch (err) {
-            alert("Erro ao salvar: " + err.message);
+            alert("Erro ao salvar arquivo: " + err.message);
         }
     }
 </script>
