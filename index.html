@@ -2,114 +2,76 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Apoio Técnico - Fibra RA</title>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fibra RA - Campo</title>
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.3.1/leaflet-omnivore.min.js"></script>
-
+    <script src="https://unpkg.com/togeojson@0.16.0/togeojson.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: sans-serif; }
-        #map { height: 40%; width: 100%; position: absolute; top: 0; z-index: 10; border-bottom: 3px solid #00FF00; }
-        .ar-viewport { height: 60%; width: 100%; position: absolute; bottom: 0; }
-        .controls { 
-            position: absolute; top: 10px; left: 10px; z-index: 100; 
-            background: rgba(255,255,255,0.9); padding: 10px; border-radius: 8px; 
-        }
-        #status { font-size: 11px; color: green; font-weight: bold; }
+        .ui { position: absolute; z-index: 100; bottom: 20px; left: 20px; background: white; padding: 10px; border-radius: 10px; }
+        #status { font-size: 12px; display: block; margin-top: 5px; }
     </style>
 </head>
+<body style="margin: 0; overflow: hidden;">
 
-<body>
-
-    <div class="controls">
-        <strong>Fibra Ótica - Raio-X</strong><br>
-        <input type="file" id="upload-kmz" accept=".kmz"><br>
-        <span id="status">Aguardando KMZ...</span>
+    <div class="ui">
+        <strong>Fibra Ótica RA</strong><br>
+        <input type="file" id="fileInput" accept=".kmz">
+        <span id="status">Selecione o KMZ</span>
     </div>
 
-    <div id="map"></div>
-
-    <div class="ar-viewport">
-        <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false;">
-            <a-camera gps-camera rotation-reader></a-camera>
-        </a-scene>
-    </div>
+    <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false;">
+        <a-camera gps-camera rotation-reader></a-camera>
+    </a-scene>
 
     <script>
-        // 1. Configuração do Mapa
-        const map = L.map('map').setView([-22.9, -45.4], 14);
-        L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
-            maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3']
-        }).addTo(map);
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+        const scene = document.querySelector('a-scene');
 
-        let userMarker = L.circleMarker(, {color: 'blue', radius: 8}).addTo(map);
-        let fibraPoints = [];
-
-        // 2. Processar o KMZ
-        document.getElementById('upload-kmz').addEventListener('change', function(e) {
+        fileInput.addEventListener('change', function(e) {
             const file = e.target.files;
+            status.innerText = "Processando...";
+
             const reader = new FileReader();
-            
             reader.onload = function(event) {
                 JSZip.loadAsync(event.target.result).then(zip => {
                     const kmlFile = Object.keys(zip.files).find(f => f.endsWith('.kml'));
                     return zip.file(kmlFile).async("string");
                 }).then(kmlText => {
-                    // Adiciona ao mapa 2D
-                    const layer = omnivore.kml.parse(kmlText).addTo(map);
-                    map.fitBounds(layer.getBounds());
+                    const parser = new DOMParser();
+                    const kmlDom = parser.parseFromString(kmlText, "text/xml");
+                    const geojson = toGeoJSON.kml(kmlDom);
                     
-                    // Extrai coordenadas para a "Mágica" da RA
-                    extractCoords(layer);
-                    document.getElementById('status').innerText = "Fibra Ativa na Câmera!";
+                    renderRA(geojson);
+                    status.innerText = "Mágica Ativa!";
+                    status.style.color = "green";
+                }).catch(err => {
+                    status.innerText = "Erro ao ler KMZ";
+                    console.error(err);
                 });
             };
             reader.readAsArrayBuffer(file);
         });
 
-        function extractCoords(layer) {
-            fibraPoints = [];
-            layer.eachLayer(l => {
-                if (l.getLatLngs) {
-                    const pts = l.getLatLngs();
-                    // Simplifica para pontos simples caso seja multi-dimensional
-                    pts.flat(Infinity).forEach(p => fibraPoints.push({lat: p.lat, lng: p.lng}));
+        function renderRA(data) {
+            // Limpa pontos antigos
+            document.querySelectorAll('.ponto-fibra').forEach(el => el.remove());
+
+            // Pega as coordenadas do traçado
+            data.features.forEach(feature => {
+                if (feature.geometry.type === "LineString") {
+                    feature.geometry.coordinates.forEach(coord => {
+                        const entity = document.createElement('a-entity');
+                        entity.setAttribute('class', 'ponto-fibra');
+                        // Longitude vem primeiro no GeoJSON
+                        entity.setAttribute('gps-entity-place', `latitude: ${coord}; longitude: ${coord};`);
+                        entity.setAttribute('geometry', 'primitive: cylinder; radius: 0.5; height: 100');
+                        entity.setAttribute('material', 'color: #00FF00; opacity: 0.5; emissive: #00FF00');
+                        scene.appendChild(entity);
+                    });
                 }
-            });
-        }
-
-        // 3. Atualizar a Realidade Aumentada (RA) baseado na distância
-        map.on('locationfound', function(e) {
-            userMarker.setLatLng(e.latlng);
-            updateAR(e.latlng);
-        });
-        map.locate({watch: true, enableHighAccuracy: true});
-
-        function updateAR(userPos) {
-            const scene = document.querySelector('a-scene');
-            
-            // Remove pontos de RA antigos para não travar
-            document.querySelectorAll('.fibra-ra').forEach(el => el.remove());
-
-            // Filtra apenas pontos da fibra num raio de 150 metros
-            const proximos = fibraPoints.filter(p => {
-                const dist = map.distance([p.lat, p.lng], [userPos.lat, userPos.lng]);
-                return dist < 150; 
-            });
-
-            proximos.forEach(p => {
-                const entity = document.createElement('a-entity');
-                entity.setAttribute('class', 'fibra-ra');
-                entity.setAttribute('gps-entity-place', `latitude: ${p.lat}; longitude: ${p.lng};`);
-                // Cria um cilindro vertical (como uma baliza neon) onde a fibra passa
-                entity.setAttribute('geometry', 'primitive: cylinder; radius: 0.3; height: 50');
-                entity.setAttribute('material', 'color: #00FF00; opacity: 0.6; emissive: #00FF00');
-                scene.appendChild(entity);
             });
         }
     </script>
