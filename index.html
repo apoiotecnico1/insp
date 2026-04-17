@@ -1,160 +1,117 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Gerador de Scripts VBS - Apoio Técnico</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Apoio Técnico - Fibra RA</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.3.1/leaflet-omnivore.min.js"></script>
+
     <style>
-        :root { --primary: #0078d4; --success: #28a745; --bg: #f3f4f6; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); display: flex; justify-content: center; padding: 20px; }
-        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
-        
-        h2 { color: #333; text-align: center; margin-bottom: 20px; font-size: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
-        
-        .btn-config { width: 100%; padding: 12px; background: #606770; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; }
-        .status { font-size: 12px; text-align: center; margin-bottom: 15px; padding: 8px; border-radius: 6px; }
-        .status.off { background: #ffdada; color: #a30000; }
-        .status.on { background: #d4ffd6; color: #007a06; }
-
-        .group { margin-bottom: 15px; }
-        label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 5px; }
-        
-        .os-row { display: flex; gap: 8px; }
-        input, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
-        
-        .lock-btn { width: 50px; background: #eee; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .lock-btn.active { background: var(--primary); color: white; border-color: #005a9e; }
-
-        .time-row { display: flex; gap: 10px; }
-        .time-row > div { flex: 1; }
-
-        textarea { height: 80px; resize: none; }
-
-        .save-btn { width: 100%; padding: 16px; background: var(--success); color: white; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 0 #1e7e34; }
-        .save-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1e7e34; }
-        
-        #console { margin-top: 15px; font-size: 12px; color: #666; text-align: center; }
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        #map { height: 40%; width: 100%; position: absolute; top: 0; z-index: 10; border-bottom: 3px solid #00FF00; }
+        .ar-viewport { height: 60%; width: 100%; position: absolute; bottom: 0; }
+        .controls { 
+            position: absolute; top: 10px; left: 10px; z-index: 100; 
+            background: rgba(255,255,255,0.9); padding: 10px; border-radius: 8px; 
+        }
+        #status { font-size: 11px; color: green; font-weight: bold; }
     </style>
 </head>
+
 <body>
 
-<div class="container">
-    <h2>Lançamento de Atividades</h2>
-
-    <button id="btnDir" class="btn-config" onclick="configurarPasta()">📁 SELECIONAR PASTA DE DESTINO</button>
-    <div id="status" class="status off">Pasta não configurada</div>
-
-    <div class="group">
-        <label>Número da Ordem:</label>
-        <div class="os-row">
-            <input type="text" id="os" placeholder="000000">
-            <button id="lockBtn" class="lock-btn" onclick="toggleLock()" title="Fixar OS">🔓</button>
-        </div>
+    <div class="controls">
+        <strong>Fibra Ótica - Raio-X</strong><br>
+        <input type="file" id="upload-kmz" accept=".kmz"><br>
+        <span id="status">Aguardando KMZ...</span>
     </div>
 
-    <div class="group">
-        <label>Data da Atividade:</label>
-        <input type="date" id="data">
+    <div id="map"></div>
+
+    <div class="ar-viewport">
+        <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false;">
+            <a-camera gps-camera rotation-reader></a-camera>
+        </a-scene>
     </div>
 
-    <div class="time-row">
-        <div class="group">
-            <label>Início:</label>
-            <input type="time" id="hIni">
-        </div>
-        <div class="group">
-            <label>Fim:</label>
-            <input type="time" id="hFim">
-        </div>
-    </div>
+    <script>
+        // 1. Configuração do Mapa
+        const map = L.map('map').setView([-22.9, -45.4], 14);
+        L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+            maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3']
+        }).addTo(map);
 
-    <div class="group">
-        <label>Descrição:</label>
-        <textarea id="desc" placeholder="Descreva a atividade..."></textarea>
-    </div>
+        let userMarker = L.circleMarker(, {color: 'blue', radius: 8}).addTo(map);
+        let fibraPoints = [];
 
-    <button class="save-btn" onclick="gerarVBS()">SALVAR .VBS</button>
-    
-    <div id="console">Aguardando ação...</div>
-</div>
-
-<script>
-    let pastaDestino;
-    let osFixa = false;
-
-    // Inicia com a data de hoje
-    document.getElementById('data').valueAsDate = new Date();
-
-    function toggleLock() {
-        osFixa = !osFixa;
-        const btn = document.getElementById('lockBtn');
-        const input = document.getElementById('os');
-        btn.classList.toggle('active');
-        btn.innerText = osFixa ? '🔒' : '🔓';
-        input.style.background = osFixa ? '#eef6ff' : '#fff';
-    }
-
-    async function configurarPasta() {
-        try {
-            pastaDestino = await window.showDirectoryPicker();
-            document.getElementById('status').innerText = "✔ Salvando em: " + pastaDestino.name;
-            document.getElementById('status').className = "status on";
-            document.getElementById('btnDir').style.display = 'none';
-        } catch (e) {
-            console.log("Seleção cancelada");
-        }
-    }
-
-    async function gerarVBS() {
-        if (!pastaDestino) {
-            alert("Selecione a pasta primeiro!");
-            return;
-        }
-
-        const dados = {
-            os: document.getElementById('os').value,
-            data: document.getElementById('data').value,
-            ini: document.getElementById('hIni').value,
-            fim: document.getElementById('hFim').value,
-            desc: document.getElementById('desc').value
-        };
-
-        if (!dados.os || !dados.ini || !dados.fim) {
-            alert("Preencha a OS e os Horários!");
-            return;
-        }
-
-        // Template do VBS (Substituiremos pelo seu script oficial depois)
-        const templateVBS = `' Script Gerado Automaticamente
-MsgBox "Lancando OS: ${dados.os}" & vbCrLf & "Periodo: ${dados.ini} ate ${dados.fim}"
-' Aqui entrarão os seus comandos SendKeys que você vai me enviar`;
-
-        try {
-            // Nome do arquivo: DATA_HORAINI_HORAFIM.vbs
-            const nomeArquivo = `${dados.data}_${dados.ini.replace(':','-')}_${dados.fim.replace(':','-')}.vbs`;
+        // 2. Processar o KMZ
+        document.getElementById('upload-kmz').addEventListener('change', function(e) {
+            const file = e.target.files;
+            const reader = new FileReader();
             
-            const handleArquivo = await pastaDestino.getFileHandle(nomeArquivo, { create: true });
-            const gravador = await handleArquivo.createWritable();
-            await gravador.write(templateVBS);
-            await gravador.close();
+            reader.onload = function(event) {
+                JSZip.loadAsync(event.target.result).then(zip => {
+                    const kmlFile = Object.keys(zip.files).find(f => f.endsWith('.kml'));
+                    return zip.file(kmlFile).async("string");
+                }).then(kmlText => {
+                    // Adiciona ao mapa 2D
+                    const layer = omnivore.kml.parse(kmlText).addTo(map);
+                    map.fitBounds(layer.getBounds());
+                    
+                    // Extrai coordenadas para a "Mágica" da RA
+                    extractCoords(layer);
+                    document.getElementById('status').innerText = "Fibra Ativa na Câmera!";
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        });
 
-            document.getElementById('console').innerText = "✅ Gerado: " + nomeArquivo;
-
-            // Limpeza lógica
-            if (!osFixa) document.getElementById('os').value = '';
-            document.getElementById('desc').value = '';
-            
-            // Foco inteligente
-            if (osFixa) {
-                document.getElementById('hIni').focus();
-            } else {
-                document.getElementById('os').focus();
-            }
-
-        } catch (err) {
-            alert("Erro ao salvar arquivo: " + err.message);
+        function extractCoords(layer) {
+            fibraPoints = [];
+            layer.eachLayer(l => {
+                if (l.getLatLngs) {
+                    const pts = l.getLatLngs();
+                    // Simplifica para pontos simples caso seja multi-dimensional
+                    pts.flat(Infinity).forEach(p => fibraPoints.push({lat: p.lat, lng: p.lng}));
+                }
+            });
         }
-    }
-</script>
 
+        // 3. Atualizar a Realidade Aumentada (RA) baseado na distância
+        map.on('locationfound', function(e) {
+            userMarker.setLatLng(e.latlng);
+            updateAR(e.latlng);
+        });
+        map.locate({watch: true, enableHighAccuracy: true});
+
+        function updateAR(userPos) {
+            const scene = document.querySelector('a-scene');
+            
+            // Remove pontos de RA antigos para não travar
+            document.querySelectorAll('.fibra-ra').forEach(el => el.remove());
+
+            // Filtra apenas pontos da fibra num raio de 150 metros
+            const proximos = fibraPoints.filter(p => {
+                const dist = map.distance([p.lat, p.lng], [userPos.lat, userPos.lng]);
+                return dist < 150; 
+            });
+
+            proximos.forEach(p => {
+                const entity = document.createElement('a-entity');
+                entity.setAttribute('class', 'fibra-ra');
+                entity.setAttribute('gps-entity-place', `latitude: ${p.lat}; longitude: ${p.lng};`);
+                // Cria um cilindro vertical (como uma baliza neon) onde a fibra passa
+                entity.setAttribute('geometry', 'primitive: cylinder; radius: 0.3; height: 50');
+                entity.setAttribute('material', 'color: #00FF00; opacity: 0.6; emissive: #00FF00');
+                scene.appendChild(entity);
+            });
+        }
+    </script>
 </body>
 </html>
