@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fibra RA - Direcionador</title>
+    <title>Fibra RA - Operacional</title>
     
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
@@ -11,152 +11,189 @@
     <script src="https://unpkg.com/togeojson@0.16.0/togeojson.js"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        :root { --primary: #00ff00; --bg-glass: rgba(0, 0, 0, 0.7); }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; background: #000; }
+
+        /* Interface Responsiva */
+        .overlay {
+            position: absolute; z-index: 1000; width: 100%;
+            display: flex; flex-direction: column; align-items: center; pointer-events: none;
+        }
+
+        .top-bar { top: 20px; }
+        .bottom-bar { bottom: 30px; }
+
+        /* Seta Guia */
+        #arrow-gui {
+            background: var(--bg-glass); width: 80px; height: 80px;
+            border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; border: 2px solid var(--primary);
+            box-shadow: 0 0 15px var(--primary); margin-bottom: 10px;
+        }
+        #arrow { font-size: 40px; color: var(--primary); transition: transform 0.1s ease-out; }
+
+        /* Painel de Dados */
+        .glass-card {
+            background: var(--bg-glass); color: white; padding: 15px;
+            border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);
+            width: 85%; max-width: 350px; pointer-events: all; text-align: center;
+        }
+
+        input[type="file"] { width: 100%; margin: 10px 0; font-size: 14px; }
+        .dist-info { font-size: 24px; font-weight: bold; color: var(--primary); margin: 5px 0; }
+        .status-txt { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
         
-        /* Seta Indicadora */
-        #arrow-container {
-            position: absolute; top: 20px; right: 20px; z-index: 2000;
-            text-align: center; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 50%;
-        }
-        #arrow { font-size: 50px; color: #00FF00; display: inline-block; transition: transform 0.2s; }
-
-        .ui-panel {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 1000; background: rgba(255, 255, 255, 0.9);
-            padding: 15px; border-radius: 15px; width: 85%; text-align: center;
-        }
-
-        #distancia { font-size: 18px; font-weight: bold; color: #2ecc71; }
+        /* Ajuste de Vídeo para cobrir tela cheia */
+        .a-canvas { width: 100% !important; height: 100% !important; }
     </style>
 </head>
 
-<body style="margin: 0; overflow: hidden;">
+<body>
 
-    <div id="arrow-container">
-        <div id="arrow">➔</div>
-        <div style="color: white; font-size: 10px;">FIBRA</div>
+    <div class="overlay top-bar">
+        <div id="arrow-gui">
+            <div id="arrow">▲</div>
+        </div>
+        <div class="glass-card">
+            <div class="status-txt" id="status">Aguardando KMZ</div>
+            <div class="dist-info" id="dist-val">-- m</div>
+            <small id="nome-caixa">Nenhum ponto próximo</small>
+        </div>
     </div>
 
-    <div class="ui-panel">
-        <input type="file" id="fileInput" accept=".kmz">
-        <div id="status">Selecione o KMZ</div>
-        <div id="distancia">-- m</div>
+    <div class="overlay bottom-bar">
+        <div class="glass-card">
+            <input type="file" id="fileInput" accept=".kmz">
+            <div style="font-size: 10px; opacity: 0.6;">Toque para carregar o traçado da rodovia</div>
+        </div>
     </div>
 
-    <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false;">
-        <a-camera gps-camera rotation-reader></a-camera>
+    <a-scene embedded vr-mode-ui="enabled: false" 
+             arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true; trackingMethod: best;">
+        
+        <a-camera gps-camera="simulateAltitude: 1.6" rotation-reader></a-camera>
     </a-scene>
 
     <script>
         const fileInput = document.getElementById('fileInput');
         const arrow = document.getElementById('arrow');
-        const distText = document.getElementById('distancia');
+        const distVal = document.getElementById('dist-val');
+        const statusTxt = document.getElementById('status');
+        const nomeCaixa = document.getElementById('nome-caixa');
         const scene = document.querySelector('a-scene');
-        
-        let fibraCoords = [];
-        let userPos = null;
 
-        fileInput.addEventListener('change', function(e) {
+        let pointsDB = [];
+        let currentPos = null;
+
+        // 1. Carregamento e Processamento de 500km
+        fileInput.addEventListener('change', handleFile);
+
+        async function handleFile(e) {
             const file = e.target.files;
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                JSZip.loadAsync(event.target.result).then(zip => {
-                    const kmlFile = Object.keys(zip.files).find(f => f.toLowerCase().endsWith('.kml'));
-                    return zip.file(kmlFile).async("string");
-                }).then(kmlText => {
-                    const kmlDom = new DOMParser().parseFromString(kmlText, "text/xml");
-                    const geojson = toGeoJSON.kml(kmlDom);
-                    processarKMZ(geojson);
-                });
-            };
-            reader.readAsArrayBuffer(file);
-        });
+            if (!file) return;
+            
+            statusTxt.innerText = "Processando Dados...";
+            
+            try {
+                const zip = await JSZip.loadAsync(file);
+                const kmlName = Object.keys(zip.files).find(f => f.toLowerCase().endsWith('.kml'));
+                const kmlContent = await zip.file(kmlName).async("string");
+                
+                const kmlDom = new DOMParser().parseFromString(kmlContent, "text/xml");
+                const geojson = toGeoJSON.kml(kmlDom);
+                
+                parseGeoJSON(geojson);
+                statusTxt.innerText = "Sistema Online";
+            } catch (err) {
+                statusTxt.innerText = "Erro no Ficheiro";
+                console.error(err);
+            }
+        }
 
-        function processarKMZ(data) {
-            fibraCoords = [];
-            document.querySelectorAll('.fibra-item').forEach(el => el.remove());
+        function parseGeoJSON(data) {
+            pointsDB = [];
+            document.querySelectorAll('.ar-node').forEach(n => n.remove());
 
-            data.features.forEach(feature => {
-                const nome = feature.properties.name || "Fibra";
-                if (feature.geometry.type === "LineString") {
-                    const coords = feature.geometry.coordinates;
-                    // Pega pontos estratégicos (Início, meio, fim e caixas)
-                    for (let i = 0; i < coords.length; i += 30) { 
+            data.features.forEach(f => {
+                const name = f.properties.name || "Fibra Entestada";
+                if (f.geometry.type === "LineString") {
+                    const coords = f.geometry.coordinates;
+                    // Otimização: 1 ponto a cada 50 metros para não fritar o CPU
+                    for (let i = 0; i < coords.length; i += 25) {
                         const p = coords[i];
-                        fibraCoords.push({lat: p, lng: p, name: nome});
-                        criarEntidadeRA(p, p, nome);
+                        pointsDB.push({ lat: p, lng: p, name: name });
+                        addARNode(p, p, name);
                     }
+                } else if (f.geometry.type === "Point") {
+                    const p = f.geometry.coordinates;
+                    pointsDB.push({ lat: p, lng: p, name: name });
+                    addARNode(p, p, name);
                 }
             });
-            document.getElementById('status').innerText = "Sistema Ativo!";
         }
 
-        function criarEntidadeRA(lat, lng, nome) {
-            const entity = document.createElement('a-entity');
-            entity.setAttribute('class', 'fibra-item');
-            entity.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng};`);
+        function addARNode(lat, lng, name) {
+            const el = document.createElement('a-entity');
+            el.setAttribute('class', 'ar-node');
+            el.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng}`);
             
-            // Baliza Visual
-            entity.setAttribute('geometry', 'primitive: cylinder; radius: 0.5; height: 60');
-            entity.setAttribute('material', 'color: #00FF00; opacity: 0.4');
-
-            // Texto Flutuante (Nome da Caixa/Fibra)
-            const text = document.createElement('a-text');
-            text.setAttribute('value', nome);
-            text.setAttribute('scale', '20 20 20');
-            text.setAttribute('look-at', '[gps-camera]');
-            text.setAttribute('align', 'center');
-            text.setAttribute('position', '0 10 0');
-            
-            entity.appendChild(text);
-            scene.appendChild(entity);
+            // Geometria da baliza
+            el.innerHTML = `
+                <a-cylinder radius="0.4" height="100" material="color: #00ff00; opacity: 0.4; emissive: #00ff00"></a-cylinder>
+                <a-text value="${name}" scale="15 15 15" align="center" position="0 15 0" look-at="[gps-camera]"></a-text>
+            `;
+            scene.appendChild(el);
         }
 
-        // Lógica da Seta e Distância
+        // 2. Lógica de Navegação e Orientação
         window.addEventListener('gps-camera-update-position', (e) => {
-            userPos = e.detail.position;
-            atualizarGuia();
+            currentPos = e.detail.position;
+            updateUI();
         });
 
-        function atualizarGuia() {
-            if (!userPos || fibraCoords.length === 0) return;
-
-            // Acha o ponto mais próximo
-            let maisProximo = fibraCoords;
-            let menorDist = calcularDistancia(userPos.latitude, userPos.longitude, maisProximo.lat, maisProximo.lng);
-
-            fibraCoords.forEach(p => {
-                let d = calcularDistancia(userPos.latitude, userPos.longitude, p.lat, p.lng);
-                if (d < menorDist) { menorDist = d; maisProximo = p; }
-            });
-
-            distText.innerText = Math.round(menorDist) + " m";
-
-            // Calcula o ângulo para a seta (Bearing)
-            const angle = calcularBearing(userPos.latitude, userPos.longitude, maisProximo.lat, maisProximo.lng);
+        window.addEventListener('deviceorientation', (e) => {
+            if (!currentPos || pointsDB.length === 0) return;
             
-            // Ajusta a seta conforme a bússola do celular
-            window.addEventListener('deviceorientation', (event) => {
-                const heading = event.webkitCompassHeading || event.alpha;
-                const arrowRotation = angle - heading;
-                arrow.style.transform = `rotate(${arrowRotation}deg)`;
-            }, {once: true});
+            const heading = e.webkitCompassHeading || e.alpha;
+            const target = findNearest();
+            
+            const bearing = calculateBearing(currentPos.latitude, currentPos.longitude, target.lat, target.lng);
+            const rotation = (bearing - heading + 360) % 360;
+            
+            arrow.style.transform = `rotate(${rotation}deg)`;
+        });
+
+        function findNearest() {
+            return pointsDB.reduce((prev, curr) => {
+                const distPrev = getDistance(currentPos.latitude, currentPos.longitude, prev.lat, prev.lng);
+                const distCurr = getDistance(currentPos.latitude, currentPos.longitude, curr.lat, curr.lng);
+                return distCurr < distPrev ? curr : prev;
+            });
         }
 
-        function calcularDistancia(lat1, lon1, lat2, lon2) {
+        function updateUI() {
+            if (pointsDB.length === 0) return;
+            const nearest = findNearest();
+            const d = getDistance(currentPos.latitude, currentPos.longitude, nearest.lat, nearest.lng);
+            
+            distVal.innerText = d > 1000 ? (d/1000).toFixed(2) + " km" : Math.round(d) + " m";
+            nomeCaixa.innerText = nearest.name;
+        }
+
+        // Fórmulas Matemáticas
+        function getDistance(lat1, lon1, lat2, lon2) {
             const R = 6371e3;
-            const dLat = (lat2-lat1) * Math.PI/180;
-            const dLon = (lon2-lon1) * Math.PI/180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
-                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        function calcularBearing(lat1, lon1, lat2, lon2) {
+        function calculateBearing(lat1, lon1, lat2, lon2) {
             const y = Math.sin((lon2-lon1)*Math.PI/180) * Math.cos(lat2*Math.PI/180);
-            const x = Math.cos(lat1*Math.PI/180)*Math.sin(lat2*Math.PI/180) -
-                      Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.cos((lon2-lon1)*Math.PI/180);
+            const x = Math.cos(lat1*Math.PI/180)*Math.sin(lat2*Math.PI/180) - Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.cos((lon2-lon1)*Math.PI/180);
             return (Math.atan2(y, x) * 180/Math.PI + 360) % 360;
         }
     </script>
