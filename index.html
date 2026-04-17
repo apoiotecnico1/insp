@@ -1,79 +1,149 @@
-<!DOCTYPE html>
-<html>
+import os
+
+# Conteúdo do HTML consolidado
+html_content = """<!DOCTYPE html>
+<html lang="pt-br">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fibra RA - Campo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RA Fibra Ótica - Apoio Técnico</title>
+    
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://unpkg.com/togeojson@0.16.0/togeojson.js"></script>
+
     <style>
-        .ui { position: absolute; z-index: 100; bottom: 20px; left: 20px; background: white; padding: 10px; border-radius: 10px; }
-        #status { font-size: 12px; display: block; margin-top: 5px; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        
+        .ui-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        #fileInput {
+            display: block;
+            margin: 10px auto;
+            font-size: 14px;
+        }
+
+        #status {
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .loader {
+            color: #2ecc71;
+            display: none;
+        }
     </style>
 </head>
+
 <body style="margin: 0; overflow: hidden;">
 
-    <div class="ui">
-        <strong>Fibra Ótica RA</strong><br>
+    <div class="ui-panel">
+        <strong>📍 Localizador de Fibra (RA)</strong><br>
         <input type="file" id="fileInput" accept=".kmz">
-        <span id="status">Selecione o KMZ</span>
+        <div id="status">Selecione o ficheiro KMZ da rodovia</div>
+        <div id="loader" class="loader">Processando 500km de dados...</div>
     </div>
 
-    <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false;">
+    <a-scene 
+        embedded 
+        vr-mode-ui="enabled: false" 
+        arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;">
+        
         <a-camera gps-camera rotation-reader></a-camera>
     </a-scene>
 
     <script>
         const fileInput = document.getElementById('fileInput');
         const status = document.getElementById('status');
+        const loader = document.getElementById('loader');
         const scene = document.querySelector('a-scene');
 
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files;
-            status.innerText = "Processando...";
+            if (!file) return;
+
+            status.style.display = 'none';
+            loader.style.display = 'block';
 
             const reader = new FileReader();
             reader.onload = function(event) {
+                // Descompactar KMZ (ZIP)
                 JSZip.loadAsync(event.target.result).then(zip => {
-                    const kmlFile = Object.keys(zip.files).find(f => f.endsWith('.kml'));
+                    const kmlFile = Object.keys(zip.files).find(f => f.toLowerCase().endsWith('.kml'));
+                    if (!kmlFile) throw new Error("KML não encontrado");
                     return zip.file(kmlFile).async("string");
                 }).then(kmlText => {
+                    // Converter KML para JSON legível
                     const parser = new DOMParser();
                     const kmlDom = parser.parseFromString(kmlText, "text/xml");
                     const geojson = toGeoJSON.kml(kmlDom);
                     
-                    renderRA(geojson);
-                    status.innerText = "Mágica Ativa!";
-                    status.style.color = "green";
+                    renderMarkers(geojson);
                 }).catch(err => {
-                    status.innerText = "Erro ao ler KMZ";
-                    console.error(err);
+                    alert("Erro ao ler o ficheiro: " + err.message);
+                    loader.style.display = 'none';
+                    status.style.display = 'block';
                 });
             };
             reader.readAsArrayBuffer(file);
         });
 
-        function renderRA(data) {
-            // Limpa pontos antigos
-            document.querySelectorAll('.ponto-fibra').forEach(el => el.remove());
+        function renderMarkers(data) {
+            // Limpar marcadores anteriores
+            document.querySelectorAll('.fibra-marker').forEach(el => el.remove());
 
-            // Pega as coordenadas do traçado
+            let totalPontos = 0;
+
             data.features.forEach(feature => {
-                if (feature.geometry.type === "LineString") {
-                    feature.geometry.coordinates.forEach(coord => {
+                if (feature.geometry.type === "LineString" || feature.geometry.type === "MultiLineString") {
+                    // Achata coordenadas (caso seja MultiLine)
+                    const coords = feature.geometry.coordinates.flat(feature.geometry.type === "MultiLineString" ? 1 : 0);
+                    
+                    // OTMIZAÇÃO: Para 500km, não desenhamos todos os pontos. 
+                    // Pegamos um ponto a cada 40 posições (aprox. 150-200 metros)
+                    for (let i = 0; i < coords.length; i += 40) {
+                        const coord = coords[i];
+                        const lat = coord;
+                        const lng = coord;
+
+                        // Criar cilindro luminoso (Baliza de Neon)
                         const entity = document.createElement('a-entity');
-                        entity.setAttribute('class', 'ponto-fibra');
-                        // Longitude vem primeiro no GeoJSON
-                        entity.setAttribute('gps-entity-place', `latitude: ${coord}; longitude: ${coord};`);
-                        entity.setAttribute('geometry', 'primitive: cylinder; radius: 0.5; height: 100');
+                        entity.setAttribute('class', 'fibra-marker');
+                        entity.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng};`);
+                        
+                        // Estética: Cilindro verde semi-transparente que sobe até ao céu
+                        entity.setAttribute('geometry', 'primitive: cylinder; radius: 0.8; height: 150');
                         entity.setAttribute('material', 'color: #00FF00; opacity: 0.5; emissive: #00FF00');
+                        
                         scene.appendChild(entity);
-                    });
+                        totalPontos++;
+                    }
                 }
             });
+
+            loader.style.display = 'none';
+            status.style.display = 'block';
+            status.innerText = "Mágica Ativa! " + totalPontos + " balizas carregadas.";
+            status.style.color = "#2ecc71";
         }
     </script>
 </body>
-</html>
+</html>"""
+
+with open("ra_fibra_rodovia.html", "w", encoding="utf-8") as f:
+    f.write(html_content)
