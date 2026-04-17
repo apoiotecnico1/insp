@@ -11,190 +11,165 @@
     <script src="https://unpkg.com/togeojson@0.16.0/togeojson.js"></script>
 
     <style>
-        :root { --primary: #00ff00; --bg-glass: rgba(0, 0, 0, 0.7); }
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; background: #000; }
+        :root { --primary: #00ff00; --bg: rgba(0, 0, 0, 0.85); }
+        body { margin: 0; overflow: hidden; font-family: sans-serif; background: #000; }
 
-        /* Interface Responsiva */
-        .overlay {
-            position: absolute; z-index: 1000; width: 100%;
-            display: flex; flex-direction: column; align-items: center; pointer-events: none;
+        /* Overlay de Permissão (Crítico) */
+        #start-screen {
+            position: fixed; top:0; left:0; width:100%; height:100%; 
+            background: #000; z-index: 9999; display: flex; 
+            flex-direction: column; align-items: center; justify-content: center; color: white;
+        }
+        .btn-start { 
+            padding: 20px 40px; background: var(--primary); color: black; 
+            border: none; border-radius: 30px; font-weight: bold; font-size: 18px;
         }
 
+        .overlay { position: absolute; z-index: 1000; width: 100%; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
         .top-bar { top: 20px; }
         .bottom-bar { bottom: 30px; }
 
-        /* Seta Guia */
         #arrow-gui {
-            background: var(--bg-glass); width: 80px; height: 80px;
+            background: var(--bg); width: 80px; height: 80px;
             border-radius: 50%; display: flex; align-items: center;
             justify-content: center; border: 2px solid var(--primary);
             box-shadow: 0 0 15px var(--primary); margin-bottom: 10px;
         }
-        #arrow { font-size: 40px; color: var(--primary); transition: transform 0.1s ease-out; }
+        #arrow { font-size: 40px; color: var(--primary); transition: transform 0.1s linear; }
 
-        /* Painel de Dados */
         .glass-card {
-            background: var(--bg-glass); color: white; padding: 15px;
-            border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);
-            width: 85%; max-width: 350px; pointer-events: all; text-align: center;
+            background: var(--bg); color: white; padding: 15px;
+            border-radius: 15px; width: 85%; max-width: 350px; pointer-events: all; text-align: center;
         }
-
-        input[type="file"] { width: 100%; margin: 10px 0; font-size: 14px; }
-        .dist-info { font-size: 24px; font-weight: bold; color: var(--primary); margin: 5px 0; }
-        .status-txt { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
-        
-        /* Ajuste de Vídeo para cobrir tela cheia */
-        .a-canvas { width: 100% !important; height: 100% !important; }
+        .dist-info { font-size: 28px; font-weight: bold; color: var(--primary); }
     </style>
 </head>
 
 <body>
 
+    <div id="start-screen">
+        <h2>Localizador de Fibra RA</h2>
+        <p>Necessário ativar GPS e Bússola</p>
+        <button class="btn-start" onclick="initSensors()">INICIAR SISTEMA</button>
+    </div>
+
     <div class="overlay top-bar">
-        <div id="arrow-gui">
-            <div id="arrow">▲</div>
-        </div>
+        <div id="arrow-gui"><div id="arrow">▲</div></div>
         <div class="glass-card">
-            <div class="status-txt" id="status">Aguardando KMZ</div>
+            <div id="status">Aguardando KMZ...</div>
             <div class="dist-info" id="dist-val">-- m</div>
-            <small id="nome-caixa">Nenhum ponto próximo</small>
+            <small id="nome-caixa">Carregue o traçado</small>
         </div>
     </div>
 
     <div class="overlay bottom-bar">
         <div class="glass-card">
             <input type="file" id="fileInput" accept=".kmz">
-            <div style="font-size: 10px; opacity: 0.6;">Toque para carregar o traçado da rodovia</div>
         </div>
     </div>
 
     <a-scene embedded vr-mode-ui="enabled: false" 
-             arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true; trackingMethod: best;">
-        
-        <a-camera gps-camera="simulateAltitude: 1.6" rotation-reader></a-camera>
+             arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;">
+        <a-camera gps-camera="minDistance: 1; maxDistance: 1000" rotation-reader></a-camera>
     </a-scene>
 
     <script>
-        const fileInput = document.getElementById('fileInput');
         const arrow = document.getElementById('arrow');
         const distVal = document.getElementById('dist-val');
         const statusTxt = document.getElementById('status');
-        const nomeCaixa = document.getElementById('nome-caixa');
-        const scene = document.querySelector('a-scene');
-
         let pointsDB = [];
-        let currentPos = null;
+        let userPos = null;
 
-        // 1. Carregamento e Processamento de 500km
-        fileInput.addEventListener('change', handleFile);
-
-        async function handleFile(e) {
-            const file = e.target.files;
-            if (!file) return;
-            
-            statusTxt.innerText = "Processando Dados...";
-            
-            try {
-                const zip = await JSZip.loadAsync(file);
-                const kmlName = Object.keys(zip.files).find(f => f.toLowerCase().endsWith('.kml'));
-                const kmlContent = await zip.file(kmlName).async("string");
-                
-                const kmlDom = new DOMParser().parseFromString(kmlContent, "text/xml");
-                const geojson = toGeoJSON.kml(kmlDom);
-                
-                parseGeoJSON(geojson);
-                statusTxt.innerText = "Sistema Online";
-            } catch (err) {
-                statusTxt.innerText = "Erro no Ficheiro";
-                console.error(err);
+        // Função para autorizar sensores (Obrigatório em iOS e Android moderno)
+        async function initSensors() {
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                const permission = await DeviceOrientationEvent.requestPermission();
+                if (permission !== 'granted') return alert("Permissão de bússola negada.");
             }
+            document.getElementById('start-screen').style.display = 'none';
+            startTracking();
         }
 
-        function parseGeoJSON(data) {
-            pointsDB = [];
-            document.querySelectorAll('.ar-node').forEach(n => n.remove());
+        function startTracking() {
+            // Monitora GPS com alta precisão
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    updateLogic();
+                },
+                (err) => console.error("Erro GPS:", err),
+                { enableHighAccuracy: true, maximumAge: 0 }
+            );
 
-            data.features.forEach(f => {
-                const name = f.properties.name || "Fibra Entestada";
-                if (f.geometry.type === "LineString") {
-                    const coords = f.geometry.coordinates;
-                    // Otimização: 1 ponto a cada 50 metros para não fritar o CPU
-                    for (let i = 0; i < coords.length; i += 25) {
-                        const p = coords[i];
-                        pointsDB.push({ lat: p, lng: p, name: name });
-                        addARNode(p, p, name);
-                    }
-                } else if (f.geometry.type === "Point") {
-                    const p = f.geometry.coordinates;
-                    pointsDB.push({ lat: p, lng: p, name: name });
-                    addARNode(p, p, name);
-                }
-            });
+            // Monitora Bússola
+            window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+            window.addEventListener('deviceorientation', handleOrientation, true);
         }
 
-        function addARNode(lat, lng, name) {
-            const el = document.createElement('a-entity');
-            el.setAttribute('class', 'ar-node');
-            el.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng}`);
-            
-            // Geometria da baliza
-            el.innerHTML = `
-                <a-cylinder radius="0.4" height="100" material="color: #00ff00; opacity: 0.4; emissive: #00ff00"></a-cylinder>
-                <a-text value="${name}" scale="15 15 15" align="center" position="0 15 0" look-at="[gps-camera]"></a-text>
-            `;
-            scene.appendChild(el);
-        }
+        function handleOrientation(e) {
+            const heading = e.webkitCompassHeading || (360 - e.alpha);
+            if (!userPos || pointsDB.length === 0 || isNaN(heading)) return;
 
-        // 2. Lógica de Navegação e Orientação
-        window.addEventListener('gps-camera-update-position', (e) => {
-            currentPos = e.detail.position;
-            updateUI();
-        });
-
-        window.addEventListener('deviceorientation', (e) => {
-            if (!currentPos || pointsDB.length === 0) return;
-            
-            const heading = e.webkitCompassHeading || e.alpha;
-            const target = findNearest();
-            
-            const bearing = calculateBearing(currentPos.latitude, currentPos.longitude, target.lat, target.lng);
+            const nearest = findNearest();
+            const bearing = calculateBearing(userPos.lat, userPos.lng, nearest.lat, nearest.lng);
             const rotation = (bearing - heading + 360) % 360;
             
             arrow.style.transform = `rotate(${rotation}deg)`;
+        }
+
+        // Carregamento do KMZ
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files;
+            statusTxt.innerText = "Processando...";
+            
+            const zip = await JSZip.loadAsync(file);
+            const kmlName = Object.keys(zip.files).find(f => f.toLowerCase().endsWith('.kml'));
+            const kmlText = await zip.file(kmlName).async("string");
+            
+            const geojson = toGeoJSON.kml(new DOMParser().parseFromString(kmlText, "text/xml"));
+            
+            pointsDB = [];
+            geojson.features.forEach(f => {
+                const name = f.properties.name || "Fibra";
+                const coords = f.geometry.coordinates;
+                if (f.geometry.type === "LineString") {
+                    for (let i = 0; i < coords.length; i += 20) {
+                        pointsDB.push({ lat: coords[i], lng: coords[i], name: name });
+                    }
+                }
+            });
+            statusTxt.innerText = "ONLINE";
         });
 
         function findNearest() {
             return pointsDB.reduce((prev, curr) => {
-                const distPrev = getDistance(currentPos.latitude, currentPos.longitude, prev.lat, prev.lng);
-                const distCurr = getDistance(currentPos.latitude, currentPos.longitude, curr.lat, curr.lng);
-                return distCurr < distPrev ? curr : prev;
+                const dPrev = getDist(userPos.lat, userPos.lng, prev.lat, prev.lng);
+                const dCurr = getDist(userPos.lat, userPos.lng, curr.lat, curr.lng);
+                return dCurr < dPrev ? curr : prev;
             });
         }
 
-        function updateUI() {
-            if (pointsDB.length === 0) return;
+        function updateLogic() {
+            if (!userPos || pointsDB.length === 0) return;
             const nearest = findNearest();
-            const d = getDistance(currentPos.latitude, currentPos.longitude, nearest.lat, nearest.lng);
-            
-            distVal.innerText = d > 1000 ? (d/1000).toFixed(2) + " km" : Math.round(d) + " m";
-            nomeCaixa.innerText = nearest.name;
+            const d = getDist(userPos.lat, userPos.lng, nearest.lat, nearest.lng);
+            distVal.innerText = Math.round(d) + " m";
+            document.getElementById('nome-caixa').innerText = nearest.name;
         }
 
-        // Fórmulas Matemáticas
-        function getDistance(lat1, lon1, lat2, lon2) {
+        // Fórmulas
+        function getDist(lat1, lon1, lat2, lon2) {
             const R = 6371e3;
-            const φ1 = lat1 * Math.PI/180;
-            const φ2 = lat2 * Math.PI/180;
-            const Δφ = (lat2-lat1) * Math.PI/180;
-            const Δλ = (lon2-lon1) * Math.PI/180;
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const dLat = (lat2-lat1)*Math.PI/180;
+            const dLon = (lon2-lon1)*Math.PI/180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
         function calculateBearing(lat1, lon1, lat2, lon2) {
             const y = Math.sin((lon2-lon1)*Math.PI/180) * Math.cos(lat2*Math.PI/180);
             const x = Math.cos(lat1*Math.PI/180)*Math.sin(lat2*Math.PI/180) - Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.cos((lon2-lon1)*Math.PI/180);
-            return (Math.atan2(y, x) * 180/Math.PI + 360) % 360;
+            return (Math.atan2(y, x)*180/Math.PI + 360) % 360;
         }
     </script>
 </body>
