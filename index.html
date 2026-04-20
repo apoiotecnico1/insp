@@ -3,58 +3,64 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Angstrom V8 - Ultra Compact</title>
+    <title>Angstrom Technical V9</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #00e676; --blue: #007bff; --red: #ff1744; --orange: #ff9100; --glass: rgba(0, 0, 0, 0.75); }
-        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        :root { --accent: #00e676; --blue: #00d4ff; --red: #ff3d00; --warn: #ffea00; --glass: rgba(10, 10, 10, 0.85); }
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; user-select: none; }
+        body { background: #000; color: #fff; font-family: 'Roboto', sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
+        /* Interface de Vídeo */
+        #viewport { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD */
-        #hud-top { position: absolute; top: 15px; left: 15px; display: flex; gap: 10px; z-index: 500; }
-        .hud-box { background: var(--glass); padding: 8px 15px; border-radius: 8px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .val { font-size: 1.8rem; font-weight: 900; line-height: 1; display: block; color: var(--accent); }
-        .lbl { font-size: 0.55rem; font-weight: bold; opacity: 0.6; text-transform: uppercase; }
-
-        /* GRADE DE BOTÕES ULTRA MENORES */
-        #action-grid {
-            position: absolute; right: 8px; top: 48%; transform: translateY(-50%);
-            display: grid; grid-template-columns: repeat(2, 68px); gap: 6px; z-index: 500;
+        /* HUD Técnico Superior */
+        #hud { position: absolute; top: 15px; left: 15px; display: flex; gap: 12px; z-index: 1000; }
+        .hud-card { 
+            background: var(--glass); padding: 10px 18px; border-radius: 12px; 
+            border-left: 4px solid var(--accent); backdrop-filter: blur(15px);
         }
-        .act-btn {
-            height: 48px; border-radius: 6px; border: none;
-            background: var(--glass); color: #fff; font-size: 0.45rem; font-weight: 800;
+        .hud-val { font-size: 2rem; font-weight: 900; color: #fff; display: block; line-height: 1; }
+        .hud-lbl { font-size: 0.6rem; font-weight: bold; color: var(--accent); text-transform: uppercase; }
+
+        /* Grade de Botões (Lateral Direita) */
+        #action-panel {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            display: grid; grid-template-columns: repeat(2, 70px); gap: 6px; z-index: 1000;
+        }
+        .btn {
+            height: 46px; border-radius: 6px; border: none; background: var(--glass);
+            color: #fff; font-size: 0.45rem; font-weight: 800; text-transform: uppercase;
             display: flex; align-items: center; justify-content: center; text-align: center;
-            text-transform: uppercase; backdrop-filter: blur(5px); padding: 3px;
+            backdrop-filter: blur(5px); transition: 0.1s;
         }
-        .act-btn:active { background: #fff; color: #000; }
-        .c-ilum { border-bottom: 3px solid var(--accent); }
-        .c-def { border-bottom: 3px solid var(--red); }
-        .c-fib { border-bottom: 3px solid var(--blue); }
-        .c-aten { border-bottom: 3px solid var(--orange); }
+        .btn:active { transform: scale(0.9); background: #fff; color: #000; }
+        
+        /* Botões Especiais */
+        .btn-full { grid-column: span 2; height: 38px; font-size: 0.6rem; }
+        .b-clean { background: rgba(255,255,255,0.15); border: 1px solid #fff; }
+        .b-norm { border-bottom: 4px solid #fff; }
+        .b-ilum { border-bottom: 4px solid var(--accent); }
+        .b-def { border-bottom: 4px solid var(--red); }
+        .b-fib { border-bottom: 4px solid var(--blue); }
+        .b-aten { border-bottom: 4px solid var(--warn); }
 
-        /* BOTÃO FOTO LIMPA */
-        .btn-clean { 
-            grid-column: span 2; background: rgba(255,255,255,0.2); 
-            border: 1px solid #fff; height: 40px; font-size: 0.6rem;
-        }
-
-        /* CONTROLES */
+        /* Rodapé de Comandos */
         #footer {
-            position: absolute; bottom: 25px; width: 100%;
-            display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 500;
+            position: absolute; bottom: 30px; width: 100%;
+            display: flex; justify-content: center; align-items: center; gap: 30px; z-index: 1000;
         }
-        .btn-rec { background: var(--accent); color: #000; border: none; padding: 12px 35px; border-radius: 50px; font-weight: 900; font-size: 0.9rem; }
-        .recording { background: var(--red) !important; color: #fff; animation: pulse 1s infinite; }
-        .gear-btn { background: var(--glass); border: 1px solid #fff; color: #fff; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .btn-main { 
+            background: var(--accent); color: #000; border: none; padding: 16px 45px; 
+            border-radius: 50px; font-weight: 900; font-size: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .rec-active { background: var(--red) !important; color: #fff; animation: blink 1s infinite; }
+        .gear { background: var(--glass); border: 1px solid #fff; color: #fff; width: 50px; height: 50px; border-radius: 50%; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
 
-        @keyframes pulse { 50% { opacity: 0.5; } }
+        @keyframes blink { 50% { opacity: 0.6; } }
+        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 2000; }
+        #config { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 3000; display: none; flex-direction: column; align-items: center; justify-content: center; }
         #gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 1000; }
-        #config-panel { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; }
         canvas { display: none; }
     </style>
 </head>
@@ -63,193 +69,176 @@
 <div id="flash"></div>
 
 <div id="gate">
-    <h2 style="color:var(--accent); font-weight:900;">ANGSTROM V8</h2>
-    <button class="btn-rec" style="margin-top:20px" onclick="startApp()">INICIAR</button>
+    <h1 style="color:var(--accent); font-weight:900; margin-bottom:10px;">ANGSTROM V9</h1>
+    <p style="color:#666; margin-bottom:30px; font-size:0.8rem;">APOIO TÉCNICO - INFRAESTRUTURA</p>
+    <button class="btn-main" onclick="init()">INICIAR CONSOLE</button>
 </div>
 
-<div id="config-panel">
-    <h3 style="color:var(--accent); margin-bottom:20px;">AJUSTES</h3>
-    <select id="cam-select" onchange="changeCam()" style="width:250px; padding:10px; margin-bottom:20px;"></select>
-    <button class="btn-rec" onclick="document.getElementById('config-panel').style.display='none'">FECHAR</button>
+<div id="config">
+    <h2 style="color:var(--accent); margin-bottom:20px;">CONFIGURAÇÕES</h2>
+    <select id="camList" onchange="switchCam()" style="width:280px; padding:15px; background:#222; color:#fff; border:1px solid var(--accent); border-radius:8px;"></select>
+    <button class="btn-main" style="margin-top:40px;" onclick="document.getElementById('config').style.display='none'">VOLTAR</button>
 </div>
 
-<div id="app-shell">
+<div id="viewport">
     <video id="vid" autoplay playsinline muted></video>
 
-    <div id="hud-top">
-        <div class="hud-box"><span class="lbl">KM</span><span id="km-txt" class="val">---</span></div>
-        <div class="hud-box"><span class="lbl">LOTE</span><span id="lote-count" class="val">000</span></div>
+    <div id="hud">
+        <div class="hud-card"><span class="hud-lbl">Km Rodovia</span><span id="km" class="hud-val">---</span></div>
+        <div class="hud-card"><span class="hud-lbl">Fotos Lote</span><span id="counter" class="hud-val">000</span></div>
     </div>
 
-    <div id="action-grid">
-        <button class="act-btn btn-clean" onclick="quickAction('LIMPA')">📷 FOTO LIMPA (S/ KM)</button>
-        <button class="act-btn c-ilum" onclick="quickAction('ILUMINAÇÃO APAGADA')">ILUM. APAGADA</button>
-        <button class="act-btn c-ilum" onclick="quickAction('ABRIR O.S.')">ABRIR O.S.</button>
-        <button class="act-btn c-def" onclick="quickAction('POSTE APAGADO')">POSTE APAGADO</button>
-        <button class="act-btn c-def" onclick="quickAction('LUMINÁRIA APAGADA')">LUM. APAGADA</button>
-        <button class="act-btn c-fib" onclick="quickAction('FIBRA ROMPIDA')">FIBRA ROMPIDA</button>
-        <button class="act-btn c-fib" onclick="quickAction('BACKBONE ABERTA')">BACKBONE ABERTA</button>
-        <button class="act-btn c-fib" onclick="quickAction('ALARME DE FIBRA')">ALARME FIBRA</button>
-        <button class="act-btn c-fib" onclick="quickAction('INOPERANTE')">INOPERANTE</button>
-        <button class="act-btn c-aten" onclick="quickAction('VANDALISMO')">VANDALISMO</button>
-        <button class="act-btn c-aten" onclick="quickAction('DANIFICADO')">DANIFICADO</button>
-        <button class="act-btn c-aten" onclick="quickAction('ATENÇÃO')">ATENÇÃO</button>
-        <button class="act-btn" style="border-bottom:3px solid #fff" onclick="quickAction('NORMALIZADO')">NORMALIZADO</button>
+    <div id="action-panel">
+        <button class="btn btn-full b-clean" onclick="trigger('FOTO LIMPA')">📷 FOTO LIMPA (S/ KM)</button>
+        <button class="btn b-ilum" onclick="trigger('ILUMINAÇÃO APAGADA')">ILUM. APAGADA</button>
+        <button class="btn b-ilum" onclick="trigger('ABRIR O.S.')">ABRIR O.S.</button>
+        <button class="btn b-def" onclick="trigger('POSTE APAGADO')">POSTE APAGADO</button>
+        <button class="btn b-def" onclick="trigger('LUMINÁRIA APAGADA')">LUM. APAGADA</button>
+        <button class="btn b-fib" onclick="trigger('FIBRA ROMPIDA')">FIBRA ROMPIDA</button>
+        <button class="btn b-fib" onclick="trigger('BACKBONE ABERTA')">BACKBONE ABERTA</button>
+        <button class="btn b-fib" onclick="trigger('ALARME DE FIBRA')">ALARME FIBRA</button>
+        <button class="btn b-fib" onclick="trigger('INOPERANTE')">INOPERANTE</button>
+        <button class="btn b-aten" onclick="trigger('VANDALISMO')">VANDALISMO</button>
+        <button class="btn b-aten" onclick="trigger('DANIFICADO')">DANIFICADO</button>
+        <button class="btn b-aten" onclick="trigger('ATENÇÃO')">ATENÇÃO</button>
+        <button class="btn btn-full b-norm" onclick="trigger('NORMALIZADO')">✅ SISTEMA NORMALIZADO</button>
     </div>
 
     <div id="footer">
-        <button class="gear-btn" onclick="document.getElementById('config-panel').style.display='flex'">⚙️</button>
-        <button id="btn-rec" class="btn-rec" onclick="toggleRec()">GRAVAR LOTE</button>
+        <button class="gear" onclick="document.getElementById('config').style.display='flex'">⚙️</button>
+        <button id="recBtn" class="btn-main" onclick="toggleRec()">GRAVAR LOTE</button>
     </div>
 </div>
 
-<canvas id="c"></canvas>
+<canvas id="canvas"></canvas>
 
 <script>
-let kmDB = [], capturing = false, hDir = null, buffer = [], currentLabel = "INSPEÇÃO NORMAL";
-let curLat = 0, curLon = 0, msInterval = 450, currentStream = null;
+let db = [], isRec = false, hDir = null, pdfBuffer = [], tag = "INSPEÇÃO";
+let lat = 0, lon = 0, stream = null;
 
-async function startApp() {
+async function init() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
         document.getElementById('gate').remove();
-        document.getElementById('app-shell').style.visibility = 'visible';
-        await listCameras();
-        await setupCamera();
-        loadCSV(); initGPS();
-    } catch(e) {}
+        document.getElementById('viewport').style.visibility = 'visible';
+        await getCams(); await startCam(); loadCSV(); startGPS();
+    } catch(e) { console.log("Permissão necessária"); }
 }
 
-async function listCameras() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter(d => d.kind === 'videoinput');
-    const select = document.getElementById('cam-select');
-    select.innerHTML = videoDevices.map((d, i) => `<option value="${d.deviceId}">${d.label || 'Câmera ' + i}</option>`).join('');
+async function getCams() {
+    const d = await navigator.mediaDevices.enumerateDevices();
+    const v = d.filter(i => i.kind === 'videoinput');
+    document.getElementById('camList').innerHTML = v.map(c => `<option value="${c.deviceId}">${c.label || 'Camera'}</option>`).join('');
 }
 
-async function setupCamera(id) {
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    const constraints = { video: { deviceId: id ? { exact: id } : undefined, width: 1920, height: 1080 } };
-    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-    document.getElementById('vid').srcObject = currentStream;
-    document.getElementById('vid').onloadedmetadata = () => { 
-        document.getElementById('c').width = vid.videoWidth; 
-        document.getElementById('c').height = vid.videoHeight; 
-    };
+async function startCam(id) {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id ? {exact:id} : undefined, width: 1920, height: 1080 } });
+    document.getElementById('vid').srcObject = stream;
 }
 
-async function changeCam() { await setupCamera(document.getElementById('cam-select').value); }
+function switchCam() { startCam(document.getElementById('camList').value); }
 
-async function quickAction(label) {
-    currentLabel = label;
+function trigger(label) {
+    tag = label;
     const f = document.getElementById('flash');
-    f.style.opacity = "0.5"; setTimeout(() => f.style.opacity = "0", 60);
-    await renderFrame(true);
-    currentLabel = "INSPEÇÃO NORMAL";
+    f.style.opacity = "0.6"; setTimeout(() => f.style.opacity = "0", 50);
+    snap(true);
 }
 
-function initGPS() {
+function startGPS() {
     navigator.geolocation.watchPosition(p => {
-        curLat = p.coords.latitude; curLon = p.coords.longitude;
-        if (kmDB.length) {
-            let closest = null, minD = Infinity;
-            for (let pt of kmDB) {
-                const d = Math.hypot(pt.lt - curLat, pt.ln - curLon);
-                if (d < minD) { minD = d; closest = pt; }
-            }
-            if (closest) document.getElementById('km-txt').innerText = closest.km;
+        lat = p.coords.latitude; lon = p.coords.longitude;
+        if (db.length) {
+            let close = db.reduce((prev, curr) => Math.hypot(curr.lt-lat, curr.ln-lon) < Math.hypot(prev.lt-lat, prev.ln-lon) ? curr : prev);
+            document.getElementById('km').innerText = close.km;
         }
     }, null, { enableHighAccuracy: true });
 }
 
 function toggleRec() {
-    capturing = !capturing;
-    const btn = document.getElementById('btn-rec');
-    if (capturing) {
-        btn.innerText = "FINALIZAR";
-        btn.classList.add('recording');
-        buffer = [];
-        recordLoop();
+    isRec = !isRec;
+    const b = document.getElementById('recBtn');
+    if (isRec) {
+        b.innerText = "FINALIZAR PDF"; b.classList.add('rec-active');
+        pdfBuffer = []; loop();
     } else {
-        btn.innerText = "SALVANDO...";
-        btn.classList.remove('recording');
-        generatePDF();
+        b.innerText = "SALVANDO..."; b.classList.remove('rec-active');
+        savePDF();
     }
 }
 
-function recordLoop() { if (capturing) { renderFrame(false); setTimeout(recordLoop, msInterval); } }
+function loop() { if (isRec) { snap(false); setTimeout(loop, 500); } }
 
-async function renderFrame(isManual) {
-    const vid = document.getElementById('vid');
-    const can = document.getElementById('c');
-    const ctx = can.getContext('2d');
-    const km = document.getElementById('km-txt').innerText;
-    const isClean = currentLabel === 'LIMPA';
+async function snap(saveJPG) {
+    const v = document.getElementById('vid');
+    const c = document.getElementById('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    const ctx = c.getContext('2d');
+    const kmStr = document.getElementById('km').innerText;
 
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    ctx.drawImage(v, 0, 0);
     
-    // Carimbo
-    const bh = can.height * 0.10;
-    ctx.fillStyle = "rgba(0,0,0,0.8)";
-    ctx.fillRect(0, can.height - bh, can.width, bh);
-    
+    // Design do Carimbo (Otimizado)
+    const h = c.height * 0.10;
+    ctx.fillStyle = "rgba(0,0,0,0.75)";
+    ctx.fillRect(0, c.height - h, c.width, h);
+
     ctx.fillStyle = "#fff";
-    ctx.font = "22px Arial";
-    
-    if (isClean) {
-        // Foto Limpa: Apenas Data e Hora centralizada ou à esquerda
-        ctx.fillText(`${new Date().toLocaleString()}`, 45, can.height - (bh * 0.4));
+    if (tag === 'FOTO LIMPA') {
+        ctx.font = "24px Arial";
+        ctx.fillText(`REGISTRO TÉCNICO: ${new Date().toLocaleString()}`, 50, c.height - (h/2) + 10);
     } else {
-        // Foto com KM e Descrição
-        ctx.fillStyle = currentLabel.includes('FIBRA') ? '#007bff' : '#ff1744';
-        ctx.fillRect(0, can.height - bh, 15, bh);
+        ctx.fillStyle = tag.includes('FIBRA') ? varColor('--blue') : (tag.includes('NORMAL') ? varColor('--accent') : varColor('--red'));
+        ctx.fillRect(0, c.height - h, 15, h);
         ctx.fillStyle = "#fff";
-        ctx.font = "bold 40px Arial";
-        ctx.fillText(`${currentLabel} | Km ${km}`, 40, can.height - (bh * 0.55));
-        ctx.font = "20px Arial";
-        ctx.fillText(`${new Date().toLocaleString()} | GPS: ${curLat.toFixed(6)}, ${curLon.toFixed(6)}`, 40, can.height - (bh * 0.22));
+        ctx.font = "bold 42px Arial";
+        ctx.fillText(`${tag} | Km ${kmStr}`, 40, c.height - (h*0.58));
+        ctx.font = "22px Arial";
+        ctx.fillText(`${new Date().toLocaleString()} | GPS: ${lat.toFixed(6)}, ${lon.toFixed(6)}`, 40, c.height - (h*0.25));
     }
 
-    const data = can.toDataURL('image/jpeg', 0.8);
-    buffer.push(data);
-    document.getElementById('lote-count').innerText = buffer.length.toString().padStart(3, '0');
+    const img = c.toDataURL('image/jpeg', 0.85);
+    pdfBuffer.push(img);
+    document.getElementById('counter').innerText = pdfBuffer.length.toString().padStart(3, '0');
 
-    if (isManual) {
-        try {
-            const blob = await (await fetch(data)).blob();
-            const handle = await hDir.getFileHandle(`FOTO_${isClean?'LIMPA':currentLabel}_${Date.now()}.jpg`, {create:true});
-            const w = await handle.createWritable();
-            await w.write(blob); await w.close();
-        } catch(e) {}
+    if (saveJPG) {
+        const blob = await (await fetch(img)).blob();
+        const file = await hDir.getFileHandle(`${tag.replace(' ','_')}_Km${kmStr}_${Date.now()}.jpg`, {create:true});
+        const w = await file.createWritable();
+        await w.write(blob); await w.close();
+        tag = "INSPEÇÃO";
     }
 }
 
-async function generatePDF() {
-    if (!buffer.length) return;
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4');
-    for (let i = 0; i < buffer.length; i++) {
-        if (i > 0) doc.addPage();
-        doc.addImage(buffer[i], 'JPEG', 0, 0, 297, 210);
+const varColor = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+async function savePDF() {
+    if (!pdfBuffer.length) return;
+    const doc = new jspdf.jsPDF('l', 'mm', 'a4');
+    for (let i=0; i<pdfBuffer.length; i++) {
+        if (i>0) doc.addPage();
+        doc.addImage(pdfBuffer[i], 'JPEG', 0, 0, 297, 210);
     }
     const blob = doc.output('blob');
-    const handle = await hDir.getFileHandle(`RELATORIO_${Date.now()}.pdf`, {create:true});
-    const w = await handle.createWritable();
+    const file = await hDir.getFileHandle(`RELATORIO_${Date.now()}.pdf`, {create:true});
+    const w = await file.createWritable();
     await w.write(blob); await w.close();
-    document.getElementById('btn-rec').innerText = "GRAVAR LOTE";
+    document.getElementById('recBtn').innerText = "GRAVAR LOTE";
+    document.getElementById('counter').innerText = "000";
 }
 
 async function loadCSV() {
     try {
         const r = await fetch('SNVBR116SPRJ.csv');
-        const text = await r.text();
-        const rows = text.split('\n').filter(row => row.includes(';'));
-        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const iKm = h.indexOf('km'), iLat = h.findIndex(v => v.includes('lat')), iLon = h.findIndex(v => v.includes('lon'));
-        kmDB = rows.map(r => {
+        const t = await r.text();
+        const rows = t.split('\n').filter(l => l.includes(';'));
+        const h = rows.shift().toLowerCase().split(';');
+        const iK = h.indexOf('km'), iLt = h.findIndex(s=>s.includes('lat')), iLn = h.findIndex(s=>s.includes('lon'));
+        db = rows.map(r => {
             const c = r.split(';');
-            return { km: c[iKm], lt: parseFloat(c[iLat].replace(',','.')), ln: parseFloat(c[iLon].replace(',','.')) };
-        }).filter(d => !isNaN(d.lt));
+            return { km: c[iK], lt: parseFloat(c[iLt].replace(',','.')), ln: parseFloat(c[iLn].replace(',','.')) };
+        });
     } catch(e) {}
 }
 </script>
