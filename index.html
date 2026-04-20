@@ -3,33 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Console Técnico de Inspeção</title>
+    <title>Sistema de Inspeção - Angstrom</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --bg: #0f0f0f; --card: #1c1c1c; --green: #00c853; }
-        body { background-color: var(--bg); color: #fff; font-family: sans-serif; padding: 15px; }
-        .tech-card { background: var(--card); border-radius: 15px; padding: 20px; margin-bottom: 20px; border: 1px solid #333; }
-        .btn-camera { background: #333; color: #00e676; border: 2px dashed #00e676; width: 100%; padding: 20px; font-weight: bold; border-radius: 10px; margin-top: 10px; }
-        .btn-final { background: var(--green); color: #000; width: 100%; padding: 20px; font-size: 1.3rem; font-weight: bold; border: none; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,200,83,0.3); }
-        .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
-        .gallery img { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #444; }
-        .form-control { background: #222; border: 1px solid #444; color: #fff; padding: 12px; font-size: 1.1rem; }
-        #pdf-content { color: #000; background: #fff; padding: 30px; width: 800px; position: absolute; left: -9999px; }
-        .pdf-photo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 10px; }
-        .pdf-photo-grid img { width: 100%; border: 1px solid #ddd; }
+        body { background-color: #121212; color: #fff; font-family: sans-serif; padding: 15px; }
+        .tech-card { background: #1e1e1e; border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid #333; }
+        .btn-foto { background: #2c2c2c; color: #00e676; border: 2px dashed #00e676; width: 100%; padding: 15px; font-weight: bold; margin-top: 10px; }
+        .btn-final { background: #00e676; color: #000; width: 100%; padding: 20px; font-size: 1.2rem; font-weight: bold; border: none; border-radius: 10px; margin-top: 20px; }
+        .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px; }
+        .gallery img { width: 100%; height: 70px; object-fit: cover; border-radius: 5px; border: 1px solid #444; }
+        .form-control { background: #2a2a2a; border: 1px solid #444; color: #fff; }
     </style>
 </head>
 <body>
 
 <div style="max-width: 500px; margin: auto;">
-    <h3 class="fw-bold mb-4">INSPEÇÃO TÉCNICA</h3>
+    <h3 class="text-center fw-bold text-success mb-4">INSPEÇÃO TÉCNICA</h3>
 
     <div class="tech-card">
-        <label class="small opacity-50 fw-bold">LOCALIZAÇÃO</label>
+        <label class="small fw-bold opacity-50">DADOS DO LOCAL</label>
         <div class="row g-2 mt-1">
-            <div class="col-8"><input type="text" id="km" class="form-control" placeholder="KM Ex: 142+300"></div>
+            <div class="col-8"><input type="text" id="km" class="form-control" placeholder="KM 142+500"></div>
             <div class="col-4">
                 <select id="sentido" class="form-select form-control">
                     <option value="Norte">Norte</option>
@@ -40,142 +35,131 @@
     </div>
 
     <div class="tech-card">
-        <label class="fw-bold text-success text-uppercase">1. Fiber Tech (CCR)</label>
-        <input type="text" id="tecCCR" class="form-control mt-2 mb-2" placeholder="Técnico Responsável">
-        <label class="btn-camera">
-            + ADICIONAR FOTO SONDAGEM
-            <input type="file" accept="image/*" capture="camera" hidden onchange="addPhoto(this, 'galeriaCCR')">
+        <span class="badge bg-primary mb-2">FIBER TECH (CCR)</span>
+        <input type="text" id="tecCCR" class="form-control mb-2" placeholder="Técnico Fiber Tech">
+        <label class="btn btn-foto">
+            <i class="bi bi-camera"></i> ADICIONAR FOTO
+            <input type="file" accept="image/*" capture="camera" hidden onchange="processPhoto(this, 'CCR')">
         </label>
-        <div id="galeriaCCR" class="gallery"></div>
+        <div id="galCCR" class="gallery"></div>
     </div>
 
     <div class="tech-card">
-        <label class="fw-bold text-danger text-uppercase">2. Equipe Claro</label>
-        <input type="text" id="tecClaro" class="form-control mt-2 mb-2" placeholder="Técnico Responsável">
-        <label class="btn-camera" style="border-color: #ff1744; color: #ff1744;">
-            + ADICIONAR FOTO SONDAGEM
-            <input type="file" accept="image/*" capture="camera" hidden onchange="addPhoto(this, 'galeriaClaro')">
+        <span class="badge bg-danger mb-2">EQUIPE CLARO</span>
+        <input type="text" id="tecClaro" class="form-control mb-2" placeholder="Técnico Claro">
+        <label class="btn btn-foto" style="color:#ff5252; border-color:#ff5252;">
+            <i class="bi bi-camera"></i> ADICIONAR FOTO
+            <input type="file" accept="image/*" capture="camera" hidden onchange="processPhoto(this, 'Claro')">
         </label>
-        <div id="galeriaClaro" class="gallery"></div>
+        <div id="galClaro" class="gallery"></div>
     </div>
 
-    <button class="btn-final" onclick="gerarRelatorioPDF()">
-        FINALIZAR E SALVAR PDF
+    <button class="btn-final shadow" onclick="gerarPDF()">
+        FINALIZAR E GERAR PDF
     </button>
 </div>
 
-<div id="pdf-content">
-    <div style="border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
-        <h1 style="margin:0;">RELATÓRIO DE INSPEÇÃO DE CAMPO</h1>
-        <p style="margin:5px 0;" id="pdf-header-info"></p>
-    </div>
-
-    <div style="background: #f4f4f4; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-        <h3 style="margin-top:0;">Dados do Local</h3>
-        <p><strong>KM:</strong> <span id="p-km"></span> | <strong>Sentido:</strong> <span id="p-sentido"></span></p>
-    </div>
-
-    <div style="margin-bottom: 30px;">
-        <h3 style="color: #004a99; border-bottom: 1px solid #ccc;">Sondagem Fiber Tech (CCR)</h3>
-        <p><strong>Técnico:</strong> <span id="p-tecCCR"></span></p>
-        <div id="pdf-galeriaCCR" class="pdf-photo-grid"></div>
-    </div>
-
-    <div style="margin-bottom: 30px;">
-        <h3 style="color: #ee1d23; border-bottom: 1px solid #ccc;">Sondagem Equipe Claro</h3>
-        <p><strong>Técnico:</strong> <span id="p-tecClaro"></span></p>
-        <div id="pdf-galeriaClaro" class="pdf-photo-grid"></div>
-    </div>
-</div>
-
 <script>
-    // Armazenamento das fotos em Base64 para garantir que entrem no PDF
-    const fotos = { CCR: [], Claro: [] };
+    const fotosCCR = [];
+    const fotosClaro = [];
 
-    function addPhoto(input, galeriaId) {
+    function processPhoto(input, tipo) {
         const file = input.files;
         if (!file) return;
 
         const reader = new FileReader();
         reader.onload = function(e) {
-            const base64Data = e.target.result;
-            const tipo = galeriaId.includes('CCR') ? 'CCR' : 'Claro';
+            const base64 = e.target.result;
+            if (tipo === 'CCR') fotosCCR.push(base64); else fotosClaro.push(base64);
             
-            // Adiciona ao array
-            fotos[tipo].push(base64Data);
-
-            // Cria miniatura na tela
+            // Preview na tela
             const img = document.createElement('img');
-            img.src = base64Data;
-            document.getElementById(galeriaId).appendChild(img);
+            img.src = base64;
+            document.getElementById('gal' + tipo).appendChild(img);
         };
         reader.readAsDataURL(file);
     }
 
-    async function gerarRelatorioPDF() {
-        const km = document.getElementById('km').value;
-        if (!km) return alert("Digite o KM para finalizar.");
-
+    async function gerarPDF() {
         const { jsPDF } = window.jspdf;
-        const btn = document.querySelector('.btn-final');
-        btn.innerText = "PROCESSANDO IMAGENS...";
-        btn.disabled = true;
+        const pdf = new jsPDF();
+        const km = document.getElementById('km').value || "000";
+        const dataHora = new Date().toLocaleString();
 
-        // Preenche o template invisível
-        const agora = new Date();
-        document.getElementById('pdf-header-info').innerText = `Data: ${agora.toLocaleDateString()} | Hora: ${agora.toLocaleTimeString()}`;
-        document.getElementById('p-km').innerText = km;
-        document.getElementById('p-sentido').innerText = document.getElementById('sentido').value;
-        document.getElementById('p-tecCCR').innerText = document.getElementById('tecCCR').value || "Não informado";
-        document.getElementById('p-tecClaro').innerText = document.getElementById('tecClaro').value || "Não informado";
+        // 1. Cabeçalho
+        pdf.setFontSize(18);
+        pdf.text("RELATÓRIO DE INSPEÇÃO DE CAMPO", 10, 20);
+        pdf.setFontSize(10);
+        pdf.text(`Data/Hora: ${dataHora} | Protocolo: ${Math.floor(Date.now()/1000)}`, 10, 28);
+        pdf.line(10, 32, 200, 32);
 
-        // Limpa e preenche galerias do PDF
-        const pdfGalCCR = document.getElementById('pdf-galeriaCCR');
-        const pdfGalClaro = document.getElementById('pdf-galeriaClaro');
-        pdfGalCCR.innerHTML = '';
-        pdfGalClaro.innerHTML = '';
+        // 2. Dados do Trecho
+        pdf.setFontSize(12);
+        pdf.setFont(undefined, 'bold');
+        pdf.text("LOCALIZAÇÃO:", 10, 42);
+        pdf.setFont(undefined, 'normal');
+        pdf.text(`KM ${km} - Sentido ${document.getElementById('sentido').value}`, 45, 42);
 
-        fotos.CCR.forEach(src => {
-            const img = document.createElement('img');
-            img.src = src;
-            pdfGalCCR.appendChild(img);
-        });
+        let y = 55;
 
-        fotos.Claro.forEach(src => {
-            const img = document.createElement('img');
-            img.src = src;
-            pdfGalClaro.appendChild(img);
-        });
+        // 3. Seção Fiber Tech
+        pdf.setDrawColor(0, 74, 153);
+        pdf.rect(10, y, 190, 8, 'S');
+        pdf.text("SONDAGEM FIBER TECH (CCR)", 15, y + 6);
+        y += 15;
+        pdf.text(`Técnico: ${document.getElementById('tecCCR').value || "N/A"}`, 10, y);
+        y += 10;
 
-        // Gera o PDF a partir da Div
-        const element = document.getElementById('pdf-content');
-        
-        try {
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: true,
-                logging: false
-            });
-
-            const imgData = canvas.toDataURL('image/jpeg', 0.9);
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = (canvas.height * pageWidth) / canvas.width;
-
-            pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
-            
-            const nomeArquivo = `Relatorio_KM_${km.replace('+', '-')}_${agora.getTime()}.pdf`;
-            pdf.save(nomeArquivo);
-
-            alert("Relatório Gerado com Sucesso!");
-        } catch (err) {
-            console.error(err);
-            alert("Erro ao gerar PDF. Verifique as fotos.");
-        } finally {
-            btn.innerText = "FINALIZAR E SALVAR PDF";
-            btn.disabled = false;
+        // Estampar Fotos CCR
+        if(fotosCCR.length > 0) {
+            let x = 10;
+            for(let foto of fotosCCR) {
+                if (x > 150) { x = 10; y += 45; }
+                if (y > 250) { pdf.addPage(); y = 20; }
+                pdf.addImage(foto, 'JPEG', x, y, 40, 40);
+                x += 45;
+            }
+            y += 50;
+        } else {
+            pdf.text("Nenhuma foto registrada.", 10, y);
+            y += 10;
         }
+
+        // 4. Seção Claro
+        if (y > 230) { pdf.addPage(); y = 20; }
+        pdf.setDrawColor(238, 29, 35);
+        pdf.rect(10, y, 190, 8, 'S');
+        pdf.text("SONDAGEM EQUIPE CLARO", 15, y + 6);
+        y += 15;
+        pdf.text(`Técnico: ${document.getElementById('tecClaro').value || "N/A"}`, 10, y);
+        y += 10;
+
+        // Estampar Fotos Claro
+        if(fotosClaro.length > 0) {
+            let x = 10;
+            for(let foto of fotosClaro) {
+                if (x > 150) { x = 10; y += 45; }
+                if (y > 250) { pdf.addPage(); y = 20; }
+                pdf.addImage(foto, 'JPEG', x, y, 40, 40);
+                x += 45;
+            }
+        } else {
+            pdf.text("Nenhuma foto registrada.", 10, y);
+        }
+
+        // Rodapé
+        const totalPages = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            pdf.setPage(i);
+            pdf.setFontSize(8);
+            pdf.text("Documento Técnico de Campo - Inspeção de Fibras", 10, 285);
+            pdf.text(`Página ${i} de ${totalPages}`, 180, 285);
+        }
+
+        // Salvar
+        const nomeArquivo = `Relatorio_KM_${km.replace('+','-')}_${Date.now()}.pdf`;
+        pdf.save(nomeArquivo);
+        alert("PDF Salvo com sucesso!");
     }
 </script>
 
