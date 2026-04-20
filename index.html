@@ -3,40 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Console Técnico - Inspeção de Campo</title>
+    <title>Console Técnico de Inspeção</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --dark-bg: #121212; --card-bg: #1e1e1e; --accent: #00e676; }
-        body { background-color: var(--dark-bg); color: #e0e0e0; font-family: sans-serif; padding-bottom: 50px; }
-        .main-container { max-width: 500px; margin: auto; padding: 20px; }
-        .card-tech { background: var(--card-bg); border-radius: 15px; padding: 20px; border: 1px solid #333; margin-bottom: 20px; }
-        .btn-giant { padding: 20px; border-radius: 12px; font-weight: bold; border: none; width: 100%; margin-top: 10px; transition: 0.3s; }
-        .btn-camera { background: #333; color: white; border: 2px dashed #444; }
-        .btn-save { background: var(--accent); color: #000; font-size: 1.2rem; }
-        .btn-folder { background: #2196f3; color: white; margin-bottom: 20px; }
-        .preview-img { width: 100%; border-radius: 8px; margin-top: 10px; display: none; border: 1px solid #444; }
-        .form-control, .form-select { background: #2a2a2a; border: 1px solid #444; color: white; padding: 12px; }
-        .form-control:focus { background: #333; color: white; border-color: var(--accent); box-shadow: none; }
-        #pdf-render { background: white; color: black; padding: 40px; position: absolute; left: -9999px; width: 800px; }
+        :root { --bg: #0f0f0f; --card: #1c1c1c; --green: #00c853; }
+        body { background-color: var(--bg); color: #fff; font-family: sans-serif; padding: 15px; }
+        .tech-card { background: var(--card); border-radius: 15px; padding: 20px; margin-bottom: 20px; border: 1px solid #333; }
+        .btn-camera { background: #333; color: #00e676; border: 2px dashed #00e676; width: 100%; padding: 20px; font-weight: bold; border-radius: 10px; margin-top: 10px; }
+        .btn-final { background: var(--green); color: #000; width: 100%; padding: 20px; font-size: 1.3rem; font-weight: bold; border: none; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,200,83,0.3); }
+        .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+        .gallery img { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #444; }
+        .form-control { background: #222; border: 1px solid #444; color: #fff; padding: 12px; font-size: 1.1rem; }
+        #pdf-content { color: #000; background: #fff; padding: 30px; width: 800px; position: absolute; left: -9999px; }
+        .pdf-photo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 10px; }
+        .pdf-photo-grid img { width: 100%; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
 
-<div class="main-container">
-    <h4 class="fw-bold mb-4">INSPEÇÃO DE CAMPO</h4>
+<div style="max-width: 500px; margin: auto;">
+    <h3 class="fw-bold mb-4">INSPEÇÃO TÉCNICA</h3>
 
-    <button class="btn btn-giant btn-folder" onclick="requestFolderPermission()">
-        <i class="bi bi-folder-fill me-2"></i>1. DEFINIR PASTA DE DESTINO
-    </button>
-    <div id="folder-status" class="small text-muted mb-3 text-center">Pasta não selecionada</div>
-
-    <div class="card-tech shadow">
-        <label class="small fw-bold text-uppercase opacity-50">Localização</label>
+    <div class="tech-card">
+        <label class="small opacity-50 fw-bold">LOCALIZAÇÃO</label>
         <div class="row g-2 mt-1">
-            <div class="col-8"><input type="text" id="km" class="form-control" placeholder="KM 000+000"></div>
+            <div class="col-8"><input type="text" id="km" class="form-control" placeholder="KM Ex: 142+300"></div>
             <div class="col-4">
-                <select id="sentido" class="form-select">
+                <select id="sentido" class="form-select form-control">
                     <option value="Norte">Norte</option>
                     <option value="Sul">Sul</option>
                 </select>
@@ -44,136 +39,143 @@
         </div>
     </div>
 
-    <div class="card-tech shadow">
-        <label class="small fw-bold text-uppercase opacity-50">Sondagem Fiber Tech (CCR)</label>
-        <input type="text" id="tecCCR" class="form-control mt-2" placeholder="Nome do Técnico">
-        <label class="btn btn-giant btn-camera" id="lblCCR">
-            FOTO SONDAGEM CCR
-            <input type="file" accept="image/*" capture="camera" hidden onchange="processImage(this, 'viewCCR', 'lblCCR')">
+    <div class="tech-card">
+        <label class="fw-bold text-success text-uppercase">1. Fiber Tech (CCR)</label>
+        <input type="text" id="tecCCR" class="form-control mt-2 mb-2" placeholder="Técnico Responsável">
+        <label class="btn-camera">
+            + ADICIONAR FOTO SONDAGEM
+            <input type="file" accept="image/*" capture="camera" hidden onchange="addPhoto(this, 'galeriaCCR')">
         </label>
-        <img id="viewCCR" class="preview-img">
+        <div id="galeriaCCR" class="gallery"></div>
     </div>
 
-    <div class="card-tech shadow">
-        <label class="small fw-bold text-uppercase opacity-50">Sondagem Equipe Claro</label>
-        <input type="text" id="tecClaro" class="form-control mt-2" placeholder="Nome do Técnico">
-        <label class="btn btn-giant btn-camera" id="lblClaro">
-            FOTO SONDAGEM CLARO
-            <input type="file" accept="image/*" capture="camera" hidden onchange="processImage(this, 'viewClaro', 'lblClaro')">
+    <div class="tech-card">
+        <label class="fw-bold text-danger text-uppercase">2. Equipe Claro</label>
+        <input type="text" id="tecClaro" class="form-control mt-2 mb-2" placeholder="Técnico Responsável">
+        <label class="btn-camera" style="border-color: #ff1744; color: #ff1744;">
+            + ADICIONAR FOTO SONDAGEM
+            <input type="file" accept="image/*" capture="camera" hidden onchange="addPhoto(this, 'galeriaClaro')">
         </label>
-        <img id="viewClaro" class="preview-img">
+        <div id="galeriaClaro" class="gallery"></div>
     </div>
 
-    <button class="btn btn-giant btn-save shadow-lg" onclick="finalizarInspeção()">
+    <button class="btn-final" onclick="gerarRelatorioPDF()">
         FINALIZAR E SALVAR PDF
     </button>
 </div>
 
-<div id="pdf-render">
-    <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
-        <h2>Relatório Técnico de Inspeção</h2>
-        <p id="pdf-data-hora"></p>
+<div id="pdf-content">
+    <div style="border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+        <h1 style="margin:0;">RELATÓRIO DE INSPEÇÃO DE CAMPO</h1>
+        <p style="margin:5px 0;" id="pdf-header-info"></p>
     </div>
-    <div style="margin-bottom: 20px;">
-        <p><strong>LOCALIZAÇÃO:</strong> <span id="pdf-km"></span> - Sentido <span id="pdf-sentido"></span></p>
+
+    <div style="background: #f4f4f4; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <h3 style="margin-top:0;">Dados do Local</h3>
+        <p><strong>KM:</strong> <span id="p-km"></span> | <strong>Sentido:</strong> <span id="p-sentido"></span></p>
     </div>
-    <div style="display: flex; gap: 20px;">
-        <div style="flex: 1;">
-            <h4>Sondagem CCR</h4>
-            <p>Técnico: <span id="pdf-tecCCR"></span></p>
-            <img id="pdf-imgCCR" style="width: 100%; border: 1px solid #ccc;">
-        </div>
-        <div style="flex: 1;">
-            <h4>Sondagem Claro</h4>
-            <p>Técnico: <span id="pdf-tecClaro"></span></p>
-            <img id="pdf-imgClaro" style="width: 100%; border: 1px solid #ccc;">
-        </div>
+
+    <div style="margin-bottom: 30px;">
+        <h3 style="color: #004a99; border-bottom: 1px solid #ccc;">Sondagem Fiber Tech (CCR)</h3>
+        <p><strong>Técnico:</strong> <span id="p-tecCCR"></span></p>
+        <div id="pdf-galeriaCCR" class="pdf-photo-grid"></div>
     </div>
-    <div style="margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 10px;">
-        Documento gerado eletronicamente para fins de acompanhamento de infraestrutura.
+
+    <div style="margin-bottom: 30px;">
+        <h3 style="color: #ee1d23; border-bottom: 1px solid #ccc;">Sondagem Equipe Claro</h3>
+        <p><strong>Técnico:</strong> <span id="p-tecClaro"></span></p>
+        <div id="pdf-galeriaClaro" class="pdf-photo-grid"></div>
     </div>
 </div>
 
 <script>
-    let folderHandle;
+    // Armazenamento das fotos em Base64 para garantir que entrem no PDF
+    const fotos = { CCR: [], Claro: [] };
 
-    async function requestFolderPermission() {
-        try {
-            folderHandle = await window.showDirectoryPicker();
-            document.getElementById('folder-status').innerText = "✓ Pasta vinculada com sucesso";
-            document.getElementById('folder-status').classList.replace('text-muted', 'text-success');
-        } catch (err) {
-            console.error("Usuário cancelou a seleção da pasta.");
-        }
-    }
-
-    function processImage(input, imgId, lblId) {
+    function addPhoto(input, galeriaId) {
         const file = input.files;
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = document.getElementById(imgId);
-                img.src = e.target.result;
-                img.style.display = 'block';
-                document.getElementById(lblId).style.background = '#1b5e20';
-                document.getElementById(lblId).innerText = 'FOTO REGISTRADA ✓';
-            };
-            reader.readAsDataURL(file);
-        }
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Data = e.target.result;
+            const tipo = galeriaId.includes('CCR') ? 'CCR' : 'Claro';
+            
+            // Adiciona ao array
+            fotos[tipo].push(base64Data);
+
+            // Cria miniatura na tela
+            const img = document.createElement('img');
+            img.src = base64Data;
+            document.getElementById(galeriaId).appendChild(img);
+        };
+        reader.readAsDataURL(file);
     }
 
-    async function finalizarInspeção() {
+    async function gerarRelatorioPDF() {
         const km = document.getElementById('km').value;
-        if (!km) return alert("Por favor, informe o KM.");
+        if (!km) return alert("Digite o KM para finalizar.");
 
+        const { jsPDF } = window.jspdf;
+        const btn = document.querySelector('.btn-final');
+        btn.innerText = "PROCESSANDO IMAGENS...";
+        btn.disabled = true;
+
+        // Preenche o template invisível
         const agora = new Date();
-        const dataStr = agora.toLocaleDateString('pt-BR').replace(/\//g, '-');
-        const horaStr = agora.toLocaleTimeString('pt-BR').replace(/:/g, '-');
-        const nomeArquivo = `Relatorio_KM_${km.replace('+', '-')}_${dataStr}_${horaStr}.pdf`;
+        document.getElementById('pdf-header-info').innerText = `Data: ${agora.toLocaleDateString()} | Hora: ${agora.toLocaleTimeString()}`;
+        document.getElementById('p-km').innerText = km;
+        document.getElementById('p-sentido').innerText = document.getElementById('sentido').value;
+        document.getElementById('p-tecCCR').innerText = document.getElementById('tecCCR').value || "Não informado";
+        document.getElementById('p-tecClaro').innerText = document.getElementById('tecClaro').value || "Não informado";
 
-        // Preencher PDF oculto
-        document.getElementById('pdf-data-hora').innerText = `Gerado em: ${agora.toLocaleString()}`;
-        document.getElementById('pdf-km').innerText = km;
-        document.getElementById('pdf-sentido').innerText = document.getElementById('sentido').value;
-        document.getElementById('pdf-tecCCR').innerText = document.getElementById('tecCCR').value;
-        document.getElementById('pdf-tecClaro').innerText = document.getElementById('tecClaro').value;
-        document.getElementById('pdf-imgCCR').src = document.getElementById('viewCCR').src;
-        document.getElementById('pdf-imgClaro').src = document.getElementById('viewClaro').src;
+        // Limpa e preenche galerias do PDF
+        const pdfGalCCR = document.getElementById('pdf-galeriaCCR');
+        const pdfGalClaro = document.getElementById('pdf-galeriaClaro');
+        pdfGalCCR.innerHTML = '';
+        pdfGalClaro.innerHTML = '';
 
-        const element = document.getElementById('pdf-render');
+        fotos.CCR.forEach(src => {
+            const img = document.createElement('img');
+            img.src = src;
+            pdfGalCCR.appendChild(img);
+        });
+
+        fotos.Claro.forEach(src => {
+            const img = document.createElement('img');
+            img.src = src;
+            pdfGalClaro.appendChild(img);
+        });
+
+        // Gera o PDF a partir da Div
+        const element = document.getElementById('pdf-content');
         
-        // Gerar Blob do PDF
-        const pdfBlob = await html2pdf().from(element).set({
-            margin: 0.5,
-            filename: nomeArquivo,
-            image: { type: 'jpeg', quality: 0.95 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-        }).output('blob');
+        try {
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                logging: false
+            });
 
-        // Salvar na pasta selecionada ou baixar se não tiver permissão de pasta
-        if (folderHandle) {
-            try {
-                const fileHandle = await folderHandle.getFileHandle(nomeArquivo, { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(pdfBlob);
-                await writable.close();
-                alert("Sucesso! Relatório salvo na sua pasta.");
-            } catch (e) {
-                saveFallback(pdfBlob, nomeArquivo);
-            }
-        } else {
-            saveFallback(pdfBlob, nomeArquivo);
+            const imgData = canvas.toDataURL('image/jpeg', 0.9);
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = (canvas.height * pageWidth) / canvas.width;
+
+            pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
+            
+            const nomeArquivo = `Relatorio_KM_${km.replace('+', '-')}_${agora.getTime()}.pdf`;
+            pdf.save(nomeArquivo);
+
+            alert("Relatório Gerado com Sucesso!");
+        } catch (err) {
+            console.error(err);
+            alert("Erro ao gerar PDF. Verifique as fotos.");
+        } finally {
+            btn.innerText = "FINALIZAR E SALVAR PDF";
+            btn.disabled = false;
         }
-    }
-
-    function saveFallback(blob, name) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = name;
-        a.click();
-        alert("PDF gerado! Salve-o na pasta desejada.");
     }
 </script>
 
