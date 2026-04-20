@@ -3,248 +3,239 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Angstrom Ultra - High Speed Inspection</title>
+    <title>Angstrom Ultra Pro - Live GPS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #00e676; --bg: #000; --panel: rgba(20, 20, 20, 0.85); --ccr: #00aaff; --claro: #ff4444; }
+        :root { --accent: #00e676; --ccr: #00aaff; --claro: #ff4444; }
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
-        /* Full Screen Shell */
-        #app-shell { position: relative; width: 100vw; height: 100vh; background: #000; }
+        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD Superior */
-        #hud-top { 
-            position: absolute; top: 0; left: 0; width: 100%; padding: 20px;
-            display: flex; justify-content: space-between; align-items: flex-start;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-            z-index: 100;
+        /* HUD DE QUILOMETRAGEM AO VIVO */
+        #km-hud { 
+            position: absolute; top: 25px; left: 20px; 
+            background: rgba(0, 121, 52, 0.9); 
+            padding: 10px 25px; 
+            border: 4px solid #fff; 
+            border-radius: 12px; 
+            z-index: 500; 
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
-        .km-box { background: rgba(0, 121, 52, 0.8); padding: 10px 20px; border: 2px solid #fff; border-radius: 8px; text-align: center; }
-        #km-txt { font-size: 2.2rem; font-weight: 900; letter-spacing: -1px; }
-        .status-box { text-align: right; font-size: 0.7rem; font-weight: bold; }
+        #km-txt { font-size: 2.8rem; font-weight: 900; line-height: 1; display: block; }
+        #gps-status { font-size: 0.7rem; font-weight: bold; color: #fff; text-transform: uppercase; margin-top: 5px; opacity: 0.8; }
 
-        /* Teclado de Eventos (Anotação Rápida) */
+        /* BOTÕES DE EVENTO */
         #event-bar {
-            position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
-            display: flex; flex-direction: column; gap: 12px; z-index: 200;
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 15px; z-index: 500;
         }
         .event-btn {
-            width: 75px; height: 75px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.3);
-            background: var(--panel); color: #fff; font-size: 0.65rem; font-weight: 900;
-            display: flex; align-items: center; justify-content: center; text-align: center;
-            backdrop-filter: blur(10px); transition: 0.1s;
+            width: 85px; height: 85px; border-radius: 15px; border: 2px solid rgba(255,255,255,0.4);
+            background: rgba(20,20,20,0.8); color: #fff; font-size: 0.7rem; font-weight: 900;
+            backdrop-filter: blur(10px);
         }
-        .event-btn:active { transform: scale(0.9); background: var(--accent); color: #000; }
-        .btn-ccr { border-left: 6px solid var(--ccr); }
-        .btn-claro { border-left: 6px solid var(--claro); }
+        .btn-ccr { border-left: 8px solid var(--ccr); }
+        .btn-claro { border-left: 8px solid var(--claro); }
 
-        /* Controles Inferiores */
-        #hud-bottom {
-            position: absolute; bottom: 0; left: 0; width: 100%; padding: 30px;
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-            display: flex; justify-content: space-around; align-items: center; z-index: 100;
+        /* CONTROLES */
+        #controls {
+            position: absolute; bottom: 40px; width: 100%;
+            display: flex; justify-content: space-around; align-items: center; z-index: 500;
         }
-        .main-trigger { width: 85px; height: 85px; border-radius: 50%; border: 6px solid #fff; background: transparent; cursor: pointer; }
-        .btn-action { background: var(--accent); color: #000; border: none; padding: 15px 35px; border-radius: 50px; font-weight: 900; font-size: 1rem; }
-        .btn-stop { background: #ff1744; color: #fff; display: none; }
+        .trigger { width: 90px; height: 90px; border-radius: 50%; border: 6px solid #fff; background: transparent; }
+        .btn-rec { background: var(--accent); color: #000; padding: 15px 40px; border-radius: 50px; font-weight: 900; border: none; }
+        .recording { background: #ff1744 !important; color: #fff; animation: pulse 1s infinite; }
+        @keyframes pulse { 50% { opacity: 0.7; } }
 
-        /* Flash e Labels */
-        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 1000; }
-        #rec-indicator { display: flex; align-items: center; gap: 8px; color: #ff1744; font-weight: 900; font-size: 0.8rem; opacity: 0; transition: 0.3s; }
-        .dot { width: 10px; height: 10px; background: #ff1744; border-radius: 50%; animation: blink 0.8s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
-
-        /* Safety Gate */
-        #gate { position: fixed; inset: 0; background: #000; z-index: 9000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        
+        #gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div id="flash"></div>
-
 <div id="gate">
-    <h1 style="color:var(--accent); font-weight: 900; margin-bottom: 5px;">ANGSTROM ULTRA</h1>
-    <p style="color:#666; margin-bottom: 30px;">SISTEMA DE INSPEÇÃO DE ALTA VELOCIDADE</p>
-    <button class="btn-action" onclick="initApp()">ATIVAR MODO FULLSCREEN</button>
+    <h2 style="color:var(--accent); margin-bottom:20px;">SISTEMA ANGSTROM</h2>
+    <button class="btn-rec" onclick="startApp()">ATIVAR HUD AO VIVO</button>
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
-
-    <div id="hud-top">
-        <div class="km-box">
-            <span style="font-size: 0.6rem; display: block; font-weight: 800;">POSTO QUILOMÉTRICO</span>
-            <span id="km-txt">Km ---</span>
-        </div>
-        <div class="status-box">
-            <div id="rec-indicator"><div class="dot"></div> GRAVANDO LOTE</div>
-            <div id="gps-status" style="margin-top: 5px; color: var(--accent);">GPS: BUSCANDO...</div>
-        </div>
+    
+    <div id="km-hud">
+        <span id="km-txt">Km ---</span>
+        <div id="gps-status">Aguardando GPS...</div>
     </div>
 
     <div id="event-bar">
-        <button class="event-btn btn-ccr" onclick="setLabel('FIBRA CCR')">FIBRA<br>CCR</button>
-        <button class="event-btn btn-claro" onclick="setLabel('FIBRA CLARO')">FIBRA<br>CLARO</button>
-        <button class="event-btn" onclick="setLabel('CAIXA/EMENDA')">CAIXA<br>EMENDA</button>
-        <button class="event-btn" style="border-left: 6px solid orange;" onclick="setLabel('PONTO CRÍTICO')">PONTO<br>CRÍTICO</button>
+        <button class="event-btn btn-ccr" onclick="mark('FIBRA CCR')">FIBRA<br>CCR</button>
+        <button class="event-btn btn-claro" onclick="mark('FIBRA CLARO')">FIBRA<br>CLARO</button>
+        <button class="event-btn" onclick="mark('CAIXA')">CAIXA<br>EMENDA</button>
     </div>
 
-    <div id="hud-bottom">
-        <button id="btn-gear" class="event-btn" onclick="openSettings()" style="width: 60px; height: 60px;">⚙️</button>
-        <button id="btn-start" class="btn-action" onclick="startCapture()">INICIAR INSPEÇÃO</button>
-        <button id="btn-stop" class="btn-action btn-stop" onclick="stopCapture()">FINALIZAR LAUDO</button>
-        <button class="main-trigger" onclick="takeManualPhoto()"></button>
+    <div id="controls">
+        <button id="btn-rec" class="btn-rec" onclick="toggleCapture()">INICIAR LOTE</button>
+        <button class="trigger" onclick="snap()"></button>
     </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
-let kmDB = [], capturing = false, hDir = null, currentStream = null;
-let currentLabel = "INSPEÇÃO NORMAL", buffer = [];
-let curLat = "0.0", curLon = "0.0", wakeLock = null;
+let kmDB = [], capturing = false, hDir = null, buffer = [], currentLabel = "INSPEÇÃO";
+let curLat = 0, curLon = 0;
 
-async function initApp() {
+async function startApp() {
     try {
         hDir = await window.showDirectoryPicker();
         document.getElementById('gate').remove();
+        document.getElementById('app-shell').style.visibility = 'visible';
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
         
-        setupCamera();
+        // Câmera
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
+        document.getElementById('vid').srcObject = stream;
+        document.getElementById('vid').onloadedmetadata = () => { 
+            document.getElementById('c').width = 1920; 
+            document.getElementById('c').height = 1080; 
+        };
+
         loadCSV();
         initGPS();
-    } catch(e) { alert("Acesso à pasta e câmera necessário!"); }
-}
-
-async function setupCamera() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const backCam = devices.filter(d => d.kind === 'videoinput').pop();
-    currentStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { deviceId: backCam.deviceId, width: {ideal: 1920}, height: {ideal: 1080} } 
-    });
-    vid.srcObject = currentStream;
-    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-}
-
-function setLabel(txt) {
-    currentLabel = txt;
-    // Feedback visual rápido
-    const kmBox = document.querySelector('.km-box');
-    kmBox.style.background = "#ff4444";
-    setTimeout(() => { kmBox.style.background = "rgba(0, 121, 52, 0.8)"; currentLabel = "INSPEÇÃO NORMAL"; }, 2000);
-}
-
-function takeManualPhoto() {
-    const f = document.getElementById('flash');
-    f.style.opacity = "0.8"; setTimeout(() => f.style.opacity = "0", 50);
-    saveFrame(true);
-}
-
-async function saveFrame(isManual = false) {
-    const km = document.getElementById('km-txt').innerText;
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    
-    // Stamp Profissional
-    const bh = can.height * 0.12;
-    ctx.fillStyle = "rgba(0,0,0,0.75)";
-    ctx.fillRect(0, can.height - bh, can.width, bh);
-    
-    // Indicador de Evento
-    ctx.fillStyle = currentLabel.includes('CCR') ? '#00aaff' : (currentLabel.includes('CLARO') ? '#ff4444' : '#00e676');
-    ctx.fillRect(0, can.height - bh, 20, bh);
-
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold ${bh * 0.35}px Arial`;
-    ctx.fillText(`${currentLabel} | ${km}`, 40, can.height - (bh * 0.55));
-    
-    ctx.font = `${bh * 0.2}px Arial`;
-    ctx.fillText(`GPS: ${curLat}, ${curLon} | DATA: ${new Date().toLocaleString()}`, 40, can.height - (bh * 0.22));
-
-    const imgData = can.toDataURL('image/jpeg', 0.7);
-    
-    if(isManual) {
-        const blob = await (await fetch(imgData)).blob();
-        const file = await hDir.getFileHandle(`MANUAL_${km}_${Date.now()}.jpg`, {create:true});
-        const w = await file.createWritable();
-        await w.write(blob); await w.close();
-    } else {
-        buffer.push(imgData);
-    }
-}
-
-function startCapture() {
-    capturing = true;
-    buffer = [];
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-indicator').style.opacity = '1';
-    loop();
-}
-
-function stopCapture() {
-    capturing = false;
-    generatePDF();
-    document.getElementById('btn-start').style.display = 'block';
-    document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-indicator').style.opacity = '0';
-}
-
-function loop() {
-    if(!capturing) return;
-    saveFrame(false);
-    setTimeout(loop, 400); // 2.5 fotos por segundo para alta velocidade
-}
-
-async function generatePDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4');
-    const pw = doc.internal.pageSize.getWidth();
-    const ph = doc.internal.pageSize.getHeight();
-
-    for(let i=0; i<buffer.length; i++) {
-        if(i > 0) doc.addPage();
-        doc.addImage(buffer[i], 'JPEG', 0, 0, pw, ph);
-    }
-    
-    const blob = doc.output('blob');
-    const file = await hDir.getFileHandle(`LAUDO_TECNICO_${Date.now()}.pdf`, {create:true});
-    const w = await file.createWritable();
-    await w.write(blob); await w.close();
-    alert("LAUDO PDF SALVO NA PASTA!");
+    } catch(e) { alert("Erro de permissão!"); }
 }
 
 function initGPS() {
     navigator.geolocation.watchPosition(p => {
-        curLat = p.coords.latitude.toFixed(6);
-        curLon = p.coords.longitude.toFixed(6);
-        document.getElementById('gps-status').innerText = `GPS OK: ${curLat}`;
-        
-        let nearest = null, minD = Infinity;
-        kmDB.forEach(pt => {
-            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if(d < minD) { minD = d; nearest = pt; }
-        });
-        if(nearest) document.getElementById('km-txt').innerText = `Km ${nearest.km}`;
-    }, null, {enableHighAccuracy:true});
+        curLat = p.coords.latitude;
+        curLon = p.coords.longitude;
+        updateLiveKm();
+    }, e => console.error(e), { enableHighAccuracy: true, maximumAge: 0 });
+}
+
+function updateLiveKm() {
+    if (kmDB.length === 0) return;
+    
+    let closest = null;
+    let minDiff = Infinity;
+
+    for (let i = 0; i < kmDB.length; i++) {
+        // Cálculo rápido de distância (Pitágoras simples para performance)
+        const d = Math.sqrt(Math.pow(kmDB[i].lt - curLat, 2) + Math.pow(kmDB[i].ln - curLon, 2));
+        if (d < minDiff) {
+            minDiff = d;
+            closest = kmDB[i];
+        }
+    }
+
+    if (closest) {
+        document.getElementById('km-txt').innerText = `Km ${closest.km}`;
+        document.getElementById('gps-status').innerText = `Sinal GPS: OK`;
+    }
 }
 
 async function loadCSV() {
     try {
         const r = await fetch('SNVBR116SPRJ.csv');
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';');
-        const ik=h.indexOf('km'), ilt=h.findIndex(x=>x.toLowerCase().includes('lat')), iln=h.findIndex(x=>x.toLowerCase().includes('lon'));
+        const text = await r.text();
+        const rows = text.split('\n').filter(row => row.includes(';'));
+        const headers = rows.shift().split(';').map(h => h.trim().toLowerCase());
+        
+        const iKm = headers.indexOf('km');
+        const iLat = headers.findIndex(h => h.includes('lat'));
+        const iLon = headers.findIndex(h => h.includes('lon'));
+
         kmDB = rows.map(r => {
-            const c = r.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
-        });
-    } catch(e) { document.getElementById('km-txt').innerText = "OFFLINE"; }
+            const cols = r.split(';');
+            return {
+                km: cols[iKm],
+                lt: parseFloat(cols[iLat].replace(',', '.')),
+                ln: parseFloat(cols[iLon].replace(',', '.'))
+            };
+        }).filter(d => !isNaN(d.lt));
+        
+        document.getElementById('gps-status').innerText = "Banco de KM Carregado";
+    } catch(e) {
+        document.getElementById('gps-status').innerText = "Erro ao carregar CSV";
+    }
+}
+
+function mark(txt) {
+    currentLabel = txt;
+    document.getElementById('km-hud').style.borderColor = "#ffcc00";
+    setTimeout(() => { 
+        currentLabel = "INSPEÇÃO"; 
+        document.getElementById('km-hud').style.borderColor = "#fff";
+    }, 1500);
+}
+
+function snap() { saveFrame(true); }
+
+function toggleCapture() {
+    capturing = !capturing;
+    const btn = document.getElementById('btn-rec');
+    if (capturing) {
+        btn.innerText = "FINALIZAR";
+        btn.classList.add('recording');
+        buffer = [];
+        loop();
+    } else {
+        btn.innerText = "PROCESSANDO...";
+        btn.classList.remove('recording');
+        savePDF();
+    }
+}
+
+function loop() {
+    if (!capturing) return;
+    saveFrame(false);
+    setTimeout(loop, 400); 
+}
+
+async function saveFrame(isManual) {
+    const vid = document.getElementById('vid');
+    const can = document.getElementById('c');
+    const ctx = can.getContext('2d');
+    const km = document.getElementById('km-txt').innerText;
+
+    ctx.drawImage(vid, 0, 0, can.width, can.height);
+    
+    // Carimbo
+    const bh = can.height * 0.12;
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0, can.height - bh, can.width, bh);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 45px Arial";
+    ctx.fillText(`${currentLabel} | ${km}`, 40, can.height - 60);
+    ctx.font = "25px Arial";
+    ctx.fillText(`${new Date().toLocaleString()} | GPS: ${curLat.toFixed(6)}, ${curLon.toFixed(6)}`, 40, can.height - 25);
+
+    const data = can.toDataURL('image/jpeg', 0.7);
+    if (isManual) {
+        const blob = await (await fetch(data)).blob();
+        const handle = await hDir.getFileHandle(`FOTO_${km}_${Date.now()}.jpg`, {create:true});
+        const w = await handle.createWritable();
+        await w.write(blob); await w.close();
+    } else {
+        buffer.push(data);
+    }
+}
+
+async function savePDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4');
+    for (let i = 0; i < buffer.length; i++) {
+        if (i > 0) doc.addPage();
+        doc.addImage(buffer[i], 'JPEG', 0, 0, 297, 210);
+    }
+    const blob = doc.output('blob');
+    const handle = await hDir.getFileHandle(`LAUDO_${Date.now()}.pdf`, {create:true});
+    const w = await handle.createWritable();
+    await w.write(blob); await w.close();
+    document.getElementById('btn-rec').innerText = "INICIAR LOTE";
+    alert("PDF Gerado!");
 }
 </script>
 </body>
