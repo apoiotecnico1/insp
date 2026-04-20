@@ -3,53 +3,64 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Angstrom Ultra V4 - No Interruption</title>
+    <title>Angstrom Ultra V5 - Technical Console</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #00e676; --blue: #007bff; --red: #ff1744; --orange: #ff9100; }
+        :root { --accent: #00e676; --blue: #007bff; --red: #ff1744; --orange: #ff9100; --glass: rgba(15, 15, 15, 0.9); }
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
 
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; }
 
-        /* HUD KM AO VIVO */
+        /* HUD KM */
         #km-hud { 
-            position: absolute; top: 15px; left: 15px; 
-            background: rgba(0, 40, 0, 0.9); 
-            padding: 10px 20px; border: 3px solid var(--accent); border-radius: 8px; 
-            z-index: 500; text-align: center; backdrop-filter: blur(8px);
+            position: absolute; top: 20px; left: 20px; 
+            background: rgba(0, 50, 0, 0.85); 
+            padding: 12px 25px; border: 2px solid var(--accent); border-radius: 12px; 
+            z-index: 500; text-align: center; backdrop-filter: blur(10px);
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.3);
         }
-        #km-txt { font-size: 2.5rem; font-weight: 900; line-height: 1; display: block; color: #fff; }
+        #km-txt { font-size: 2.8rem; font-weight: 900; line-height: 1; letter-spacing: -1px; }
 
-        /* GRADE DE BOTÕES (DIREITA) */
+        /* GRADE DE COMANDO */
         #action-grid {
-            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-            display: grid; grid-template-columns: repeat(2, 90px); gap: 10px; z-index: 500;
+            position: absolute; right: 15px; top: 45%; transform: translateY(-50%);
+            display: grid; grid-template-columns: repeat(2, 95px); gap: 12px; z-index: 500;
         }
         .act-btn {
-            height: 80px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2);
-            background: rgba(15,15,15,0.95); color: #fff; font-size: 0.58rem; font-weight: 900;
+            height: 85px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15);
+            background: var(--glass); color: #fff; font-size: 0.6rem; font-weight: 800;
             display: flex; align-items: center; justify-content: center; text-align: center;
-            text-transform: uppercase; backdrop-filter: blur(10px); padding: 5px;
+            text-transform: uppercase; backdrop-filter: blur(10px); padding: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
-        .act-btn:active { background: var(--accent); color: #000; transform: scale(0.9); }
-        
-        .c-ilum { border-bottom: 5px solid var(--accent); }
-        .c-def { border-bottom: 5px solid var(--red); }
-        .c-fib { border-bottom: 5px solid var(--blue); }
-        .c-aten { border-bottom: 5px solid var(--orange); }
+        .act-btn:active { background: #fff; color: #000; transform: scale(0.9); }
+        .c-ilum { border-left: 6px solid var(--accent); }
+        .c-def { border-left: 6px solid var(--red); }
+        .c-fib { border-left: 6px solid var(--blue); }
+        .c-aten { border-left: 6px solid var(--orange); }
 
+        /* RODAPÉ E CONFIG */
         #footer {
-            position: absolute; bottom: 30px; width: 100%;
-            display: flex; justify-content: center; z-index: 500;
+            position: absolute; bottom: 35px; width: 100%;
+            display: flex; justify-content: center; align-items: center; gap: 30px; z-index: 500;
         }
-        .btn-rec { background: var(--accent); color: #000; border: none; padding: 18px 50px; border-radius: 50px; font-weight: 900; font-size: 1rem; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .btn-rec { background: var(--accent); color: #000; border: none; padding: 18px 45px; border-radius: 50px; font-weight: 900; font-size: 1rem; }
         .recording { background: var(--red) !important; color: #fff; animation: pulse 1s infinite; }
+        .gear-btn { background: var(--glass); border: 1px solid #fff; color: #fff; width: 60px; height: 60px; border-radius: 50%; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
+
+        /* PAINEL DE CONFIGURAÇÕES */
+        #config-panel {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000;
+            display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+        }
+        .cfg-row { width: 100%; max-width: 300px; margin-bottom: 20px; }
+        select, input { width: 100%; padding: 12px; background: #222; color: #fff; border: 1px solid var(--accent); border-radius: 8px; margin-top: 5px; }
 
         @keyframes pulse { 50% { opacity: 0.5; } }
         #gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 1000; transition: opacity 0.1s; }
+        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 1000; }
         canvas { display: none; }
     </style>
 </head>
@@ -58,8 +69,21 @@
 <div id="flash"></div>
 
 <div id="gate">
-    <h2 style="color:var(--accent); font-weight:900; margin-bottom: 20px;">ANGSTROM ULTRA V4</h2>
-    <button class="btn-rec" onclick="startApp()">INICIAR EM FULLSCREEN</button>
+    <h1 style="color:var(--accent); font-weight:900; letter-spacing: 2px;">ANGSTROM ELITE V5</h1>
+    <button class="btn-rec" style="margin-top:20px" onclick="startApp()">INICIAR OPERAÇÃO</button>
+</div>
+
+<div id="config-panel">
+    <h2 style="color:var(--accent); margin-bottom:30px;">CONFIGURAÇÕES</h2>
+    <div class="cfg-row">
+        <label>SELECIONAR CÂMERA:</label>
+        <select id="cam-select" onchange="changeCam()"></select>
+    </div>
+    <div class="cfg-row">
+        <label>INTERVALO LOTE (ms):</label>
+        <input type="number" id="ms-input" value="450" onchange="msInterval = this.value">
+    </div>
+    <button class="btn-rec" onclick="document.getElementById('config-panel').style.display='none'">VOLTAR</button>
 </div>
 
 <div id="app-shell">
@@ -67,66 +91,77 @@
 
     <div id="km-hud">
         <span id="km-txt">Km ---</span>
+        <div id="gps-status" style="font-size:0.6rem; opacity:0.7">SINAL GPS</div>
     </div>
 
     <div id="action-grid">
         <button class="act-btn c-ilum" onclick="quickAction('ILUMINAÇÃO APAGADA')">ILUMINAÇÃO<br>APAGADA</button>
-        <button class="act-btn c-ilum" onclick="quickAction('ABRIR ORDEM DE SERVIÇO')">ABRIR O.S.<br>DEFEITO</button>
+        <button class="act-btn c-ilum" onclick="quickAction('ABRIR O.S.')">ABRIR O.S.<br>DEFEITO</button>
         <button class="act-btn c-def" onclick="quickAction('POSTE APAGADO')">POSTE<br>APAGADO</button>
         <button class="act-btn c-def" onclick="quickAction('LUMINÁRIA APAGADA')">LUMINÁRIA<br>APAGADA</button>
         <button class="act-btn c-fib" onclick="quickAction('FIBRA ROMPIDA')">FIBRA<br>ROMPIDA</button>
         <button class="act-btn c-fib" onclick="quickAction('BACKBONE ABERTA')">BACKBONE<br>ABERTA</button>
         <button class="act-btn c-fib" onclick="quickAction('ALARME DE FIBRA')">ALARME DE<br>FIBRA</button>
-        <button class="act-btn c-fib" onclick="quickAction('INOPERANTE')">SISTEMA<br>INOPERANTE</button>
-        <button class="act-btn c-aten" onclick="quickAction('VANDALISMO')">ITEM DE<br>VANDALISMO</button>
-        <button class="act-btn c-aten" onclick="quickAction('QUEBRADO/DANIFICADO')">QUEBRADO<br>DANIFICADO</button>
-        <button class="act-btn c-aten" onclick="quickAction('ITEM DE ATENÇÃO')">ITEM DE<br>ATENÇÃO</button>
-        <button class="act-btn" style="border-bottom: 5px solid #fff;" onclick="quickAction('SISTEMA NORMALIZADO')">SISTEMA<br>NORMALIZADO</button>
+        <button class="act-btn c-fib" onclick="quickAction('SISTEMA INOPERANTE')">SISTEMA<br>INOPERANTE</button>
+        <button class="act-btn c-aten" onclick="quickAction('VANDALISMO')">VANDALISMO</button>
+        <button class="act-btn c-aten" onclick="quickAction('QUEBRADO/DANIFICADO')">DANIFICADO</button>
+        <button class="act-btn c-aten" onclick="quickAction('ITEM DE ATENÇÃO')">ATENÇÃO</button>
+        <button class="act-btn" style="border-left: 6px solid #fff;" onclick="quickAction('SISTEMA NORMALIZADO')">NORMALIZADO</button>
     </div>
 
     <div id="footer">
+        <button class="gear-btn" onclick="document.getElementById('config-panel').style.display='flex'">⚙️</button>
         <button id="btn-rec" class="btn-rec" onclick="toggleRec()">GRAVAR LOTE PDF</button>
-    </div>
+        <div style="width:60px"></div> </div>
 </div>
 
 <canvas id="c"></canvas>
 
 <script>
 let kmDB = [], capturing = false, hDir = null, buffer = [], currentLabel = "INSPEÇÃO NORMAL";
-let curLat = 0, curLon = 0;
+let curLat = 0, curLon = 0, msInterval = 450;
 
 async function startApp() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
         document.getElementById('gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
         
-        // Ativa Fullscreen sem perguntar de novo
-        if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(() => {});
-        }
-
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
-        });
-        document.getElementById('vid').srcObject = stream;
-        document.getElementById('vid').onloadedmetadata = () => { 
-            const can = document.getElementById('c');
-            can.width = vid.videoWidth; can.height = vid.videoHeight;
-        };
+        await listCameras();
+        await setupCamera();
         loadCSV(); initGPS();
-    } catch(e) { console.error("Erro ao iniciar."); }
+    } catch(e) { }
+}
+
+async function listCameras() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+    const select = document.getElementById('cam-select');
+    select.innerHTML = videoDevices.map((d, i) => `<option value="${d.deviceId}">${d.label || 'Câmera ' + i}</option>`).join('');
+}
+
+async function setupCamera(id) {
+    const constraints = { video: { deviceId: id ? { exact: id } : undefined, width: 1920, height: 1080 } };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const vid = document.getElementById('vid');
+    vid.srcObject = stream;
+    vid.onloadedmetadata = () => { 
+        document.getElementById('c').width = vid.videoWidth; 
+        document.getElementById('c').height = vid.videoHeight; 
+    };
+}
+
+async function changeCam() {
+    const id = document.getElementById('cam-select').value;
+    await setupCamera(id);
 }
 
 async function quickAction(label) {
     currentLabel = label;
-    // Feedback de Flash (apenas visual, não sai do modo tela cheia)
     const f = document.getElementById('flash');
-    f.style.opacity = "0.4"; 
-    setTimeout(() => f.style.opacity = "0", 60);
-    
-    // Captura e salva silenciosamente
-    await renderFrame(true); 
+    f.style.opacity = "0.4"; setTimeout(() => f.style.opacity = "0", 70);
+    await renderFrame(true);
     currentLabel = "INSPEÇÃO NORMAL";
 }
 
@@ -148,14 +183,21 @@ function toggleRec() {
     capturing = !capturing;
     const btn = document.getElementById('btn-rec');
     if (capturing) {
-        btn.innerText = "PARAR E SALVAR PDF";
+        btn.innerText = "FINALIZAR PDF";
         btn.classList.add('recording');
         buffer = [];
+        recordLoop();
     } else {
-        btn.innerText = "GERANDO PDF...";
+        btn.innerText = "SALVANDO...";
         btn.classList.remove('recording');
         generatePDF();
     }
+}
+
+function recordLoop() {
+    if (!capturing) return;
+    renderFrame(false);
+    setTimeout(recordLoop, msInterval);
 }
 
 async function renderFrame(isManual) {
@@ -165,9 +207,8 @@ async function renderFrame(isManual) {
     const km = document.getElementById('km-txt').innerText;
 
     ctx.drawImage(vid, 0, 0, can.width, can.height);
-    
     const bh = can.height * 0.12;
-    ctx.fillStyle = "rgba(0,0,0,0.8)";
+    ctx.fillStyle = "rgba(0,0,0,0.85)";
     ctx.fillRect(0, can.height - bh, can.width, bh);
     
     ctx.fillStyle = currentLabel.includes('NORMALIZADO') ? '#fff' : (currentLabel.includes('FIBRA') ? '#007bff' : '#ff1744');
@@ -180,36 +221,31 @@ async function renderFrame(isManual) {
     ctx.fillText(`${new Date().toLocaleString()} | GPS: ${curLat.toFixed(6)}, ${curLon.toFixed(6)}`, 45, can.height - (bh * 0.22));
 
     const data = can.toDataURL('image/jpeg', 0.8);
-    buffer.push(data); 
+    buffer.push(data);
 
     if (isManual) {
-        // Gravação direta sem diálogos
         try {
             const blob = await (await fetch(data)).blob();
             const safeLabel = currentLabel.replace(/[\/\\?%*:|"<>]/g, '-');
             const handle = await hDir.getFileHandle(`${safeLabel}_${km.replace(' ','_')}_${Date.now()}.jpg`, {create:true});
             const w = await handle.createWritable();
-            await w.write(blob); 
-            await w.close();
-        } catch(e) { console.error("Erro ao salvar JPG silenciado."); }
+            await w.write(blob); await w.close();
+        } catch(e) { }
     }
 }
 
 async function generatePDF() {
-    if (buffer.length === 0) return;
-    try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('l', 'mm', 'a4');
-        for (let i = 0; i < buffer.length; i++) {
-            if (i > 0) doc.addPage();
-            doc.addImage(buffer[i], 'JPEG', 0, 0, 297, 210);
-        }
-        const blob = doc.output('blob');
-        const handle = await hDir.getFileHandle(`RELATORIO_${Date.now()}.pdf`, {create:true});
-        const w = await handle.createWritable();
-        await w.write(blob); 
-        await w.close();
-    } catch(e) { }
+    if (!buffer.length) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4');
+    for (let i = 0; i < buffer.length; i++) {
+        if (i > 0) doc.addPage();
+        doc.addImage(buffer[i], 'JPEG', 0, 0, 297, 210);
+    }
+    const blob = doc.output('blob');
+    const handle = await hDir.getFileHandle(`RELATORIO_${Date.now()}.pdf`, {create:true});
+    const w = await handle.createWritable();
+    await w.write(blob); await w.close();
     document.getElementById('btn-rec').innerText = "GRAVAR LOTE PDF";
 }
 
