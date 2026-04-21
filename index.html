@@ -3,236 +3,246 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Angstrom Command Center V11</title>
+    <title>Angstrom V12 - SAP Support & Command</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #00e676; --blue: #00d4ff; --red: #ff3d00; --warn: #ffea00; --dark: #121212; --glass: rgba(18, 18, 18, 0.85); }
+        :root { --accent: #00e676; --blue: #00d4ff; --red: #ff3d00; --sap: #0081d1; --dark: #0a0a0a; --glass: rgba(15, 15, 15, 0.9); }
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
 
         #vid { width: 100%; height: 100%; object-fit: cover; position: fixed; inset: 0; z-index: 1; }
 
-        /* KM DISPLAY PROFISSIONAL */
-        #hud-km {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background: var(--dark); padding: 10px 40px; border-radius: 15px;
-            border: 2px solid var(--accent); box-shadow: 0 0 20px rgba(0, 230, 118, 0.4);
-            z-index: 10; text-align: center; min-width: 180px;
+        /* KM E STATUS */
+        #hud-top {
+            position: fixed; top: 15px; left: 15px; z-index: 10; display: flex; flex-direction: column; gap: 5px;
         }
-        #km-txt { font-size: 2.8rem; font-weight: 900; display: block; line-height: 1; color: #fff; }
-        .km-lbl { font-size: 0.7rem; font-weight: bold; color: var(--accent); text-transform: uppercase; }
-
-        /* PAINEL LATERAL DE COMANDO */
+        .km-box { background: var(--dark); border: 2px solid var(--accent); padding: 5px 20px; border-radius: 10px; text-align: center; }
+        #km-txt { font-size: 2.2rem; font-weight: 900; line-height: 1; }
+        
+        /* PAINEL LATERAL */
         #side-panel {
-            position: fixed; right: 15px; top: 15px; bottom: 15px; width: 220px;
-            background: var(--glass); backdrop-filter: blur(10px); border-radius: 20px;
-            z-index: 10; display: flex; flex-direction: column; padding: 15px;
-            border: 1px solid rgba(255,255,255,0.1); overflow-y: auto;
+            position: fixed; right: 10px; top: 10px; bottom: 10px; width: 200px;
+            background: var(--glass); backdrop-filter: blur(10px); border-radius: 15px;
+            z-index: 100; display: flex; flex-direction: column; padding: 12px; border: 1px solid #333;
         }
 
-        .section-header { font-size: 0.65rem; font-weight: 900; color: var(--accent); margin: 15px 0 8px 0; text-transform: uppercase; border-bottom: 1px solid #333; }
-
+        .section-lbl { font-size: 0.6rem; font-weight: bold; color: var(--accent); margin: 10px 0 5px 0; text-transform: uppercase; border-bottom: 1px solid #222; }
+        
         .btn {
-            background: #222; border: 1px solid #444; color: #fff; padding: 10px; margin-bottom: 6px;
-            border-radius: 8px; font-size: 0.65rem; font-weight: bold; text-align: left;
-            transition: 0.2s; display: flex; align-items: center; gap: 8px;
+            background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 8px; margin-bottom: 5px;
+            border-radius: 6px; font-size: 0.65rem; font-weight: bold; text-align: left; display: flex; align-items: center; gap: 5px;
         }
-        .btn:active { background: #fff; color: #000; }
-        .btn-fib { border-left: 4px solid var(--blue); }
-        .btn-adm { border-left: 4px solid var(--warn); }
-        .btn-main { background: var(--accent); color: #000; border: none; text-align: center; justify-content: center; font-size: 0.8rem; margin-top: 10px; padding: 15px; }
+        .btn:active { background: var(--accent); color: #000; }
+        .btn-sap { border-left: 4px solid var(--sap); background: #001a2c; }
 
-        /* HUD DE STATUS DO PDF */
-        #status-lote { position: fixed; top: 20px; left: 20px; background: var(--glass); padding: 10px; border-radius: 10px; z-index: 10; font-size: 0.7rem; border: 1px solid #444; }
-
-        /* MODAL DE ANOTAÇÃO */
-        #note-ui {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100;
-            display: none; flex-direction: column; padding: 30px;
+        /* MODAIS */
+        .modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000;
+            display: none; flex-direction: column; padding: 25px; justify-content: center;
         }
-        textarea { flex: 1; background: #111; border: 2px solid var(--accent); border-radius: 12px; color: #fff; padding: 20px; font-size: 1.2rem; margin: 20px 0; outline: none; }
-
-        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 200; }
+        .modal input, .modal textarea { 
+            width: 100%; background: #111; border: 1px solid var(--accent); color: #fff; 
+            padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 1rem;
+        }
+        .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+        
+        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 2000; }
         canvas { display: none; }
     </style>
 </head>
-<body>
+<body onclick="openFullscreen()">
 
 <video id="vid" autoplay playsinline muted></video>
 <div id="flash"></div>
 
-<div id="status-lote">
-    FOTOS NO LOTE: <b id="foto-count" style="color:var(--accent)">000</b><br>
-    SISTEMA: <span style="color:var(--accent)">ATIVO</span>
-</div>
-
-<div id="hud-km">
-    <span class="km-lbl">Km Rodovia</span>
-    <span id="km-txt">---</span>
+<div id="hud-top">
+    <div class="km-box">
+        <span style="font-size:0.6rem; color:var(--accent); font-weight:bold;">KM RODOVIA</span>
+        <div id="km-txt">---</div>
+    </div>
 </div>
 
 <div id="side-panel">
-    <h2 style="font-size: 1rem; font-weight: 900; margin-bottom: 5px;">ANGSTROM</h2>
-    <span style="font-size: 0.5rem; opacity: 0.6;">SISTEMA DE APOIO TÉCNICO</span>
-
-    <div class="section-header">Administrativo</div>
-    <button class="btn btn-adm" onclick="openNote('PAUTA REUNIÃO')">📋 PAUTA REUNIÃO</button>
-    <button class="btn btn-adm" onclick="openNote('LEMBRETE ADM')">💡 LEMBRETE / INSIGHT</button>
-    <button class="btn btn-adm" onclick="openNote('EQUIPE TECH')">👥 GESTÃO EQUIPE</button>
-    <button class="btn" style="border-left: 4px solid #fff;" onclick="trigger('FOTO LIMPA')">📷 FOTO LIMPA (S/ TAG)</button>
-
-    <div class="section-header">Técnico / Operacional</div>
-    <button class="btn btn-fib" onclick="trigger('FIBRA ROMPIDA')">FIBRA ROMPIDA</button>
-    <button class="btn btn-fib" onclick="trigger('CAIXA ABERTA')">BACKBONE ABERTA</button>
-    <button class="btn btn-fib" onclick="trigger('CABO BAIXO')">CABO C/ FLECHA</button>
+    <h2 style="font-size: 0.8rem; border-bottom: 1px solid var(--accent); padding-bottom: 5px;">ANGSTROM V12</h2>
     
-    <button class="btn" style="border-left: 4px solid var(--accent);" onclick="trigger('POSTE APAGADO')">POSTE APAGADO</button>
-    <button class="btn" style="border-left: 4px solid var(--accent);" onclick="trigger('HVAC FALHA')">FALHA CLIMATIZAÇÃO</button>
-    <button class="btn" style="border-left: 4px solid var(--accent);" onclick="trigger('TELEGESTÃO')">ERRO TELEGESTÃO</button>
+    <div class="section-lbl">Apoio SAP (IW41)</div>
+    <button class="btn btn-sap" onclick="openSapModal()">📝 LOG DE ORDEM SAP</button>
     
-    <button class="btn" style="border-left: 4px solid var(--red);" onclick="trigger('VANDALISMO')">VANDALISMO/FURTO</button>
-    <button class="btn" style="border-left: 4px solid #fff;" onclick="trigger('SISTEMA NORMALIZADO')">✅ NORMALIZADO</button>
+    <div class="section-lbl">Administrativo</div>
+    <button class="btn" onclick="openNote('PAUTA REUNIÃO')">👥 PAUTAS REUNIÃO</button>
+    <button class="btn" onclick="openNote('LEMBRETE')">💡 LEMBRETE GERAL</button>
+    
+    <div class="section-lbl">Técnico Pista</div>
+    <button class="btn" style="border-left:4px solid var(--blue)" onclick="snap('FIBRA ROMPIDA')">FIBRA ROMPIDA</button>
+    <button class="btn" style="border-left:4px solid var(--blue)" onclick="snap('CAIXA ABERTA')">BACKBONE ABERTA</button>
+    <button class="btn" style="border-left:4px solid var(--accent)" onclick="snap('ILUMINAÇÃO')">FALHA ILUMINAÇÃO</button>
+    <button class="btn" style="border-left:4px solid var(--red)" onclick="snap('VANDALISMO')">FURTO/VANDALISMO</button>
+    <button class="btn" style="border-left:4px solid #fff" onclick="snap('LIMPA')">📷 FOTO LIMPA</button>
 
     <div style="flex:1"></div>
-    <button id="recBtn" class="btn btn-main" onclick="toggleRec()">GRAVAR LOTE PDF</button>
+    <button id="recBtn" class="btn" style="background:var(--accent); color:#000; border:none; justify-content:center;" onclick="toggleRec()">GRAVAR LOTE PDF</button>
 </div>
 
-<div id="note-ui">
-    <h2 id="note-title" style="color:var(--accent)">ANOTAÇÃO</h2>
-    <textarea id="note-text" placeholder="Escreva aqui detalhes da reunião, pautas ou lembretes importantes..."></textarea>
-    <div style="display: flex; gap: 15px;">
-        <button class="btn btn-main" style="flex:1" onclick="saveNote()">SALVAR NO DISCO</button>
-        <button class="btn" style="flex:1; background:#444; border:none; text-align:center; justify-content:center;" onclick="closeNote()">CANCELAR</button>
+<div id="sap-modal" class="modal">
+    <h2 style="color:var(--sap); margin-bottom:15px;">LOG DE ORDEM SAP</h2>
+    <input type="text" id="sap-os" placeholder="Nº da Ordem (Ex: 10005432)">
+    <div class="btn-row">
+        <div style="flex:1">
+            <label style="font-size:0.7rem; color:var(--sap)">INÍCIO:</label>
+            <input type="time" id="sap-start">
+        </div>
+        <div style="flex:1">
+            <label style="font-size:0.7rem; color:var(--sap)">FIM:</label>
+            <input type="time" id="sap-end">
+        </div>
+    </div>
+    <textarea id="sap-desc" placeholder="Descrição do serviço (ex: Fusão de fibra poste 42)"></textarea>
+    <div class="btn-row">
+        <button class="btn" style="flex:1; background:var(--sap); justify-content:center; padding:15px;" onclick="saveSapLog()">SALVAR LOG SAP</button>
+        <button class="btn" style="flex:1; background:#333; justify-content:center; border:none;" onclick="closeModal('sap-modal')">SAIR</button>
+    </div>
+</div>
+
+<div id="note-modal" class="modal">
+    <h2 id="note-title" style="color:var(--accent);">ANOTAÇÃO</h2>
+    <textarea id="note-body" style="height:200px;" placeholder="Digite os detalhes aqui..."></textarea>
+    <div class="btn-row">
+        <button class="btn" style="flex:1; background:var(--accent); color:#000; justify-content:center; padding:15px;" onclick="saveNote()">SALVAR NOTA</button>
+        <button class="btn" style="flex:1; background:#333; justify-content:center; border:none;" onclick="closeModal('note-modal')">CANCELAR</button>
     </div>
 </div>
 
 <canvas id="canvas"></canvas>
 
 <script>
-let db = [], isRec = false, hDir = null, pdfBuffer = [], tag = "INSPEÇÃO";
-let lat = 0, lon = 0, stream = null;
+let db = [], pdfBuffer = [], hDir = null, isRec = false, lat = 0, lon = 0;
 
-async function start() {
+async function init() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
         document.getElementById('vid').srcObject = stream;
-        loadCSV(); initGPS();
-    } catch(e) { alert("Selecione uma pasta para salvar os arquivos."); }
+        loadCSV(); startGPS();
+    } catch(e) {}
 }
 
-function trigger(label) {
-    tag = label;
-    const f = document.getElementById('flash');
-    f.style.opacity = "0.5"; setTimeout(() => f.style.opacity = "0", 60);
-    snap(true);
+function openFullscreen() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
 }
 
-// GESTÃO DE NOTAS
-let noteType = "";
+// LÓGICA SAP
+function openSapModal() { document.getElementById('sap-modal').style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+async function saveSapLog() {
+    const os = document.getElementById('sap-os').value;
+    const start = document.getElementById('sap-start').value;
+    const end = document.getElementById('sap-end').value;
+    const desc = document.getElementById('sap-desc').value;
+    const km = document.getElementById('km-txt').innerText;
+
+    const logEntry = `[SAP LOG] DATA: ${new Date().toLocaleDateString()} | ORDEM: ${os} | KM: ${km}\nPERÍODO: ${start} até ${end}\nDESCRIÇÃO: ${desc}\n-----------------------------------\n`;
+    
+    await saveToFile("FECHAMENTO_SAP.txt", logEntry);
+    alert("Log SAP salvo para fechamento!");
+    closeModal('sap-modal');
+}
+
+// LÓGICA NOTAS ADM
+let activeNoteType = "";
 function openNote(type) {
-    noteType = type;
+    activeNoteType = type;
     document.getElementById('note-title').innerText = type;
-    document.getElementById('note-ui').style.display = 'flex';
+    document.getElementById('note-modal').style.display = 'flex';
 }
-function closeNote() { document.getElementById('note-ui').style.display = 'none'; }
 async function saveNote() {
-    const text = document.getElementById('note-text').value;
-    if(!text) return;
-    const blob = new Blob([text], {type: 'text/plain'});
-    const file = await hDir.getFileHandle(`${noteType}_${Date.now()}.txt`, {create:true});
-    const w = await file.createWritable();
-    await w.write(blob); await w.close();
-    document.getElementById('note-text').value = "";
-    closeNote();
+    const text = document.getElementById('note-body').value;
+    const entry = `[${activeNoteType}] DATA: ${new Date().toLocaleString()}\nCONTEÚDO: ${text}\n-----------------------------------\n`;
+    await saveToFile(`NOTAS_ADM.txt`, entry);
+    document.getElementById('note-body').value = "";
+    closeModal('note-modal');
 }
 
-function initGPS() {
+async function saveToFile(fileName, content) {
+    const file = await hDir.getFileHandle(fileName, {create:true});
+    const existingFile = await file.getFile();
+    const existingContent = await existingFile.text();
+    const w = await file.createWritable();
+    await w.write(existingContent + content);
+    await w.close();
+}
+
+function startGPS() {
     navigator.geolocation.watchPosition(p => {
         lat = p.coords.latitude; lon = p.coords.longitude;
         if (db.length) {
             let close = db.reduce((p, c) => Math.hypot(c.lt-lat, c.ln-lon) < Math.hypot(p.lt-lat, p.ln-lon) ? c : p);
             document.getElementById('km-txt').innerText = close.km;
         }
-    }, null, { enableHighAccuracy: true });
+    });
 }
 
-async function snap(isManual) {
+async function snap(label) {
     const v = document.getElementById('vid');
     const c = document.getElementById('canvas');
-    c.width = v.videoWidth; c.height = v.videoHeight;
     const ctx = c.getContext('2d');
     const km = document.getElementById('km-txt').innerText;
-
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    
     ctx.drawImage(v, 0, 0);
-    if (tag !== 'FOTO LIMPA') {
+    if(label !== 'LIMPA') {
         const h = c.height * 0.12;
-        ctx.fillStyle = "rgba(0,0,0,0.85)";
+        ctx.fillStyle = "rgba(0,0,0,0.8)";
         ctx.fillRect(0, c.height - h, c.width, h);
-        ctx.fillStyle = tag.includes('FIBRA') ? '#00d4ff' : (tag.includes('NORMAL') ? '#00e676' : '#ff3d00');
-        ctx.fillRect(0, c.height - h, 20, h);
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 44px Arial";
-        ctx.fillText(`${tag} | Km ${km}`, 45, c.height - (h*0.55));
-        ctx.font = "24px Arial";
-        ctx.fillText(`${new Date().toLocaleString()} | GPS: ${lat.toFixed(6)}, ${lon.toFixed(6)}`, 45, c.height - (h*0.22));
+        ctx.fillStyle = "#fff"; ctx.font = "bold 42px Arial";
+        ctx.fillText(`${label} | Km ${km}`, 40, c.height - (h*0.55));
+        ctx.font = "22px Arial";
+        ctx.fillText(`${new Date().toLocaleString()} | GPS: ${lat.toFixed(6)}, ${lon.toFixed(6)}`, 40, c.height - (h*0.22));
     }
 
-    const data = c.toDataURL('image/jpeg', 0.85);
-    if(isRec) { 
-        pdfBuffer.push(data);
-        document.getElementById('foto-count').innerText = pdfBuffer.length.toString().padStart(3, '0');
-    }
+    const img = c.toDataURL('image/jpeg', 0.85);
+    if(isRec) pdfBuffer.push(img);
+    
+    const f = document.getElementById('flash');
+    f.style.opacity = "0.5"; setTimeout(() => f.style.opacity = "0", 50);
 
-    if (isManual) {
-        const blob = await (await fetch(data)).blob();
-        const file = await hDir.getFileHandle(`REGISTRO_${tag}_Km${km}.jpg`, {create:true});
-        const w = await file.createWritable();
-        await w.write(blob); await w.close();
-        tag = "INSPEÇÃO";
-    }
+    const blob = await (await fetch(img)).blob();
+    const file = await hDir.getFileHandle(`IMG_${label}_${Date.now()}.jpg`, {create:true});
+    const w = await file.createWritable();
+    await w.write(blob); await w.close();
 }
 
 function toggleRec() {
     isRec = !isRec;
     const btn = document.getElementById('recBtn');
-    if (isRec) {
-        btn.innerText = "FINALIZAR PDF"; btn.style.background = "#ff3d00";
-        pdfBuffer = []; loop();
-    } else {
-        btn.innerText = "SALVANDO..."; btn.style.background = "#00e676";
-        savePDF();
-    }
+    if (isRec) { btn.innerText = "FINALIZAR PDF"; btn.style.background = varColor('--red'); pdfBuffer = []; startLoop(); }
+    else { btn.innerText = "SALVANDO..."; btn.style.background = varColor('--accent'); savePDF(); }
 }
-
-function loop() { if(isRec) { snap(false); setTimeout(loop, 1000); } }
+function startLoop() { if(isRec) { snap('LOTE'); setTimeout(startLoop, 1500); } }
+const varColor = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
 async function savePDF() {
     const doc = new jspdf.jsPDF('l', 'mm', 'a4');
     pdfBuffer.forEach((img, i) => { if(i>0) doc.addPage(); doc.addImage(img, 'JPEG', 0, 0, 297, 210); });
     const blob = doc.output('blob');
-    const file = await hDir.getFileHandle(`LOTE_RELATORIO_${Date.now()}.pdf`, {create:true});
+    const file = await hDir.getFileHandle(`RELATORIO_LOTE_${Date.now()}.pdf`, {create:true});
     const w = await file.createWritable();
     await w.write(blob); await w.close();
     document.getElementById('recBtn').innerText = "GRAVAR LOTE PDF";
-    document.getElementById('foto-count').innerText = "000";
 }
 
 async function loadCSV() {
-    try {
-        const r = await fetch('SNVBR116SPRJ.csv');
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().toLowerCase().split(';');
-        const iK = h.indexOf('km'), iLt = h.findIndex(s=>s.includes('lat')), iLn = h.findIndex(s=>s.includes('lon'));
-        db = rows.map(r => {
-            const c = r.split(';');
-            return { km: c[iK], lt: parseFloat(c[iLat || iLt].replace(',','.')), ln: parseFloat(c[iLon || iLn].replace(',','.')) };
-        });
-    } catch(e) {}
+    const r = await fetch('SNVBR116SPRJ.csv');
+    const t = await r.text();
+    const rows = t.split('\n').filter(l => l.includes(';'));
+    const h = rows.shift().toLowerCase().split(';');
+    const iK = h.indexOf('km'), iLt = h.findIndex(s=>s.includes('lat')), iLn = h.findIndex(s=>s.includes('lon'));
+    db = rows.map(r => {
+        const c = r.split(';');
+        return { km: c[iK], lt: parseFloat(c[iLt].replace(',','.')), ln: parseFloat(c[iLn].replace(',','.')) };
+    });
 }
-
-document.body.addEventListener('click', () => { if(!hDir) start(); }, {once:true});
+document.body.addEventListener('click', () => { if(!hDir) init(); }, {once:true});
 </script>
 </body>
 </html>
