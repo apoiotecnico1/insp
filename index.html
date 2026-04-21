@@ -3,158 +3,158 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Angstrom V10 - Management & Technical</title>
+    <title>Angstrom Command Center V11</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #00e676; --blue: #00d4ff; --red: #ff3d00; --warn: #ffea00; --glass: rgba(10, 10, 10, 0.9); }
-        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; user-select: none; }
-        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        :root { --accent: #00e676; --blue: #00d4ff; --red: #ff3d00; --warn: #ffea00; --dark: #121212; --glass: rgba(18, 18, 18, 0.85); }
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; }
 
         #vid { width: 100%; height: 100%; object-fit: cover; position: fixed; inset: 0; z-index: 1; }
-        
-        /* KM HUD - Ultra discreto */
-        #km-display { position: fixed; top: 10px; left: 10px; font-size: 0.8rem; opacity: 0.3; z-index: 5; font-weight: bold; }
 
-        /* Trigger Area (Área Sensível Invisível) */
-        #ui-trigger { 
-            position: fixed; right: 0; bottom: 0; width: 80px; height: 80px; 
-            z-index: 1000; cursor: pointer; background: rgba(255,255,255,0.01);
+        /* KM DISPLAY PROFISSIONAL */
+        #hud-km {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--dark); padding: 10px 40px; border-radius: 15px;
+            border: 2px solid var(--accent); box-shadow: 0 0 20px rgba(0, 230, 118, 0.4);
+            z-index: 10; text-align: center; min-width: 180px;
+        }
+        #km-txt { font-size: 2.8rem; font-weight: 900; display: block; line-height: 1; color: #fff; }
+        .km-lbl { font-size: 0.7rem; font-weight: bold; color: var(--accent); text-transform: uppercase; }
+
+        /* PAINEL LATERAL DE COMANDO */
+        #side-panel {
+            position: fixed; right: 15px; top: 15px; bottom: 15px; width: 220px;
+            background: var(--glass); backdrop-filter: blur(10px); border-radius: 20px;
+            z-index: 10; display: flex; flex-direction: column; padding: 15px;
+            border: 1px solid rgba(255,255,255,0.1); overflow-y: auto;
         }
 
-        /* Painel Principal (Oculto por padrão) */
-        #main-panel {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px);
-            z-index: 2000; display: none; grid-template-columns: 1fr 1fr; padding: 20px; gap: 15px;
-            overflow-y: auto; align-content: start;
-        }
-
-        .section-title { grid-column: span 2; font-size: 0.7rem; color: var(--accent); letter-spacing: 2px; margin-top: 15px; border-bottom: 1px solid #333; padding-bottom: 5px; text-transform: uppercase; }
+        .section-header { font-size: 0.65rem; font-weight: 900; color: var(--accent); margin: 15px 0 8px 0; text-transform: uppercase; border-bottom: 1px solid #333; }
 
         .btn {
-            background: #1a1a1a; border: 1px solid #333; color: #eee; padding: 12px 8px;
-            border-radius: 8px; font-size: 0.65rem; font-weight: 600; text-align: center;
-            display: flex; align-items: center; justify-content: center; text-transform: uppercase;
+            background: #222; border: 1px solid #444; color: #fff; padding: 10px; margin-bottom: 6px;
+            border-radius: 8px; font-size: 0.65rem; font-weight: bold; text-align: left;
+            transition: 0.2s; display: flex; align-items: center; gap: 8px;
         }
-        .btn:active { background: var(--accent); color: #000; }
-        .btn-adm { border-left: 4px solid var(--warn); }
+        .btn:active { background: #fff; color: #000; }
         .btn-fib { border-left: 4px solid var(--blue); }
-        .btn-infra { border-left: 4px solid var(--accent); }
-        .btn-emerg { border-left: 4px solid var(--red); background: #2a1010; }
+        .btn-adm { border-left: 4px solid var(--warn); }
+        .btn-main { background: var(--accent); color: #000; border: none; text-align: center; justify-content: center; font-size: 0.8rem; margin-top: 10px; padding: 15px; }
 
-        /* Módulo de Notas */
-        #note-modal {
-            position: fixed; inset: 0; background: #000; z-index: 3000; display: none;
-            flex-direction: column; padding: 20px;
+        /* HUD DE STATUS DO PDF */
+        #status-lote { position: fixed; top: 20px; left: 20px; background: var(--glass); padding: 10px; border-radius: 10px; z-index: 10; font-size: 0.7rem; border: 1px solid #444; }
+
+        /* MODAL DE ANOTAÇÃO */
+        #note-ui {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100;
+            display: none; flex-direction: column; padding: 30px;
         }
-        textarea { flex: 1; background: #111; color: var(--accent); border: 1px solid #333; padding: 15px; font-family: monospace; border-radius: 10px; margin-bottom: 15px; outline: none; }
+        textarea { flex: 1; background: #111; border: 2px solid var(--accent); border-radius: 12px; color: #fff; padding: 20px; font-size: 1.2rem; margin: 20px 0; outline: none; }
 
-        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 4000; }
+        #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 200; }
         canvas { display: none; }
     </style>
 </head>
 <body>
 
 <video id="vid" autoplay playsinline muted></video>
-<div id="km-display">KM ---</div>
 <div id="flash"></div>
 
-<div id="ui-trigger" onclick="togglePanel(true)"></div>
-
-<div id="main-panel">
-    <div style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center;">
-        <h2 style="font-weight: 900; color: #fff;">ANGSTROM V10</h2>
-        <button onclick="togglePanel(false)" style="background:none; border:1px solid #fff; color:#fff; padding:5px 15px; border-radius:20px;">FECHAR</button>
-    </div>
-
-    <div class="section-title">Gestão e ADM</div>
-    <button class="btn btn-adm" onclick="openNote('PAUTA REUNIÃO')">📝 PAUTA REUNIÃO</button>
-    <button class="btn btn-adm" onclick="openNote('CONTROLE EQUIPE')">👥 GESTÃO EQUIPE</button>
-    <button class="btn btn-adm" onclick="openNote('LEMBRETE TÉCNICO')">💡 LEMBRETE ADM</button>
-    <button class="btn btn-adm" onclick="toggleRec()">⏺️ GRAVAR LOTE PDF</button>
-
-    <div class="section-title">Infraestrutura e Iluminação</div>
-    <button class="btn btn-infra" onclick="trigger('ILUMINAÇÃO APAGADA')">LUM. APAGADA</button>
-    <button class="btn btn-infra" onclick="trigger('POSTE DANIFICADO')">POSTE AVARIADO</button>
-    <button class="btn btn-infra" onclick="trigger('TELEGESTÃO FALHA')">FALHA TELEGESTÃO</button>
-    <button class="btn btn-infra" onclick="trigger('HVAC CLIMATIZAÇÃO')">MANUT. HVAC</button>
-
-    <div class="section-title">Fibra e Conectividade</div>
-    <button class="btn btn-fib" onclick="trigger('FIBRA ROMPIDA')">FIBRA ROMPIDA</button>
-    <button class="btn btn-fib" onclick="trigger('BACKBONE ABERTA')">CAIXA ABERTA</button>
-    <button class="btn btn-fib" onclick="trigger('OTDR DIAGNÓSTICO')">SOLICITAR OTDR</button>
-    <button class="btn btn-fib" onclick="trigger('CABO BAIXO')">CABO C/ FLECHA</button>
-
-    <div class="section-title">Segurança e Emergência</div>
-    <button class="btn btn-emerg" onclick="trigger('VANDALISMO/FURTO')">FURTO/ROUBO</button>
-    <button class="btn btn-emerg" onclick="trigger('BARREIRA METÁLICA')">DEFENSA DANIF.</button>
-    <button class="btn btn-emerg" onclick="trigger('RISCO DE QUEDA')">RISCO ESTRUTURAL</button>
-    <button class="btn" onclick="trigger('FOTO LIMPA')">📷 FOTO LIMPA</button>
+<div id="status-lote">
+    FOTOS NO LOTE: <b id="foto-count" style="color:var(--accent)">000</b><br>
+    SISTEMA: <span style="color:var(--accent)">ATIVO</span>
 </div>
 
-<div id="note-modal">
-    <h3 id="note-title" style="margin-bottom: 10px; color: var(--accent);">ANOTAÇÃO</h3>
-    <textarea id="note-text" placeholder="Digite aqui os detalhes técnicos ou pauta..."></textarea>
-    <div style="display: flex; gap: 10px;">
-        <button class="btn-adm" style="flex:1; padding:15px; border-radius:10px;" onclick="saveNote()">SALVAR ARQUIVO</button>
-        <button style="flex:1; background:#333; color:#fff; border:none; border-radius:10px;" onclick="closeNote()">CANCELAR</button>
+<div id="hud-km">
+    <span class="km-lbl">Km Rodovia</span>
+    <span id="km-txt">---</span>
+</div>
+
+<div id="side-panel">
+    <h2 style="font-size: 1rem; font-weight: 900; margin-bottom: 5px;">ANGSTROM</h2>
+    <span style="font-size: 0.5rem; opacity: 0.6;">SISTEMA DE APOIO TÉCNICO</span>
+
+    <div class="section-header">Administrativo</div>
+    <button class="btn btn-adm" onclick="openNote('PAUTA REUNIÃO')">📋 PAUTA REUNIÃO</button>
+    <button class="btn btn-adm" onclick="openNote('LEMBRETE ADM')">💡 LEMBRETE / INSIGHT</button>
+    <button class="btn btn-adm" onclick="openNote('EQUIPE TECH')">👥 GESTÃO EQUIPE</button>
+    <button class="btn" style="border-left: 4px solid #fff;" onclick="trigger('FOTO LIMPA')">📷 FOTO LIMPA (S/ TAG)</button>
+
+    <div class="section-header">Técnico / Operacional</div>
+    <button class="btn btn-fib" onclick="trigger('FIBRA ROMPIDA')">FIBRA ROMPIDA</button>
+    <button class="btn btn-fib" onclick="trigger('CAIXA ABERTA')">BACKBONE ABERTA</button>
+    <button class="btn btn-fib" onclick="trigger('CABO BAIXO')">CABO C/ FLECHA</button>
+    
+    <button class="btn" style="border-left: 4px solid var(--accent);" onclick="trigger('POSTE APAGADO')">POSTE APAGADO</button>
+    <button class="btn" style="border-left: 4px solid var(--accent);" onclick="trigger('HVAC FALHA')">FALHA CLIMATIZAÇÃO</button>
+    <button class="btn" style="border-left: 4px solid var(--accent);" onclick="trigger('TELEGESTÃO')">ERRO TELEGESTÃO</button>
+    
+    <button class="btn" style="border-left: 4px solid var(--red);" onclick="trigger('VANDALISMO')">VANDALISMO/FURTO</button>
+    <button class="btn" style="border-left: 4px solid #fff;" onclick="trigger('SISTEMA NORMALIZADO')">✅ NORMALIZADO</button>
+
+    <div style="flex:1"></div>
+    <button id="recBtn" class="btn btn-main" onclick="toggleRec()">GRAVAR LOTE PDF</button>
+</div>
+
+<div id="note-ui">
+    <h2 id="note-title" style="color:var(--accent)">ANOTAÇÃO</h2>
+    <textarea id="note-text" placeholder="Escreva aqui detalhes da reunião, pautas ou lembretes importantes..."></textarea>
+    <div style="display: flex; gap: 15px;">
+        <button class="btn btn-main" style="flex:1" onclick="saveNote()">SALVAR NO DISCO</button>
+        <button class="btn" style="flex:1; background:#444; border:none; text-align:center; justify-content:center;" onclick="closeNote()">CANCELAR</button>
     </div>
 </div>
 
 <canvas id="canvas"></canvas>
 
 <script>
-let db = [], isRec = false, hDir = null, pdfBuffer = [], lat = 0, lon = 0, currentTag = "";
+let db = [], isRec = false, hDir = null, pdfBuffer = [], tag = "INSPEÇÃO";
+let lat = 0, lon = 0, stream = null;
 
-async function startSystem() {
-    hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
-    document.getElementById('vid').srcObject = stream;
-    loadCSV(); initGPS();
-}
-
-function togglePanel(show) {
-    document.getElementById('main-panel').style.display = show ? 'grid' : 'none';
+async function start() {
+    try {
+        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
+        document.getElementById('vid').srcObject = stream;
+        loadCSV(); initGPS();
+    } catch(e) { alert("Selecione uma pasta para salvar os arquivos."); }
 }
 
 function trigger(label) {
-    currentTag = label;
-    togglePanel(false);
+    tag = label;
     const f = document.getElementById('flash');
-    f.style.opacity = "0.6"; setTimeout(() => f.style.opacity = "0", 50);
+    f.style.opacity = "0.5"; setTimeout(() => f.style.opacity = "0", 60);
     snap(true);
 }
 
-// Lógica de Notas
-let activeNoteType = "";
+// GESTÃO DE NOTAS
+let noteType = "";
 function openNote(type) {
-    activeNoteType = type;
+    noteType = type;
     document.getElementById('note-title').innerText = type;
-    document.getElementById('note-modal').style.display = 'flex';
-    togglePanel(false);
+    document.getElementById('note-ui').style.display = 'flex';
 }
-
-function closeNote() { document.getElementById('note-modal').style.display = 'none'; }
-
+function closeNote() { document.getElementById('note-ui').style.display = 'none'; }
 async function saveNote() {
     const text = document.getElementById('note-text').value;
     if(!text) return;
     const blob = new Blob([text], {type: 'text/plain'});
-    const file = await hDir.getFileHandle(`${activeNoteType}_${Date.now()}.txt`, {create:true});
+    const file = await hDir.getFileHandle(`${noteType}_${Date.now()}.txt`, {create:true});
     const w = await file.createWritable();
     await w.write(blob); await w.close();
     document.getElementById('note-text').value = "";
     closeNote();
 }
 
-// GPS e Câmera
 function initGPS() {
     navigator.geolocation.watchPosition(p => {
         lat = p.coords.latitude; lon = p.coords.longitude;
         if (db.length) {
             let close = db.reduce((p, c) => Math.hypot(c.lt-lat, c.ln-lon) < Math.hypot(p.lt-lat, p.ln-lon) ? c : p);
-            document.getElementById('km-display').innerText = `Km ${close.km}`;
+            document.getElementById('km-txt').innerText = close.km;
         }
-    });
+    }, null, { enableHighAccuracy: true });
 }
 
 async function snap(isManual) {
@@ -162,64 +162,77 @@ async function snap(isManual) {
     const c = document.getElementById('canvas');
     c.width = v.videoWidth; c.height = v.videoHeight;
     const ctx = c.getContext('2d');
-    const km = document.getElementById('km-display').innerText;
+    const km = document.getElementById('km-txt').innerText;
 
     ctx.drawImage(v, 0, 0);
-    if (currentTag !== 'FOTO LIMPA') {
-        const h = c.height * 0.10;
-        ctx.fillStyle = "rgba(0,0,0,0.8)";
+    if (tag !== 'FOTO LIMPA') {
+        const h = c.height * 0.12;
+        ctx.fillStyle = "rgba(0,0,0,0.85)";
         ctx.fillRect(0, c.height - h, c.width, h);
+        ctx.fillStyle = tag.includes('FIBRA') ? '#00d4ff' : (tag.includes('NORMAL') ? '#00e676' : '#ff3d00');
+        ctx.fillRect(0, c.height - h, 20, h);
         ctx.fillStyle = "#fff";
-        ctx.font = "bold 42px Arial";
-        ctx.fillText(`${currentTag} | ${km}`, 40, c.height - (h*0.55));
-        ctx.font = "22px Arial";
-        ctx.fillText(`${new Date().toLocaleString()} | GPS: ${lat.toFixed(6)}, ${lon.toFixed(6)}`, 40, c.height - (h*0.22));
+        ctx.font = "bold 44px Arial";
+        ctx.fillText(`${tag} | Km ${km}`, 45, c.height - (h*0.55));
+        ctx.font = "24px Arial";
+        ctx.fillText(`${new Date().toLocaleString()} | GPS: ${lat.toFixed(6)}, ${lon.toFixed(6)}`, 45, c.height - (h*0.22));
     }
 
     const data = c.toDataURL('image/jpeg', 0.85);
-    if(isRec) pdfBuffer.push(data);
+    if(isRec) { 
+        pdfBuffer.push(data);
+        document.getElementById('foto-count').innerText = pdfBuffer.length.toString().padStart(3, '0');
+    }
 
     if (isManual) {
         const blob = await (await fetch(data)).blob();
-        const file = await hDir.getFileHandle(`REGISTRO_${currentTag}_${Date.now()}.jpg`, {create:true});
+        const file = await hDir.getFileHandle(`REGISTRO_${tag}_Km${km}.jpg`, {create:true});
         const w = await file.createWritable();
         await w.write(blob); await w.close();
+        tag = "INSPEÇÃO";
     }
 }
 
 function toggleRec() {
     isRec = !isRec;
-    if (!isRec) savePDF();
-    else { pdfBuffer = []; startLoop(); togglePanel(false); }
+    const btn = document.getElementById('recBtn');
+    if (isRec) {
+        btn.innerText = "FINALIZAR PDF"; btn.style.background = "#ff3d00";
+        pdfBuffer = []; loop();
+    } else {
+        btn.innerText = "SALVANDO..."; btn.style.background = "#00e676";
+        savePDF();
+    }
 }
 
-function startLoop() { if(isRec) { snap(false); setTimeout(startLoop, 1000); } }
+function loop() { if(isRec) { snap(false); setTimeout(loop, 1000); } }
 
 async function savePDF() {
     const doc = new jspdf.jsPDF('l', 'mm', 'a4');
     pdfBuffer.forEach((img, i) => { if(i>0) doc.addPage(); doc.addImage(img, 'JPEG', 0, 0, 297, 210); });
     const blob = doc.output('blob');
-    const file = await hDir.getFileHandle(`LOTE_INSPECAO_${Date.now()}.pdf`, {create:true});
+    const file = await hDir.getFileHandle(`LOTE_RELATORIO_${Date.now()}.pdf`, {create:true});
     const w = await file.createWritable();
     await w.write(blob); await w.close();
+    document.getElementById('recBtn').innerText = "GRAVAR LOTE PDF";
+    document.getElementById('foto-count').innerText = "000";
 }
 
 async function loadCSV() {
-    const r = await fetch('SNVBR116SPRJ.csv');
-    const t = await r.text();
-    const rows = t.split('\n').filter(l => l.includes(';'));
-    const h = rows.shift().toLowerCase().split(';');
-    const iK = h.indexOf('km'), iLt = h.findIndex(s=>s.includes('lat')), iLn = h.findIndex(s=>s.includes('lon'));
-    db = rows.map(r => {
-        const c = r.split(';');
-        return { km: c[iK], lt: parseFloat(c[iLt].replace(',','.')), ln: parseFloat(c[iLn].replace(',','.')) };
-    });
+    try {
+        const r = await fetch('SNVBR116SPRJ.csv');
+        const t = await r.text();
+        const rows = t.split('\n').filter(l => l.includes(';'));
+        const h = rows.shift().toLowerCase().split(';');
+        const iK = h.indexOf('km'), iLt = h.findIndex(s=>s.includes('lat')), iLn = h.findIndex(s=>s.includes('lon'));
+        db = rows.map(r => {
+            const c = r.split(';');
+            return { km: c[iK], lt: parseFloat(c[iLat || iLt].replace(',','.')), ln: parseFloat(c[iLon || iLn].replace(',','.')) };
+        });
+    } catch(e) {}
 }
 
-// Iniciar ao primeiro toque
-document.body.addEventListener('click', function() {
-    if (!hDir) startSystem();
-}, {once: true});
+document.body.addEventListener('click', () => { if(!hDir) start(); }, {once:true});
 </script>
 </body>
 </html>
