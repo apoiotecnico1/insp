@@ -1,114 +1,448 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Estoque Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GEOFLEX OpsCore v9.5 - Anti-Perda Mobile</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 20px; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        :root {
+            --primary: #0f172a;
+            --secondary: #0ea5e9;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #eab308;
+        }
         
-        /* Formulário */
-        .form-group { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 20px; align-items: end; }
-        input, button { padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        button { background: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background: #218838; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0; padding: 0;
+            background-color: var(--bg); color: #0f172a;
+        }
 
-        /* Tabela */
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; }
+        /* Topbar fixa com Progresso */
+        .sticky-progress {
+            position: sticky; top: 0; z-index: 100;
+            background: var(--primary); color: white;
+            padding: 12px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .progress-info { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: bold; margin-bottom: 6px; }
+        .progress-bar-bg { background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { background: var(--secondary); height: 100%; width: 0%; transition: width 0.3s ease; }
+
+        .main-container { padding: 16px; max-width: 600px; margin: 0 auto; }
+
+        .panel-import { background: white; padding: 16px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        .panel-import h3 { margin-top: 0; font-size: 16px; color: var(--primary); margin-bottom: 12px; }
         
-        .img-preview { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; background: #eee; }
-        .btn-delete { background: #dc3545; padding: 5px 10px; }
-        .btn-delete:hover { background: #c82333; }
+        .file-box {
+            border: 2px dashed #cbd5e1; padding: 15px; text-align: center; border-radius: 8px;
+            margin-bottom: 12px; background: #fafafa; font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+
+        .select-regional-pre {
+            width: 100%; padding: 14px; border: 2px solid var(--secondary); border-radius: 8px;
+            background: #f0f9ff; font-size: 14px; font-weight: 700; color: #0369a1; margin-bottom: 16px;
+        }
+
+        /* Cards do Operador */
+        .card-inspecao {
+            background: var(--card-bg); border-radius: 14px; padding: 18px; margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0; border-left: 6px solid #cbd5e1;
+            transition: all 0.2s ease;
+        }
+        
+        .card-inspecao.status-ok { border-left-color: var(--success); background-color: #f0fdf4; }
+        .card-inspecao.status-apagado { border-left-color: var(--danger); background-color: #fef2f2; }
+        .card-inspecao.status-nao-localizado { border-left-color: #64748b; background-color: #f1f5f9; opacity: 0.8; }
+
+        .card-header-info { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .id-nox { font-size: 18px; font-weight: 800; color: #1e293b; }
+        .badge-km { background: #0f172a; color: white; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; font-family: monospace; }
+        .badge-uf { padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 4px; border: 1px solid #94a3b8; margin-left: 4px;}
+        .uf-sp { background: #fee2e2; color: #991b1b; }
+        .uf-rj { background: #dcfce7; color: #166534; }
+
+        .sys-info { font-size: 12px; color: #64748b; margin-bottom: 14px; }
+
+        /* Botões de Toque */
+        .action-trigger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        
+        .btn-mobile-action {
+            padding: 14px; border: 2px solid #e2e8f0; border-radius: 10px; background: white;
+            font-size: 14px; font-weight: 700; color: #334155; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        
+        .btn-mobile-action.active-ok { background: var(--success); color: white; border-color: var(--success); }
+        .btn-mobile-action.active-apagado { background: var(--danger); color: white; border-color: var(--danger); }
+        .btn-mobile-action.active-nl { background: #64748b; color: white; border-color: #64748b; }
+        
+        .btn-nl-container { margin-bottom: 12px; }
+        .btn-nl-container .btn-mobile-action { width: 100%; }
+
+        .text-obs-mobile {
+            width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px;
+            font-size: 13px; font-family: inherit; resize: none; background: #f8fafc;
+        }
+
+        .btn-block {
+            width: 100%; padding: 15px; border: none; border-radius: 10px;
+            font-size: 15px; font-weight: 700; color: white; cursor: pointer; margin-bottom: 10px;
+        }
+        .btn-blue { background: #2563eb; }
+        .btn-purple { background: #a855f7; }
+        .btn-clear { background: #ef4444; font-size: 12px; padding: 6px; margin-top: 5px; }
+        
+        .hidden-input { display: none; }
+        .date-badge { font-size: 11px; opacity: 0.8; font-weight: normal; }
+        
+        .recovery-alert {
+            background: #fef9c3; border: 1px solid #fef08a; color: #854d0e;
+            padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold;
+            margin-bottom: 15px; display: none; text-align: center;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>📦 Controle de Estoque</h2>
+<div class="sticky-progress">
+    <div class="progress-info">
+        <span>📱 Inspeção Ops v9.5</span>
+        <span id="txt-contador">0 / 0</span>
+    </div>
+    <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="bar-progresso"></div>
+    </div>
+    <div class="date-badge" id="lbl-data-kml">Sincronize as bases para iniciar...</div>
+</div>
+
+<div class="main-container">
     
-    <div class="form-group">
-        <div>
-            <label>Produto</label><br>
-            <input type="text" id="nome" placeholder="Nome do item">
-        </div>
-        <div>
-            <label>Qtd</label><br>
-            <input type="number" id="qtd" placeholder="0">
-        </div>
-        <div>
-            <label>Foto</label><br>
-            <input type="file" id="foto" accept="image/*">
-        </div>
-        <button onclick="adicionarItem()">Adicionar</button>
+    <!-- Alerta de dados salvos na memória -->
+    <div class="recovery-alert" id="alerta-memoria">
+        ℹ️ Progresso anterior recuperado do bolso! Carregue as planilhas para continuar de onde parou.
+        <button class="btn-block btn-clear" onclick="limparMemoriaLocal()">Limpar Dados Salvos (Zerar Campo)</button>
     </div>
 
-    <table id="tabelaEstoque">
-        <thead>
-            <tr>
-                <th>Foto</th>
-                <th>Produto</th>
-                <th>Quantidade</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            </tbody>
-    </table>
+    <!-- Painel de Carga Inicial -->
+    <div class="panel-import" id="painel-inicial">
+        <h3>1. Escopo de Região</h3>
+        <select id="lote-operacao" class="select-regional-pre">
+            <option value="AMBOS">🌍 Executar Todo o Trecho (SP + RJ)</option>
+            <option value="SP">📍 Filtrar Somente Lote SÃO PAULO</option>
+            <option value="RJ">📍 Filtrar Somente Lote RIO DE JANEIRO</option>
+        </select>
+
+        <h3>2. Carga de Arquivos</h3>
+        <div class="file-box" onclick="document.getElementById('f-snv').click()" id="box-snv">📁 Planilha SNV (.xlsx)</div>
+        <input type="file" id="f-snv" class="hidden-input" accept=".xlsx, .xls">
+
+        <div class="file-box" onclick="document.getElementById('f-online').click()" id="box-online" style="border-color: var(--warning)">🟡 KMZ Online Apagados</div>
+        <input type="file" id="f-online" class="hidden-input" accept=".kmz, .kml">
+
+        <div class="file-box" onclick="document.getElementById('f-offline').click()" id="box-offline" style="border-color: var(--danger)">🔴 KMZ Offline Campo</div>
+        <input type="file" id="f-offline" class="hidden-input" accept=".kmz, .kml">
+
+        <button class="btn-block btn-purple" id="btn-iniciar" style="opacity:0.5;" disabled>⚡ Iniciar Roteiro Inteligente</button>
+    </div>
+
+    <!-- Container dos Cards Móveis -->
+    <div id="container-cards-mobile"></div>
+
+    <!-- Botão de Fechamento -->
+    <div class="floating-actions" id="painel-final" style="display: none; margin-top: 20px;">
+        <button class="btn-block btn-blue" id="btn-exportar-retorno">📥 Exportar Relatório de Campo (.xlsx)</button>
+        <button class="btn-block btn-clear" onclick="limparMemoriaLocal()" style="background:#dc2626; padding: 12px;">⚠️ Finalizar Lote e Apagar Memória Local</button>
+    </div>
 </div>
 
 <script>
-    function adicionarItem() {
-        const nome = document.getElementById('nome').value;
-        const qtd = document.getElementById('qtd').value;
-        const fotoInput = document.getElementById('foto');
-        const tabela = document.getElementById('tabelaEstoque').getElementsByTagName('tbody');
+    let dadosSNV = [];
+    let pontosOnline = [];
+    let pontosOffline = [];
+    let checklistFinal = [];
+    let dataReferencia = "";
 
-        if (nome === '' || qtd === '') {
-            alert("Por favor, preencha o nome e a quantidade.");
-            return;
-        }
+    const fSnv = document.getElementById('f-snv');
+    const fOnline = document.getElementById('f-online');
+    const fOffline = document.getElementById('f-offline');
+    const btnIniciar = document.getElementById('btn-iniciar');
+    const containerCards = document.getElementById('container-cards-mobile');
 
-        const novaLinha = tabela.insertRow();
-
-        // Lógica da Imagem
-        const celulaFoto = novaLinha.insertCell(0);
-        const img = document.createElement('img');
-        img.classList.add('img-preview');
-        
-        if (fotoInput.files && fotoInput.files) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                img.src = e.target.result;
-            }
-            reader.readAsDataURL(fotoInput.files);
-        } else {
-            img.src = 'https://via.placeholder.com/50?text=S/F';
-        }
-        celulaFoto.appendChild(img);
-
-        // Nome e Qtd
-        novaLinha.insertCell(1).innerText = nome;
-        novaLinha.insertCell(2).innerText = qtd;
-
-        // Botão Deletar
-        const celulaAcao = novaLinha.insertCell(3);
-        const btnDelete = document.createElement('button');
-        btnDelete.innerHTML = 'Excluir';
-        btnDelete.className = 'btn-delete';
-        btnDelete.onclick = function() {
-            tabela.deleteRow(novaLinha.rowIndex - 1);
-        };
-        celulaAcao.appendChild(btnDelete);
-
-        // Limpar campos
-        document.getElementById('nome').value = '';
-        document.getElementById('qtd').value = '';
-        document.getElementById('foto').value = '';
+    // Verifica se existem dados armazenados no celular para avisar o usuário
+    if(localStorage.getItem('checklist_backup_dados')) {
+        document.getElementById('alerta-memoria').style.display = 'block';
     }
+
+    fSnv.addEventListener('change', () => { if(fSnv.files[0]) document.getElementById('box-snv').innerText = "✔️ SNV Sincronizado"; verificarProntidao(); });
+    fOnline.addEventListener('change', () => { if(fOnline.files[0]) document.getElementById('box-online').innerText = "✔️ Online Sincronizado"; verificarProntidao(); });
+    fOffline.addEventListener('change', () => { if(fOffline.files[0]) document.getElementById('box-offline').innerText = "✔️ Offline Sincronizado"; verificarProntidao(); });
+
+    function verificarProntidao() {
+        if (fSnv.files.length > 0 && (fOnline.files.length > 0 || fOffline.files.length > 0)) {
+            btnIniciar.disabled = false;
+            btnIniciar.style.opacity = "1";
+        }
+    }
+
+    btnIniciar.addEventListener('click', async () => {
+        let arqRef = fOffline.files[0] || fOnline.files[0];
+        if(arqRef && arqRef.lastModified) {
+            const dt = new Date(arqRef.lastModified);
+            dataReferencia = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+        } else {
+            dataReferencia = "21/05/2026";
+        }
+        document.getElementById('lbl-data-kml').innerText = `📅 Status Base KMZ Criado em: ${dataReferencia}`;
+
+        await processarLeituras();
+        gerarMatrizMobile();
+        document.getElementById('painel-inicial').style.display = 'none';
+        document.getElementById('alerta-memoria').style.display = 'none';
+        document.getElementById('painel-final').style.display = 'block';
+    });
+
+    async function processarLeituras() {
+        const snvBuffer = await fSnv.files[0].arrayBuffer();
+        const wb = XLSX.read(snvBuffer, {type: 'array'});
+        const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {raw: false});
+        dadosSNV = json.map(r => {
+            const n = {};
+            for (let k in r) n[k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()] = r[k];
+            return n;
+        });
+
+        if(fOnline.files.length > 0) pontosOnline = await extrairKML(fOnline.files[0]);
+        if(fOffline.files.length > 0) pontosOffline = await extrairKML(fOffline.files[0]);
+    }
+
+    function extrairKML(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const buffer = e.target.result;
+                const view = new DataView(buffer);
+                if(view.byteLength >= 4 && view.getUint32(0) === 0x504B0304) {
+                    JSZip.loadAsync(buffer).then(async zip => {
+                        const kmlKey = Object.keys(zip.files).find(n => n.endsWith('.kml'));
+                        const txt = await zip.file(kmlKey).async("string");
+                        resolve(parsearStringKML(txt));
+                    });
+                } else {
+                    const txt = new TextDecoder("utf-8").decode(buffer);
+                    resolve(parsearStringKML(txt));
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    function parsearStringKML(txt) {
+        const doc = new DOMParser().parseFromString(txt, "text/xml");
+        const placemarks = doc.getElementsByTagName("Placemark");
+        let arr = [];
+        for(let i=0; i<placemarks.length; i++) {
+            const pm = placemarks[i];
+            const name = pm.getElementsByTagName("name")[0]?.textContent.trim() || `Luminaria_${i+1}`;
+            const coord = pm.getElementsByTagName("coordinates")[0]?.textContent.trim();
+            if(coord) {
+                const p = coord.split(/[\s,]+/);
+                if(p.length >= 2) arr.push({ name, lat: parseFloat(p[1]), lng: parseFloat(p[0]) });
+            }
+        }
+        return arr;
+    }
+
+    function gerarMatrizMobile() {
+        const filtroLote = document.getElementById('lote-operacao').value; // SP, RJ ou AMBOS
+        let mapaGeral = new Map();
+        
+        pontosOnline.forEach(p => mapaGeral.set(p.name, { ...p, origem: 'Online' }));
+        pontosOffline.forEach(p => {
+            if(mapaGeral.has(p.name)) mapaGeral.get(p.name).origem = 'Ambos';
+            else mapaGeral.set(p.name, { ...p, origem: 'Offline' });
+        });
+
+        const chaves = Object.keys(dadosSNV[0]);
+        const sLat = chaves.find(k => k.includes('lat'));
+        const sLng = chaves.find(k => k.includes('long') || k.includes('lng'));
+        const sKm = chaves.find(k => k.includes('km'));
+
+        checklistFinal = [];
+        
+        // Tenta buscar o backup em cache
+        let cacheSalvo = null;
+        try {
+            cacheSalvo = JSON.parse(localStorage.getItem('checklist_backup_dados'));
+        } catch(e) { cacheSalvo = null; }
+
+        mapaGeral.forEach((p) => {
+            let ufCalculada = p.lng > -44.8396 ? "RJ" : "SP";
+            
+            // FILTRAGEM PRÉ-CARGA DE SOLICITAÇÃO
+            if(filtroLote !== "AMBOS" && ufCalculada !== filtroLote) {
+                return; // Ignora o registro fora do escopo selecionado
+            }
+
+            let mDist = Infinity; let mRow = null;
+            dadosSNV.forEach(s => {
+                const lat2 = parseFloat(String(s[sLat]).replace(',','.'));
+                const lng2 = parseFloat(String(s[sLng]).replace(',','.'));
+                if(!isNaN(lat2) && !isNaN(lng2)) {
+                    const d = Math.abs(p.lat - lat2) + Math.abs(p.lng - lng2);
+                    if(d < mDist) { mDist = d; mRow = s; }
+                }
+            });
+
+            if(mRow) {
+                let kmBruto = parseFloat(String(mRow[sKm]).replace('KM','').replace('km','').replace(',','.').trim()) || 0;
+                
+                // Restaura o estado salvo na memória se encontrar o mesmo ID NOX
+                let statusResgatado = "";
+                let obsResgatada = "";
+                if(cacheSalvo && cacheSalvo[p.name]) {
+                    statusResgatado = cacheSalvo[p.name].status;
+                    obsResgatada = cacheSalvo[p.name].obs;
+                }
+
+                checklistFinal.push({
+                    idNox: p.name,
+                    km: Math.floor(kmBruto),
+                    metros: Math.round((kmBruto - Math.floor(kmBruto)) * 1000),
+                    uf: ufCalculada,
+                    origem: p.origem,
+                    statusVistoria: statusResgatado,
+                    obs: obsResgatada
+                });
+            }
+        });
+
+        checklistFinal.sort((a,b) => b.km - a.km);
+        renderizarCardsCelular();
+        recalcularProgresso();
+    }
+
+    function renderizarCardsCelular() {
+        containerCards.innerHTML = "";
+        checklistFinal.forEach((item, idx) => {
+            const card = document.createElement('div');
+            card.id = `card-${idx}`;
+            
+            // Aplica a cor guardada caso venha da memória cache
+            let classeStatus = "";
+            if(item.statusVistoria === 'OK') classeStatus = 'status-ok';
+            if(item.statusVistoria === 'Apagado') classeStatus = 'status-apagado';
+            if(item.statusVistoria === 'Não Localizado') classeStatus = 'status-nao-localizado';
+            
+            card.className = `card-inspecao ${classeStatus}`;
+            
+            let statusBadge = item.origem === 'Online' ? '🟡 Online Apagado' : (item.origem === 'Offline' ? '🔴 Offline Campo' : '🟣 Ambos');
+
+            card.innerHTML = `
+                <div class="card-header-info">
+                    <div class="id-nox">${item.idNox}</div>
+                    <div>
+                        <span class="badge-km">KM ${item.km} + ${item.metros}m</span>
+                        <span class="badge-uf ${item.uf === 'SP'?'uf-sp':'uf-rj'}">${item.uf}</span>
+                    </div>
+                </div>
+                <div class="sys-info">Sist.: <b>${statusBadge}</b></div>
+                
+                <div class="action-trigger-grid">
+                    <button class="btn-mobile-action ${item.statusVistoria==='OK'?'active-ok':''}" onclick="atribuirStatus(${idx}, 'OK', this)">✔️ OK</button>
+                    <button class="btn-mobile-action ${item.statusVistoria==='Apagado'?'active-apagado':''}" onclick="atribuirStatus(${idx}, 'Apagado', this)">❌ Apagado</button>
+                </div>
+                <div class="btn-nl-container">
+                    <button class="btn-mobile-action ${item.statusVistoria==='Não Localizado'?'active-nl':''}" onclick="atribuirStatus(${idx}, 'Não Localizado', this)">🔍 Não Localizado</button>
+                </div>
+
+                <textarea class="text-obs-mobile" placeholder="Alguma observação a acrescentar?" rows="2" oninput="mudarObs(${idx}, this.value)">${item.obs}</textarea>
+            `;
+            containerCards.appendChild(card);
+        });
+    }
+
+    window.atribuirStatus = function(idx, status, elementoBotao) {
+        checklistFinal[idx].statusVistoria = status;
+        
+        const card = document.getElementById(`card-${idx}`);
+        card.classList.remove('status-ok', 'status-apagado', 'status-nao-localizado');
+        
+        const botoesNoCard = card.querySelectorAll('.btn-mobile-action');
+        botoesNoCard.forEach(b => b.classList.remove('active-ok', 'active-apagado', 'active-nl'));
+
+        if(status === 'OK') { card.classList.add('status-ok'); elementoBotao.classList.add('active-ok'); } 
+        else if(status === 'Apagado') { card.classList.add('status-apagado'); elementoBotao.classList.add('active-apagado'); } 
+        else if(status === 'Não Localizado') { card.classList.add('status-nao-localizado'); elementoBotao.classList.add('active-nl'); }
+
+        gravarBackupCelular();
+        recalcularProgresso();
+
+        // Salto visual para o próximo card (foco imediato)
+        setTimeout(() => {
+            const proximoCard = document.getElementById('card-' + (idx + 1));
+            if(proximoCard) proximoCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 200);
+    };
+
+    window.mudarObs = function(idx, valor) {
+        checklistFinal[idx].obs = valor;
+        gravarBackupCelular();
+    };
+
+    // Salva o estado atual no armazenamento interno do navegador do celular
+    function gravarBackupCelular() {
+        let mapaBackup = {};
+        checklistFinal.forEach(i => {
+            if(i.statusVistoria || i.obs) {
+                mapaBackup[i.idNox] = { status: i.statusVistoria, obs: i.obs };
+            }
+        });
+        localStorage.setItem('checklist_backup_dados', JSON.stringify(mapaBackup));
+    }
+
+    function limparMemoriaLocal() {
+        if(confirm("Deseja realmente zerar todos os registros salvos neste aparelho celular?")) {
+            localStorage.removeItem('checklist_backup_dados');
+            alert("Memória limpa! O aplicativo foi reiniciado.");
+            window.location.reload();
+        }
+    }
+
+    function recalcularProgresso() {
+        const total = checklistFinal.length;
+        const respondidos = checklistFinal.filter(i => i.statusVistoria !== "").length;
+        
+        document.getElementById('txt-contador').innerText = `${respondidos} / ${total}`;
+        const pct = total > 0 ? (respondidos / total) * 100 : 0;
+        document.getElementById('bar-progresso').style.width = `${pct}%`;
+    }
+
+    document.getElementById('btn-exportar-retorno').addEventListener('click', () => {
+        const wb = XLSX.utils.book_new();
+        const exportDados = checklistFinal.map(i => ({
+            "ID NOX CADASTRADO": i.idNox,
+            "UF": i.uf,
+            "KM APROXIMADO": i.km,
+            "METROS RESIDUAIS": i.metros,
+            "STATUS SISTEMA ORIGEM": i.origem,
+            "DATA REFERENCIA BASE": dataReferencia,
+            "INSPEÇÃO OPERACIONAL CAMPO": i.statusVistoria || "Não Vistoriado",
+            "ANOTAÇÕES DO OPERADOR": i.obs
+        }));
+        
+        const ws = XLSX.utils.json_to_sheet(exportDados);
+        XLSX.utils.book_append_sheet(wb, ws, "Resultado_Campo");
+        XLSX.writeFile(wb, `Retorno_Campo_Lote.xlsx`);
+    });
 </script>
 
 </body>
