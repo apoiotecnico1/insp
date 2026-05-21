@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>GEOFLEX OpsCore v15.0 - Mobile Pro</title>
+    <title>GEOFLEX OpsCore v16.0 - Campo Total</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
@@ -24,165 +24,183 @@
         body {
             font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg); color: var(--text-main);
-            overflow-x: hidden; padding-bottom: 100px;
+            overflow-x: hidden; padding-bottom: 110px;
         }
 
-        /* Topbar de Alta Visibilidade */
+        /* Topbar com Exibição de KM Atual do Usuário */
         .sticky-progress {
             position: sticky; top: 0; z-index: 100;
             background: #000000; color: white;
-            padding: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            border-bottom: 2px solid #334155;
+            padding: 14px; box-shadow: 0 6px 25px rgba(0,0,0,0.6);
+            border-bottom: 3px solid #334155;
         }
         .progress-info { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 900; margin-bottom: 6px; }
-        .progress-bar-bg { background: #334155; height: 8px; border-radius: 4px; overflow: hidden; }
+        .progress-bar-bg { background: #334155; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
         .progress-bar-fill { background: var(--success); height: 100%; width: 0%; transition: width 0.3s ease; }
         
+        /* Box de Destaque do KM Atual na Rodovia */
+        .user-km-box {
+            background: linear-gradient(90deg, #1e3a8a, #0f172a); border: 2px solid var(--secondary);
+            padding: 10px; border-radius: 10px; text-align: center; font-size: 18px; font-weight: 900;
+            color: #ffffff; letter-spacing: 0.5px; margin-bottom: 6px; box-shadow: inset 0 0 10px rgba(56,189,248,0.3);
+        }
+
         .gps-status-bar {
-            background: #1e293b; padding: 8px 12px; font-size: 12px; font-weight: bold;
-            display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-top: 6px;
+            background: #111827; padding: 8px 12px; font-size: 12px; font-weight: bold;
+            display: flex; justify-content: space-between; align-items: center; border-radius: 8px;
             border: 1px solid #334155;
         }
-        .gps-status-bar.active { background: #052e16; color: #22c55e; border-color: var(--success); }
+        .gps-status-bar.active { background: #022c22; color: #34d399; border-color: #059669; }
 
-        /* Navegação Touch Superior/Inferior Emborrachada */
+        /* Navegação Touch Inferior */
         .bottom-nav {
-            position: fixed; bottom: 0; left: 0; right: 0; height: 80px;
-            background: #000000; border-top: 2px solid #334155;
+            position: fixed; bottom: 0; left: 0; right: 0; height: 85px;
+            background: #000000; border-top: 3px solid #334155;
             display: flex; justify-content: space-around; align-items: center;
             z-index: 1000; padding-bottom: env(safe-area-inset-bottom);
         }
         .nav-btn {
             background: transparent; border: none; color: #64748b;
-            font-size: 11px; font-weight: bold; display: flex; flex-direction: column;
+            font-size: 12px; font-weight: bold; display: flex; flex-direction: column;
             align-items: center; gap: 6px; cursor: pointer; width: 33%; height: 100%; justify-content: center;
         }
         .nav-btn svg { width: 26px; height: 26px; fill: currentColor; }
-        .nav-btn.active { color: var(--secondary); background: rgba(56, 189, 248, 0.05); }
+        .nav-btn.active { color: var(--secondary); background: rgba(56, 189, 248, 0.06); }
 
-        .main-container { width: 100vw; padding: 16px; }
+        .main-container { width: 100vw; padding: 14px; }
         .app-screen { display: none; }
         .app-screen.active { display: block; }
 
-        /* Cards Otimizados para Operação em Campo */
+        /* Configurações Iniciais */
         .panel-import { background: var(--card-bg); padding: 18px; border-radius: 16px; margin-bottom: 20px; border: 1px solid #334155; }
-        .panel-import h3 { font-size: 16px; color: var(--secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .panel-import h3 { font-size: 15px; color: var(--secondary); margin-bottom: 12px; text-transform: uppercase; }
         
         .file-box {
             border: 2px dashed #475569; padding: 18px; text-align: center; border-radius: 12px;
             margin-bottom: 12px; background: #0f172a; font-size: 14px; font-weight: bold; cursor: pointer; color: #cbd5e1;
-            transition: all 0.2s ease;
         }
-        .file-box.loaded { border-color: var(--success); color: var(--success); background: #042f1a; border-style: solid; }
+        .file-box.loaded { border-color: var(--success); color: var(--success); background: #022c22; border-style: solid; }
         
         .select-regional-pre {
             width: 100%; padding: 14px; border: 2px solid #475569; border-radius: 12px;
             background: #0f172a; font-size: 16px; font-weight: bold; color: white; margin-bottom: 16px;
         }
 
-        /* Radar UI Incremental */
-        .radar-distance-badge {
-            background: #eab308; color: #000000; padding: 10px; border-radius: 10px;
-            font-size: 14px; font-weight: 800; text-align: center; margin-bottom: 14px;
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-            text-transform: uppercase;
-        }
+        /* Cards Otimizados para Operação em Campo */
         .card-inspecao {
-            background: var(--card-bg); border-radius: 20px; padding: 20px; margin-bottom: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.4); border: 1px solid #334155;
-            transition: border 0.2s ease;
+            background: var(--card-bg); border-radius: 20px; padding: 18px; margin-bottom: 18px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4); border: 1px solid #334155;
         }
-        .card-inspecao.status-ok { border: 2px solid var(--success); background: linear-gradient(145deg, #1e293b, #064e3b); }
-        .card-inspecao.status-apagado { border: 2px solid var(--danger); background: linear-gradient(145deg, #1e293b, #7f1d1d); }
+        .card-inspecao.status-ok { border: 2px solid var(--success); background: linear-gradient(145deg, #1e293b, #022c22); }
+        .card-inspecao.status-apagado { border: 2px solid var(--danger); background: linear-gradient(145deg, #1e293b, #451a03); }
         
-        .id-nox { font-size: 36px; font-weight: 900; color: #ffffff; tracking: -1px; }
-        .badge-km { background: #ffffff; color: #000000; padding: 6px 14px; border-radius: 10px; font-size: 18px; font-weight: 900; font-family: monospace; }
+        .radar-distance-badge {
+            background: #eab308; color: #000000; padding: 8px; border-radius: 8px;
+            font-size: 13px; font-weight: 800; text-align: center; margin-bottom: 12px;
+            display: flex; align-items: center; justify-content: center; gap: 6px; text-transform: uppercase;
+        }
         
-        /* Grid de Botões Grandes (Fácil de Acertar o Dedo) */
-        .action-trigger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+        .card-header-data { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .id-nox { font-size: 34px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px; }
+        
+        /* KM Cadastrado Visual */
+        .badge-km-cadastrado {
+            background: #ffffff; color: #000000; padding: 6px 12px; border-radius: 8px;
+            font-size: 15px; font-weight: 900; font-family: monospace; text-align: right; line-height: 1.2;
+        }
+        .badge-km-cadastrado span { display: block; font-size: 9px; color: #475569; text-transform: uppercase; font-weight: bold; }
+        
+        /* Botões Grandes e Rápidos de Situação Encontrada */
+        .action-trigger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
         .btn-mobile-action {
-            padding: 20px 10px; border: 2px solid #475569; border-radius: 14px; background: #0f172a;
-            font-size: 18px; font-weight: 900; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 22px 10px; border: 2px solid #475569; border-radius: 14px; background: #0f172a;
+            font-size: 18px; font-weight: 900; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
         }
-        .btn-mobile-action.active-ok { background: var(--success); border-color: white; color: white; }
-        .btn-mobile-action.active-apagado { background: var(--danger); border-color: white; color: white; }
+        .btn-mobile-action.active-ok { background: var(--success); border-color: white; color: white; box-shadow: 0 0 15px rgba(34,197,94,0.4); }
+        .btn-mobile-action.active-apagado { background: var(--danger); border-color: white; color: white; box-shadow: 0 0 15px rgba(239,68,68,0.4); }
         
         .btn-camera-hud-trigger {
-            width: 100%; padding: 18px; background: #d97706; color: white; border: none;
-            border-radius: 14px; font-weight: 900; font-size: 16px; margin-bottom: 12px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(217,119,6,0.3);
+            width: 100%; padding: 16px; background: #d97706; color: white; border: none;
+            border-radius: 12px; font-weight: 900; font-size: 15px; margin-bottom: 10px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
         }
-        .btn-camera-hud-trigger.has-photo { background: #15803d; box-shadow: 0 4px 12px rgba(22,101,52,0.3); }
+        .btn-camera-hud-trigger.has-photo { background: #166534; }
         
-        .photo-preview-container { display: none; text-align: center; margin-bottom: 12px; width: 100%; }
-        .photo-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; border: 2px solid #475569; }
-        .text-obs-mobile { width: 100%; padding: 14px; border: 1px solid #475569; border-radius: 12px; font-size: 15px; background: #0f172a; color: white; resize: none; }
+        .photo-preview-container { display: none; text-align: center; margin-bottom: 10px; }
+        .photo-preview { width: 100%; max-height: 180px; object-fit: cover; border-radius: 10px; border: 2px solid #475569; }
+        .text-obs-mobile { width: 100%; padding: 12px; border: 1px solid #475569; border-radius: 10px; font-size: 14px; background: #0f172a; color: white; resize: none; }
 
-        /* Tela de Captura Realtime */
+        /* Botão de Paginação Expansível */
+        .btn-load-more {
+            width: 100%; padding: 22px; background: #1e293b; color: var(--secondary);
+            border: 2px solid var(--secondary); border-radius: 16px; font-weight: 900; font-size: 16px;
+            cursor: pointer; text-align: center; margin-top: 10px; margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(56,189,248,0.1); text-transform: uppercase;
+        }
+        .btn-load-more:active { background: var(--secondary); color: #000; }
+
+        /* Viewport da Câmera */
         #camera-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: #000000; z-index: 5000; display: none; flex-direction: column;
         }
-        #video-preview-stream { width: 100%; height: 70vh; object-fit: cover; background: #000; }
-        
+        #video-preview-stream { width: 100%; height: 70vh; object-fit: cover; }
         .camera-hud-data-window {
-            position: absolute; top: 16px; left: 16px; right: 16px;
-            background: rgba(0,0,0,0.8); border: 1px solid var(--secondary);
-            padding: 12px; border-radius: 12px; font-family: monospace; font-size: 13px; color: #38bdf8;
-            line-height: 1.5; pointer-events: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            position: absolute; top: 15px; left: 15px; right: 15px;
+            background: rgba(0,0,0,0.85); border: 1px solid var(--secondary);
+            padding: 12px; border-radius: 10px; font-family: monospace; font-size: 13px; color: #38bdf8;
+            pointer-events: none;
         }
         .camera-controls-bottom {
-            height: 30vh; background: #000000; display: flex;
-            justify-content: space-around; align-items: center; padding: 20px;
+            height: 30vh; background: #000; display: flex; justify-content: space-around; align-items: center; padding: 20px;
             padding-bottom: calc(20px + env(safe-area-inset-bottom));
         }
-        .btn-shutter {
-            width: 88px; height: 88px; background: #ffffff; border: 8px solid #334155;
-            border-radius: 50%; cursor: pointer; box-shadow: 0 0 20px rgba(255,255,255,0.3);
-        }
-        .btn-shutter:active { background: var(--danger); }
-        .btn-close-camera { background: #1e293b; color: white; border: 1px solid #475569; padding: 16px 28px; font-size: 16px; font-weight: bold; border-radius: 12px; }
+        .btn-shutter { width: 85px; height: 85px; background: #fff; border: 6px solid #475569; border-radius: 50%; cursor: pointer; }
+        .btn-close-camera { background: #1e293b; color: white; border: 1px solid #475569; padding: 14px 24px; font-size: 15px; font-weight: bold; border-radius: 10px; }
 
-        /* Tabelas e Containers Gerais */
-        .table-container { width: 100%; overflow-x: auto; background: var(--card-bg); border-radius: 14px; border: 1px solid #334155; }
+        /* Tabelas */
+        .table-container { width: 100%; overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 1px solid #334155; }
         .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-        .data-table th { background: #000; color: var(--secondary); padding: 14px; font-weight: bold; }
-        .data-table td { padding: 14px; border-bottom: 1px solid #334155; color: #cbd5e1; white-space: nowrap; }
+        .data-table th { background: #000; color: var(--secondary); padding: 12px; }
+        .data-table td { padding: 12px; border-bottom: 1px solid #334155; color: #cbd5e1; white-space: nowrap; }
         
-        .btn-block { width: 100%; padding: 20px; border: none; border-radius: 16px; font-size: 18px; font-weight: 900; color: white; cursor: pointer; margin-bottom: 14px; }
-        .btn-purple { background: #6366f1; box-shadow: 0 4px 14px rgba(99,102,241,0.4); }
+        .btn-block { width: 100%; padding: 20px; border: none; border-radius: 16px; font-size: 17px; font-weight: 900; color: white; cursor: pointer; margin-bottom: 14px; }
+        .btn-purple { background: #6366f1; }
         .btn-clear { background: #ef4444; font-size: 14px; padding: 14px; }
-        
         .hidden-input { display: none; }
         .status-banco-local { background: #0f172a; padding: 14px; border-radius: 12px; text-align: center; font-size: 14px; margin-bottom: 16px; color: var(--secondary); font-weight: bold; border: 1px solid #334155; }
-        
-        /* Loader de Ativação */
         #loader-global { display: none; text-align: center; padding: 20px; font-weight: bold; color: #eab308; }
     </style>
 </head>
 <body>
 
-<!-- HUD Superior -->
+<!-- HUD Superior Unificado -->
 <div class="sticky-progress" id="app-topbar" style="display: none;">
     <div class="progress-info">
-        <span>🛰️ RADAR GEOFLEX MOBILE</span>
+        <span>🛰️ RADAR OPERACIONAL</span>
         <span id="txt-contador">0 / 0</span>
     </div>
     <div class="progress-bar-bg">
         <div class="progress-bar-fill" id="bar-progresso"></div>
     </div>
+    
+    <!-- EXIBIÇÃO EM TEMPO REAL DO SEU KM ATUAL -->
+    <div class="user-km-box" id="user-current-km-display">
+        📍 MEU KM ATUAL: CALCULANDO GPS...
+    </div>
+
     <div class="gps-status-bar" id="node-gps-status">
-        <span>📡 Conectando sensores...</span>
+        <span>📡 Conectando Satélites...</span>
         <span id="gps-coords">-</span>
     </div>
 </div>
 
-<!-- Modal Realtime Viewport da Câmera -->
+<!-- Modal Realtime Câmera -->
 <div id="camera-modal-overlay">
     <div class="camera-hud-data-window" id="hud-visor-dados">
         POSTE: <span id="hud-id">-</span> | <span id="hud-km">-</span><br>
         LAT: <span id="hud-lat">-</span> | LNG: <span id="hud-lng">-</span><br>
-        DATA SINC: <span id="hud-timestamp">-</span>
+        DATA/HORA: <span id="hud-timestamp">-</span>
     </div>
     <video id="video-preview-stream" autoplay playsinline></video>
     <div class="camera-controls-bottom">
@@ -192,24 +210,23 @@
     </div>
 </div>
 
-<!-- Input Invisível de Captura Direta Inteligente (Garante funcionamento em qualquer cenário) -->
 <input type="file" id="fallback-camera-input" class="hidden-input" accept="image/*" capture="environment">
 
 <div class="main-container">
     
     <!-- Tela de Configurações Iniciais -->
     <div id="screen-config" class="app-screen active">
-        <div class="status-banco-local" id="status-cache">Verificando memória interna do dispositivo...</div>
+        <div class="status-banco-local" id="status-cache">Sincronizando armazenamento local seguro...</div>
         
         <div class="panel-import">
-            <h3>1. Filtro de Trecho Rodoviário</h3>
+            <h3>1. Regional / Lote Operacional</h3>
             <select id="lote-operacao" class="select-regional-pre" onchange="salvarConfigRegiao()">
                 <option value="AMBOS">🌍 Todo o Trecho (SP + RJ)</option>
                 <option value="SP">📍 Apenas Lote SÃO PAULO</option>
                 <option value="RJ">📍 Apenas Lote RIO DE JANEIRO</option>
             </select>
 
-            <h3>2. Bases de Dados Obrigatórias</h3>
+            <h3>2. Bases Georreferenciadas</h3>
             <div class="file-box" onclick="document.getElementById('f-snv').click()" id="box-snv">📁 Vincular Planilha SNV (.xlsx)</div>
             <input type="file" id="f-snv" class="hidden-input" accept=".xlsx, .xls">
 
@@ -219,27 +236,29 @@
             <div class="file-box" onclick="document.getElementById('f-offline').click()" id="box-offline">🔴 Vincular KMZ Offline</div>
             <input type="file" id="f-offline" class="hidden-input" accept=".kmz, .kml">
 
-            <div id="loader-global">⏳ Processando Geometrias... Por favor aguarde.</div>
+            <div id="loader-global">⏳ Estruturando Matrizes de Proximidade...</div>
             <button class="btn-block btn-purple" id="btn-iniciar" style="opacity:0.6;" disabled onclick="forcarAtivacaoSistema()">⚡ ATIVAR RADAR OPERACIONAL</button>
         </div>
     </div>
 
-    <!-- Tela Principal: Radar Ativo -->
+    <!-- Tela Principal: Radar Dinâmico -->
     <div id="screen-radar" class="app-screen">
         <div id="container-cards-mobile"></div>
+        <!-- BOTÃO PARA FAZER CRESCER A LISTA CONFORME VOCÊ VAI PASSANDO -->
+        <button class="btn-load-more" id="btn-carregar-mais" onclick="expandirListaPontos()">🔄 Carregar +10 Pontos Seguintes</button>
     </div>
 
-    <!-- Tela de Visualização de Dados -->
+    <!-- Tela de Dados -->
     <div id="screen-data" class="app-screen">
-        <h2 style="font-size: 16px; margin-bottom: 12px; color: var(--secondary);">📊 RELATÓRIO EXPEDIDO</h2>
+        <h2 style="font-size: 16px; margin-bottom: 12px; color: var(--secondary);">📊 DETALHAMENTO DAS VISTORIAS</h2>
         <div class="table-container">
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>ID NOX</th>
                         <th>UF</th>
-                        <th>KM</th>
-                        <th>STATUS</th>
+                        <th>KM CAD.</th>
+                        <th>SITUAÇÃO</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-relatorio"></tbody>
@@ -247,16 +266,16 @@
         </div>
     </div>
 
-    <!-- Tela do Repositório Fotográfico -->
+    <!-- Tela da Galeria -->
     <div id="screen-gallery" class="app-screen">
-        <h2 style="font-size: 16px; margin-bottom: 12px; color: var(--secondary);">🖼️ REPOSITÓRIO FOTOGRÁFICO DE EVIDÊNCIAS</h2>
+        <h2 style="font-size: 16px; margin-bottom: 12px; color: var(--secondary);">🖼️ EVIDÊNCIAS FOTOGRÁFICAS EM CACHE</h2>
         <div class="gallery-grid" id="grid-galeria" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;"></div>
-        <button class="btn-block btn-clear" onclick="limparBancoGeral()" style="margin-top: 40px;">⚠️ ZERAR MEMÓRIA DO APLICATIVO</button>
+        <button class="btn-block btn-clear" onclick="limparBancoGeral()" style="margin-top: 40px;">⚠️ APAGAR TODO O CACHE DO NAVEGADOR</button>
     </div>
 
 </div>
 
-<!-- Barra de Abas Inferior Emborrachada -->
+<!-- Rodapé Operacional Emborrachado -->
 <nav class="bottom-nav" id="app-navigation" style="display: none;">
     <button class="nav-btn active" onclick="alternarTela('screen-radar', this)">
         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
@@ -281,12 +300,15 @@
     let pontosOffline = [];
     let checklistFinal = [];
     
+    // Paginação Dinâmica da Lista
+    let limiteExibicaoPontos = 10;
+
     let userLat = 0;
     let userLng = 0;
     let localStream = null;
     let idxPosteAlvoCamera = null;
 
-    // Inicialização direta do IndexedDB
+    // Conexão com IndexedDB mantendo versões anteriores intactas
     const request = indexedDB.open("GeoFlexStoreV15", 1);
     request.onupgradeneeded = (e) => {
         let database = e.target.result;
@@ -299,12 +321,11 @@
         verificarCacheExistente();
     };
 
-    // Listeners de Input
     document.getElementById('f-snv').addEventListener('change', async (e) => {
         if(e.target.files[0]) {
             dadosSNV = await e.target.files[0].arrayBuffer();
             salvarNoBanco("arquivos", "snv", dadosSNV);
-            marcarProntoVisual("box-snv", "Planilha SNV Sincronizada");
+            marcarProntoVisual("box-snv", "Planilha SNV Vinculada");
             verificarProntidao();
         }
     });
@@ -312,7 +333,7 @@
         if(e.target.files[0]) {
             arquivoOnline = await e.target.files[0].arrayBuffer();
             salvarNoBanco("arquivos", "online", arquivoOnline);
-            marcarProntoVisual("box-online", "KMZ Online Sincronizado");
+            marcarProntoVisual("box-online", "KMZ Online Vinculado");
             verificarProntidao();
         }
     });
@@ -320,7 +341,7 @@
         if(e.target.files[0]) {
             arquivoOffline = await e.target.files[0].arrayBuffer();
             salvarNoBanco("arquivos", "offline", arquivoOffline);
-            marcarProntoVisual("box-offline", "KMZ Offline Sincronizado");
+            marcarProntoVisual("box-offline", "KMZ Offline Vinculado");
             verificarProntidao();
         }
     });
@@ -349,9 +370,9 @@
         let reqRegiao = tx.objectStore("config").get("regiao");
 
         setTimeout(() => {
-            if(reqSnv.result) { dadosSNV = reqSnv.result; marcarProntoVisual("box-snv", "SNV Carregado do Aparelho"); }
-            if(reqOn.result) { arquivoOnline = reqOn.result; marcarProntoVisual("box-online", "KMZ Online Carregado"); }
-            if(reqOff.result) { arquivoOffline = reqOff.result; marcarProntoVisual("box-offline", "KMZ Offline Carregado"); }
+            if(reqSnv.result) { dadosSNV = reqSnv.result; marcarProntoVisual("box-snv", "SNV Carregado da Memória"); }
+            if(reqOn.result) { arquivoOnline = reqOn.result; marcarProntoVisual("box-online", "KMZ Online Identificado"); }
+            if(reqOff.result) { arquivoOffline = reqOff.result; marcarProntoVisual("box-offline", "KMZ Offline Identificado"); }
             if(reqRegiao.result) document.getElementById('lote-operacao').value = reqRegiao.result;
             verificarProntidao();
         }, 300);
@@ -361,13 +382,12 @@
         if (dadosSNV && (arquivoOnline || arquivoOffline)) {
             const btn = document.getElementById('btn-iniciar');
             btn.disabled = false; btn.style.opacity = "1";
-            document.getElementById('status-cache').innerHTML = "🟢 Banco de dados pronto para ativação.";
+            document.getElementById('status-cache').innerHTML = "🟢 Pronto para Iniciar sem Perda de Dados.";
         } else {
-            document.getElementById('status-cache').innerHTML = "⚠️ Aguardando o upload dos arquivos bases para liberar o app...";
+            document.getElementById('status-cache').innerHTML = "⚠️ Insira as bases para liberar a ativação móvel...";
         }
     }
 
-    // CORREÇÃO CRÍTICA DA ATIVAÇÃO: Força a mudança de tela sem travar a thread
     async function forcarAtivacaoSistema() {
         document.getElementById('btn-iniciar').style.display = 'none';
         document.getElementById('loader-global').style.display = 'block';
@@ -376,18 +396,17 @@
             try {
                 await processarBases();
                 generarMatrizMobile();
-                ativarRastreamentoGPS();
+                ativarRastreamentoGPSOtimizado();
             } catch(err) {
-                console.log("Inicialização assistida.");
+                console.log("Modo de operação em campo iniciado.");
             }
             
-            // Força a exibição das telas do aplicativo
             document.getElementById('screen-config').classList.remove('active');
             document.getElementById('screen-radar').classList.add('active');
             document.getElementById('app-topbar').style.display = 'block';
             document.getElementById('app-navigation').style.display = 'flex';
             window.scrollTo(0,0);
-        }, 100);
+        }, 150);
     }
 
     async function processarBases() {
@@ -487,18 +506,60 @@
         setTimeout(() => { reordenarERenderizarLista(); }, 200);
     }
 
-    function ativarRastreamentoGPS() {
+    // GEOLOCALIZAÇÃO OTIMIZADA COM MAIOR ACURÁCIA
+    function ativarRastreamentoGPSOtimizado() {
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition((pos) => {
                 userLat = pos.coords.latitude; userLng = pos.coords.longitude;
+                
                 document.getElementById('node-gps-status').className = "gps-status-bar active";
-                document.getElementById('node-gps-status').innerHTML = `<span>🟢 Satélite OK (Precisão: ${Math.round(pos.coords.accuracy)}m)</span><span>${userLat.toFixed(5)}, ${userLng.toFixed(5)}</span>`;
+                document.getElementById('node-gps-status').innerHTML = `<span>🟢 Sinal GPS Confiável (±${Math.round(pos.coords.accuracy)}m)</span><span>${userLat.toFixed(5)}, ${userLng.toFixed(5)}</span>`;
+                
+                // Calcula e atualiza o KM real onde o usuário está pisando
+                calcularEExibirKmAtualDoUsuario();
+                
                 reordenarERenderizarLista();
                 atualizarLiveHUDVisor();
             }, () => {
-                document.getElementById('node-gps-status').innerHTML = "<span>⚠️ Localização Manual (Aguardando sinal)</span>";
-            }, { enableHighAccuracy: true, timeout: 10000 });
+                document.getElementById('node-gps-status').innerHTML = "<span>⚠️ Aguardando Visão Limpa dos Satélites...</span>";
+            }, { 
+                enableHighAccuracy: true, // Força uso do GPS de hardware interno
+                timeout: 5000, 
+                maximumAge: 0 
+            });
         }
+    }
+
+    // Calcula de forma dinâmica o KM real baseado no ponto conhecido mais próximo
+    function calcularEExibirKmAtualDoUsuario() {
+        if(checklistFinal.length === 0 || userLat === 0) return;
+        
+        let maisProximo = null;
+        let menorDistancia = Infinity;
+
+        checklistFinal.forEach(item => {
+            const R = 6371e3;
+            const p1 = userLat * Math.PI/180; const p2 = item.lat * Math.PI/180;
+            const dp = (item.lat-userLat) * Math.PI/180; const dl = (item.lng-userLng) * Math.PI/180;
+            const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+            let d = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+            
+            if(d < menorDistancia) {
+                menorDistancia = d;
+                maisProximo = item;
+            }
+        });
+
+        if(maisProximo && menorDistancia < 500) { // Se estiver a menos de 500m de um ponto conhecido
+            document.getElementById('user-current-km-display').innerText = `📍 MEU KM ATUAL: KM ${maisProximo.km} + ${maisProximo.metros}m (${maisProximo.uf})`;
+        } else {
+            document.getElementById('user-current-km-display').innerText = `📍 RASTREADOR DE TRECHO ATIVO`;
+        }
+    }
+
+    function expandirListaPontos() {
+        limiteExibicaoPontos += 10;
+        renderizarCardsCelular();
     }
 
     function reordenarERenderizarLista() {
@@ -514,6 +575,7 @@
             }
         });
 
+        // Ordena: Não respondidos mais próximos primeiro, seguidos pelos respondidos
         checklistFinal.sort((a, b) => {
             if (a.statusVistoria !== "" && b.statusVistoria === "") return 1;
             if (a.statusVistoria === "" && b.statusVistoria !== "") return -1;
@@ -529,36 +591,49 @@
         const containerCards = document.getElementById('container-cards-mobile');
         containerCards.innerHTML = "";
         
-        // Renderiza o Top 10 mais próximos para o app rodar liso no calor
-        checklistFinal.slice(0, 10).forEach((item) => {
+        // Exibe apenas a quantidade permitida pelo limite da paginação expansível
+        const visiveis = checklistFinal.slice(0, limiteExibicaoPontos);
+
+        visiveis.forEach((item) => {
             const card = document.createElement('div');
             card.className = `card-inspecao ${item.statusVistoria === 'OK' ? 'status-ok' : (item.statusVistoria === 'Apagado' ? 'status-apagado' : '')}`;
             
-            let txtRadar = item.distanciaDoUsuario === Infinity ? "Localizando..." : `🎯 A ${Math.round(item.distanciaDoUsuario)}m de distância`;
+            let txtRadar = item.distanciaDoUsuario === Infinity ? "Aguardando GPS..." : `🎯 ALVO A ${Math.round(item.distanciaDoUsuario)}m`;
 
             card.innerHTML = `
                 <div class="radar-distance-badge">📡 ${txtRadar}</div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div class="card-header-data">
                     <div class="id-nox">${item.idNox}</div>
-                    <span class="badge-km">KM ${item.km}</span>
+                    <div class="badge-km-cadastrado">
+                        <span>Cadastrado</span>
+                        KM ${item.km} + ${item.metros}m
+                    </div>
                 </div>
                 <div class="action-trigger-grid">
                     <button class="btn-mobile-action ${item.statusVistoria==='OK'?'active-ok':''}" onclick="atribuirStatus('${item.idNox}', 'OK')">✔️ OK</button>
                     <button class="btn-mobile-action ${item.statusVistoria==='Apagado'?'active-apagado':''}" onclick="atribuirStatus('${item.idNox}', 'Apagado')">❌ Apagado</button>
                 </div>
                 <button class="btn-camera-hud-trigger ${item.foto ? 'has-photo' : ''}" onclick="abrirModoCameraHUD('${item.idNox}')">
-                    📷 ${item.foto ? 'Foto Vinculada ✓ (Mudar)' : 'Tirar Foto Carimbada'}
+                    📷 ${item.foto ? 'Foto Georreferenciada Salva ✓' : 'Tirar Foto Carimbada'}
                 </button>
                 <div class="photo-preview-container" style="display: ${item.foto ? 'block' : 'none'};">
                     <img src="${item.foto}" class="photo-preview">
                 </div>
-                <textarea class="text-obs-mobile" placeholder="Observações de campo (opcional)..." rows="2" oninput="mudarObs('${item.idNox}', this.value)">${item.obs}</textarea>
+                <textarea class="text-obs-mobile" placeholder="Observações de irregularidade..." rows="2" oninput="mudarObs('${item.idNox}', this.value)">${item.obs}</textarea>
             `;
             containerCards.appendChild(card);
         });
+
+        // Oculta o botão "Carregar Mais" se todos os pontos da malha já estiverem visíveis
+        const btnMais = document.getElementById('btn-carregar-mais');
+        if(limiteExibicaoPontos >= checklistFinal.length) {
+            btnMais.style.display = 'none';
+        } else {
+            btnMais.style.display = 'block';
+        }
     }
 
-    // CONTROLE INTEGRADO DE CÂMERA MOBILE
+    // FLUXO INTEGRADO DE MÍDIA MÓVEL
     window.abrirModoCameraHUD = function(idNox) {
         idxPosteAlvoCamera = idNox;
         atualizarLiveHUDVisor();
@@ -601,7 +676,7 @@
             let ref = checklistFinal.find(i => i.idNox === idxPosteAlvoCamera);
             if(ref) {
                 document.getElementById('hud-id').innerText = ref.idNox;
-                document.getElementById('hud-km').innerText = `KM ${ref.km} + ${ref.metros}m (${ref.uf})`;
+                document.getElementById('hud-km').innerText = `CAD: KM ${ref.km} + ${ref.metros}m (${ref.uf})`;
                 document.getElementById('hud-lat').innerText = userLat !== 0 ? userLat.toFixed(6) : "Buscando...";
                 document.getElementById('hud-lng').innerText = userLng !== 0 ? userLng.toFixed(6) : "Buscando...";
                 document.getElementById('hud-timestamp').innerText = new Date().toLocaleString('pt-BR');
@@ -632,7 +707,6 @@
     }
 
     function aplicarCarimboGraficoFinal(canvas, ctx) {
-        // Tarja de dados física
         ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
         ctx.fillRect(0, canvas.height - 150, canvas.width, 150);
         
@@ -642,8 +716,8 @@
         let ref = checklistFinal.find(i => i.idNox === idxPosteAlvoCamera);
         let dataHoraStr = new Date().toLocaleString('pt-BR');
         
-        ctx.fillText(`ID POSTE: ${ref.idNox} | TRECHO: KM ${ref.km} + ${ref.metros}m [${ref.uf}]`, 40, canvas.height - 100);
-        ctx.fillText(`GPS: LAT ${userLat !== 0 ? userLat.toFixed(6) : 'N/A'} / LNG ${userLng !== 0 ? userLng.toFixed(6) : 'N/A'}`, 40, canvas.height - 60);
+        ctx.fillText(`ID POSTE: ${ref.idNox} | CONFIGURADO NO SNV: KM ${ref.km} + ${ref.metros}m [${ref.uf}]`, 40, canvas.height - 100);
+        ctx.fillText(`GPS DISPOSITIVO: LAT ${userLat !== 0 ? userLat.toFixed(6) : 'N/A'} / LNG ${userLng !== 0 ? userLng.toFixed(6) : 'N/A'}`, 40, canvas.height - 60);
         ctx.fillText(`DATA/HORA: ${dataHoraStr} | REPOSITORIO GEOFLEX OPERACIONAL`, 40, canvas.height - 20);
         
         ref.foto = canvas.toDataURL('image/jpeg', 0.6);
@@ -723,7 +797,7 @@
     };
 
     function limparBancoGeral() {
-        if(confirm("Deseja limpar todos os dados salvos deste celular?")) {
+        if(confirm("ATENÇÃO: Isso apagará TODOS os dados coletados de forma permanente! Deseja continuar?")) {
             db.transaction("arquivos", "readwrite").objectStore("arquivos").clear();
             db.transaction("progresso", "readwrite").objectStore("progresso").clear();
             window.location.reload();
