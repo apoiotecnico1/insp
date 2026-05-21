@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>GEOFLEX OpsCore v16.0 - Campo Total</title>
+    <title>GEOFLEX OpsCore v17.0 - Flex & Print</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
@@ -166,10 +166,23 @@
         
         .btn-block { width: 100%; padding: 20px; border: none; border-radius: 16px; font-size: 17px; font-weight: 900; color: white; cursor: pointer; margin-bottom: 14px; }
         .btn-purple { background: #6366f1; }
+        .btn-amber { background: #d97706; font-size: 15px; }
         .btn-clear { background: #ef4444; font-size: 14px; padding: 14px; }
         .hidden-input { display: none; }
         .status-banco-local { background: #0f172a; padding: 14px; border-radius: 12px; text-align: center; font-size: 14px; margin-bottom: 16px; color: var(--secondary); font-weight: bold; border: 1px solid #334155; }
         #loader-global { display: none; text-align: center; padding: 20px; font-weight: bold; color: #eab308; }
+
+        /* CSS de Impressão Otimizado para o Checklist de papel */
+        @media print {
+            body { background: white; color: black; padding: 0; }
+            .sticky-progress, .bottom-nav, .btn-block, .btn-load-more, #screen-config, #app-navigation, #app-topbar { display: none !important; }
+            .main-container { width: 100%; padding: 0; }
+            .app-screen { display: none !important; }
+            #screen-data { display: block !important; }
+            .table-container { background: white; border: none; }
+            .data-table th { background: #eaeaea !important; color: black !important; border: 1px solid #000; }
+            .data-table td { color: black !important; border: 1px solid #000; padding: 8px; }
+        }
     </style>
 </head>
 <body>
@@ -226,7 +239,14 @@
                 <option value="RJ">📍 Apenas Lote RIO DE JANEIRO</option>
             </select>
 
-            <h3>2. Bases Georreferenciadas</h3>
+            <h3>2. Modo de Trabalho (Fonte de Dados)</h3>
+            <select id="modo-fonte-dados" class="select-regional-pre">
+                <option value="AMBOS">🔄 Combinar Ambas as Bases (Online + Offline)</option>
+                <option value="ONLINE">🟡 Usar APENAS Base KMZ Online</option>
+                <option value="OFFLINE">🔴 Usar APENAS Base KMZ Offline</option>
+            </select>
+
+            <h3>3. Bases Georreferenciadas</h3>
             <div class="file-box" onclick="document.getElementById('f-snv').click()" id="box-snv">📁 Vincular Planilha SNV (.xlsx)</div>
             <input type="file" id="f-snv" class="hidden-input" accept=".xlsx, .xls">
 
@@ -237,28 +257,34 @@
             <input type="file" id="f-offline" class="hidden-input" accept=".kmz, .kml">
 
             <div id="loader-global">⏳ Estruturando Matrizes de Proximidade...</div>
+            
             <button class="btn-block btn-purple" id="btn-iniciar" style="opacity:0.6;" disabled onclick="forcarAtivacaoSistema()">⚡ ATIVAR RADAR OPERACIONAL</button>
+            
+            <!-- GERADOR DE CHECKLIST MANUAL -->
+            <button class="btn-block btn-amber" id="btn-gerar-manual" style="opacity:0.6;" disabled onclick="prepararEImprimirChecklistMao()">📝 GERAR CHECKLIST PARA PREENCHER NA MÃO</button>
         </div>
     </div>
 
     <!-- Tela Principal: Radar Dinâmico -->
     <div id="screen-radar" class="app-screen">
         <div id="container-cards-mobile"></div>
-        <!-- BOTÃO PARA FAZER CRESCER A LISTA CONFORME VOCÊ VAI PASSANDO -->
         <button class="btn-load-more" id="btn-carregar-mais" onclick="expandirListaPontos()">🔄 Carregar +10 Pontos Seguintes</button>
     </div>
 
-    <!-- Tela de Dados -->
+    <!-- Tela de Dados / Relatório / Checklist para Impressão -->
     <div id="screen-data" class="app-screen">
-        <h2 style="font-size: 16px; margin-bottom: 12px; color: var(--secondary);">📊 DETALHAMENTO DAS VISTORIAS</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h2 style="font-size: 16px; color: var(--secondary);" id="titulo-tabela-dados">📊 DETALHAMENTO DAS VISTORIAS</h2>
+            <button onclick="window.print()" class="btn-mobile-action" style="padding: 8px 14px; font-size: 12px; margin: 0; width: auto; height: auto; border-radius: 8px;">🖨️ Imprimir Esta Lista</button>
+        </div>
         <div class="table-container">
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>ID NOX</th>
                         <th>UF</th>
-                        <th>KM CAD.</th>
-                        <th>SITUAÇÃO</th>
+                        <th>KM CADASTRAO</th>
+                        <th id="th-dinamica-situacao">SITUAÇÃO</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-relatorio"></tbody>
@@ -300,15 +326,11 @@
     let pontosOffline = [];
     let checklistFinal = [];
     
-    // Paginação Dinâmica da Lista
     let limiteExibicaoPontos = 10;
+    let userLat = 0; let userLng = 0;
+    let localStream = null; let idxPosteAlvoCamera = null;
 
-    let userLat = 0;
-    let userLng = 0;
-    let localStream = null;
-    let idxPosteAlvoCamera = null;
-
-    // Conexão com IndexedDB mantendo versões anteriores intactas
+    // Conexão Segura com IndexedDB
     const request = indexedDB.open("GeoFlexStoreV15", 1);
     request.onupgradeneeded = (e) => {
         let database = e.target.result;
@@ -370,36 +392,36 @@
         let reqRegiao = tx.objectStore("config").get("regiao");
 
         setTimeout(() => {
-            if(reqSnv.result) { dadosSNV = reqSnv.result; marcarProntoVisual("box-snv", "SNV Carregado da Memória"); }
-            if(reqOn.result) { arquivoOnline = reqOn.result; marcarProntoVisual("box-online", "KMZ Online Identificado"); }
-            if(reqOff.result) { arquivoOffline = reqOff.result; marcarProntoVisual("box-offline", "KMZ Offline Identificado"); }
+            if(reqSnv.result) { dadosSNV = reqSnv.result; marcarProntoVisual("box-snv", "SNV Carregado"); }
+            if(reqOn.result) { arquivoOnline = reqOn.result; marcarProntoVisual("box-online", "KMZ Online Carregado"); }
+            if(reqOff.result) { arquivoOffline = reqOff.result; marcarProntoVisual("box-offline", "KMZ Offline Carregado"); }
             if(reqRegiao.result) document.getElementById('lote-operacao').value = reqRegiao.result;
             verificarProntidao();
         }, 300);
     }
 
     function verificarProntidao() {
+        // Libera se tiver o SNV e pelo menos uma das duas bases KMZ carregada
         if (dadosSNV && (arquivoOnline || arquivoOffline)) {
-            const btn = document.getElementById('btn-iniciar');
-            btn.disabled = false; btn.style.opacity = "1";
-            document.getElementById('status-cache').innerHTML = "🟢 Pronto para Iniciar sem Perda de Dados.";
+            document.getElementById('btn-iniciar').disabled = false;
+            document.getElementById('btn-iniciar').style.opacity = "1";
+            document.getElementById('btn-gerar-manual').disabled = false;
+            document.getElementById('btn-gerar-manual').style.opacity = "1";
+            document.getElementById('status-cache').innerHTML = "🟢 Modos Online/Offline Prontos para Uso.";
         } else {
-            document.getElementById('status-cache').innerHTML = "⚠️ Insira as bases para liberar a ativação móvel...";
+            document.getElementById('status-cache').innerHTML = "⚠️ Vincule a Planilha SNV e ao menos um KMZ (Online ou Offline)...";
         }
     }
 
     async function forcarAtivacaoSistema() {
         document.getElementById('btn-iniciar').style.display = 'none';
+        document.getElementById('btn-gerar-manual').style.display = 'none';
         document.getElementById('loader-global').style.display = 'block';
         
         setTimeout(async () => {
-            try {
-                await processarBases();
-                generarMatrizMobile();
-                ativarRastreamentoGPSOtimizado();
-            } catch(err) {
-                console.log("Modo de operação em campo iniciado.");
-            }
+            await processarBases();
+            generarMatrizMobile(false); // Carrega modo aplicativo normal
+            ativarRastreamentoGPSOtimizado();
             
             document.getElementById('screen-config').classList.remove('active');
             document.getElementById('screen-radar').classList.add('active');
@@ -407,6 +429,16 @@
             document.getElementById('app-navigation').style.display = 'flex';
             window.scrollTo(0,0);
         }, 150);
+    }
+
+    async function prepararEImprimirChecklistMao() {
+        await processarBases();
+        generarMatrizMobile(true); // Modo Impressão Manual Ativado
+        
+        document.getElementById('screen-config').classList.remove('active');
+        document.getElementById('screen-data').classList.add('active');
+        document.getElementById('app-navigation').style.display = 'flex';
+        window.print(); // Dispara comando de impressão do navegador/celular
     }
 
     async function processarBases() {
@@ -450,15 +482,21 @@
         return arr;
     }
 
-    function generarMatrizMobile() {
+    function generarMatrizMobile(modoImpressaoManual = false) {
         const filtroLote = document.getElementById('lote-operacao').value;
+        const modoFonte = document.getElementById('modo-fonte-dados').value;
         let mapaGeral = new Map();
         
-        pontosOnline.forEach(p => mapaGeral.set(p.name, { ...p, origem: 'Online' }));
-        pontosOffline.forEach(p => {
-            if(mapaGeral.has(p.name)) mapaGeral.get(p.name).origem = 'Ambos';
-            else mapaGeral.set(p.name, { ...p, origem: 'Offline' });
-        });
+        // Aplica a lógica de escolha se quer só Online, só Offline ou os dois
+        if (modoFonte === "AMBOS" || modoFonte === "ONLINE") {
+            pontosOnline.forEach(p => mapaGeral.set(p.name, { ...p, origem: 'Online' }));
+        }
+        if (modoFonte === "AMBOS" || modoFonte === "OFFLINE") {
+            pontosOffline.forEach(p => {
+                if(mapaGeral.has(p.name)) mapaGeral.get(p.name).origem = 'Ambos';
+                else mapaGeral.set(p.name, { ...p, origem: 'Offline' });
+            });
+        }
 
         if(dadosSNV.length === 0) return;
         const chaves = Object.keys(dadosSNV[0]);
@@ -503,57 +541,45 @@
             }
         });
 
-        setTimeout(() => { reordenarERenderizarLista(); }, 200);
+        setTimeout(() => { 
+            // Se for para preenchimento manual, ordena por KM crescente direto para facilitar leitura em papel
+            if(modoImpressaoManual) {
+                checklistFinal.sort((a,b) => (a.km + a.metros/1000) - (b.km + b.metros/1000));
+                renderizarTabelaParaMao();
+            } else {
+                reordenarERenderizarLista(); 
+            }
+        }, 200);
     }
 
-    // GEOLOCALIZAÇÃO OTIMIZADA COM MAIOR ACURÁCIA
-    function ativarRastreamentoGPSOtimizado() {
+    function activarRastreamentoGPSOtimizado() {
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition((pos) => {
                 userLat = pos.coords.latitude; userLng = pos.coords.longitude;
-                
                 document.getElementById('node-gps-status').className = "gps-status-bar active";
-                document.getElementById('node-gps-status').innerHTML = `<span>🟢 Sinal GPS Confiável (±${Math.round(pos.coords.accuracy)}m)</span><span>${userLat.toFixed(5)}, ${userLng.toFixed(5)}</span>`;
-                
-                // Calcula e atualiza o KM real onde o usuário está pisando
+                document.getElementById('node-gps-status').innerHTML = `<span>🟢 Sinal GPS Ativo (±${Math.round(pos.coords.accuracy)}m)</span><span>${userLat.toFixed(5)}, ${userLng.toFixed(5)}</span>`;
                 calcularEExibirKmAtualDoUsuario();
-                
                 reordenarERenderizarLista();
                 atualizarLiveHUDVisor();
             }, () => {
-                document.getElementById('node-gps-status').innerHTML = "<span>⚠️ Aguardando Visão Limpa dos Satélites...</span>";
-            }, { 
-                enableHighAccuracy: true, // Força uso do GPS de hardware interno
-                timeout: 5000, 
-                maximumAge: 0 
-            });
+                document.getElementById('node-gps-status').innerHTML = "<span>⚠️ Aguardando GPS...</span>";
+            }, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
         }
     }
 
-    // Calcula de forma dinâmica o KM real baseado no ponto conhecido mais próximo
     function calcularEExibirKmAtualDoUsuario() {
         if(checklistFinal.length === 0 || userLat === 0) return;
-        
-        let maisProximo = null;
-        let menorDistancia = Infinity;
-
+        let maisProximo = null; let menorDistancia = Infinity;
         checklistFinal.forEach(item => {
             const R = 6371e3;
             const p1 = userLat * Math.PI/180; const p2 = item.lat * Math.PI/180;
             const dp = (item.lat-userLat) * Math.PI/180; const dl = (item.lng-userLng) * Math.PI/180;
             const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
             let d = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-            
-            if(d < menorDistancia) {
-                menorDistancia = d;
-                maisProximo = item;
-            }
+            if(d < menorDistancia) { menorDistancia = d; maisProximo = item; }
         });
-
-        if(maisProximo && menorDistancia < 500) { // Se estiver a menos de 500m de um ponto conhecido
+        if(maisProximo && menorDistancia < 500) { 
             document.getElementById('user-current-km-display').innerText = `📍 MEU KM ATUAL: KM ${maisProximo.km} + ${maisProximo.metros}m (${maisProximo.uf})`;
-        } else {
-            document.getElementById('user-current-km-display').innerText = `📍 RASTREADOR DE TRECHO ATIVO`;
         }
     }
 
@@ -570,12 +596,9 @@
                 const dp = (item.lat-userLat) * Math.PI/180; const dl = (item.lng-userLng) * Math.PI/180;
                 const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
                 item.distanciaDoUsuario = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-            } else {
-                item.distanciaDoUsuario = Infinity;
             }
         });
 
-        // Ordena: Não respondidos mais próximos primeiro, seguidos pelos respondidos
         checklistFinal.sort((a, b) => {
             if (a.statusVistoria !== "" && b.statusVistoria === "") return 1;
             if (a.statusVistoria === "" && b.statusVistoria !== "") return -1;
@@ -590,18 +613,15 @@
     function renderizarCardsCelular() {
         const containerCards = document.getElementById('container-cards-mobile');
         containerCards.innerHTML = "";
-        
-        // Exibe apenas a quantidade permitida pelo limite da paginação expansível
         const visiveis = checklistFinal.slice(0, limiteExibicaoPontos);
 
         visiveis.forEach((item) => {
             const card = document.createElement('div');
             card.className = `card-inspecao ${item.statusVistoria === 'OK' ? 'status-ok' : (item.statusVistoria === 'Apagado' ? 'status-apagado' : '')}`;
-            
             let txtRadar = item.distanciaDoUsuario === Infinity ? "Aguardando GPS..." : `🎯 ALVO A ${Math.round(item.distanciaDoUsuario)}m`;
 
             card.innerHTML = `
-                <div class="radar-distance-badge">📡 ${txtRadar}</div>
+                <div class="radar-distance-badge">📡 ${txtRadar} (${item.origem})</div>
                 <div class="card-header-data">
                     <div class="id-nox">${item.idNox}</div>
                     <div class="badge-km-cadastrado">
@@ -614,57 +634,59 @@
                     <button class="btn-mobile-action ${item.statusVistoria==='Apagado'?'active-apagado':''}" onclick="atribuirStatus('${item.idNox}', 'Apagado')">❌ Apagado</button>
                 </div>
                 <button class="btn-camera-hud-trigger ${item.foto ? 'has-photo' : ''}" onclick="abrirModoCameraHUD('${item.idNox}')">
-                    📷 ${item.foto ? 'Foto Georreferenciada Salva ✓' : 'Tirar Foto Carimbada'}
+                    📷 ${item.foto ? 'Foto Vinculada ✓' : 'Tirar Foto Carimbada'}
                 </button>
                 <div class="photo-preview-container" style="display: ${item.foto ? 'block' : 'none'};">
                     <img src="${item.foto}" class="photo-preview">
                 </div>
-                <textarea class="text-obs-mobile" placeholder="Observações de irregularidade..." rows="2" oninput="mudarObs('${item.idNox}', this.value)">${item.obs}</textarea>
+                <textarea class="text-obs-mobile" placeholder="Observações..." rows="2" oninput="mudarObs('${item.idNox}', this.value)">${item.obs}</textarea>
             `;
             containerCards.appendChild(card);
         });
 
-        // Oculta o botão "Carregar Mais" se todos os pontos da malha já estiverem visíveis
-        const btnMais = document.getElementById('btn-carregar-mais');
-        if(limiteExibicaoPontos >= checklistFinal.length) {
-            btnMais.style.display = 'none';
-        } else {
-            btnMais.style.display = 'block';
-        }
+        document.getElementById('btn-carregar-mais').style.display = limiteExibicaoPontos >= checklistFinal.length ? 'none' : 'block';
     }
 
-    // FLUXO INTEGRADO DE MÍDIA MÓVEL
+    // Renderiza a estrutura focada em papel para preencher na mão
+    function renderizarTabelaParaMao() {
+        document.getElementById('titulo-tabela-dados').innerText = "📝 CHECKLIST DE CAMPO (PREENCHIMENTO MANUAL)";
+        document.getElementById('th-dinamica-situacao').innerText = "SITUAÇÃO ENCONTRADA (ANOTAR À MÃO)";
+        
+        const tbody = document.getElementById('tbody-relatorio');
+        tbody.innerHTML = "";
+        
+        checklistFinal.forEach(i => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight:bold; color:#fff; font-size:16px;">${i.idNox}</td>
+                <td>${i.uf}</td>
+                <td style="font-weight:bold;">KM ${i.km} + ${i.metros}m</td>
+                <td style="color:#cbd5e1; font-family:monospace; font-size:14px;">
+                    [  ] OK  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [  ] APAGADO &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; OBS:________________________
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
     window.abrirModoCameraHUD = function(idNox) {
         idxPosteAlvoCamera = idNox;
         atualizarLiveHUDVisor();
-        
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             document.getElementById('camera-modal-overlay').style.display = 'flex';
-            
-            navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: "environment" } },
-                audio: false
-            }).then(stream => {
-                localStream = stream;
-                document.getElementById('video-preview-stream').srcObject = stream;
-            }).catch(() => {
-                acionarCapturaNativaFallback();
-            });
-        } else {
-            acionarCapturaNativaFallback();
-        }
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false }).then(stream => {
+                localStream = stream; document.getElementById('video-preview-stream').srcObject = stream;
+            }).catch(() => { acionarCapturaNativaFallback(); });
+        } else { acionarCapturaNativaFallback(); }
     };
 
     function acionarCapturaNativaFallback() {
         document.getElementById('camera-modal-overlay').style.display = 'none';
         const fallbackInput = document.getElementById('fallback-camera-input');
-        
         fallbackInput.onchange = function(e) {
             if(e.target.files && e.target.files[0]) {
                 const reader = new FileReader();
-                reader.onload = function(evt) {
-                    processarImagemEEstamparData(evt.target.result);
-                };
+                reader.onload = function(evt) { processarImagemEEstamparData(evt.target.result); };
                 reader.readAsDataURL(e.target.files[0]);
             }
         };
@@ -686,20 +708,16 @@
 
     window.executarDisparoFotografico = function() {
         const video = document.getElementById('video-preview-stream');
-        const canvas = document.createElement('canvas');
-        canvas.width = 1024; canvas.height = 768;
+        const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 768;
         const ctx = canvas.getContext('2d');
-        
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         aplicarCarimboGraficoFinal(canvas, ctx);
     };
 
     function processarImagemEEstamparData(base64Origem) {
-        const img = new Image();
-        img.src = base64Origem;
+        const img = new Image(); img.src = base64Origem;
         img.onload = function() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 1024; canvas.height = 768;
+            const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 768;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             aplicarCarimboGraficoFinal(canvas, ctx);
@@ -707,32 +725,20 @@
     }
 
     function aplicarCarimboGraficoFinal(canvas, ctx) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
-        ctx.fillRect(0, canvas.height - 150, canvas.width, 150);
-        
-        ctx.fillStyle = "#38bdf8";
-        ctx.font = "bold 22px monospace";
-        
+        ctx.fillStyle = "rgba(0, 0, 0, 0.85)"; ctx.fillRect(0, canvas.height - 150, canvas.width, 150);
+        ctx.fillStyle = "#38bdf8"; ctx.font = "bold 22px monospace";
         let ref = checklistFinal.find(i => i.idNox === idxPosteAlvoCamera);
         let dataHoraStr = new Date().toLocaleString('pt-BR');
-        
-        ctx.fillText(`ID POSTE: ${ref.idNox} | CONFIGURADO NO SNV: KM ${ref.km} + ${ref.metros}m [${ref.uf}]`, 40, canvas.height - 100);
+        ctx.fillText(`ID POSTE: ${ref.idNox} | CAD: KM ${ref.km} + ${ref.metros}m [${ref.uf}]`, 40, canvas.height - 100);
         ctx.fillText(`GPS DISPOSITIVO: LAT ${userLat !== 0 ? userLat.toFixed(6) : 'N/A'} / LNG ${userLng !== 0 ? userLng.toFixed(6) : 'N/A'}`, 40, canvas.height - 60);
-        ctx.fillText(`DATA/HORA: ${dataHoraStr} | REPOSITORIO GEOFLEX OPERACIONAL`, 40, canvas.height - 20);
-        
+        ctx.fillText(`DATA: ${dataHoraStr} | REPOSITORIO GEOFLEX OPERACIONAL`, 40, canvas.height - 20);
         ref.foto = canvas.toDataURL('image/jpeg', 0.6);
-        salvarProgressoItem(ref);
-        
-        fecharJanelaCamera();
-        reordenarERenderizarLista();
+        salvarProgressoItem(ref); fecharJanelaCamera(); reordenarERenderizarLista();
     }
 
     window.fecharJanelaCamera = function() {
         document.getElementById('camera-modal-overlay').style.display = 'none';
-        if(localStream) {
-            localStream.getTracks().forEach(track => track.stop());
-            localStream = null;
-        }
+        if(localStream) { localStream.getTracks().forEach(track => track.stop()); localStream = null; }
     };
 
     window.atribuirStatus = function(idNox, status) {
@@ -756,22 +762,26 @@
         document.getElementById('txt-contador').innerText = `${respondidos} / ${total}`;
         document.getElementById('bar-progresso').style.width = `${total > 0 ? (respondidos / total) * 100 : 0}%`;
 
-        const tbody = document.getElementById('tbody-relatorio');
-        tbody.innerHTML = "";
-        checklistFinal.forEach(i => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td style="font-weight:bold; color:#fff;">${i.idNox}</td>
-                <td>${i.uf}</td>
-                <td>KM ${i.km}</td>
-                <td style="color:${i.statusVistoria==='OK'?'#22c55e':'#ef4444'}">${i.statusVistoria || "Pendente"}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        // Se a tela de dados NÃO estiver no modo manual de impressão, renderiza o relatório digital normal
+        if(!document.getElementById('titulo-tabela-dados').innerText.includes("MANUAL")) {
+            document.getElementById('titulo-tabela-dados').innerText = "📊 DETALHAMENTO DAS VISTORIAS";
+            document.getElementById('th-dinamica-situacao').innerText = "SITUAÇÃO";
+            const tbody = document.getElementById('tbody-relatorio');
+            tbody.innerHTML = "";
+            checklistFinal.forEach(i => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:bold; color:#fff;">${i.idNox}</td>
+                    <td>${i.uf}</td>
+                    <td>KM ${i.km} + ${i.metros}m</td>
+                    <td style="color:${i.statusVistoria==='OK'?'#22c55e':'#ef4444'}">${i.statusVistoria || "Pendente"}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
 
         const gridGaleria = document.getElementById('grid-galeria');
-        gridGaleria.innerHTML = "";
-        let countFotos = 0;
+        gridGaleria.innerHTML = ""; let countFotos = 0;
         checklistFinal.forEach(i => {
             if(i.foto) {
                 countFotos++;
@@ -781,11 +791,7 @@
                 gridGaleria.appendChild(item);
             }
         });
-        
-        document.getElementById('app-navigation').children[2].innerHTML = `
-            <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-            FOTOS HUD (${countFotos})
-        `;
+        document.getElementById('app-navigation').children[2].innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg> FOTOS HUD (${countFotos})`;
     }
 
     window.alternarTela = function(screenId, btnElemento) {
@@ -793,6 +799,13 @@
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(screenId).classList.add('active');
         btnElemento.classList.add('active');
+        
+        // Se mudou para a tela de dados por clique no menu inferior, reverte para o layout operacional digital
+        if(screenId === 'screen-data') {
+            document.getElementById('titulo-tabela-dados').innerText = "📊 DETALHAMENTO DAS VISTORIAS";
+            document.getElementById('th-dinamica-situacao').innerText = "SITUAÇÃO";
+            sincronizarTelasInternas();
+        }
         window.scrollTo(0,0);
     };
 
