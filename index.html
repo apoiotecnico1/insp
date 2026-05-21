@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>GEOFLEX OpsCore v14.0 - Live HUD Camera</title>
+    <title>GEOFLEX OpsCore v14.1 - Correção Ativação</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
@@ -27,7 +27,6 @@
             overflow-x: hidden; padding-bottom: 90px;
         }
 
-        /* Topbar fixa */
         .sticky-progress {
             position: sticky; top: 0; z-index: 100;
             background: #000000; color: white;
@@ -44,7 +43,6 @@
         }
         .gps-status-bar.active { background: var(--success); color: white; }
 
-        /* Menu Inferior */
         .bottom-nav {
             position: fixed; bottom: 0; left: 0; right: 0; height: 75px;
             background: #000000; border-top: 3px solid #334155;
@@ -63,7 +61,6 @@
         .app-screen { display: none; }
         .app-screen.active { display: block; }
 
-        /* Setup Inicial */
         .panel-import { background: var(--card-bg); padding: 20px; border-radius: 16px; margin-bottom: 20px; border: 2px solid #334155; }
         .panel-import h3 { font-size: 18px; color: var(--secondary); margin-bottom: 12px; text-transform: uppercase; }
         .file-box {
@@ -76,7 +73,6 @@
             background: #0f172a; font-size: 16px; font-weight: bold; color: white; margin-bottom: 20px;
         }
 
-        /* CARDS DO MODO RADAR */
         .radar-distance-badge {
             background: #facc15; color: #000000; padding: 8px 12px; border-radius: 8px;
             font-size: 16px; font-weight: 900; text-align: center; margin-bottom: 12px;
@@ -101,7 +97,6 @@
         .btn-mobile-action.active-apagado { background: var(--danger); border-color: #ffffff; }
         .btn-mobile-action.active-nl { background: #64748b; border-color: #ffffff; }
         
-        /* Botão Camera HUD */
         .btn-camera-hud-trigger {
             width: 100%; padding: 20px; background: #d97706; color: white; border: 2px solid #f59e0b;
             border-radius: 14px; font-weight: 900; font-size: 18px; margin-bottom: 14px; cursor: pointer;
@@ -113,14 +108,12 @@
         .photo-preview { width: 100%; max-height: 240px; object-fit: cover; border-radius: 12px; border: 2px solid #ffffff; }
         .text-obs-mobile { width: 100%; padding: 14px; border: 2px solid #475569; border-radius: 12px; font-size: 15px; background: #0f172a; color: white; }
 
-        /* INTERFACE DA CÂMERA NATIVA DO SYSTEMA (FULLSCREEN OVERLAY) */
         #camera-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: #000000; z-index: 5000; display: none; flex-direction: column;
         }
         #video-preview-stream { width: 100%; height: 75vh; object-fit: cover; background: #1e293b; }
         
-        /* Elemento HUD sobreposto no visor da câmera */
         .camera-hud-data-window {
             position: absolute; top: 20px; left: 15px; right: 15px;
             background: rgba(0,0,0,0.75); border: 2px solid var(--secondary);
@@ -138,7 +131,6 @@
         .btn-shutter:active { background: var(--danger); }
         .btn-close-camera { background: #334155; color: white; border: none; padding: 14px 24px; font-size: 16px; font-weight: bold; border-radius: 10px; }
 
-        /* Tabelas e Dashboard */
         .table-container { width: 100%; overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 1px solid #334155; }
         .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; color: #cbd5e1; }
         .data-table th { background: #000000; color: var(--secondary); padding: 12px; border-bottom: 2px solid #334155; }
@@ -161,7 +153,6 @@
 </head>
 <body>
 
-<!-- Monitor Superior de Progresso e Coordenadas Base -->
 <div class="sticky-progress" id="app-topbar" style="display: none;">
     <div class="progress-info">
         <span>🛰️ RADAR & CÂMERA LIVE HUD</span>
@@ -171,12 +162,12 @@
         <div class="progress-bar-fill" id="bar-progresso"></div>
     </div>
     <div class="gps-status-bar" id="node-gps-status">
-        <span>📡 Sincronizando Satélites...</span>
+        <span>📡 Inicializando Sensores do Dispositivo...</span>
         <span id="gps-coords">- / -</span>
     </div>
 </div>
 
-<!-- MODAL DA CÂMERA INTELIGENTE GEOFLEX -->
+<!-- CONTAINER DA CÂMERA INTERNA -->
 <div id="camera-modal-overlay">
     <div class="camera-hud-data-window" id="hud-visor-dados">
         ID POSTE: <span id="hud-id">Buscando...</span><br>
@@ -189,15 +180,18 @@
     <div class="camera-controls-bottom">
         <button class="btn-close-camera" onclick="fecharJanelaCamera()">FECHAR</button>
         <button class="btn-shutter" onclick="executarDisparoFotografico()"></button>
-        <div style="width:75px;"></div> <!-- Alinhamento -->
+        <div style="width:75px;"></div>
     </div>
 </div>
+
+<!-- INPUT FALLBACK PARA CASO DE BLOQUEIO DO NAVEGADOR -->
+<input type="file" id="fallback-camera-input" class="hidden-input" accept="image/*" capture="environment">
 
 <div class="main-container">
     
     <!-- TELA CONFIG -->
     <div id="screen-config" class="app-screen active">
-        <div class="status-banco-local" id="status-cache">🔍 Verificando integridade da memória...</div>
+        <div class="status-banco-local" id="status-cache">🔍 Aguardando dados de entrada...</div>
         <div class="panel-import">
             <h3>1. Região Operacional</h3>
             <select id="lote-operacao" class="select-regional-pre" onchange="salvarConfigRegiao()">
@@ -220,12 +214,12 @@
         </div>
     </div>
 
-    <!-- TELA 1: Radar Dinâmico -->
+    <!-- TELA 1 -->
     <div id="screen-radar" class="app-screen">
         <div id="container-cards-mobile"></div>
     </div>
 
-    <!-- TELA 2: Visualizador Geral de Dados -->
+    <!-- TELA 2 -->
     <div id="screen-data" class="app-screen">
         <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--secondary);">📊 RELATÓRIO DO BANCO DE DADOS LOCAL</h2>
         <div class="table-container">
@@ -244,7 +238,7 @@
         </div>
     </div>
 
-    <!-- TELA 3: Histórico Fotográfico com Marca d'Água -->
+    <!-- TELA 3 -->
     <div id="screen-gallery" class="app-screen">
         <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--secondary);">🖼️ REPOSITÓRIO DE EVIDÊNCIAS GEORREFERENCIADAS</h2>
         <div class="gallery-grid" id="grid-galeria"></div>
@@ -253,7 +247,6 @@
 
 </div>
 
-<!-- Menu Principal de Abas -->
 <nav class="bottom-nav" id="app-navigation" style="display: none;">
     <button class="nav-btn active" onclick="alternarTela('screen-radar', this)">
         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
@@ -284,7 +277,7 @@
     let localStream = null;
     let idxPosteAlvoCamera = null;
 
-    // Inicialização IndexedDB
+    // Conexão Segura com Banco de Dados Interno
     const request = indexedDB.open("GeoFlexDB_v14", 1);
     request.onupgradeneeded = (e) => {
         let database = e.target.result;
@@ -297,7 +290,6 @@
         verificarCacheExistente();
     };
 
-    // Upload Handlers
     document.getElementById('f-snv').addEventListener('change', async (e) => {
         if(e.target.files[0]) {
             dadosSNV = await e.target.files[0].arrayBuffer();
@@ -310,7 +302,7 @@
         if(e.target.files[0]) {
             arquivoOnline = await e.target.files[0].arrayBuffer();
             salvarNoBanco("arquivos", "online", arquivoOnline);
-            marcarProntoVisual("box-online", "KMZ Online Sincronizado");
+            marcarProntoVisual("box-online", "KMZ Online Ativo");
             verificarProntidao();
         }
     });
@@ -318,12 +310,13 @@
         if(e.target.files[0]) {
             arquivoOffline = await e.target.files[0].arrayBuffer();
             salvarNoBanco("arquivos", "offline", arquivoOffline);
-            marcarProntoVisual("box-offline", "KMZ Offline Sincronizado");
+            marcarProntoVisual("box-offline", "KMZ Offline Ativo");
             verificarProntidao();
         }
     });
 
     function salvarNoBanco(storeName, key, value) {
+        if(!db) return;
         let tx = db.transaction(storeName, "readwrite");
         tx.objectStore(storeName).put(value, key);
     }
@@ -345,30 +338,38 @@
         let reqRegiao = tx.objectStore("config").get("regiao");
 
         setTimeout(() => {
-            if(reqSnv.result) { dadosSNV = reqSnv.result; marcarProntoVisual("box-snv", "SNV Ativo no Sistema"); }
-            if(reqOn.result) { arquivoOnline = reqOn.result; marcarProntoVisual("box-online", "KMZ Online Ativo"); }
-            if(reqOff.result) { arquivoOffline = reqOff.result; marcarProntoVisual("box-offline", "KMZ Offline Ativo"); }
+            if(reqSnv.result) { dadosSNV = reqSnv.result; marcarProntoVisual("box-snv", "SNV Detectado na Memória"); }
+            if(reqOn.result) { arquivoOnline = reqOn.result; marcarProntoVisual("box-online", "KMZ Online Localizado"); }
+            if(reqOff.result) { arquivoOffline = reqOff.result; marcarProntoVisual("box-offline", "KMZ Offline Localizado"); }
             if(reqRegiao.result) document.getElementById('lote-operacao').value = reqRegiao.result;
-            if(dadosSNV && (arquivoOnline || arquivoOffline)) verificarProntidao();
-        }, 200);
+            verificarProntidao();
+        }, 250);
     }
 
     function verificarProntidao() {
         if (dadosSNV && (arquivoOnline || arquivoOffline)) {
             const btn = document.getElementById('btn-iniciar');
             btn.disabled = false; btn.style.opacity = "1";
-            document.getElementById('status-cache').innerHTML = "🟢 Sistema Pronto para Reconhecimento de Campo!";
+            document.getElementById('status-cache').innerHTML = "🟢 Pronto! Clique abaixo para liberar a tela.";
         }
     }
 
+    // CORREÇÃO CRÍTICA: Executa mesmo sem resposta instantânea dos sensores externos
     document.getElementById('btn-iniciar').addEventListener('click', async () => {
-        await processarBases();
-        gerarMatrizMobile();
-        ativarRastreamentoGPS();
-        document.getElementById('screen-config').classList.remove('active');
-        document.getElementById('screen-radar').classList.add('active');
-        document.getElementById('app-topbar').style.display = 'block';
-        document.getElementById('app-navigation').style.display = 'flex';
+        try {
+            document.getElementById('status-cache').innerHTML = "⏳ Processando dados estruturais...";
+            await processarBases();
+            gerarMatrizMobile();
+            ativarRastreamentoGPS();
+        } catch(e) {
+            console.log("Aviso de inicialização de sensores híbridos.");
+        } finally {
+            document.getElementById('screen-config').classList.remove('active');
+            document.getElementById('screen-radar').classList.add('active');
+            document.getElementById('app-topbar').style.display = 'block';
+            document.getElementById('app-navigation').style.display = 'flex';
+            window.scrollTo(0,0);
+        }
     });
 
     async function processarBases() {
@@ -376,7 +377,7 @@
         const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {raw: false});
         dadosSNV = json.map(r => {
             const n = {};
-            for (let k in r) n[k.toLowerCase().normalize("NFD").replace(/[\u0300._-]/g, "").trim()] = r[k];
+            for (let k in r) n[k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\s._-]+/g, "").trim()] = r[k];
             return n;
         });
         if(arquivoOnline) pontosOnline = await extrairKML(arquivoOnline);
@@ -389,7 +390,7 @@
                 JSZip.loadAsync(buffer).then(async zip => {
                     const kmlKey = Object.keys(zip.files).find(n => n.endsWith('.kml'));
                     resolve(parsearStringKML(await zip.file(kmlKey).async("string")));
-                });
+                }).catch(() => resolve([]));
             } else {
                 resolve(parsearStringKML(new TextDecoder("utf-8").decode(buffer)));
             }
@@ -421,6 +422,7 @@
             else mapaGeral.set(p.name, { ...p, origem: 'Offline' });
         });
 
+        if(dadosSNV.length === 0) return;
         const chaves = Object.keys(dadosSNV[0]);
         const sLat = chaves.find(k => k.includes('lat'));
         const sLng = chaves.find(k => k.includes('long') || k.includes('lng'));
@@ -471,27 +473,33 @@
             gpsWatchId = navigator.geolocation.watchPosition((pos) => {
                 userLat = pos.coords.latitude; userLng = pos.coords.longitude;
                 document.getElementById('node-gps-status').className = "gps-status-bar active";
-                document.getElementById('node-gps-status').innerHTML = `<span>🟢 GPS Ativo (Precisão: ${Math.round(pos.coords.accuracy)}m)</span><span>${userLat.toFixed(5)}, ${userLng.toFixed(5)}</span>`;
+                document.getElementById('node-gps-status').innerHTML = `<span>🟢 GPS Sincronizado (${Math.round(pos.coords.accuracy)}m)</span><span>${userLat.toFixed(5)}, ${userLng.toFixed(5)}</span>`;
                 reordenarERenderizarLista();
                 atualizarLiveHUDVisor();
-            }, null, { enableHighAccuracy: true });
+            }, (err) => {
+                document.getElementById('node-gps-status').innerHTML = "<span>⚠️ Rodando sem GPS Físico (Modo Manual)</span>";
+            }, { enableHighAccuracy: true });
         }
     }
 
     function reordenarERenderizarLista() {
         checklistFinal.forEach(item => {
-            // Haversine simplificado para ordenação rápida em campo
-            const R = 6371e3;
-            const p1 = userLat * Math.PI/180; const p2 = item.lat * Math.PI/180;
-            const dp = (item.lat-userLat) * Math.PI/180; const dl = (item.lng-userLng) * Math.PI/180;
-            const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
-            item.distanciaDoUsuario = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+            if(userLat !== 0) {
+                const R = 6371e3;
+                const p1 = userLat * Math.PI/180; const p2 = item.lat * Math.PI/180;
+                const dp = (item.lat-userLat) * Math.PI/180; const dl = (item.lng-userLng) * Math.PI/180;
+                const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+                item.distanciaDoUsuario = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+            } else {
+                item.distanciaDoUsuario = Infinity;
+            }
         });
 
         checklistFinal.sort((a, b) => {
             if (a.statusVistoria !== "" && b.statusVistoria === "") return 1;
             if (a.statusVistoria === "" && b.statusVistoria !== "") return -1;
-            return a.distanciaDoUsuario - b.distanciaDoUsuario;
+            if (a.distanciaDoUsuario !== Infinity) return a.distanciaDoUsuario - b.distanciaDoUsuario;
+            return a.idNox.localeCompare(b.idNox);
         });
 
         renderizarCardsCelular();
@@ -502,12 +510,11 @@
         const containerCards = document.getElementById('container-cards-mobile');
         containerCards.innerHTML = "";
         
-        // Renderiza apenas os 8 primeiros no radar ativo para velocidade total do app no sol
-        checklistFinal.slice(0, 8).forEach((item, idx) => {
+        checklistFinal.slice(0, 10).forEach((item, idx) => {
             const card = document.createElement('div');
             card.className = `card-inspecao ${item.statusVistoria === 'OK' ? 'status-ok' : (item.statusVistoria === 'Apagado' ? 'status-apagado' : (item.statusVistoria === 'Não Localizado' ? 'status-nao-localizado' : ''))}`;
             
-            let txtRadar = `🎯 A ${Math.round(item.distanciaDoUsuario)} metros de você`;
+            let txtRadar = item.distanciaDoUsuario === Infinity ? "Aguardando satélites..." : `🎯 A ${Math.round(item.distanciaDoUsuario)}m de distância`;
 
             card.innerHTML = `
                 <div class="radar-distance-badge">📡 ${txtRadar}</div>
@@ -520,7 +527,7 @@
                     <button class="btn-mobile-action ${item.statusVistoria==='Apagado'?'active-apagado':''}" onclick="atribuirStatus('${item.idNox}', 'Apagado')">❌ Apagado</button>
                 </div>
                 <button class="btn-camera-hud-trigger ${item.foto ? 'has-photo' : ''}" onclick="abrirModoCameraHUD('${item.idNox}')">
-                    📷 ${item.foto ? 'Foto Gravada (Mudar Foto)' : 'Tirar Foto Georreferenciada'}
+                    📷 ${item.foto ? 'Foto com Estampa OK ✓' : 'Tirar Foto Georreferenciada'}
                 </button>
                 <div class="photo-preview-container" style="display: ${item.foto ? 'block' : 'none'};">
                     <img src="${item.foto}" class="photo-preview">
@@ -531,73 +538,107 @@
         });
     }
 
-    // SISTEMA DE CÂMERA INTEGRADA COM ESTAMPAGEM GRÁFICA (HUD NATIVO)
+    // CORREÇÃO DA CÂMERA: Fallback Inteligente para rodar fora de HTTPS / Localhost
     window.abrirModoCameraHUD = function(idNox) {
         idxPosteAlvoCamera = idNox;
         atualizarLiveHUDVisor();
-        document.getElementById('camera-modal-overlay').style.display = 'flex';
         
-        // Força a ativação da câmera traseira do smartphone
-        navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { exact: "environment" } },
-            audio: false
-        }).then(stream => {
-            localStream = stream;
-            document.getElementById('video-preview-stream').srcObject = stream;
-        }).catch(err => {
-            // Fallback para qualquer câmera disponível se falhar a traseira exata
-            navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        // Testa se o navegador bloqueia a API de Stream de Vídeo Direta
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            document.getElementById('camera-modal-overlay').style.display = 'flex';
+            
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: "environment" } }, // Mudado de exact para ideal para evitar travar o app
+                audio: false
+            }).then(stream => {
                 localStream = stream;
                 document.getElementById('video-preview-stream').srcObject = stream;
+            }).catch(() => {
+                // Segundo Fallback: Abre com qualquer câmera ativa disponível
+                navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+                    localStream = stream;
+                    document.getElementById('video-preview-stream').srcObject = stream;
+                }).catch(() => {
+                    acionarCapturaNativaFallback();
+                });
             });
-        });
+        } else {
+            acionarCapturaNativaFallback();
+        }
     };
 
+    // Caso o navegador bloqueie o HUD em tempo real, ele usa o app nativo do android/iOS sem travar o checklist
+    function acionarCapturaNativaFallback() {
+        document.getElementById('camera-modal-overlay').style.display = 'none';
+        const fallbackInput = document.getElementById('fallback-camera-input');
+        
+        fallbackInput.onchange = function(e) {
+            if(e.target.files && e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    processarImagemEEstamparData(evt.target.result);
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        };
+        fallbackInput.click();
+    }
+
     function atualizarLiveHUDVisor() {
-        if(document.getElementById('camera-modal-overlay').style.display === 'flex' && idxPosteAlvoCamera) {
+        if(idxPosteAlvoCamera) {
             let ref = checklistFinal.find(i => i.idNox === idxPosteAlvoCamera);
-            document.getElementById('hud-id').innerText = ref.idNox;
-            document.getElementById('hud-km').innerText = `KM ${ref.km} + ${ref.metros}m (${ref.uf})`;
-            document.getElementById('hud-lat').innerText = userLat.toFixed(6);
-            document.getElementById('hud-lng').innerText = userLng.toFixed(6);
-            document.getElementById('hud-timestamp').innerText = new Date().toLocaleString('pt-BR');
+            if(ref) {
+                document.getElementById('hud-id').innerText = ref.idNox;
+                document.getElementById('hud-km').innerText = `KM ${ref.km} + ${ref.metros}m (${ref.uf})`;
+                document.getElementById('hud-lat').innerText = userLat !== 0 ? userLat.toFixed(6) : "Sem sinal";
+                document.getElementById('hud-lng').innerText = userLng !== 0 ? userLng.toFixed(6) : "Sem sinal";
+                document.getElementById('hud-timestamp').innerText = new Date().toLocaleString('pt-BR');
+            }
         }
     }
 
     window.executarDisparoFotografico = function() {
         const video = document.getElementById('video-preview-stream');
         const canvas = document.createElement('canvas');
-        canvas.width = 1024; // Resolução otimizada para o banco de dados
-        canvas.height = 768;
-        
+        canvas.width = 1024; canvas.height = 768;
         const ctx = canvas.getContext('2d');
-        // Desenha o frame atual da câmera no canvas plano
+        
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        aplicarCarimboGraficoFinal(canvas, ctx);
+    };
+
+    function processarImagemEEstamparData(base64Origem) {
+        const img = new Image();
+        img.src = base64Origem;
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024; canvas.height = 768;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            aplicarCarimboGraficoFinal(canvas, ctx);
+        };
+    }
+
+    function aplicarCarimboGraficoFinal(canvas, ctx) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.fillRect(0, canvas.height - 140, canvas.width, 140);
         
-        // Configura a caixa preta da estampa no rodapé da imagem
-        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-        ctx.fillRect(0, canvas.height - 150, canvas.width, 150);
-        
-        // Escreve os metadados geográficos físicos diretamente nos pixels da imagem
         ctx.fillStyle = "#38bdf8";
-        ctx.font = "bold 22px monospace";
+        ctx.font = "bold 20px monospace";
         
         let ref = checklistFinal.find(i => i.idNox === idxPosteAlvoCamera);
         let dataHoraStr = new Date().toLocaleString('pt-BR');
         
-        ctx.fillText(`ID POSTE: ${ref.idNox} | LOCALIZAÇÃO: KM ${ref.km} + ${ref.metros}m [${ref.uf}]`, 30, canvas.height - 105);
-        ctx.fillText(`COORDENADAS: LAT ${userLat.toFixed(6)} / LNG ${userLng.toFixed(6)}`, 30, canvas.height - 65);
-        ctx.fillText(`DATA/HORA SINC: ${dataHoraStr} | SISTEMA DE CAMPO GEOFLEX v14`, 30, canvas.height - 25);
+        ctx.fillText(`ID POSTE: ${ref.idNox} | LOCALIZAÇÃO: KM ${ref.km} + ${ref.metros}m [${ref.uf}]`, 35, canvas.height - 95);
+        ctx.fillText(`COORDENADAS: LAT ${userLat !== 0 ? userLat.toFixed(6) : 'N/A'} / LNG ${userLng !== 0 ? userLng.toFixed(6) : 'N/A'}`, 35, canvas.height - 60);
+        ctx.fillText(`DATA/HORA SINC: ${dataHoraStr} | SYSTEMA NATIVO GEOFLEX v14.1`, 35, canvas.height - 25);
         
-        const base64MarcadAgua = canvas.toDataURL('image/jpeg', 0.7);
-        
-        // Salva a foto carimbada diretamente na estrutura
-        ref.foto = base64MarcadAgua;
+        ref.foto = canvas.toDataURL('image/jpeg', 0.7);
         salvarProgressoItem(ref);
         
         fecharJanelaCamera();
         reordenarERenderizarLista();
-    };
+    }
 
     window.fecharJanelaCamera = function() {
         document.getElementById('camera-modal-overlay').style.display = 'none';
@@ -627,7 +668,6 @@
         document.getElementById('txt-contador').innerText = `${respondidos} / ${total}`;
         document.getElementById('bar-progresso').style.width = `${total > 0 ? (respondidos / total) * 100 : 0}%`;
 
-        // Tabela de Dados Atualizada
         const tbody = document.getElementById('tbody-relatorio');
         tbody.innerHTML = "";
         checklistFinal.forEach(i => {
@@ -643,7 +683,6 @@
             tbody.appendChild(tr);
         });
 
-        // Galeria de Fotos HUD Atualizada
         const gridGaleria = document.getElementById('grid-galeria');
         gridGaleria.innerHTML = "";
         let nFotos = 0;
@@ -671,7 +710,7 @@
     };
 
     function limparBancoGeral() {
-        if(confirm("Confirmar a exclusão permanente dos dados de campo do aparelho?")) {
+        if(confirm("Zerar todos os dados do dispositivo?")) {
             db.transaction("arquivos", "readwrite").objectStore("arquivos").clear();
             db.transaction("progresso", "readwrite").objectStore("progresso").clear();
             window.location.reload();
