@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>GEOFLEX OpsCore v13.0 - Sistema Nativo HTML</title>
+    <title>GEOFLEX OpsCore v14.0 - Live HUD Camera</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
@@ -27,7 +27,7 @@
             overflow-x: hidden; padding-bottom: 90px;
         }
 
-        /* Topbar fixa de Monitoramento */
+        /* Topbar fixa */
         .sticky-progress {
             position: sticky; top: 0; z-index: 100;
             background: #000000; color: white;
@@ -44,7 +44,7 @@
         }
         .gps-status-bar.active { background: var(--success); color: white; }
 
-        /* Menu de Navegação Inferior Fixo */
+        /* Menu Inferior */
         .bottom-nav {
             position: fixed; bottom: 0; left: 0; right: 0; height: 75px;
             background: #000000; border-top: 3px solid #334155;
@@ -59,12 +59,11 @@
         .nav-btn svg { width: 24px; height: 24px; fill: currentColor; }
         .nav-btn.active { color: var(--secondary); }
 
-        /* Conteiner de Telas */
         .main-container { width: 100vw; padding: 12px; }
         .app-screen { display: none; }
         .app-screen.active { display: block; }
 
-        /* Estilos da Tela Inicial de Configuração */
+        /* Setup Inicial */
         .panel-import { background: var(--card-bg); padding: 20px; border-radius: 16px; margin-bottom: 20px; border: 2px solid #334155; }
         .panel-import h3 { font-size: 18px; color: var(--secondary); margin-bottom: 12px; text-transform: uppercase; }
         .file-box {
@@ -90,44 +89,69 @@
         .card-inspecao.status-ok { border-left-color: var(--success); background-color: #064e3b; border-color: var(--success); }
         .card-inspecao.status-apagado { border-left-color: var(--danger); background-color: #7f1d1d; border-color: var(--danger); }
         .card-inspecao.status-nao-localizado { border-left-color: #475569; background-color: #334155; opacity: 0.7; }
-        .id-nox { font-size: 30px; font-weight: 900; color: #ffffff; }
-        .badge-km { background: #ffffff; color: #000000; padding: 4px 10px; border-radius: 6px; font-size: 16px; font-weight: 900; font-family: monospace; }
+        .id-nox { font-size: 32px; font-weight: 900; color: #ffffff; }
+        .badge-km { background: #ffffff; color: #000000; padding: 6px 12px; border-radius: 8px; font-size: 18px; font-weight: 900; font-family: monospace; }
         
         .action-trigger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
         .btn-mobile-action {
             padding: 22px 10px; border: 3px solid #475569; border-radius: 14px; background: #0f172a;
             font-size: 20px; font-weight: 900; color: white; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 10px;
         }
         .btn-mobile-action.active-ok { background: var(--success); border-color: #ffffff; }
         .btn-mobile-action.active-apagado { background: var(--danger); border-color: #ffffff; }
         .btn-mobile-action.active-nl { background: #64748b; border-color: #ffffff; }
-        .btn-camera-mobile {
-            width: 100%; padding: 18px; background: #0284c7; color: white; border: 2px solid #0ea5e9;
-            border-radius: 14px; font-weight: 800; font-size: 16px; margin-bottom: 14px; cursor: pointer;
+        
+        /* Botão Camera HUD */
+        .btn-camera-hud-trigger {
+            width: 100%; padding: 20px; background: #d97706; color: white; border: 2px solid #f59e0b;
+            border-radius: 14px; font-weight: 900; font-size: 18px; margin-bottom: 14px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        .btn-camera-mobile.has-photo { background: #166534; border-color: var(--success); }
+        .btn-camera-hud-trigger.has-photo { background: #166534; border-color: var(--success); }
+        
         .photo-preview-container { display: none; text-align: center; margin-bottom: 14px; }
         .photo-preview { width: 100%; max-height: 240px; object-fit: cover; border-radius: 12px; border: 2px solid #ffffff; }
         .text-obs-mobile { width: 100%; padding: 14px; border: 2px solid #475569; border-radius: 12px; font-size: 15px; background: #0f172a; color: white; }
 
-        /* TELA DE RELATÓRIO DO BANCO DE DADOS (HTML NATIVO) */
+        /* INTERFACE DA CÂMERA NATIVA DO SYSTEMA (FULLSCREEN OVERLAY) */
+        #camera-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000000; z-index: 5000; display: none; flex-direction: column;
+        }
+        #video-preview-stream { width: 100%; height: 75vh; object-fit: cover; background: #1e293b; }
+        
+        /* Elemento HUD sobreposto no visor da câmera */
+        .camera-hud-data-window {
+            position: absolute; top: 20px; left: 15px; right: 15px;
+            background: rgba(0,0,0,0.75); border: 2px solid var(--secondary);
+            padding: 12px; border-radius: 10px; font-family: monospace; font-size: 14px; color: #38bdf8;
+            line-height: 1.4; pointer-events: none;
+        }
+        .camera-controls-bottom {
+            height: 25vh; background: #000000; display: flex;
+            justify-content: space-around; align-items: center; padding: 20px;
+        }
+        .btn-shutter {
+            width: 84px; height: 84px; background: #ffffff; border: 6px solid #475569;
+            border-radius: 50%; cursor: pointer; box-shadow: 0 0 15px rgba(255,255,255,0.4);
+        }
+        .btn-shutter:active { background: var(--danger); }
+        .btn-close-camera { background: #334155; color: white; border: none; padding: 14px 24px; font-size: 16px; font-weight: bold; border-radius: 10px; }
+
+        /* Tabelas e Dashboard */
         .table-container { width: 100%; overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 1px solid #334155; }
         .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; color: #cbd5e1; }
-        .data-table th { background: #000000; color: var(--secondary); padding: 12px; font-weight: bold; border-bottom: 2px solid #334155; }
+        .data-table th { background: #000000; color: var(--secondary); padding: 12px; border-bottom: 2px solid #334155; }
         .data-table td { padding: 12px; border-bottom: 1px solid #334155; white-space: nowrap; }
-        .data-table tr:nth-child(even) { background: rgba(255,255,255,0.02); }
         .badge-status-table { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
         .bst-ok { background: #064e3b; color: #22c55e; }
         .bst-ap { background: #7f1d1d; color: #ef4444; }
         .bst-nl { background: #334155; color: #94a3b8; }
 
-        /* TELA DE GALERIA DE FOTOS */
         .gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .gallery-item { background: var(--card-bg); border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center; }
-        .gallery-item img { width: 100%; height: 130px; object-fit: cover; border-radius: 6px; margin-bottom: 6px; border: 1px solid #475569; }
-        .gallery-item div { font-size: 12px; font-weight: bold; color: white; }
-
+        .gallery-item img { width: 100%; height: 130px; object-fit: cover; border-radius: 6px; margin-bottom: 6px; }
+        
         .btn-block { width: 100%; padding: 18px; border: none; border-radius: 14px; font-size: 16px; font-weight: 900; color: white; cursor: pointer; margin-bottom: 14px; }
         .btn-purple { background: #7c3aed; border: 2px solid #a78bfa; }
         .btn-clear { background: #dc2626; font-size: 14px; padding: 12px; }
@@ -137,34 +161,52 @@
 </head>
 <body>
 
+<!-- Monitor Superior de Progresso e Coordenadas Base -->
 <div class="sticky-progress" id="app-topbar" style="display: none;">
     <div class="progress-info">
-        <span>🛰️ RADAR DE VARREDURA</span>
+        <span>🛰️ RADAR & CÂMERA LIVE HUD</span>
         <span id="txt-contador">0 / 0</span>
     </div>
     <div class="progress-bar-bg">
         <div class="progress-bar-fill" id="bar-progresso"></div>
     </div>
     <div class="gps-status-bar" id="node-gps-status">
-        <span>📡 Conectando Satélites GPS...</span>
+        <span>📡 Sincronizando Satélites...</span>
         <span id="gps-coords">- / -</span>
+    </div>
+</div>
+
+<!-- MODAL DA CÂMERA INTELIGENTE GEOFLEX -->
+<div id="camera-modal-overlay">
+    <div class="camera-hud-data-window" id="hud-visor-dados">
+        ID POSTE: <span id="hud-id">Buscando...</span><br>
+        KM ESTIMADO: <span id="hud-km">Calculando...</span><br>
+        LATITUDE: <span id="hud-lat">-</span><br>
+        LONGITUDE: <span id="hud-lng">-</span><br>
+        DATA/HORA: <span id="hud-timestamp">-</span>
+    </div>
+    <video id="video-preview-stream" autoplay playsinline></video>
+    <div class="camera-controls-bottom">
+        <button class="btn-close-camera" onclick="fecharJanelaCamera()">FECHAR</button>
+        <button class="btn-shutter" onclick="executarDisparoFotografico()"></button>
+        <div style="width:75px;"></div> <!-- Alinhamento -->
     </div>
 </div>
 
 <div class="main-container">
     
-    <!-- TELA CONFIG: Setup Inicial Único -->
+    <!-- TELA CONFIG -->
     <div id="screen-config" class="app-screen active">
-        <div class="status-banco-local" id="status-cache">🔍 Verificando banco de dados interno...</div>
+        <div class="status-banco-local" id="status-cache">🔍 Verificando integridade da memória...</div>
         <div class="panel-import">
-            <h3>1. Escopo Territorial</h3>
+            <h3>1. Região Operacional</h3>
             <select id="lote-operacao" class="select-regional-pre" onchange="salvarConfigRegiao()">
                 <option value="AMBOS">🌍 Todo o Trecho (SP + RJ)</option>
                 <option value="SP">📍 Apenas Lote SÃO PAULO</option>
                 <option value="RJ">📍 Apenas Lote RIO DE JANEIRO</option>
             </select>
 
-            <h3>2. Sincronização Automática das Bases</h3>
+            <h3>2. Sincronizar Bases Sólidas</h3>
             <div class="file-box" onclick="document.getElementById('f-snv').click()" id="box-snv">📁 Carregar SNV (.xlsx)</div>
             <input type="file" id="f-snv" class="hidden-input" accept=".xlsx, .xls">
 
@@ -174,48 +216,44 @@
             <div class="file-box" onclick="document.getElementById('f-offline').click()" id="box-offline">🔴 Carregar KMZ Offline</div>
             <input type="file" id="f-offline" class="hidden-input" accept=".kmz, .kml">
 
-            <button class="btn-block btn-purple" id="btn-iniciar" style="opacity:0.5;" disabled>⚡ INICIAR SISTEMA DE CAMPO</button>
+            <button class="btn-block btn-purple" id="btn-iniciar" style="opacity:0.5;" disabled>⚡ ATIVAR RADAR OPERACIONAL</button>
         </div>
     </div>
 
-    <!-- TELA 1: Radar Ativo por Proximidade -->
+    <!-- TELA 1: Radar Dinâmico -->
     <div id="screen-radar" class="app-screen">
         <div id="container-cards-mobile"></div>
     </div>
 
-    <!-- TELA 2: Banco de Dados Geral HTML Completo -->
+    <!-- TELA 2: Visualizador Geral de Dados -->
     <div id="screen-data" class="app-screen">
-        <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--secondary);">📊 CONSULTA DE REGISTROS CONSOLIDADOS</h2>
+        <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--secondary);">📊 RELATÓRIO DO BANCO DE DADOS LOCAL</h2>
         <div class="table-container">
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>ID NOX</th>
                         <th>REGIONAL</th>
-                        <th>LOCALIZAÇÃO</th>
-                        <th>INSPEÇÃO</th>
-                        <th>ANOTAÇÃO</th>
+                        <th>PROXIMIDADE</th>
+                        <th>STATUS</th>
+                        <th>OBSERVAÇÃO</th>
                     </tr>
                 </thead>
-                <tbody id="tbody-relatorio">
-                    <!-- Linhas injetadas via JavaScript -->
-                </tbody>
+                <tbody id="tbody-relatorio"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- TELA 3: Galeria de Fotos e Evidências -->
+    <!-- TELA 3: Histórico Fotográfico com Marca d'Água -->
     <div id="screen-gallery" class="app-screen">
-        <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--secondary);">🖼️ PAINEL CRONOLÓGICO DE FOTOS</h2>
-        <div class="gallery-grid" id="grid-galeria">
-            <!-- Fotos injetadas via JavaScript -->
-        </div>
-        <button class="btn-block btn-clear" onclick="limparBancoGeral()" style="margin-top: 30px;">⚠️ REINICIAR SISTEMA E APAGAR CACHE GERAL</button>
+        <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--secondary);">🖼️ REPOSITÓRIO DE EVIDÊNCIAS GEORREFERENCIADAS</h2>
+        <div class="gallery-grid" id="grid-galeria"></div>
+        <button class="btn-block btn-clear" onclick="limparBancoGeral()" style="margin-top: 30px;">⚠️ REINICIAR E ZERAR CACHE DO SMARTPHONE</button>
     </div>
 
 </div>
 
-<!-- Menu de Navegação Inferior (Estilo Aplicativo Mobile) -->
+<!-- Menu Principal de Abas -->
 <nav class="bottom-nav" id="app-navigation" style="display: none;">
     <button class="nav-btn active" onclick="alternarTela('screen-radar', this)">
         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
@@ -227,7 +265,7 @@
     </button>
     <button class="nav-btn" onclick="alternarTela('screen-gallery', this)">
         <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-        FOTOS ({N})
+        FOTOS HUD
     </button>
 </nav>
 
@@ -236,17 +274,18 @@
     let dadosSNV = null;
     let arquivoOnline = null;
     let arquivoOffline = null;
-    
     let pontosOnline = [];
     let pontosOffline = [];
     let checklistFinal = [];
     
-    let userLat = null;
-    let userLng = null;
+    let userLat = 0;
+    let userLng = 0;
     let gpsWatchId = null;
+    let localStream = null;
+    let idxPosteAlvoCamera = null;
 
-    // Inicializa Banco de Dados Local (IndexedDB)
-    const request = indexedDB.open("GeoFlexDB_v13", 1);
+    // Inicialização IndexedDB
+    const request = indexedDB.open("GeoFlexDB_v14", 1);
     request.onupgradeneeded = (e) => {
         let database = e.target.result;
         database.createObjectStore("arquivos");
@@ -258,12 +297,12 @@
         verificarCacheExistente();
     };
 
-    // Listeners de upload nativo
+    // Upload Handlers
     document.getElementById('f-snv').addEventListener('change', async (e) => {
         if(e.target.files[0]) {
             dadosSNV = await e.target.files[0].arrayBuffer();
             salvarNoBanco("arquivos", "snv", dadosSNV);
-            marcarProntoVisual("box-snv", "SNV Configurado");
+            marcarProntoVisual("box-snv", "SNV Carregado");
             verificarProntidao();
         }
     });
@@ -271,7 +310,7 @@
         if(e.target.files[0]) {
             arquivoOnline = await e.target.files[0].arrayBuffer();
             salvarNoBanco("arquivos", "online", arquivoOnline);
-            marcarProntoVisual("box-online", "KMZ Online Configurado");
+            marcarProntoVisual("box-online", "KMZ Online Sincronizado");
             verificarProntidao();
         }
     });
@@ -279,7 +318,7 @@
         if(e.target.files[0]) {
             arquivoOffline = await e.target.files[0].arrayBuffer();
             salvarNoBanco("arquivos", "offline", arquivoOffline);
-            marcarProntoVisual("box-offline", "KMZ Offline Configurado");
+            marcarProntoVisual("box-offline", "KMZ Offline Sincronizado");
             verificarProntidao();
         }
     });
@@ -290,14 +329,12 @@
     }
 
     function salvarConfigRegiao() {
-        let val = document.getElementById('lote-operacao').value;
-        salvarNoBanco("config", "regiao", val);
+        salvarNoBanco("config", "regiao", document.getElementById('lote-operacao').value);
     }
 
     function marcarProntoVisual(id, msg) {
         const box = document.getElementById(id);
-        box.classList.add('loaded');
-        box.innerText = "✔️ " + msg;
+        box.classList.add('loaded'); box.innerText = "✔️ " + msg;
     }
 
     async function verificarCacheExistente() {
@@ -308,25 +345,19 @@
         let reqRegiao = tx.objectStore("config").get("regiao");
 
         setTimeout(() => {
-            if(reqSnv.result) { dadosSNV = reqSnv.result; marcarProntoVisual("box-snv", "SNV Carregado do Celular"); }
-            if(reqOn.result) { arquivoOnline = reqOn.result; marcarProntoVisual("box-online", "KMZ Online Carregado"); }
-            if(reqOff.result) { arquivoOffline = reqOff.result; marcarProntoVisual("box-offline", "KMZ Offline Carregado"); }
+            if(reqSnv.result) { dadosSNV = reqSnv.result; marcarProntoVisual("box-snv", "SNV Ativo no Sistema"); }
+            if(reqOn.result) { arquivoOnline = reqOn.result; marcarProntoVisual("box-online", "KMZ Online Ativo"); }
+            if(reqOff.result) { arquivoOffline = reqOff.result; marcarProntoVisual("box-offline", "KMZ Offline Ativo"); }
             if(reqRegiao.result) document.getElementById('lote-operacao').value = reqRegiao.result;
-
-            if(dadosSNV && (arquivoOnline || arquivoOffline)) {
-                document.getElementById('status-cache').innerHTML = "🟢 Banco de dados pronto para o campo!";
-                verificarProntidao();
-            } else {
-                document.getElementById('status-cache').innerHTML = "ℹ️ Insira as planilhas/KMLs de base para ativar o sistema.";
-            }
+            if(dadosSNV && (arquivoOnline || arquivoOffline)) verificarProntidao();
         }, 200);
     }
 
     function verificarProntidao() {
         if (dadosSNV && (arquivoOnline || arquivoOffline)) {
             const btn = document.getElementById('btn-iniciar');
-            btn.disabled = false;
-            btn.style.opacity = "1";
+            btn.disabled = false; btn.style.opacity = "1";
+            document.getElementById('status-cache').innerHTML = "🟢 Sistema Pronto para Reconhecimento de Campo!";
         }
     }
 
@@ -345,26 +376,22 @@
         const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {raw: false});
         dadosSNV = json.map(r => {
             const n = {};
-            for (let k in r) n[k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()] = r[k];
+            for (let k in r) n[k.toLowerCase().normalize("NFD").replace(/[\u0300._-]/g, "").trim()] = r[k];
             return n;
         });
-
         if(arquivoOnline) pontosOnline = await extrairKML(arquivoOnline);
         if(arquivoOffline) pontosOffline = await extrairKML(arquivoOffline);
     }
 
     function extrairKML(buffer) {
         return new Promise((resolve) => {
-            const view = new DataView(buffer);
-            if(view.byteLength >= 4 && view.getUint32(0) === 0x504B0304) {
+            if(new DataView(buffer).getUint32(0) === 0x504B0304) {
                 JSZip.loadAsync(buffer).then(async zip => {
                     const kmlKey = Object.keys(zip.files).find(n => n.endsWith('.kml'));
-                    const txt = await zip.file(kmlKey).async("string");
-                    resolve(parsearStringKML(txt));
+                    resolve(parsearStringKML(await zip.file(kmlKey).async("string")));
                 });
             } else {
-                const txt = new TextDecoder("utf-8").decode(buffer);
-                resolve(parsearStringKML(txt));
+                resolve(parsearStringKML(new TextDecoder("utf-8").decode(buffer)));
             }
         });
     }
@@ -375,7 +402,7 @@
         let arr = [];
         for(let i=0; i<placemarks.length; i++) {
             const pm = placemarks[i];
-            const name = pm.getElementsByTagName("name")[0]?.textContent.trim() || `Luminaria_${i+1}`;
+            const name = pm.getElementsByTagName("name")[0]?.textContent.trim() || `Ponto_${i+1}`;
             const coord = pm.getElementsByTagName("coordinates")[0]?.textContent.trim();
             if(coord) {
                 const p = coord.split(/[\s,]+/);
@@ -388,7 +415,6 @@
     function generarMatrizMobile() {
         const filtroLote = document.getElementById('lote-operacao').value;
         let mapaGeral = new Map();
-        
         pontosOnline.forEach(p => mapaGeral.set(p.name, { ...p, origem: 'Online' }));
         pontosOffline.forEach(p => {
             if(mapaGeral.has(p.name)) mapaGeral.get(p.name).origem = 'Ambos';
@@ -401,8 +427,7 @@
         const sKm = chaves.find(k => k.includes('km'));
 
         checklistFinal = [];
-        let tx = db.transaction("progresso", "readonly");
-        let store = tx.objectStore("progresso");
+        let tx = db.transaction("progresso", "readonly").objectStore("progresso");
 
         mapaGeral.forEach((p) => {
             let ufCalculada = p.lng > -44.8396 ? "RJ" : "SP";
@@ -420,15 +445,13 @@
 
             if(mRow) {
                 let kmBruto = parseFloat(String(mRow[sKm]).replace('KM','').replace('km','').replace(',','.').trim()) || 0;
-                
                 let itemObj = {
                     idNox: p.name, lat: p.lat, lng: p.lng,
                     km: Math.floor(kmBruto), metros: Math.round((kmBruto - Math.floor(kmBruto)) * 1000),
-                    uf: ufCalculada, origem: p.origem,
-                    statusVistoria: "", obs: "", foto: "", distanciaDoUsuario: Infinity
+                    uf: ufCalculada, origem: p.origem, statusVistoria: "", obs: "", foto: "", distanciaDoUsuario: Infinity
                 };
 
-                let reqFato = store.get(p.name);
+                let reqFato = tx.get(p.name);
                 reqFato.onsuccess = () => {
                     if(reqFato.result) {
                         itemObj.statusVistoria = reqFato.result.statusVistoria || "";
@@ -443,50 +466,48 @@
         setTimeout(() => { reordenarERenderizarLista(); }, 300);
     }
 
-    function calcularDistanciaMetros(lat1, lon1, lat2, lon2) {
-        const R = 6371e3;
-        const phi1 = lat1 * Math.PI/180; const phi2 = lat2 * Math.PI/180;
-        const deltaPhi = (lat2-lat1) * Math.PI/180; const deltaLambda = (lon2-lon1) * Math.PI/180;
-        const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
-        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
-    }
-
-    function activarRastreamentoGPS() {
+    function ativarRastreamentoGPS() {
         if ("geolocation" in navigator) {
             gpsWatchId = navigator.geolocation.watchPosition((pos) => {
                 userLat = pos.coords.latitude; userLng = pos.coords.longitude;
-                const gBar = document.getElementById('node-gps-status');
-                gBar.className = "gps-status-bar active";
-                gBar.innerHTML = `<span>🟢 GPS Conectado (Precisão: ${Math.round(pos.coords.accuracy)}m)</span><span>${userLat.toFixed(4)}, ${userLng.toFixed(4)}</span>`;
+                document.getElementById('node-gps-status').className = "gps-status-bar active";
+                document.getElementById('node-gps-status').innerHTML = `<span>🟢 GPS Ativo (Precisão: ${Math.round(pos.coords.accuracy)}m)</span><span>${userLat.toFixed(5)}, ${userLng.toFixed(5)}</span>`;
                 reordenarERenderizarLista();
-            }, null, { enableHighAccuracy: true, maximumAge: 1000 });
+                atualizarLiveHUDVisor();
+            }, null, { enableHighAccuracy: true });
         }
     }
 
     function reordenarERenderizarLista() {
-        if(userLat !== null && userLng !== null) {
-            checklistFinal.forEach(item => {
-                item.distanciaDoUsuario = calcularDistanciaMetros(userLat, userLng, item.lat, item.lng);
-            });
-            checklistFinal.sort((a, b) => {
-                if (a.statusVistoria !== "" && b.statusVistoria === "") return 1;
-                if (a.statusVistoria === "" && b.statusVistoria !== "") return -1;
-                return a.distanciaDoUsuario - b.distanciaDoUsuario;
-            });
-        }
+        checklistFinal.forEach(item => {
+            // Haversine simplificado para ordenação rápida em campo
+            const R = 6371e3;
+            const p1 = userLat * Math.PI/180; const p2 = item.lat * Math.PI/180;
+            const dp = (item.lat-userLat) * Math.PI/180; const dl = (item.lng-userLng) * Math.PI/180;
+            const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+            item.distanciaDoUsuario = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+        });
+
+        checklistFinal.sort((a, b) => {
+            if (a.statusVistoria !== "" && b.statusVistoria === "") return 1;
+            if (a.statusVistoria === "" && b.statusVistoria !== "") return -1;
+            return a.distanciaDoUsuario - b.distanciaDoUsuario;
+        });
+
         renderizarCardsCelular();
         sincronizarTelasInternas();
     }
 
     function renderizarCardsCelular() {
+        const containerCards = document.getElementById('container-cards-mobile');
         containerCards.innerHTML = "";
-        // Renderiza apenas os 12 mais próximos no radar para manter performance lisa no smartphone
-        checklistFinal.slice(0, 12).forEach((item, idx) => {
+        
+        // Renderiza apenas os 8 primeiros no radar ativo para velocidade total do app no sol
+        checklistFinal.slice(0, 8).forEach((item, idx) => {
             const card = document.createElement('div');
-            card.id = `card-${idx}`;
             card.className = `card-inspecao ${item.statusVistoria === 'OK' ? 'status-ok' : (item.statusVistoria === 'Apagado' ? 'status-apagado' : (item.statusVistoria === 'Não Localizado' ? 'status-nao-localizado' : ''))}`;
             
-            let txtRadar = item.distanciaDoUsuario === Infinity ? "Aguardando GPS..." : `🎯 A ${Math.round(item.distanciaDoUsuario)} metros de você`;
+            let txtRadar = `🎯 A ${Math.round(item.distanciaDoUsuario)} metros de você`;
 
             card.innerHTML = `
                 <div class="radar-distance-badge">📡 ${txtRadar}</div>
@@ -498,21 +519,92 @@
                     <button class="btn-mobile-action ${item.statusVistoria==='OK'?'active-ok':''}" onclick="atribuirStatus('${item.idNox}', 'OK')">✔️ OK</button>
                     <button class="btn-mobile-action ${item.statusVistoria==='Apagado'?'active-apagado':''}" onclick="atribuirStatus('${item.idNox}', 'Apagado')">❌ Apagado</button>
                 </div>
-                <div class="btn-nl-container">
-                    <button class="btn-mobile-action ${item.statusVistoria==='Não Localizado'?'active-nl':''}" onclick="atribuirStatus('${item.idNox}', 'Não Localizado')">🔍 Não Localizado</button>
-                </div>
-                <input type="file" id="cam-${idx}" class="hidden-input" accept="image/*" capture="environment" onchange="capturarFoto('${item.idNox}', ${idx}, this)">
-                <button class="btn-camera-mobile ${item.foto ? 'has-photo' : ''}" onclick="document.getElementById('cam-${idx}').click()">
-                    📷 ${item.foto ? 'Foto Vinculada ✔️' : 'Abrir Câmera do Celular'}
+                <button class="btn-camera-hud-trigger ${item.foto ? 'has-photo' : ''}" onclick="abrirModoCameraHUD('${item.idNox}')">
+                    📷 ${item.foto ? 'Foto Gravada (Mudar Foto)' : 'Tirar Foto Georreferenciada'}
                 </button>
-                <div class="photo-preview-container" id="preview-box-${idx}" style="display: ${item.foto ? 'block' : 'none'};">
-                    <img src="${item.foto}" class="photo-preview" id="img-preview-${idx}">
+                <div class="photo-preview-container" style="display: ${item.foto ? 'block' : 'none'};">
+                    <img src="${item.foto}" class="photo-preview">
                 </div>
-                <textarea class="text-obs-mobile" placeholder="Observações de campo..." rows="2" oninput="mudarObs('${item.idNox}', this.value)">${item.obs}</textarea>
+                <textarea class="text-obs-mobile" placeholder="Notas complementares..." rows="2" oninput="mudarObs('${item.idNox}', this.value)">${item.obs}</textarea>
             `;
             containerCards.appendChild(card);
         });
     }
+
+    // SISTEMA DE CÂMERA INTEGRADA COM ESTAMPAGEM GRÁFICA (HUD NATIVO)
+    window.abrirModoCameraHUD = function(idNox) {
+        idxPosteAlvoCamera = idNox;
+        atualizarLiveHUDVisor();
+        document.getElementById('camera-modal-overlay').style.display = 'flex';
+        
+        // Força a ativação da câmera traseira do smartphone
+        navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { exact: "environment" } },
+            audio: false
+        }).then(stream => {
+            localStream = stream;
+            document.getElementById('video-preview-stream').srcObject = stream;
+        }).catch(err => {
+            // Fallback para qualquer câmera disponível se falhar a traseira exata
+            navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+                localStream = stream;
+                document.getElementById('video-preview-stream').srcObject = stream;
+            });
+        });
+    };
+
+    function atualizarLiveHUDVisor() {
+        if(document.getElementById('camera-modal-overlay').style.display === 'flex' && idxPosteAlvoCamera) {
+            let ref = checklistFinal.find(i => i.idNox === idxPosteAlvoCamera);
+            document.getElementById('hud-id').innerText = ref.idNox;
+            document.getElementById('hud-km').innerText = `KM ${ref.km} + ${ref.metros}m (${ref.uf})`;
+            document.getElementById('hud-lat').innerText = userLat.toFixed(6);
+            document.getElementById('hud-lng').innerText = userLng.toFixed(6);
+            document.getElementById('hud-timestamp').innerText = new Date().toLocaleString('pt-BR');
+        }
+    }
+
+    window.executarDisparoFotografico = function() {
+        const video = document.getElementById('video-preview-stream');
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024; // Resolução otimizada para o banco de dados
+        canvas.height = 768;
+        
+        const ctx = canvas.getContext('2d');
+        // Desenha o frame atual da câmera no canvas plano
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Configura a caixa preta da estampa no rodapé da imagem
+        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.fillRect(0, canvas.height - 150, canvas.width, 150);
+        
+        // Escreve os metadados geográficos físicos diretamente nos pixels da imagem
+        ctx.fillStyle = "#38bdf8";
+        ctx.font = "bold 22px monospace";
+        
+        let ref = checklistFinal.find(i => i.idNox === idxPosteAlvoCamera);
+        let dataHoraStr = new Date().toLocaleString('pt-BR');
+        
+        ctx.fillText(`ID POSTE: ${ref.idNox} | LOCALIZAÇÃO: KM ${ref.km} + ${ref.metros}m [${ref.uf}]`, 30, canvas.height - 105);
+        ctx.fillText(`COORDENADAS: LAT ${userLat.toFixed(6)} / LNG ${userLng.toFixed(6)}`, 30, canvas.height - 65);
+        ctx.fillText(`DATA/HORA SINC: ${dataHoraStr} | SISTEMA DE CAMPO GEOFLEX v14`, 30, canvas.height - 25);
+        
+        const base64MarcadAgua = canvas.toDataURL('image/jpeg', 0.7);
+        
+        // Salva a foto carimbada diretamente na estrutura
+        ref.foto = base64MarcadAgua;
+        salvarProgressoItem(ref);
+        
+        fecharJanelaCamera();
+        reordenarERenderizarLista();
+    };
+
+    window.fecharJanelaCamera = function() {
+        document.getElementById('camera-modal-overlay').style.display = 'none';
+        if(localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+        }
+    };
 
     window.atribuirStatus = function(idNox, status) {
         let ref = checklistFinal.find(i => i.idNox === idNox);
@@ -525,40 +617,17 @@
         if(ref) { ref.obs = valor; salvarProgressoItem(ref); }
     };
 
-    window.capturarFoto = function(idNox, idx, input) {
-        if(input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image(); img.src = e.target.result;
-                img.onload = function() {
-                    const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
-                    let w = img.width; let h = img.height;
-                    if (w > 800) { h *= 800 / w; w = 800; }
-                    canvas.width = w; canvas.height = h; ctx.drawImage(img, 0, 0, w, h);
-                    
-                    const compressed = canvas.toDataURL('image/jpeg', 0.6);
-                    let ref = checklistFinal.find(i => i.idNox === idNox);
-                    if(ref) { ref.foto = compressed; salvarProgressoItem(ref); }
-                    reordenarERenderizarLista();
-                };
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
-    };
-
     function salvarProgressoItem(item) {
         salvarNoBanco("progresso", item.idNox, { statusVistoria: item.statusVistoria, obs: item.obs, foto: item.foto });
     }
 
-    // Sincroniza as Telas Internas (Tabela de Dados e Galeria de Fotos) Dinamicamente
     function sincronizarTelasInternas() {
-        // 1. Atualiza Contador Superior
         const total = checklistFinal.length;
         const respondidos = checklistFinal.filter(i => i.statusVistoria !== "").length;
         document.getElementById('txt-contador').innerText = `${respondidos} / ${total}`;
         document.getElementById('bar-progresso').style.width = `${total > 0 ? (respondidos / total) * 100 : 0}%`;
 
-        // 2. Monta a Tabela de Banco de Dados Interna
+        // Tabela de Dados Atualizada
         const tbody = document.getElementById('tbody-relatorio');
         tbody.innerHTML = "";
         checklistFinal.forEach(i => {
@@ -567,52 +636,45 @@
             tr.innerHTML = `
                 <td style="font-weight:bold; color:white;">${i.idNox}</td>
                 <td>${i.uf}</td>
-                <td>KM ${i.km} + ${i.metros}m</td>
+                <td>KM ${i.km}</td>
                 <td><span class="badge-status-table ${classeBadge}">${i.statusVistoria || "Pendente"}</span></td>
-                <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis;">${i.obs || "-"}</td>
+                <td>${i.obs || "-"}</td>
             `;
             tbody.appendChild(tr);
         });
 
-        // 3. Monta a Galeria de Fotos Interna
+        // Galeria de Fotos HUD Atualizada
         const gridGaleria = document.getElementById('grid-galeria');
         gridGaleria.innerHTML = "";
-        let totalFotos = 0;
+        let nFotos = 0;
         checklistFinal.forEach(i => {
             if(i.foto) {
-                totalFotos++;
+                nFotos++;
                 const item = document.createElement('div');
                 item.className = "gallery-item";
-                item.innerHTML = `
-                    <img src="${i.foto}">
-                    <div>${i.idNox} (${i.statusVistoria})</div>
-                `;
+                item.innerHTML = `<img src="${i.foto}"><div style="font-size:11px; margin-top:4px;">${i.idNox}</div>`;
                 gridGaleria.appendChild(item);
             }
         });
         
-        // Atualiza o texto do menu inferior com o número de fotos
         document.getElementById('app-navigation').children[2].innerHTML = `
             <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-            FOTOS (${totalFotos})
+            FOTOS HUD (${nFotos})
         `;
     }
 
-    // Gerenciador de Abas do Aplicativo
     window.alternarTela = function(screenId, btnElemento) {
         document.querySelectorAll('.app-screen').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        
         document.getElementById(screenId).classList.add('active');
         btnElemento.classList.add('active');
-        window.scrollTo(0,0);
     };
 
     function limparBancoGeral() {
-        if(confirm("Deseja deletar permanentemente todas as fotos e registros do sistema local?")) {
-            let tx1 = db.transaction("arquivos", "readwrite").objectStore("arquivos").clear();
-            let tx2 = db.transaction("progresso", "readwrite").objectStore("progresso").clear();
-            tx1.onsuccess = () => { window.location.reload(); };
+        if(confirm("Confirmar a exclusão permanente dos dados de campo do aparelho?")) {
+            db.transaction("arquivos", "readwrite").objectStore("arquivos").clear();
+            db.transaction("progresso", "readwrite").objectStore("progresso").clear();
+            window.location.reload();
         }
     }
 </script>
