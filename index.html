@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>GEOFLEX OpsCore v17.5 - Print Optimizer</title>
+    <title>GEOFLEX OpsCore v18.2 - KM Order Switcher</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
@@ -15,24 +15,22 @@
             --card-bg: #1e293b;
             --success: #22c55e;
             --danger: #ef4444;
-            --warning: #eab308;
             --text-main: #f8fafc;
         }
         
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         
         body {
             font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg); color: var(--text-main);
-            overflow-x: hidden; padding-bottom: 110px;
+            padding-bottom: 110px;
         }
 
         /* Topbar */
         .sticky-progress {
             position: sticky; top: 0; z-index: 100;
             background: #000000; color: white;
-            padding: 14px; box-shadow: 0 6px 25px rgba(0,0,0,0.6);
-            border-bottom: 3px solid #334155;
+            padding: 14px; border-bottom: 3px solid #334155;
         }
         .progress-info { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 900; margin-bottom: 6px; }
         .progress-bar-bg { background: #334155; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
@@ -40,38 +38,29 @@
         
         .user-km-box {
             background: linear-gradient(90deg, #1e3a8a, #0f172a); border: 2px solid var(--secondary);
-            padding: 10px; border-radius: 10px; text-align: center; font-size: 18px; font-weight: 900;
-            color: #ffffff; letter-spacing: 0.5px; margin-bottom: 6px; box-shadow: inset 0 0 10px rgba(56,189,248,0.3);
+            padding: 10px; border-radius: 10px; text-align: center; font-size: 18px; font-weight: 900; color: #ffffff;
         }
 
-        .gps-status-bar {
-            background: #111827; padding: 8px 12px; font-size: 12px; font-weight: bold;
-            display: flex; justify-content: space-between; align-items: center; border-radius: 8px;
-            border: 1px solid #334155;
-        }
-        .gps-status-bar.active { background: #022c22; color: #34d399; border-color: #059669; }
-
-        /* Navegação Touch Inferior */
+        /* Navegação */
         .bottom-nav {
             position: fixed; bottom: 0; left: 0; right: 0; height: 85px;
             background: #000000; border-top: 3px solid #334155;
-            display: flex; justify-content: space-around; align-items: center;
-            z-index: 1000; padding-bottom: env(safe-area-inset-bottom);
+            display: flex; justify-content: space-around; align-items: center; z-index: 1000;
         }
         .nav-btn {
             background: transparent; border: none; color: #64748b;
             font-size: 12px; font-weight: bold; display: flex; flex-direction: column;
-            align-items: center; gap: 6px; cursor: pointer; width: 33%; height: 100%; justify-content: center;
+            align-items: center; gap: 6px; cursor: pointer; width: 50%; height: 100%; justify-content: center;
         }
         .nav-btn svg { width: 26px; height: 26px; fill: currentColor; }
         .nav-btn.active { color: var(--secondary); background: rgba(56, 189, 248, 0.06); }
 
-        .main-container { width: 100vw; padding: 14px; }
+        .main-container { padding: 14px; }
         .app-screen { display: none; }
         .app-screen.active { display: block; }
 
-        /* Configurações Iniciais */
-        .panel-import { background: var(--card-bg); padding: 18px; border-radius: 16px; margin-bottom: 20px; border: 1px solid #334155; }
+        /* Painel Config */
+        .panel-import { background: var(--card-bg); padding: 18px; border-radius: 16px; border: 1px solid #334155; }
         .panel-import h3 { font-size: 15px; color: var(--secondary); margin-bottom: 12px; text-transform: uppercase; }
         
         .file-box {
@@ -85,105 +74,84 @@
             background: #0f172a; font-size: 16px; font-weight: bold; color: white; margin-bottom: 16px;
         }
 
-        /* Cards Otimizados */
+        /* Container de Filtros Avançados */
+        .filter-checkbox-container {
+            background: #0f172a; border: 1px solid #334155; padding: 14px; border-radius: 12px; margin-bottom: 20px;
+        }
+        .filter-label {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 12px; color: #f8fafc; font-size: 14px; font-weight: bold; cursor: pointer;
+        }
+        .filter-label:last-child { margin-bottom: 0; }
+        .filter-label input[type="checkbox"] {
+            width: 20px; height: 20px; accent-color: var(--secondary); cursor: pointer;
+        }
+
+        /* Cards Mobile */
         .card-inspecao {
-            background: var(--card-bg); border-radius: 20px; padding: 18px; margin-bottom: 18px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4); border: 1px solid #334155;
+            background: var(--card-bg); border-radius: 20px; padding: 18px; margin-bottom: 18px; border: 1px solid #334155;
         }
-        .card-inspecao.status-ok { border: 2px solid var(--success); background: linear-gradient(145deg, #1e293b, #022c22); }
-        .card-inspecao.status-apagado { border: 2px solid var(--danger); background: linear-gradient(145deg, #1e293b, #451a03); }
-        
-        .radar-distance-badge {
-            background: #eab308; color: #000000; padding: 8px; border-radius: 8px;
-            font-size: 13px; font-weight: 800; text-align: center; margin-bottom: 12px;
-            display: flex; align-items: center; justify-content: center; gap: 6px; text-transform: uppercase;
-        }
-        
         .card-header-data { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .id-nox { font-size: 34px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px; }
-        
-        .badge-km-cadastrado {
-            background: #ffffff; color: #000000; padding: 6px 12px; border-radius: 8px;
-            font-size: 15px; font-weight: 900; font-family: monospace; text-align: right; line-height: 1.2;
-        }
-        .badge-km-cadastrado span { display: block; font-size: 9px; color: #475569; text-transform: uppercase; font-weight: bold; }
+        .id-nox { font-size: 34px; font-weight: 900; color: #ffffff; }
+        .badge-km-cadastrado { background: #ffffff; color: #000000; padding: 6px 12px; border-radius: 8px; font-size: 15px; font-weight: 900; }
         
         .action-trigger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
         .btn-mobile-action {
             padding: 22px 10px; border: 2px solid #475569; border-radius: 14px; background: #0f172a;
-            font-size: 18px; font-weight: 900; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+            font-size: 18px; font-weight: 900; color: white; cursor: pointer;
         }
-        .btn-mobile-action.active-ok { background: var(--success); border-color: white; color: white; box-shadow: 0 0 15px rgba(34,197,94,0.4); }
-        .btn-mobile-action.active-apagado { background: var(--danger); border-color: white; color: white; box-shadow: 0 0 15px rgba(239,68,68,0.4); }
-        
-        .btn-camera-hud-trigger {
-            width: 100%; padding: 16px; background: #d97706; color: white; border: none;
-            border-radius: 12px; font-weight: 900; font-size: 15px; margin-bottom: 10px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-        }
-        .btn-camera-hud-trigger.has-photo { background: #166534; }
-        
-        .photo-preview-container { display: none; text-align: center; margin-bottom: 10px; }
-        .photo-preview { width: 100%; max-height: 180px; object-fit: cover; border-radius: 10px; border: 2px solid #475569; }
-        .text-obs-mobile { width: 100%; padding: 12px; border: 1px solid #475569; border-radius: 10px; font-size: 14px; background: #0f172a; color: white; resize: none; }
 
         .btn-load-more {
             width: 100%; padding: 22px; background: #1e293b; color: var(--secondary);
-            border: 2px solid var(--secondary); border-radius: 16px; font-weight: 900; font-size: 16px;
-            cursor: pointer; text-align: center; margin-top: 10px; margin-bottom: 30px;
-            box-shadow: 0 4px 15px rgba(56,189,248,0.1); text-transform: uppercase;
+            border: 2px solid var(--secondary); border-radius: 16px; font-weight: 900; font-size: 16px; cursor: pointer;
         }
 
         /* Tabelas */
-        .table-container { width: 100%; overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 1px solid #334155; }
+        .table-container { width: 100%; background: var(--card-bg); border-radius: 12px; border: 1px solid #334155; }
         .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
         .data-table th { background: #000; color: var(--secondary); padding: 12px; }
-        .data-table td { padding: 12px; border-bottom: 1px solid #334155; color: #cbd5e1; white-space: nowrap; }
+        .data-table td { padding: 12px; border-bottom: 1px solid #334155; color: #cbd5e1; }
         
         .btn-block { width: 100%; padding: 20px; border: none; border-radius: 16px; font-size: 17px; font-weight: 900; color: white; cursor: pointer; margin-bottom: 14px; }
         .btn-purple { background: #6366f1; }
-        .btn-emerald { background: #059669; font-size: 15px; }
-        .btn-clear { background: #ef4444; font-size: 14px; padding: 14px; }
-        .hidden-input { display: none; }
+        .btn-emerald { background: #059669; }
         .status-banco-local { background: #0f172a; padding: 14px; border-radius: 12px; text-align: center; font-size: 14px; margin-bottom: 16px; color: var(--secondary); font-weight: bold; border: 1px solid #334155; }
         #loader-global { display: none; text-align: center; padding: 20px; font-weight: bold; color: #eab308; }
 
+        /* Tags para Impressão */
+        .print-tag { font-size: 9px; font-weight: bold; padding: 1px 3px; border: 1px solid #000; border-radius: 3px; margin-left: 5px; font-family: sans-serif; }
+
         /* ==========================================
-           MOTO DE IMPRESSÃO ULTRA OTIMIZADO (PAPEL)
+           MODO DE IMPRESSÃO ULTRA COMPACTO (PAPEL)
            ========================================== */
         @media print {
-            body { background: white !important; color: black !important; padding: 0 !important; font-size: 11px !important; }
-            .sticky-progress, .bottom-nav, .btn-block, .btn-load-more, #screen-config, #app-navigation, #app-topbar, .btn-mobile-action { display: none !important; }
+            @page { margin: 0.5cm; }
+            body { background: white !important; color: black !important; padding: 0 !important; font-size: 10px !important; }
+            .sticky-progress, .bottom-nav, .btn-block, .btn-load-more, #screen-config, #app-navigation, #app-topbar, .btn-imprimir-acao { display: none !important; }
             .main-container { width: 100% !important; padding: 0 !important; margin: 0 !important; }
             .app-screen { display: none !important; }
             #screen-data { display: block !important; }
-            .table-container { background: white !important; border: none !important; overflow: visible !important; }
+            .table-container { background: white !important; border: none !important; }
             
-            /* Tabela ultra compacta para economizar papel */
             .data-table { width: 100% !important; border-collapse: collapse !important; }
-            .data-table th { background: #f2f2f2 !important; color: black !important; border: 1px solid #000 !important; padding: 4px 6px !important; font-size: 11px !important; }
-            .data-table td { color: black !important; border: 1px solid #000 !important; padding: 4px 6px !important; font-size: 12px !important; font-family: monospace !important; }
+            .data-table th { background: #e2e8f0 !important; color: black !important; border: 1px solid #000 !important; padding: 3px 5px !important; font-size: 10px !important; text-transform: uppercase; }
+            .data-table td { color: black !important; border: 1px solid #000 !important; padding: 4px 6px !important; font-size: 11px !important; font-family: monospace !important; font-weight: bold; }
         }
     </style>
 </head>
 <body>
 
-<!-- HUD Superior -->
 <div class="sticky-progress" id="app-topbar" style="display: none;">
     <div class="progress-info">
-        <span>🛰️ RADAR LIVE</span>
+        <span>🛰️ RADAR DIGITAL</span>
         <span id="txt-contador">0 / 0</span>
     </div>
-    <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="bar-progresso"></div>
-    </div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="bar-progresso"></div></div>
     <div class="user-km-box" id="user-current-km-display">📍 CALCULANDO GPS...</div>
-    <div class="gps-status-bar" id="node-gps-status"><span>📡 Buscando Satélites...</span><span id="gps-coords">-</span></div>
 </div>
 
 <div class="main-container">
     
-    <!-- Tela Inicial de Configuração -->
+    <!-- Tela de Configuração -->
     <div id="screen-config" class="app-screen active">
         <div class="status-banco-local" id="status-cache">Sincronizando armazenamento...</div>
         
@@ -195,51 +163,61 @@
                 <option value="RJ">📍 Apenas Lote RIO DE JANEIRO</option>
             </select>
 
-            <h3>2. Escolha de Base de Dados</h3>
-            <select id="modo-fonte-dados" class="select-regional-pre">
-                <option value="AMBOS">🔄 Combinar Ambas as Bases (Online + Offline)</option>
-                <option value="ONLINE">🟡 Usar APENAS Base KMZ Online</option>
-                <option value="OFFLINE">🔴 Usar APENAS Base KMZ Offline</option>
+            <h3>2. Sentido de Varredura (KM)</h3>
+            <select id="sentido-quilometragem" class="select-regional-pre">
+                <option value="ASC">⬇️ Crescente (Menor KM para o Maior)</option>
+                <option value="DESC">⬆️ Decrescente (Maior KM para o Menor)</option>
             </select>
 
-            <h3>3. Carregar Arquivos</h3>
+            <h3>3. Alvos para Listagem</h3>
+            <div class="filter-checkbox-container">
+                <label class="filter-label">
+                    <input type="checkbox" id="chk-online" checked> 💡 Online (Apagados)
+                </label>
+                <label class="filter-label">
+                    <input type="checkbox" id="chk-offline" checked> 🔌 Totalmente Offline
+                </label>
+                <label class="filter-label">
+                    <input type="checkbox" id="chk-ambos" checked> 🔄 Presente em Ambos
+                </label>
+            </div>
+
+            <h3>4. Upload de Arquivos</h3>
             <div class="file-box" onclick="document.getElementById('f-snv').click()" id="box-snv">📁 Vincular Planilha SNV (.xlsx)</div>
-            <input type="file" id="f-snv" class="hidden-input" accept=".xlsx, .xls">
+            <input type="file" id="f-snv" style="display:none;" accept=".xlsx, .xls">
 
-            <div class="file-box" onclick="document.getElementById('f-online').click()" id="box-online">🟡 Vincular KMZ Online</div>
-            <input type="file" id="f-online" class="hidden-input" accept=".kmz, .kml">
+            <div class="file-box" onclick="document.getElementById('f-online').click()" id="box-online">💡 Vincular KMZ Online</div>
+            <input type="file" id="f-online" style="display:none;" accept=".kmz, .kml">
 
-            <div class="file-box" onclick="document.getElementById('f-offline').click()" id="box-offline">🔴 Vincular KMZ Offline</div>
-            <input type="file" id="f-offline" class="hidden-input" accept=".kmz, .kml">
+            <div class="file-box" onclick="document.getElementById('f-offline').click()" id="box-offline">🔌 Vincular KMZ Offline</div>
+            <input type="file" id="f-offline" style="display:none;" accept=".kmz, .kml">
 
-            <div id="loader-global">⏳ Processando matrizes...</div>
+            <div id="loader-global">⏳ Cruzando dados geográficos...</div>
             
-            <button class="btn-block btn-purple" id="btn-iniciar" style="opacity:0.6;" disabled onclick="ativarModoAplicativo(false)">⚡ INICIAR INSPEÇÃO NO CELULAR</button>
-            
-            <!-- BOTÃO SOLICITADO: GERADOR SIMPLES E OTIMIZADO -->
-            <button class="btn-block btn-emerald" id="btn-gerar-manual" style="opacity:0.6;" disabled onclick="ativarModoAplicativo(true)">🖨️ GERAR CHECKLIST SIMPLES (IMPRIMIR)</button>
+            <button class="btn-block btn-purple" id="btn-iniciar" style="opacity:0.5;" disabled onclick="ativarModoAplicativo(false)">📱 INSPECIONAR NO CELULAR</button>
+            <button class="btn-block btn-emerald" id="btn-gerar-manual" style="opacity:0.5;" disabled onclick="ativarModoAplicativo(true)">🖨️ GERAR CHECKLIST IMPRESSO (X)</button>
         </div>
     </div>
 
-    <!-- Tela do Radar Digital -->
+    <!-- Tela do Radar (Mobile) -->
     <div id="screen-radar" class="app-screen">
         <div id="container-cards-mobile"></div>
-        <button class="btn-load-more" id="btn-carregar-mais" onclick="expandirListaPontos()">🔄 Carregar +10 Pontos</button>
+        <button class="btn-load-more" onclick="expandirListaPontos()">Carregar +10 Pontos</button>
     </div>
 
-    <!-- Tela de Visualização de Dados / Lista Otimizada para Impressão -->
+    <!-- Tela de Dados / Visualização da Impressão -->
     <div id="screen-data" class="app-screen">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;" class="btn-mobile-action">
-            <h2 style="font-size: 15px; color: var(--secondary);" id="titulo-tabela-dados">📊 LISTAGEM GERAL</h2>
-            <button onclick="window.print()" class="btn-emerald" style="padding: 10px 16px; font-size: 13px; font-weight:bold; border-radius: 8px; border:none; color:white; cursor:pointer;">🖨️ Mandar para Impressora</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;" class="btn-imprimir-acao">
+            <h2 id="titulo-relatorio-dinamico" style="font-size: 14px; color: var(--secondary);">📋 FOLHA DE CAMPO</h2>
+            <button onclick="window.print()" class="btn-emerald" style="padding: 10px 16px; font-size: 13px; font-weight:bold; border-radius: 8px; border:none; color:white; cursor:pointer;">🖨️ IMPRIMIR AGORA</button>
         </div>
         <div class="table-container">
             <table class="data-table">
                 <thead>
                     <tr id="thead-dinamico">
-                        <th>ID NOX</th>
+                        <th>ID NOX / FONTE</th>
                         <th>KM APROXIMADO</th>
-                        <th>SITUAÇÃO</th>
+                        <th style="text-align: center;">[ X ] PENDENTE / CONDIÇÃO</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-relatorio"></tbody>
@@ -247,15 +225,9 @@
         </div>
     </div>
 
-    <!-- Tela de Galeria -->
-    <div id="screen-gallery" class="app-screen">
-        <div class="gallery-grid" id="grid-galeria" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;"></div>
-        <button class="btn-block btn-clear" onclick="limparBancoGeral()" style="margin-top: 40px;">⚠️ APAGAR CACHE TOTAL</button>
-    </div>
-
 </div>
 
-<!-- Menu de Navegação Inferior -->
+<!-- Barra de Navegação App -->
 <nav class="bottom-nav" id="app-navigation" style="display: none;">
     <button class="nav-btn active" onclick="alternarTela('screen-radar', this)">
         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
@@ -263,20 +235,17 @@
     </button>
     <button class="nav-btn" onclick="alternarTela('screen-data', this)">
         <svg viewBox="0 0 24 24"><path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/></svg>
-        VER DADOS
+        VER PLANILHA
     </button>
 </nav>
 
 <script>
-    let db = null;
-    let dadosSNV = null;
+    let db = null; let dadosSNV = null;
     let arquivoOnline = null; let arquivoOffline = null;
     let pontosOnline = []; let pontosOffline = [];
-    let checklistFinal = [];
-    let limiteExibicaoPontos = 10;
+    let checklistFinal = []; let limiteExibicaoPontos = 10;
     let userLat = 0; let userLng = 0;
 
-    // Inicialização IndexedDB
     const request = indexedDB.open("GeoFlexStoreV17", 1);
     request.onupgradeneeded = (e) => {
         let database = e.target.result;
@@ -287,13 +256,13 @@
     request.onsuccess = (e) => { db = e.target.result; verificarCacheExistente(); };
 
     document.getElementById('f-snv').addEventListener('change', async (e) => {
-        if(e.target.files[0]) { dadosSNV = await e.target.files[0].arrayBuffer(); salvarNoBanco("arquivos", "snv", dadosSNV); marcarProntoVisual("box-snv", "Planilha SNV Vinculada"); verificarProntidao(); }
+        if(e.target.files[0]) { dadosSNV = await e.target.files[0].arrayBuffer(); salvarNoBanco("arquivos", "snv", dadosSNV); marcarProntoVisual("box-snv", "SNV Carregado"); verificarProntidao(); }
     });
     document.getElementById('f-online').addEventListener('change', async (e) => {
-        if(e.target.files[0]) { arquivoOnline = await e.target.files[0].arrayBuffer(); salvarNoBanco("arquivos", "online", arquivoOnline); marcarProntoVisual("box-online", "KMZ Online Vinculado"); verificarProntidao(); }
+        if(e.target.files[0]) { arquivoOnline = await e.target.files[0].arrayBuffer(); salvarNoBanco("arquivos", "online", arquivoOnline); marcarProntoVisual("box-online", "Online Carregado"); verificarProntidao(); }
     });
     document.getElementById('f-offline').addEventListener('change', async (e) => {
-        if(e.target.files[0]) { arquivoOffline = await e.target.files[0].arrayBuffer(); salvarNoBanco("arquivos", "offline", arquivoOffline); marcarProntoVisual("box-offline", "KMZ Offline Vinculado"); verificarProntidao(); }
+        if(e.target.files[0]) { arquivoOffline = await e.target.files[0].arrayBuffer(); salvarNoBanco("arquivos", "offline", arquivoOffline); marcarProntoVisual("box-offline", "Offline Carregado"); verificarProntidao(); }
     });
 
     function salvarNoBanco(storeName, key, value) { if(db) db.transaction(storeName, "readwrite").objectStore(storeName).put(value, key); }
@@ -310,8 +279,8 @@
 
         setTimeout(() => {
             if(rSnv.result) { dadosSNV = rSnv.result; marcarProntoVisual("box-snv", "SNV Ativo"); }
-            if(rOn.result) { arquivoOnline = rOn.result; marcarProntoVisual("box-online", "KMZ Online Ativo"); }
-            if(rOff.result) { arquivoOffline = rOff.result; marcarProntoVisual("box-offline", "KMZ Offline Ativo"); }
+            if(rOn.result) { arquivoOnline = rOn.result; marcarProntoVisual("box-online", "Online Ativo"); }
+            if(rOff.result) { arquivoOffline = rOff.result; marcarProntoVisual("box-offline", "Offline Ativo"); }
             if(rReg.result) document.getElementById('lote-operacao').value = rReg.result;
             verificarProntidao();
         }, 300);
@@ -320,7 +289,7 @@
     function verificarProntidao() {
         if (dadosSNV && (arquivoOnline || arquivoOffline)) {
             document.querySelectorAll('#btn-iniciar, #btn-gerar-manual').forEach(btn => { btn.disabled = false; btn.style.opacity = "1"; });
-            document.getElementById('status-cache').innerHTML = "🟢 Sistema de Filtros Online/Offline Pronto.";
+            document.getElementById('status-cache').innerHTML = "🟢 Bancos carregados e prontos.";
         }
     }
 
@@ -332,19 +301,17 @@
         setTimeout(async () => {
             await processarBases();
             gerarEstruturaDadosMatriz(modoImpressaoManual);
-            
             document.getElementById('screen-config').classList.remove('active');
             
             if(modoImpressaoManual) {
                 document.getElementById('screen-data').classList.add('active');
-                window.print(); // Executa o print direto
+                window.print();
             } else {
                 ativarRastreamentoGPS();
                 document.getElementById('screen-radar').classList.add('active');
                 document.getElementById('app-topbar').style.display = 'block';
                 document.getElementById('app-navigation').style.display = 'flex';
             }
-            window.scrollTo(0,0);
         }, 100);
     }
 
@@ -377,7 +344,7 @@
         let arr = [];
         for(let i=0; i<placemarks.length; i++) {
             const pm = placemarks[i];
-            const name = pm.getElementsByTagName("name")[0]?.textContent.trim() || `P_ ${i+1}`;
+            const name = pm.getElementsByTagName("name")[0]?.textContent.trim() || `P_${i+1}`;
             const coord = pm.getElementsByTagName("coordinates")[0]?.textContent.trim();
             if(coord) {
                 const p = coord.split(/[\s,]+/);
@@ -389,18 +356,18 @@
 
     function gerarEstruturaDadosMatriz(modoImpressaoManual = false) {
         const filtroLote = document.getElementById('lote-operacao').value;
-        const modoFonte = document.getElementById('modo-fonte-dados').value;
+        const sentidoKm = document.getElementById('sentido-quilometragem').value;
+        const fOnline = document.getElementById('chk-online').checked;
+        const fOffline = document.getElementById('chk-offline').checked;
+        const fAmbos = document.getElementById('chk-ambos').checked;
+
         let mapaGeral = new Map();
         
-        if (modoFonte === "AMBOS" || modoFonte === "ONLINE") {
-            pontosOnline.forEach(p => mapaGeral.set(p.name, { ...p, origem: 'Online' }));
-        }
-        if (modoFonte === "AMBOS" || modoFonte === "OFFLINE") {
-            pontosOffline.forEach(p => {
-                if(mapaGeral.has(p.name)) mapaGeral.get(p.name).origem = 'Ambos';
-                else mapaGeral.set(p.name, { ...p, origem: 'Offline' });
-            });
-        }
+        pontosOnline.forEach(p => mapaGeral.set(p.name, { ...p, origem: 'ONLINE' }));
+        pontosOffline.forEach(p => {
+            if(mapaGeral.has(p.name)) mapaGeral.get(p.name).origem = 'AMBOS';
+            else mapaGeral.set(p.name, { ...p, origem: 'OFFLINE' });
+        });
 
         const chaves = Object.keys(dadosSNV[0]);
         const sLat = chaves.find(k => k.includes('lat'));
@@ -408,9 +375,11 @@
         const sKm = chaves.find(k => k.includes('km'));
 
         checklistFinal = [];
-        let tx = db.transaction("progresso", "readonly").objectStore("progresso");
-
         mapaGeral.forEach((p) => {
+            if (p.origem === 'ONLINE' && !fOnline) return;
+            if (p.origem === 'OFFLINE' && !fOffline) return;
+            if (p.origem === 'AMBOS' && !fAmbos) return;
+
             let ufCalculada = p.lng > -44.8396 ? "RJ" : "SP";
             if(filtroLote !== "AMBOS" && ufCalculada !== filtroLote) return;
 
@@ -426,56 +395,38 @@
 
             if(mRow) {
                 let kmBruto = parseFloat(String(mRow[sKm]).replace('KM','').replace('km','').replace(',','.').trim()) || 0;
-                let itemObj = {
+                checklistFinal.push({
                     idNox: p.name, lat: p.lat, lng: p.lng,
                     km: Math.floor(kmBruto), metros: Math.round((kmBruto - Math.floor(kmBruto)) * 1000),
-                    uf: ufCalculada, origem: p.origem, statusVistoria: "", obs: "", foto: "", distanciaDoUsuario: Infinity
-                };
-
-                let reqFato = tx.get(p.name);
-                reqFato.onsuccess = () => {
-                    if(reqFato.result) {
-                        itemObj.statusVistoria = reqFato.result.statusVistoria || "";
-                        itemObj.obs = reqFato.result.obs || "";
-                        itemObj.foto = reqFato.result.foto || "";
-                    }
-                };
-                checklistFinal.push(itemObj);
+                    origem: p.origem, kmAbsoluto: kmBruto
+                });
             }
         });
 
-        setTimeout(() => { 
-            if(modoImpressaoManual) {
-                // Ordenação sequencial por KM rodovia para facilitar o preenchimento em papel sequencial
-                checklistFinal.sort((a,b) => (a.km + a.metros/1000) - (b.km + b.metros/1000));
-                renderizarChecklistOtimizadoPapel();
-            } else {
-                reordenarEExibirModoLive(); 
-            }
-        }, 200);
+        // 🔄 LÓGICA DE ORDENAÇÃO SELECIONÁVEL (CRESCENTE OU DECRESCENTE)
+        if(sentidoKm === "ASC") {
+            checklistFinal.sort((a, b) => a.kmAbsoluto - b.kmAbsoluto);
+            document.getElementById('titulo-relatorio-dinamico').innerText = "📋 FOLHA DE CAMPO PROGRESSIVA (CRESCENTE)";
+        } else {
+            checklistFinal.sort((a, b) => b.kmAbsoluto - a.kmAbsoluto);
+            document.getElementById('titulo-relatorio-dinamico').innerText = "📋 FOLHA DE CAMPO REGRESSIVA (DECRESCENTE)";
+        }
+
+        if(modoImpressaoManual) renderizarChecklistOtimizadoPapel();
+        else reordenarEExibirModoLive();
     }
 
-    // RENDERIZAÇÃO ULTRA SIMPLES PEDIDA: ID NOX, KM E CHECKBOX (MAIS POSTES POR PÁGINA)
     function renderizarChecklistOtimizadoPapel() {
-        document.getElementById('titulo-tabela-dados').innerText = "📝 CHECKLIST SIMPLIFICADO DE CAMPO";
-        
-        const thead = document.getElementById('thead-dinamico');
-        thead.innerHTML = `
-            <th style="width:35%;">ID NOX</th>
-            <th style="width:30%;">KM APROX.</th>
-            <th style="width:35%; text-align:center;">CONDIÇÃO</th>
-        `;
-
         const tbody = document.getElementById('tbody-relatorio');
         tbody.innerHTML = "";
         
         checklistFinal.forEach(i => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="font-weight:bold; font-size:13px; color:#000;">${i.idNox}</td>
-                <td style="font-size:12px; color:#000;">KM ${i.km} + ${i.metros}m</td>
-                <td style="text-align:center; font-size:11px; color:#000; font-weight:bold;">
-                    [ &nbsp; ] OK &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [ &nbsp; ] APAGADO
+                <td>${i.idNox} <span class="print-tag">[${i.origem}]</span></td>
+                <td>KM ${i.km} + ${i.metros}m</td>
+                <td style="text-align:center; font-family:monospace; font-size:12px;">
+                    [ &nbsp; ] OK &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [ &nbsp; ] APAGADO
                 </td>
             `;
             tbody.appendChild(tr);
@@ -486,72 +437,33 @@
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition((pos) => {
                 userLat = pos.coords.latitude; userLng = pos.coords.longitude;
-                document.getElementById('node-gps-status').className = "gps-status-bar active";
-                document.getElementById('node-gps-status').innerHTML = `<span>🟢 Sinal Ativo (±${Math.round(pos.coords.accuracy)}m)</span>`;
                 reordenarEExibirModoLive();
             }, null, { enableHighAccuracy: true });
         }
     }
 
-    function expandirListaPontos() { limiteExibicaoPontos += 10; renderizarInterfaceFiltroMobile(); }
+    function expandirListaPontos() { limiteExibicaoPontos += 10; reordenarEExibirModoLive(); }
 
     function reordenarEExibirModoLive() {
-        checklistFinal.forEach(item => {
-            if(userLat !== 0) {
-                const R = 6371e3;
-                const p1 = userLat * Math.PI/180; const p2 = item.lat * Math.PI/180;
-                const dp = (item.lat-userLat) * Math.PI/180; const dl = (item.lng-userLng) * Math.PI/180;
-                const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
-                item.distanciaDoUsuario = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-            }
-        });
-
-        checklistFinal.sort((a, b) => {
-            if (a.statusVistoria !== "" && b.statusVistoria === "") return 1;
-            if (a.statusVistoria === "" && b.statusVistoria !== "") return -1;
-            return a.distanciaDoUsuario - b.distanciaDoUsuario;
-        });
-
-        renderizarInterfaceFiltroMobile();
-        atualizarIndicadoresTopo();
-    }
-
-    function renderizarInterfaceFiltroMobile() {
+        // Exibe respeitando o sentido da listagem escolhido pelo usuário
         const container = document.getElementById('container-cards-mobile');
         container.innerHTML = "";
-        const visiveis = checklistFinal.slice(0, limiteExibicaoPontos);
-
-        visiveis.forEach((item) => {
+        
+        checklistFinal.slice(0, limiteExibicaoPontos).forEach((item) => {
             const card = document.createElement('div');
-            card.className = `card-inspecao ${item.statusVistoria === 'OK' ? 'status-ok' : (item.statusVistoria === 'Apagado' ? 'status-apagado' : '')}`;
-            let txtRadar = item.distanciaDoUsuario === Infinity ? "Localizando..." : `🎯 DISTÂNCIA: ${Math.round(item.distanciaDoUsuario)}m`;
-
+            card.className = 'card-inspecao';
             card.innerHTML = `
-                <div class="radar-distance-badge">📡 ${txtRadar} (${item.origem})</div>
                 <div class="card-header-data">
-                    <div class="id-nox">${item.idNox}</div>
+                    <div class="id-nox">${item.idNox} <small style="font-size:12px;color:var(--secondary)">(${item.origem})</small></div>
                     <div class="badge-km-cadastrado">KM ${item.km} + ${item.metros}m</div>
                 </div>
                 <div class="action-trigger-grid">
-                    <button class="btn-mobile-action ${item.statusVistoria==='OK'?'active-ok':''}" onclick="atribuirStatus '${item.idNox}', 'OK')">✔️ OK</button>
-                    <button class="btn-mobile-action ${item.statusVistoria==='Apagado'?'active-apagado':''}" onclick="atribuirStatus('${item.idNox}', 'Apagado')">❌ Apagado</button>
+                    <button class="btn-mobile-action">✔️ OK</button>
+                    <button class="btn-mobile-action">❌ Apagado</button>
                 </div>
             `;
             container.appendChild(card);
         });
-    }
-
-    window.atribuirStatus = function(idNox, status) {
-        let ref = checklistFinal.find(i => i.idNox === idNox);
-        if(ref) { ref.statusVistoria = (ref.statusVistoria === status) ? "" : status; salvarNoBanco("progresso", ref.idNox, { statusVistoria: ref.statusVistoria }); }
-        reordenarEExibirModoLive();
-    };
-
-    function atualizarIndicadoresTopo() {
-        const total = checklistFinal.length;
-        const respondidos = checklistFinal.filter(i => i.statusVistoria !== "").length;
-        document.getElementById('txt-contador').innerText = `${respondidos} / ${total}`;
-        document.getElementById('bar-progresso').style.width = `${total > 0 ? (respondidos / total) * 100 : 0}%`;
     }
 
     window.alternarTela = function(screenId, btnElemento) {
@@ -559,18 +471,7 @@
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(screenId).classList.add('active');
         btnElemento.classList.add('active');
-        if(screenId === 'screen-data') {
-            // Se abrir pela navegação digital, força a tabela digital completa de volta
-            const thead = document.getElementById('thead-dinamico');
-            thead.innerHTML = `<th>ID NOX</th><th>KM APROXIMADO</th><th>SITUAÇÃO</th>`;
-            const tbody = document.getElementById('tbody-relatorio');
-            tbody.innerHTML = "";
-            checklistFinal.forEach(i => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td><b>${i.idNox}</b></td><td>KM ${i.km} + ${i.metros}m</td><td>${i.statusVistoria || 'Pendente'}</td>`;
-                tbody.appendChild(tr);
-            });
-        }
+        if(screenId === 'screen-data') renderizarChecklistOtimizadoPapel();
     };
 </script>
 </body>
