@@ -2,217 +2,346 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GEOFLEX OpsCore v9.5 - Anti-Perda Mobile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>GEOFLEX OpsCore v13.0 - Sistema Nativo HTML</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
     <style>
         :root {
             --primary: #0f172a;
-            --secondary: #0ea5e9;
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
-            --success: #10b981;
+            --secondary: #38bdf8;
+            --bg: #090d16;
+            --card-bg: #1e293b;
+            --success: #22c55e;
             --danger: #ef4444;
             --warning: #eab308;
+            --text-main: #f8fafc;
         }
         
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
         
         body {
             font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            margin: 0; padding: 0;
-            background-color: var(--bg); color: #0f172a;
+            background-color: var(--bg); color: var(--text-main);
+            overflow-x: hidden; padding-bottom: 90px;
         }
 
-        /* Topbar fixa com Progresso */
+        /* Topbar fixa de Monitoramento */
         .sticky-progress {
             position: sticky; top: 0; z-index: 100;
-            background: var(--primary); color: white;
-            padding: 12px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: #000000; color: white;
+            padding: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            border-bottom: 2px solid #334155;
         }
-        .progress-info { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: bold; margin-bottom: 6px; }
-        .progress-bar-bg { background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden; }
-        .progress-bar-fill { background: var(--secondary); height: 100%; width: 0%; transition: width 0.3s ease; }
-
-        .main-container { padding: 16px; max-width: 600px; margin: 0 auto; }
-
-        .panel-import { background: white; padding: 16px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
-        .panel-import h3 { margin-top: 0; font-size: 16px; color: var(--primary); margin-bottom: 12px; }
+        .progress-info { display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 900; margin-bottom: 6px; }
+        .progress-bar-bg { background: #334155; height: 10px; border-radius: 5px; overflow: hidden; }
+        .progress-bar-fill { background: var(--success); height: 100%; width: 0%; transition: width 0.3s ease; }
         
+        .gps-status-bar {
+            background: #0284c7; padding: 6px 12px; font-size: 13px; font-weight: bold;
+            display: flex; justify-content: space-between; align-items: center; border-radius: 6px; margin-top: 6px;
+        }
+        .gps-status-bar.active { background: var(--success); color: white; }
+
+        /* Menu de Navegação Inferior Fixo */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 75px;
+            background: #000000; border-top: 3px solid #334155;
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 1000; padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-btn {
+            background: transparent; border: none; color: #64748b;
+            font-size: 12px; font-weight: bold; display: flex; flex-direction: column;
+            align-items: center; gap: 4px; cursor: pointer; width: 33%;
+        }
+        .nav-btn svg { width: 24px; height: 24px; fill: currentColor; }
+        .nav-btn.active { color: var(--secondary); }
+
+        /* Conteiner de Telas */
+        .main-container { width: 100vw; padding: 12px; }
+        .app-screen { display: none; }
+        .app-screen.active { display: block; }
+
+        /* Estilos da Tela Inicial de Configuração */
+        .panel-import { background: var(--card-bg); padding: 20px; border-radius: 16px; margin-bottom: 20px; border: 2px solid #334155; }
+        .panel-import h3 { font-size: 18px; color: var(--secondary); margin-bottom: 12px; text-transform: uppercase; }
         .file-box {
-            border: 2px dashed #cbd5e1; padding: 15px; text-align: center; border-radius: 8px;
-            margin-bottom: 12px; background: #fafafa; font-size: 13px; font-weight: 600; cursor: pointer;
+            border: 3px dashed #64748b; padding: 20px; text-align: center; border-radius: 12px;
+            margin-bottom: 14px; background: #0f172a; font-size: 15px; font-weight: bold; cursor: pointer; color: #cbd5e1;
         }
-
+        .file-box.loaded { border-color: var(--success); color: var(--success); background: #052e16; }
         .select-regional-pre {
-            width: 100%; padding: 14px; border: 2px solid var(--secondary); border-radius: 8px;
-            background: #f0f9ff; font-size: 14px; font-weight: 700; color: #0369a1; margin-bottom: 16px;
+            width: 100%; padding: 16px; border: 3px solid var(--secondary); border-radius: 12px;
+            background: #0f172a; font-size: 16px; font-weight: bold; color: white; margin-bottom: 20px;
         }
 
-        /* Cards do Operador */
-        .card-inspecao {
-            background: var(--card-bg); border-radius: 14px; padding: 18px; margin-bottom: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-            border: 1px solid #e2e8f0; border-left: 6px solid #cbd5e1;
-            transition: all 0.2s ease;
-        }
-        
-        .card-inspecao.status-ok { border-left-color: var(--success); background-color: #f0fdf4; }
-        .card-inspecao.status-apagado { border-left-color: var(--danger); background-color: #fef2f2; }
-        .card-inspecao.status-nao-localizado { border-left-color: #64748b; background-color: #f1f5f9; opacity: 0.8; }
-
-        .card-header-info { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-        .id-nox { font-size: 18px; font-weight: 800; color: #1e293b; }
-        .badge-km { background: #0f172a; color: white; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; font-family: monospace; }
-        .badge-uf { padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 4px; border: 1px solid #94a3b8; margin-left: 4px;}
-        .uf-sp { background: #fee2e2; color: #991b1b; }
-        .uf-rj { background: #dcfce7; color: #166534; }
-
-        .sys-info { font-size: 12px; color: #64748b; margin-bottom: 14px; }
-
-        /* Botões de Toque */
-        .action-trigger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-        
-        .btn-mobile-action {
-            padding: 14px; border: 2px solid #e2e8f0; border-radius: 10px; background: white;
-            font-size: 14px; font-weight: 700; color: #334155; cursor: pointer;
+        /* CARDS DO MODO RADAR */
+        .radar-distance-badge {
+            background: #facc15; color: #000000; padding: 8px 12px; border-radius: 8px;
+            font-size: 16px; font-weight: 900; text-align: center; margin-bottom: 12px;
             display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        
-        .btn-mobile-action.active-ok { background: var(--success); color: white; border-color: var(--success); }
-        .btn-mobile-action.active-apagado { background: var(--danger); color: white; border-color: var(--danger); }
-        .btn-mobile-action.active-nl { background: #64748b; color: white; border-color: #64748b; }
-        
-        .btn-nl-container { margin-bottom: 12px; }
-        .btn-nl-container .btn-mobile-action { width: 100%; }
-
-        .text-obs-mobile {
-            width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px;
-            font-size: 13px; font-family: inherit; resize: none; background: #f8fafc;
+        .card-inspecao {
+            background: var(--card-bg); border-radius: 18px; padding: 24px; margin-bottom: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3); border: 2px solid #334155; border-left: 12px solid #64748b;
         }
-
-        .btn-block {
-            width: 100%; padding: 15px; border: none; border-radius: 10px;
-            font-size: 15px; font-weight: 700; color: white; cursor: pointer; margin-bottom: 10px;
-        }
-        .btn-blue { background: #2563eb; }
-        .btn-purple { background: #a855f7; }
-        .btn-clear { background: #ef4444; font-size: 12px; padding: 6px; margin-top: 5px; }
+        .card-inspecao.status-ok { border-left-color: var(--success); background-color: #064e3b; border-color: var(--success); }
+        .card-inspecao.status-apagado { border-left-color: var(--danger); background-color: #7f1d1d; border-color: var(--danger); }
+        .card-inspecao.status-nao-localizado { border-left-color: #475569; background-color: #334155; opacity: 0.7; }
+        .id-nox { font-size: 30px; font-weight: 900; color: #ffffff; }
+        .badge-km { background: #ffffff; color: #000000; padding: 4px 10px; border-radius: 6px; font-size: 16px; font-weight: 900; font-family: monospace; }
         
+        .action-trigger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+        .btn-mobile-action {
+            padding: 22px 10px; border: 3px solid #475569; border-radius: 14px; background: #0f172a;
+            font-size: 20px; font-weight: 900; color: white; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-mobile-action.active-ok { background: var(--success); border-color: #ffffff; }
+        .btn-mobile-action.active-apagado { background: var(--danger); border-color: #ffffff; }
+        .btn-mobile-action.active-nl { background: #64748b; border-color: #ffffff; }
+        .btn-camera-mobile {
+            width: 100%; padding: 18px; background: #0284c7; color: white; border: 2px solid #0ea5e9;
+            border-radius: 14px; font-weight: 800; font-size: 16px; margin-bottom: 14px; cursor: pointer;
+        }
+        .btn-camera-mobile.has-photo { background: #166534; border-color: var(--success); }
+        .photo-preview-container { display: none; text-align: center; margin-bottom: 14px; }
+        .photo-preview { width: 100%; max-height: 240px; object-fit: cover; border-radius: 12px; border: 2px solid #ffffff; }
+        .text-obs-mobile { width: 100%; padding: 14px; border: 2px solid #475569; border-radius: 12px; font-size: 15px; background: #0f172a; color: white; }
+
+        /* TELA DE RELATÓRIO DO BANCO DE DADOS (HTML NATIVO) */
+        .table-container { width: 100%; overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 1px solid #334155; }
+        .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; color: #cbd5e1; }
+        .data-table th { background: #000000; color: var(--secondary); padding: 12px; font-weight: bold; border-bottom: 2px solid #334155; }
+        .data-table td { padding: 12px; border-bottom: 1px solid #334155; white-space: nowrap; }
+        .data-table tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+        .badge-status-table { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+        .bst-ok { background: #064e3b; color: #22c55e; }
+        .bst-ap { background: #7f1d1d; color: #ef4444; }
+        .bst-nl { background: #334155; color: #94a3b8; }
+
+        /* TELA DE GALERIA DE FOTOS */
+        .gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .gallery-item { background: var(--card-bg); border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center; }
+        .gallery-item img { width: 100%; height: 130px; object-fit: cover; border-radius: 6px; margin-bottom: 6px; border: 1px solid #475569; }
+        .gallery-item div { font-size: 12px; font-weight: bold; color: white; }
+
+        .btn-block { width: 100%; padding: 18px; border: none; border-radius: 14px; font-size: 16px; font-weight: 900; color: white; cursor: pointer; margin-bottom: 14px; }
+        .btn-purple { background: #7c3aed; border: 2px solid #a78bfa; }
+        .btn-clear { background: #dc2626; font-size: 14px; padding: 12px; }
         .hidden-input { display: none; }
-        .date-badge { font-size: 11px; opacity: 0.8; font-weight: normal; }
-        
-        .recovery-alert {
-            background: #fef9c3; border: 1px solid #fef08a; color: #854d0e;
-            padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold;
-            margin-bottom: 15px; display: none; text-align: center;
-        }
+        .status-banco-local { background: #1e293b; padding: 12px; border-radius: 8px; text-align: center; font-size: 14px; margin-bottom: 15px; color: var(--secondary); font-weight: bold; border: 1px solid #334155; }
     </style>
 </head>
 <body>
 
-<div class="sticky-progress">
+<div class="sticky-progress" id="app-topbar" style="display: none;">
     <div class="progress-info">
-        <span>📱 Inspeção Ops v9.5</span>
+        <span>🛰️ RADAR DE VARREDURA</span>
         <span id="txt-contador">0 / 0</span>
     </div>
     <div class="progress-bar-bg">
         <div class="progress-bar-fill" id="bar-progresso"></div>
     </div>
-    <div class="date-badge" id="lbl-data-kml">Sincronize as bases para iniciar...</div>
+    <div class="gps-status-bar" id="node-gps-status">
+        <span>📡 Conectando Satélites GPS...</span>
+        <span id="gps-coords">- / -</span>
+    </div>
 </div>
 
 <div class="main-container">
     
-    <!-- Alerta de dados salvos na memória -->
-    <div class="recovery-alert" id="alerta-memoria">
-        ℹ️ Progresso anterior recuperado do bolso! Carregue as planilhas para continuar de onde parou.
-        <button class="btn-block btn-clear" onclick="limparMemoriaLocal()">Limpar Dados Salvos (Zerar Campo)</button>
+    <!-- TELA CONFIG: Setup Inicial Único -->
+    <div id="screen-config" class="app-screen active">
+        <div class="status-banco-local" id="status-cache">🔍 Verificando banco de dados interno...</div>
+        <div class="panel-import">
+            <h3>1. Escopo Territorial</h3>
+            <select id="lote-operacao" class="select-regional-pre" onchange="salvarConfigRegiao()">
+                <option value="AMBOS">🌍 Todo o Trecho (SP + RJ)</option>
+                <option value="SP">📍 Apenas Lote SÃO PAULO</option>
+                <option value="RJ">📍 Apenas Lote RIO DE JANEIRO</option>
+            </select>
+
+            <h3>2. Sincronização Automática das Bases</h3>
+            <div class="file-box" onclick="document.getElementById('f-snv').click()" id="box-snv">📁 Carregar SNV (.xlsx)</div>
+            <input type="file" id="f-snv" class="hidden-input" accept=".xlsx, .xls">
+
+            <div class="file-box" onclick="document.getElementById('f-online').click()" id="box-online">🟡 Carregar KMZ Online</div>
+            <input type="file" id="f-online" class="hidden-input" accept=".kmz, .kml">
+
+            <div class="file-box" onclick="document.getElementById('f-offline').click()" id="box-offline">🔴 Carregar KMZ Offline</div>
+            <input type="file" id="f-offline" class="hidden-input" accept=".kmz, .kml">
+
+            <button class="btn-block btn-purple" id="btn-iniciar" style="opacity:0.5;" disabled>⚡ INICIAR SISTEMA DE CAMPO</button>
+        </div>
     </div>
 
-    <!-- Painel de Carga Inicial -->
-    <div class="panel-import" id="painel-inicial">
-        <h3>1. Escopo de Região</h3>
-        <select id="lote-operacao" class="select-regional-pre">
-            <option value="AMBOS">🌍 Executar Todo o Trecho (SP + RJ)</option>
-            <option value="SP">📍 Filtrar Somente Lote SÃO PAULO</option>
-            <option value="RJ">📍 Filtrar Somente Lote RIO DE JANEIRO</option>
-        </select>
-
-        <h3>2. Carga de Arquivos</h3>
-        <div class="file-box" onclick="document.getElementById('f-snv').click()" id="box-snv">📁 Planilha SNV (.xlsx)</div>
-        <input type="file" id="f-snv" class="hidden-input" accept=".xlsx, .xls">
-
-        <div class="file-box" onclick="document.getElementById('f-online').click()" id="box-online" style="border-color: var(--warning)">🟡 KMZ Online Apagados</div>
-        <input type="file" id="f-online" class="hidden-input" accept=".kmz, .kml">
-
-        <div class="file-box" onclick="document.getElementById('f-offline').click()" id="box-offline" style="border-color: var(--danger)">🔴 KMZ Offline Campo</div>
-        <input type="file" id="f-offline" class="hidden-input" accept=".kmz, .kml">
-
-        <button class="btn-block btn-purple" id="btn-iniciar" style="opacity:0.5;" disabled>⚡ Iniciar Roteiro Inteligente</button>
+    <!-- TELA 1: Radar Ativo por Proximidade -->
+    <div id="screen-radar" class="app-screen">
+        <div id="container-cards-mobile"></div>
     </div>
 
-    <!-- Container dos Cards Móveis -->
-    <div id="container-cards-mobile"></div>
-
-    <!-- Botão de Fechamento -->
-    <div class="floating-actions" id="painel-final" style="display: none; margin-top: 20px;">
-        <button class="btn-block btn-blue" id="btn-exportar-retorno">📥 Exportar Relatório de Campo (.xlsx)</button>
-        <button class="btn-block btn-clear" onclick="limparMemoriaLocal()" style="background:#dc2626; padding: 12px;">⚠️ Finalizar Lote e Apagar Memória Local</button>
+    <!-- TELA 2: Banco de Dados Geral HTML Completo -->
+    <div id="screen-data" class="app-screen">
+        <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--secondary);">📊 CONSULTA DE REGISTROS CONSOLIDADOS</h2>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID NOX</th>
+                        <th>REGIONAL</th>
+                        <th>LOCALIZAÇÃO</th>
+                        <th>INSPEÇÃO</th>
+                        <th>ANOTAÇÃO</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-relatorio">
+                    <!-- Linhas injetadas via JavaScript -->
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    <!-- TELA 3: Galeria de Fotos e Evidências -->
+    <div id="screen-gallery" class="app-screen">
+        <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--secondary);">🖼️ PAINEL CRONOLÓGICO DE FOTOS</h2>
+        <div class="gallery-grid" id="grid-galeria">
+            <!-- Fotos injetadas via JavaScript -->
+        </div>
+        <button class="btn-block btn-clear" onclick="limparBancoGeral()" style="margin-top: 30px;">⚠️ REINICIAR SISTEMA E APAGAR CACHE GERAL</button>
+    </div>
+
 </div>
 
+<!-- Menu de Navegação Inferior (Estilo Aplicativo Mobile) -->
+<nav class="bottom-nav" id="app-navigation" style="display: none;">
+    <button class="nav-btn active" onclick="alternarTela('screen-radar', this)">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+        RADAR LIVE
+    </button>
+    <button class="nav-btn" onclick="alternarTela('screen-data', this)">
+        <svg viewBox="0 0 24 24"><path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/></svg>
+        VER DADOS
+    </button>
+    <button class="nav-btn" onclick="alternarTela('screen-gallery', this)">
+        <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+        FOTOS ({N})
+    </button>
+</nav>
+
 <script>
-    let dadosSNV = [];
+    let db = null;
+    let dadosSNV = null;
+    let arquivoOnline = null;
+    let arquivoOffline = null;
+    
     let pontosOnline = [];
     let pontosOffline = [];
     let checklistFinal = [];
-    let dataReferencia = "";
+    
+    let userLat = null;
+    let userLng = null;
+    let gpsWatchId = null;
 
-    const fSnv = document.getElementById('f-snv');
-    const fOnline = document.getElementById('f-online');
-    const fOffline = document.getElementById('f-offline');
-    const btnIniciar = document.getElementById('btn-iniciar');
-    const containerCards = document.getElementById('container-cards-mobile');
+    // Inicializa Banco de Dados Local (IndexedDB)
+    const request = indexedDB.open("GeoFlexDB_v13", 1);
+    request.onupgradeneeded = (e) => {
+        let database = e.target.result;
+        database.createObjectStore("arquivos");
+        database.createObjectStore("progresso");
+        database.createObjectStore("config");
+    };
+    request.onsuccess = (e) => {
+        db = e.target.result;
+        verificarCacheExistente();
+    };
 
-    // Verifica se existem dados armazenados no celular para avisar o usuário
-    if(localStorage.getItem('checklist_backup_dados')) {
-        document.getElementById('alerta-memoria').style.display = 'block';
-    }
-
-    fSnv.addEventListener('change', () => { if(fSnv.files[0]) document.getElementById('box-snv').innerText = "✔️ SNV Sincronizado"; verificarProntidao(); });
-    fOnline.addEventListener('change', () => { if(fOnline.files[0]) document.getElementById('box-online').innerText = "✔️ Online Sincronizado"; verificarProntidao(); });
-    fOffline.addEventListener('change', () => { if(fOffline.files[0]) document.getElementById('box-offline').innerText = "✔️ Offline Sincronizado"; verificarProntidao(); });
-
-    function verificarProntidao() {
-        if (fSnv.files.length > 0 && (fOnline.files.length > 0 || fOffline.files.length > 0)) {
-            btnIniciar.disabled = false;
-            btnIniciar.style.opacity = "1";
+    // Listeners de upload nativo
+    document.getElementById('f-snv').addEventListener('change', async (e) => {
+        if(e.target.files[0]) {
+            dadosSNV = await e.target.files[0].arrayBuffer();
+            salvarNoBanco("arquivos", "snv", dadosSNV);
+            marcarProntoVisual("box-snv", "SNV Configurado");
+            verificarProntidao();
         }
-    }
-
-    btnIniciar.addEventListener('click', async () => {
-        let arqRef = fOffline.files[0] || fOnline.files[0];
-        if(arqRef && arqRef.lastModified) {
-            const dt = new Date(arqRef.lastModified);
-            dataReferencia = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
-        } else {
-            dataReferencia = "21/05/2026";
+    });
+    document.getElementById('f-online').addEventListener('change', async (e) => {
+        if(e.target.files[0]) {
+            arquivoOnline = await e.target.files[0].arrayBuffer();
+            salvarNoBanco("arquivos", "online", arquivoOnline);
+            marcarProntoVisual("box-online", "KMZ Online Configurado");
+            verificarProntidao();
         }
-        document.getElementById('lbl-data-kml').innerText = `📅 Status Base KMZ Criado em: ${dataReferencia}`;
-
-        await processarLeituras();
-        gerarMatrizMobile();
-        document.getElementById('painel-inicial').style.display = 'none';
-        document.getElementById('alerta-memoria').style.display = 'none';
-        document.getElementById('painel-final').style.display = 'block';
+    });
+    document.getElementById('f-offline').addEventListener('change', async (e) => {
+        if(e.target.files[0]) {
+            arquivoOffline = await e.target.files[0].arrayBuffer();
+            salvarNoBanco("arquivos", "offline", arquivoOffline);
+            marcarProntoVisual("box-offline", "KMZ Offline Configurado");
+            verificarProntidao();
+        }
     });
 
-    async function processarLeituras() {
-        const snvBuffer = await fSnv.files[0].arrayBuffer();
-        const wb = XLSX.read(snvBuffer, {type: 'array'});
+    function salvarNoBanco(storeName, key, value) {
+        let tx = db.transaction(storeName, "readwrite");
+        tx.objectStore(storeName).put(value, key);
+    }
+
+    function salvarConfigRegiao() {
+        let val = document.getElementById('lote-operacao').value;
+        salvarNoBanco("config", "regiao", val);
+    }
+
+    function marcarProntoVisual(id, msg) {
+        const box = document.getElementById(id);
+        box.classList.add('loaded');
+        box.innerText = "✔️ " + msg;
+    }
+
+    async function verificarCacheExistente() {
+        let tx = db.transaction(["arquivos", "config"], "readonly");
+        let reqSnv = tx.objectStore("arquivos").get("snv");
+        let reqOn = tx.objectStore("arquivos").get("online");
+        let reqOff = tx.objectStore("arquivos").get("offline");
+        let reqRegiao = tx.objectStore("config").get("regiao");
+
+        setTimeout(() => {
+            if(reqSnv.result) { dadosSNV = reqSnv.result; marcarProntoVisual("box-snv", "SNV Carregado do Celular"); }
+            if(reqOn.result) { arquivoOnline = reqOn.result; marcarProntoVisual("box-online", "KMZ Online Carregado"); }
+            if(reqOff.result) { arquivoOffline = reqOff.result; marcarProntoVisual("box-offline", "KMZ Offline Carregado"); }
+            if(reqRegiao.result) document.getElementById('lote-operacao').value = reqRegiao.result;
+
+            if(dadosSNV && (arquivoOnline || arquivoOffline)) {
+                document.getElementById('status-cache').innerHTML = "🟢 Banco de dados pronto para o campo!";
+                verificarProntidao();
+            } else {
+                document.getElementById('status-cache').innerHTML = "ℹ️ Insira as planilhas/KMLs de base para ativar o sistema.";
+            }
+        }, 200);
+    }
+
+    function verificarProntidao() {
+        if (dadosSNV && (arquivoOnline || arquivoOffline)) {
+            const btn = document.getElementById('btn-iniciar');
+            btn.disabled = false;
+            btn.style.opacity = "1";
+        }
+    }
+
+    document.getElementById('btn-iniciar').addEventListener('click', async () => {
+        await processarBases();
+        gerarMatrizMobile();
+        ativarRastreamentoGPS();
+        document.getElementById('screen-config').classList.remove('active');
+        document.getElementById('screen-radar').classList.add('active');
+        document.getElementById('app-topbar').style.display = 'block';
+        document.getElementById('app-navigation').style.display = 'flex';
+    });
+
+    async function processarBases() {
+        const wb = XLSX.read(dadosSNV, {type: 'array'});
         const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {raw: false});
         dadosSNV = json.map(r => {
             const n = {};
@@ -220,28 +349,23 @@
             return n;
         });
 
-        if(fOnline.files.length > 0) pontosOnline = await extrairKML(fOnline.files[0]);
-        if(fOffline.files.length > 0) pontosOffline = await extrairKML(fOffline.files[0]);
+        if(arquivoOnline) pontosOnline = await extrairKML(arquivoOnline);
+        if(arquivoOffline) pontosOffline = await extrairKML(arquivoOffline);
     }
 
-    function extrairKML(file) {
+    function extrairKML(buffer) {
         return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const buffer = e.target.result;
-                const view = new DataView(buffer);
-                if(view.byteLength >= 4 && view.getUint32(0) === 0x504B0304) {
-                    JSZip.loadAsync(buffer).then(async zip => {
-                        const kmlKey = Object.keys(zip.files).find(n => n.endsWith('.kml'));
-                        const txt = await zip.file(kmlKey).async("string");
-                        resolve(parsearStringKML(txt));
-                    });
-                } else {
-                    const txt = new TextDecoder("utf-8").decode(buffer);
+            const view = new DataView(buffer);
+            if(view.byteLength >= 4 && view.getUint32(0) === 0x504B0304) {
+                JSZip.loadAsync(buffer).then(async zip => {
+                    const kmlKey = Object.keys(zip.files).find(n => n.endsWith('.kml'));
+                    const txt = await zip.file(kmlKey).async("string");
                     resolve(parsearStringKML(txt));
-                }
-            };
-            reader.readAsArrayBuffer(file);
+                });
+            } else {
+                const txt = new TextDecoder("utf-8").decode(buffer);
+                resolve(parsearStringKML(txt));
+            }
         });
     }
 
@@ -261,8 +385,8 @@
         return arr;
     }
 
-    function gerarMatrizMobile() {
-        const filtroLote = document.getElementById('lote-operacao').value; // SP, RJ ou AMBOS
+    function generarMatrizMobile() {
+        const filtroLote = document.getElementById('lote-operacao').value;
         let mapaGeral = new Map();
         
         pontosOnline.forEach(p => mapaGeral.set(p.name, { ...p, origem: 'Online' }));
@@ -277,20 +401,12 @@
         const sKm = chaves.find(k => k.includes('km'));
 
         checklistFinal = [];
-        
-        // Tenta buscar o backup em cache
-        let cacheSalvo = null;
-        try {
-            cacheSalvo = JSON.parse(localStorage.getItem('checklist_backup_dados'));
-        } catch(e) { cacheSalvo = null; }
+        let tx = db.transaction("progresso", "readonly");
+        let store = tx.objectStore("progresso");
 
         mapaGeral.forEach((p) => {
             let ufCalculada = p.lng > -44.8396 ? "RJ" : "SP";
-            
-            // FILTRAGEM PRÉ-CARGA DE SOLICITAÇÃO
-            if(filtroLote !== "AMBOS" && ufCalculada !== filtroLote) {
-                return; // Ignora o registro fora do escopo selecionado
-            }
+            if(filtroLote !== "AMBOS" && ufCalculada !== filtroLote) return;
 
             let mDist = Infinity; let mRow = null;
             dadosSNV.forEach(s => {
@@ -305,144 +421,200 @@
             if(mRow) {
                 let kmBruto = parseFloat(String(mRow[sKm]).replace('KM','').replace('km','').replace(',','.').trim()) || 0;
                 
-                // Restaura o estado salvo na memória se encontrar o mesmo ID NOX
-                let statusResgatado = "";
-                let obsResgatada = "";
-                if(cacheSalvo && cacheSalvo[p.name]) {
-                    statusResgatado = cacheSalvo[p.name].status;
-                    obsResgatada = cacheSalvo[p.name].obs;
-                }
+                let itemObj = {
+                    idNox: p.name, lat: p.lat, lng: p.lng,
+                    km: Math.floor(kmBruto), metros: Math.round((kmBruto - Math.floor(kmBruto)) * 1000),
+                    uf: ufCalculada, origem: p.origem,
+                    statusVistoria: "", obs: "", foto: "", distanciaDoUsuario: Infinity
+                };
 
-                checklistFinal.push({
-                    idNox: p.name,
-                    km: Math.floor(kmBruto),
-                    metros: Math.round((kmBruto - Math.floor(kmBruto)) * 1000),
-                    uf: ufCalculada,
-                    origem: p.origem,
-                    statusVistoria: statusResgatado,
-                    obs: obsResgatada
-                });
+                let reqFato = store.get(p.name);
+                reqFato.onsuccess = () => {
+                    if(reqFato.result) {
+                        itemObj.statusVistoria = reqFato.result.statusVistoria || "";
+                        itemObj.obs = reqFato.result.obs || "";
+                        itemObj.foto = reqFato.result.foto || "";
+                    }
+                };
+                checklistFinal.push(itemObj);
             }
         });
 
-        checklistFinal.sort((a,b) => b.km - a.km);
+        setTimeout(() => { reordenarERenderizarLista(); }, 300);
+    }
+
+    function calcularDistanciaMetros(lat1, lon1, lat2, lon2) {
+        const R = 6371e3;
+        const phi1 = lat1 * Math.PI/180; const phi2 = lat2 * Math.PI/180;
+        const deltaPhi = (lat2-lat1) * Math.PI/180; const deltaLambda = (lon2-lon1) * Math.PI/180;
+        const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
+    }
+
+    function activarRastreamentoGPS() {
+        if ("geolocation" in navigator) {
+            gpsWatchId = navigator.geolocation.watchPosition((pos) => {
+                userLat = pos.coords.latitude; userLng = pos.coords.longitude;
+                const gBar = document.getElementById('node-gps-status');
+                gBar.className = "gps-status-bar active";
+                gBar.innerHTML = `<span>🟢 GPS Conectado (Precisão: ${Math.round(pos.coords.accuracy)}m)</span><span>${userLat.toFixed(4)}, ${userLng.toFixed(4)}</span>`;
+                reordenarERenderizarLista();
+            }, null, { enableHighAccuracy: true, maximumAge: 1000 });
+        }
+    }
+
+    function reordenarERenderizarLista() {
+        if(userLat !== null && userLng !== null) {
+            checklistFinal.forEach(item => {
+                item.distanciaDoUsuario = calcularDistanciaMetros(userLat, userLng, item.lat, item.lng);
+            });
+            checklistFinal.sort((a, b) => {
+                if (a.statusVistoria !== "" && b.statusVistoria === "") return 1;
+                if (a.statusVistoria === "" && b.statusVistoria !== "") return -1;
+                return a.distanciaDoUsuario - b.distanciaDoUsuario;
+            });
+        }
         renderizarCardsCelular();
-        recalcularProgresso();
+        sincronizarTelasInternas();
     }
 
     function renderizarCardsCelular() {
         containerCards.innerHTML = "";
-        checklistFinal.forEach((item, idx) => {
+        // Renderiza apenas os 12 mais próximos no radar para manter performance lisa no smartphone
+        checklistFinal.slice(0, 12).forEach((item, idx) => {
             const card = document.createElement('div');
             card.id = `card-${idx}`;
+            card.className = `card-inspecao ${item.statusVistoria === 'OK' ? 'status-ok' : (item.statusVistoria === 'Apagado' ? 'status-apagado' : (item.statusVistoria === 'Não Localizado' ? 'status-nao-localizado' : ''))}`;
             
-            // Aplica a cor guardada caso venha da memória cache
-            let classeStatus = "";
-            if(item.statusVistoria === 'OK') classeStatus = 'status-ok';
-            if(item.statusVistoria === 'Apagado') classeStatus = 'status-apagado';
-            if(item.statusVistoria === 'Não Localizado') classeStatus = 'status-nao-localizado';
-            
-            card.className = `card-inspecao ${classeStatus}`;
-            
-            let statusBadge = item.origem === 'Online' ? '🟡 Online Apagado' : (item.origem === 'Offline' ? '🔴 Offline Campo' : '🟣 Ambos');
+            let txtRadar = item.distanciaDoUsuario === Infinity ? "Aguardando GPS..." : `🎯 A ${Math.round(item.distanciaDoUsuario)} metros de você`;
 
             card.innerHTML = `
-                <div class="card-header-info">
+                <div class="radar-distance-badge">📡 ${txtRadar}</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <div class="id-nox">${item.idNox}</div>
-                    <div>
-                        <span class="badge-km">KM ${item.km} + ${item.metros}m</span>
-                        <span class="badge-uf ${item.uf === 'SP'?'uf-sp':'uf-rj'}">${item.uf}</span>
-                    </div>
+                    <span class="badge-km">KM ${item.km}</span>
                 </div>
-                <div class="sys-info">Sist.: <b>${statusBadge}</b></div>
-                
                 <div class="action-trigger-grid">
-                    <button class="btn-mobile-action ${item.statusVistoria==='OK'?'active-ok':''}" onclick="atribuirStatus(${idx}, 'OK', this)">✔️ OK</button>
-                    <button class="btn-mobile-action ${item.statusVistoria==='Apagado'?'active-apagado':''}" onclick="atribuirStatus(${idx}, 'Apagado', this)">❌ Apagado</button>
+                    <button class="btn-mobile-action ${item.statusVistoria==='OK'?'active-ok':''}" onclick="atribuirStatus('${item.idNox}', 'OK')">✔️ OK</button>
+                    <button class="btn-mobile-action ${item.statusVistoria==='Apagado'?'active-apagado':''}" onclick="atribuirStatus('${item.idNox}', 'Apagado')">❌ Apagado</button>
                 </div>
                 <div class="btn-nl-container">
-                    <button class="btn-mobile-action ${item.statusVistoria==='Não Localizado'?'active-nl':''}" onclick="atribuirStatus(${idx}, 'Não Localizado', this)">🔍 Não Localizado</button>
+                    <button class="btn-mobile-action ${item.statusVistoria==='Não Localizado'?'active-nl':''}" onclick="atribuirStatus('${item.idNox}', 'Não Localizado')">🔍 Não Localizado</button>
                 </div>
-
-                <textarea class="text-obs-mobile" placeholder="Alguma observação a acrescentar?" rows="2" oninput="mudarObs(${idx}, this.value)">${item.obs}</textarea>
+                <input type="file" id="cam-${idx}" class="hidden-input" accept="image/*" capture="environment" onchange="capturarFoto('${item.idNox}', ${idx}, this)">
+                <button class="btn-camera-mobile ${item.foto ? 'has-photo' : ''}" onclick="document.getElementById('cam-${idx}').click()">
+                    📷 ${item.foto ? 'Foto Vinculada ✔️' : 'Abrir Câmera do Celular'}
+                </button>
+                <div class="photo-preview-container" id="preview-box-${idx}" style="display: ${item.foto ? 'block' : 'none'};">
+                    <img src="${item.foto}" class="photo-preview" id="img-preview-${idx}">
+                </div>
+                <textarea class="text-obs-mobile" placeholder="Observações de campo..." rows="2" oninput="mudarObs('${item.idNox}', this.value)">${item.obs}</textarea>
             `;
             containerCards.appendChild(card);
         });
     }
 
-    window.atribuirStatus = function(idx, status, elementoBotao) {
-        checklistFinal[idx].statusVistoria = status;
-        
-        const card = document.getElementById(`card-${idx}`);
-        card.classList.remove('status-ok', 'status-apagado', 'status-nao-localizado');
-        
-        const botoesNoCard = card.querySelectorAll('.btn-mobile-action');
-        botoesNoCard.forEach(b => b.classList.remove('active-ok', 'active-apagado', 'active-nl'));
-
-        if(status === 'OK') { card.classList.add('status-ok'); elementoBotao.classList.add('active-ok'); } 
-        else if(status === 'Apagado') { card.classList.add('status-apagado'); elementoBotao.classList.add('active-apagado'); } 
-        else if(status === 'Não Localizado') { card.classList.add('status-nao-localizado'); elementoBotao.classList.add('active-nl'); }
-
-        gravarBackupCelular();
-        recalcularProgresso();
-
-        // Salto visual para o próximo card (foco imediato)
-        setTimeout(() => {
-            const proximoCard = document.getElementById('card-' + (idx + 1));
-            if(proximoCard) proximoCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 200);
+    window.atribuirStatus = function(idNox, status) {
+        let ref = checklistFinal.find(i => i.idNox === idNox);
+        if(ref) { ref.statusVistoria = status; salvarProgressoItem(ref); }
+        reordenarERenderizarLista();
     };
 
-    window.mudarObs = function(idx, valor) {
-        checklistFinal[idx].obs = valor;
-        gravarBackupCelular();
+    window.mudarObs = function(idNox, valor) {
+        let ref = checklistFinal.find(i => i.idNox === idNox);
+        if(ref) { ref.obs = valor; salvarProgressoItem(ref); }
     };
 
-    // Salva o estado atual no armazenamento interno do navegador do celular
-    function gravarBackupCelular() {
-        let mapaBackup = {};
-        checklistFinal.forEach(i => {
-            if(i.statusVistoria || i.obs) {
-                mapaBackup[i.idNox] = { status: i.statusVistoria, obs: i.obs };
-            }
-        });
-        localStorage.setItem('checklist_backup_dados', JSON.stringify(mapaBackup));
-    }
-
-    function limparMemoriaLocal() {
-        if(confirm("Deseja realmente zerar todos os registros salvos neste aparelho celular?")) {
-            localStorage.removeItem('checklist_backup_dados');
-            alert("Memória limpa! O aplicativo foi reiniciado.");
-            window.location.reload();
+    window.capturarFoto = function(idNox, idx, input) {
+        if(input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image(); img.src = e.target.result;
+                img.onload = function() {
+                    const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+                    let w = img.width; let h = img.height;
+                    if (w > 800) { h *= 800 / w; w = 800; }
+                    canvas.width = w; canvas.height = h; ctx.drawImage(img, 0, 0, w, h);
+                    
+                    const compressed = canvas.toDataURL('image/jpeg', 0.6);
+                    let ref = checklistFinal.find(i => i.idNox === idNox);
+                    if(ref) { ref.foto = compressed; salvarProgressoItem(ref); }
+                    reordenarERenderizarLista();
+                };
+            };
+            reader.readAsDataURL(input.files[0]);
         }
+    };
+
+    function salvarProgressoItem(item) {
+        salvarNoBanco("progresso", item.idNox, { statusVistoria: item.statusVistoria, obs: item.obs, foto: item.foto });
     }
 
-    function recalcularProgresso() {
+    // Sincroniza as Telas Internas (Tabela de Dados e Galeria de Fotos) Dinamicamente
+    function sincronizarTelasInternas() {
+        // 1. Atualiza Contador Superior
         const total = checklistFinal.length;
         const respondidos = checklistFinal.filter(i => i.statusVistoria !== "").length;
-        
         document.getElementById('txt-contador').innerText = `${respondidos} / ${total}`;
-        const pct = total > 0 ? (respondidos / total) * 100 : 0;
-        document.getElementById('bar-progresso').style.width = `${pct}%`;
+        document.getElementById('bar-progresso').style.width = `${total > 0 ? (respondidos / total) * 100 : 0}%`;
+
+        // 2. Monta a Tabela de Banco de Dados Interna
+        const tbody = document.getElementById('tbody-relatorio');
+        tbody.innerHTML = "";
+        checklistFinal.forEach(i => {
+            let classeBadge = i.statusVistoria === 'OK' ? 'bst-ok' : (i.statusVistoria === 'Apagado' ? 'bst-ap' : (i.statusVistoria === 'Não Localizado' ? 'bst-nl' : ''));
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight:bold; color:white;">${i.idNox}</td>
+                <td>${i.uf}</td>
+                <td>KM ${i.km} + ${i.metros}m</td>
+                <td><span class="badge-status-table ${classeBadge}">${i.statusVistoria || "Pendente"}</span></td>
+                <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis;">${i.obs || "-"}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // 3. Monta a Galeria de Fotos Interna
+        const gridGaleria = document.getElementById('grid-galeria');
+        gridGaleria.innerHTML = "";
+        let totalFotos = 0;
+        checklistFinal.forEach(i => {
+            if(i.foto) {
+                totalFotos++;
+                const item = document.createElement('div');
+                item.className = "gallery-item";
+                item.innerHTML = `
+                    <img src="${i.foto}">
+                    <div>${i.idNox} (${i.statusVistoria})</div>
+                `;
+                gridGaleria.appendChild(item);
+            }
+        });
+        
+        // Atualiza o texto do menu inferior com o número de fotos
+        document.getElementById('app-navigation').children[2].innerHTML = `
+            <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            FOTOS (${totalFotos})
+        `;
     }
 
-    document.getElementById('btn-exportar-retorno').addEventListener('click', () => {
-        const wb = XLSX.utils.book_new();
-        const exportDados = checklistFinal.map(i => ({
-            "ID NOX CADASTRADO": i.idNox,
-            "UF": i.uf,
-            "KM APROXIMADO": i.km,
-            "METROS RESIDUAIS": i.metros,
-            "STATUS SISTEMA ORIGEM": i.origem,
-            "DATA REFERENCIA BASE": dataReferencia,
-            "INSPEÇÃO OPERACIONAL CAMPO": i.statusVistoria || "Não Vistoriado",
-            "ANOTAÇÕES DO OPERADOR": i.obs
-        }));
+    // Gerenciador de Abas do Aplicativo
+    window.alternarTela = function(screenId, btnElemento) {
+        document.querySelectorAll('.app-screen').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         
-        const ws = XLSX.utils.json_to_sheet(exportDados);
-        XLSX.utils.book_append_sheet(wb, ws, "Resultado_Campo");
-        XLSX.writeFile(wb, `Retorno_Campo_Lote.xlsx`);
-    });
+        document.getElementById(screenId).classList.add('active');
+        btnElemento.classList.add('active');
+        window.scrollTo(0,0);
+    };
+
+    function limparBancoGeral() {
+        if(confirm("Deseja deletar permanentemente todas as fotos e registros do sistema local?")) {
+            let tx1 = db.transaction("arquivos", "readwrite").objectStore("arquivos").clear();
+            let tx2 = db.transaction("progresso", "readwrite").objectStore("progresso").clear();
+            tx1.onsuccess = () => { window.location.reload(); };
+        }
+    }
 </script>
 
 </body>
