@@ -4,7 +4,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Launcher Multi-App Unificado - Pro</title>
+    <title>Launcher Multi-App Unificado - Professional Suite</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: monospace; }
         body { display: flex; height: 100vh; background: #121212; color: #e0e0e0; overflow: hidden; }
@@ -38,11 +38,16 @@
         .delete-btn:hover { background: #551111; color: #ff6666; }
 
         /* Rodapé de Ações */
-        .action-zone { margin-top: auto; padding-top: 15px; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 8px; }
-        .main-btn { width: 100%; padding: 12px; background: #00ff66; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .action-zone { margin-top: auto; padding-top: 15px; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 6px; }
+        .main-btn { width: 100%; padding: 11px; background: #00ff66; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
         .main-btn:hover { background: #00cc55; }
-        .secondary-btn { width: 100%; padding: 8px; background: #222; color: #888; border: 1px solid #333; cursor: pointer; border-radius: 4px; font-size: 10px; text-transform: uppercase; }
-        .secondary-btn:hover { color: #fff; border-color: #555; }
+        
+        /* Grade de Botões Utilitários */
+        .util-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 2px; }
+        .util-btn { padding: 8px; background: #222; color: #ccc; border: 1px solid #343434; font-size: 10px; font-weight: bold; cursor: pointer; border-radius: 4px; text-transform: uppercase; text-align: center; }
+        .util-btn:hover { background: #2d2d2d; color: #fff; border-color: #555; }
+        .danger-btn { color: #ff5555; border-color: #552222; }
+        .danger-btn:hover { background: #3a1a1a; color: #ff7777; border-color: #773333; }
 
         /* Painel de Execução Principal */
         #content-area { flex: 1; display: flex; flex-direction: column; background: #1e1e1e; position: relative; }
@@ -58,7 +63,7 @@
             left: 15px;
             top: 15px;
             z-index: 9999;
-            background: rgba(0, 0, 0, 0.65);
+            background: rgba(0, 0, 0, 0.75);
             color: #00ff66;
             border: 1px solid #333;
             padding: 8px 12px;
@@ -88,8 +93,13 @@
         <h3>Aplicações Injetadas (<span id="appCount">0</span>)</h3>
         <ul id="systemList"></ul>
         <div class="action-zone">
-            <button class="main-btn" onclick="exportCompiledHTML()">Exportar HTML Completo com Apps</button>
-            <button class="secondary-btn" onclick="clearSystemStorage()">Limpar Memória Atual</button>
+            <button class="main-btn" onclick="exportCompiledHTML()">Exportar HTML Unificado</button>
+            <div class="util-grid">
+                <button class="util-btn" onclick="exportBackupJSON()">Criar Backup</button>
+                <button class="util-btn" onclick="document.getElementById('backupInput').click()">Fazer Upload</button>
+            </div>
+            <input type="file" id="backupInput" accept=".json" style="display: none;" onchange="importBackupJSON(event)">
+            <button class="util-btn danger-btn" onclick="clearSystemStorage()">Limpar Memória</button>
         </div>
     </div>
     <div id="content-area">
@@ -138,7 +148,6 @@
             renderList();
             setupDragAndDrop();
 
-            // Atalho físico global: Tecla ESC oculta/exibe a barra lateral
             document.addEventListener('keydown', (e) => {
                 if (e.key === "Escape" && currentActiveKey) {
                     toggleSidebar();
@@ -146,7 +155,6 @@
             });
         }
 
-        // Alterna entre modo focado (Full Screen) e exibição com menu
         function toggleSidebar() {
             sidebar.classList.toggle('hidden');
             if (sidebar.classList.contains('hidden')) {
@@ -263,7 +271,6 @@
             if (currentActiveKey === sanitizedName) loadSystem(sanitizedName);
         }
 
-        // CARREGA E ENTRA EM FULLSCREEN AUTOMÁTICO RECOLHENDO A SIDEBAR
         function loadSystem(name) {
             if (!activeUrls[name]) return;
 
@@ -278,7 +285,6 @@
             appRunner.style.display = 'block';
             appRunner.src = activeUrls[name];
 
-            // Ativa o micro botão flutuante e recolhe o menu para dar Tela Cheia total ao App
             toggleMenuBtn.style.display = 'block';
             toggleMenuBtn.textContent = "Menu ☰";
             sidebar.classList.add('hidden');
@@ -324,6 +330,66 @@
             }
         }
 
+        /* ==========================================================================
+           SISTEMA DE RETROALIMENTAÇÃO E BACKUP JSON (GARANTIA ANTI-PERDA DE DADOS)
+           ========================================================================== */
+
+        // 1. Exporta o banco de dados atual para um arquivo de texto JSON puro externo
+        function exportBackupJSON() {
+            if (Object.keys(window.SUITE_DATA).length === 0) {
+                alert("Não há dados de aplicações para exportar o backup.");
+                return;
+            }
+            const dataStr = JSON.stringify(window.SUITE_DATA, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json;charset=utf-8' });
+            
+            // Carimba o arquivo com a data e hora exata do momento do snapshot
+            const now = new Date();
+            const timestamp = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + '-' + String(now.getMinutes()).padStart(2,'0');
+            
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `backup_sistema_${timestamp}.json`;
+            a.click();
+        }
+
+        // 2. Importa o arquivo JSON externo e reconstitui o estado completo na hora
+        function importBackupJSON(event) {
+            const file = event.target.files;
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsedData = JSON.parse(e.target.result);
+                    
+                    // Validação estrutural simples do backup
+                    if (typeof parsedData !== 'object' || parsedData === null || Array.isArray(parsedData)) {
+                        throw new Error("Formato de backup inválido.");
+                    }
+
+                    if (confirm("Isso irá substituir as aplicações atuais pelas do arquivo de backup. Confirmar restauração?")) {
+                        window.SUITE_DATA = parsedData;
+                        saveAndRefresh();
+                        
+                        // Reseta a interface gráfica para o estado inicial estável com a nova lista carregada
+                        appRunner.style.display = 'none';
+                        appRunner.src = '';
+                        welcomeScreen.style.display = 'flex';
+                        toggleMenuBtn.style.display = 'none';
+                        sidebar.classList.remove('hidden');
+                        
+                        alert("Sistema restaurado com sucesso para o exato momento do backup!");
+                    }
+                } catch (err) {
+                    alert("Erro catastrófico ao ler arquivo de backup: " + err.message);
+                }
+                event.target.value = ''; // Reseta o input de arquivo
+            };
+            reader.readAsText(file);
+        }
+
+        // 3. Compilador de distribuição estática completa (Injeta os códigos em Base64 estruturado)
         function exportCompiledHTML() {
             const exportB64 = {};
             Object.keys(window.SUITE_DATA).forEach(key => {
@@ -350,8 +416,13 @@
         <h3>Aplicações Injetadas (<span id="appCount">0</span>)</h3>
         <ul id="systemList"></ul>
         <div class="action-zone">
-            <button class="main-btn" onclick="exportCompiledHTML()">Exportar HTML Completo com Apps</button>
-            <button class="secondary-btn" onclick="clearSystemStorage()">Limpar Memória Atual</button>
+            <button class="main-btn" onclick="exportCompiledHTML()">Exportar HTML Unificado</button>
+            <div class="util-grid">
+                <button class="util-btn" onclick="exportBackupJSON()">Criar Backup</button>
+                <button class="util-btn" onclick="document.getElementById('backupInput').click()">Fazer Upload</button>
+            </div>
+            <input type="file" id="backupInput" accept=".json" style="display: none;" onchange="importBackupJSON(event)">
+            <button class="util-btn danger-btn" onclick="clearSystemStorage()">Limpar Memória</button>
         </div>
     </div>
     <div id="content-area">
@@ -373,7 +444,7 @@
             const blob = new Blob([cleanTemplate], { type: 'text/html;charset=utf-8' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'painel_operacional_fullscreen.html';
+            a.download = 'painel_operacional_total.html';
             a.click();
         }
 
