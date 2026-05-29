@@ -3,14 +3,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Captura Pro - Versão Final</title>
+    <title>Captura Pro - Sincronizada</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
         #app-shell { position: relative; width: 100vw; height: 100vh; }
         #vid { width: 100%; height: 100%; object-fit: cover; }
         #hud-top { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
-        .data-box { background: rgba(0, 121, 52, 0.7); padding: 10px 20px; border-radius: 8px; font-weight: 800; font-size: 1.1rem; border: 2px solid #fff; }
+        .data-box { background: rgba(0, 121, 52, 0.85); padding: 12px 25px; border-radius: 10px; font-weight: 900; font-size: 1.3rem; border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .btn-action { position: absolute; bottom: 50px; right: 50px; padding: 30px 60px; font-size: 1.5rem; font-weight: 900; border-radius: 15px; border: none; cursor: pointer; z-index: 200; }
     </style>
 </head>
@@ -19,7 +19,7 @@
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
     <div id="hud-top">
-        <div class="data-box" id="info-km">Km: ---</div>
+        <div class="data-box" id="info-km">Km: 000.0</div>
         <div class="data-box" id="info-time">--:--:--</div>
     </div>
     <button id="btn-ctrl" class="btn-action" style="background:#ffcc00" onclick="toggleCapture()">GRAVAR</button>
@@ -28,7 +28,7 @@
 <canvas id="c" style="display:none"></canvas>
 
 <script>
-let stream, rec, hDir, capturing = false, buffer = [], notaAtual = "", falando = false, pos = {lat:0, lon:0};
+let stream, rec, hDir, capturing = false, buffer = [], notaAtual = "", falando = false, pos = {lat:0, lon:0, km: 0};
 const vid = document.getElementById('vid'), can = document.getElementById('c'), ctx = can.getContext('2d');
 
 async function init() {
@@ -37,8 +37,15 @@ async function init() {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
         vid.srcObject = stream;
         
-        navigator.geolocation.watchPosition(p => { pos = {lat: p.coords.latitude.toFixed(5), lon: p.coords.longitude.toFixed(5)}; });
+        // Sincronização de GPS/Km
+        navigator.geolocation.watchPosition(p => { 
+            pos.lat = p.coords.latitude.toFixed(5);
+            pos.lon = p.coords.longitude.toFixed(5);
+            // Simulação de km baseada na latitude para teste (substitua pela sua lógica)
+            pos.km = (p.coords.latitude * 100).toFixed(1); 
+        }, null, { enableHighAccuracy: true });
         
+        // Narração
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         rec = new SR();
         rec.lang = 'pt-BR'; rec.continuous = true; rec.interimResults = true;
@@ -46,15 +53,15 @@ async function init() {
             let t = ""; for(let i=e.resultIndex; i<e.results.length; i++) t += e.results[i][0].transcript;
             if(t.length > 2) { notaAtual = t; falando = true; }
         };
-        rec.onspeechend = () => setTimeout(() => { falando = false; }, 3000);
+        rec.onspeechend = () => setTimeout(() => { falando = false; }, 2000);
         rec.onend = () => { try { rec.start(); } catch(e){} };
         rec.start();
-        setInterval(updateHUD, 1000);
+        
+        setInterval(() => {
+            document.getElementById('info-time').innerText = new Date().toLocaleTimeString();
+            document.getElementById('info-km').innerText = `Km: ${pos.km}`;
+        }, 1000);
     } catch(e) { alert("Permissões necessárias!"); }
-}
-
-function updateHUD() {
-    document.getElementById('info-time').innerText = new Date().toLocaleTimeString();
 }
 
 function toggleCapture() {
@@ -69,15 +76,17 @@ function loop() {
     can.width = vid.videoWidth; can.height = vid.videoHeight;
     ctx.drawImage(vid, 0, 0);
     
-    // Desenho dos dados (O que sai na foto)
-    ctx.fillStyle = "rgba(0,121,52,0.7)"; ctx.fillRect(20, 20, 400, 100);
-    ctx.fillStyle = "#fff"; ctx.font = "bold 40px Arial";
-    ctx.fillText(`GPS: ${pos.lat}, ${pos.lon}`, 40, 85);
+    // Estampa Fixa (Dados)
+    ctx.fillStyle = "rgba(0,121,52,0.8)"; ctx.fillRect(20, 20, 500, 100);
+    ctx.fillStyle = "#fff"; ctx.font = "bold 45px Arial";
+    ctx.fillText(`Km: ${pos.km} | GPS: ${pos.lat}`, 40, 90);
     
+    // Estampa Dinâmica (Voz)
     if(falando) {
-        ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, can.height-150, can.width, 150);
-        ctx.fillStyle = "#ffcc00"; ctx.font = "bold 35px Arial";
-        ctx.fillText(notaAtual.substring(0, 70), 40, can.height-60);
+        ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, can.height-180, can.width, 180);
+        ctx.fillStyle = "#ffcc00"; ctx.font = "bold 40px Arial";
+        let lines = notaAtual.match(/.{1,60}(\s|$)/g) || [notaAtual];
+        lines.forEach((l, i) => ctx.fillText(l, 40, (can.height-120) + (i*50)));
     }
     
     buffer.push(can.toDataURL('image/jpeg', 0.8));
