@@ -3,32 +3,39 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Captura Pro - Operacional</title>
+    <title>Captura Pro - Sistema</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
+        :root { --placa-verde: rgba(0, 121, 52, 0.8); }
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
         #safety-gate { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: #000; }
         .btn-start { padding: 40px 80px; font-size: 1.5rem; background: #ffcc00; border: none; border-radius: 20px; font-weight: 900; }
-        #vid { width: 100vw; height: 100vh; object-fit: cover; }
-        .hud { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.85); padding: 20px; }
-        .controls { position: absolute; top: 30px; right: 30px; z-index: 1000; }
+        #app-shell { position: relative; width: 100vw; height: 100vh; }
+        #vid { width: 100%; height: 100%; object-fit: cover; }
+        #hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 15px 25px; border-radius: 10px; border: 3px solid #fff; z-index: 100; }
+        #nota-hud { position: absolute; bottom: 20px; left: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; border: 1px solid #ffcc00; }
+        .controls { position: absolute; bottom: 100px; right: 30px; z-index: 1000; }
         .btn-ctrl { padding: 30px 60px; font-size: 1.2rem; border-radius: 15px; border: none; font-weight: 900; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="safety-gate">
-    <button class="btn-start" onclick="initApp()">INICIAR SISTEMA OPERACIONAL</button>
+    <button class="btn-start" onclick="initApp()">INICIAR SISTEMA</button>
 </div>
 
-<video id="vid" autoplay playsinline muted></video>
-<div class="hud">
-    <div id="status-info" style="font-size: 1.2rem; margin-bottom: 10px;">Km: 000 | GPS: 0.000, 0.000</div>
-    <div id="nota-status" style="font-size: 1rem; color: #ffcc00; font-weight: bold;">Nota: ---</div>
-</div>
-<div class="controls">
-    <button id="btn-start" class="btn-ctrl" style="background:#ffcc00" onclick="startCapture()">GRAVAR</button>
-    <button id="btn-stop" class="btn-ctrl" style="background:#ff4444; color:#fff; display:none" onclick="stopCapture()">PARAR</button>
+<div id="app-shell">
+    <video id="vid" autoplay playsinline muted></video>
+    <div id="hud">
+        <div id="km-txt" style="font-size: 2rem; font-weight: 900;">Km ---</div>
+    </div>
+    <div id="nota-hud">
+        <div id="nota-status" style="color: #ffcc00; font-weight: bold;">Ouvindo: ...</div>
+    </div>
+    <div class="controls">
+        <button id="btn-start" class="btn-ctrl" style="background:#ffcc00" onclick="startCapture()">GRAVAR</button>
+        <button id="btn-stop" class="btn-ctrl" style="background:#ff4444; color:#fff; display:none" onclick="stopCapture()">PARAR</button>
+    </div>
 </div>
 
 <canvas id="c" style="display:none"></canvas>
@@ -46,20 +53,22 @@ async function initApp() {
         });
         vid.srcObject = stream;
         
-        // Configuração Estável do Reconhecimento
+        // Reconhecimento de Voz Aprimorado
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         rec = new SR();
         rec.lang = 'pt-BR'; 
         rec.continuous = true; 
-        rec.interimResults = false; 
+        rec.interimResults = true; // Permite ver o texto enquanto fala
         
-        // Bloqueia a permissão repetida não tentando dar start se já estiver rodando
         rec.onresult = (e) => { 
-            notaAtual = e.results[e.results.length - 1][0].transcript;
-            document.getElementById('nota-status').innerText = "Nota: " + notaAtual;
+            let interim = "";
+            for (let i = e.resultIndex; i < e.results.length; ++i) {
+                if (e.results[i].isFinal) notaAtual = e.results[i][0].transcript;
+                else interim += e.results[i][0].transcript;
+            }
+            document.getElementById('nota-status').innerText = "Falando: " + (notaAtual || interim);
         };
         
-        // Em vez de reiniciar agressivamente, apenas verificamos o estado
         rec.onend = () => { try { rec.start(); } catch(e) {} };
         rec.start();
         
@@ -86,17 +95,19 @@ function loop() {
     can.width = vid.videoWidth; can.height = vid.videoHeight;
     ctx.drawImage(vid, 0, 0);
     
-    // Dados para o buffer
-    buffer.push({ 
-        img: can.toDataURL('image/jpeg', 0.6), 
-        nota: notaAtual,
-        km: "Km " + (Math.floor(Math.random()*1000)), // Substitua pela lógica do seu GPS
-        gps: "-23.21, -45.42",
-        data: new Date().toLocaleDateString()
-    });
+    // Desenha o HUD na foto
+    ctx.fillStyle = "rgba(0,121,52,0.6)"; 
+    ctx.fillRect(50, 50, 300, 150);
+    ctx.fillStyle = "#fff"; ctx.font = "bold 60px Arial";
+    ctx.fillText("Km 123", 80, 140);
     
-    notaAtual = ""; 
-    document.getElementById('nota-status').innerText = "Nota: ...";
+    // Desenha a nota na foto
+    ctx.fillStyle = "rgba(0,0,0,0.8)";
+    ctx.fillRect(50, can.height - 200, can.width - 100, 150);
+    ctx.fillStyle = "#ffcc00"; ctx.font = "bold 40px Arial";
+    ctx.fillText(notaAtual ? "Nota: " + notaAtual : "...", 80, can.height - 100);
+    
+    buffer.push({ img: can.toDataURL('image/jpeg', 0.7), nota: notaAtual });
     
     if(buffer.length >= 20) saveBatch();
     setTimeout(loop, 1000);
@@ -105,33 +116,10 @@ function loop() {
 async function saveBatch() {
     if(buffer.length === 0) return;
     const doc = new jspdf.jsPDF('l', 'mm', 'a4');
-    
     for(let i=0; i<buffer.length; i++) {
         if(i > 0) doc.addPage();
-        const img = new Image();
-        img.src = buffer[i].img;
-        await new Promise(r => img.onload = r);
-        ctx.drawImage(img, 0, 0);
-        
-        // Estampa Inferior Organizada
-        ctx.fillStyle = "rgba(0,0,0,0.8)";
-        ctx.fillRect(0, can.height - 180, can.width, 180);
-        
-        // Linha 1: Dados Originais
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 40px Arial";
-        ctx.fillText(`${buffer[i].km} | GPS: ${buffer[i].gps} | ${buffer[i].data}`, 40, can.height - 110);
-        
-        // Linha 2: Nota Narrada (Adicional)
-        ctx.fillStyle = "#ffcc00";
-        ctx.font = "bold 35px Arial";
-        let txt = buffer[i].nota || "Sem observações.";
-        if(txt.length > 80) txt = txt.substring(0, 77) + "...";
-        ctx.fillText("Nota: " + txt, 40, can.height - 40);
-        
-        doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, 297, 210);
+        doc.addImage(buffer[i].img, 'JPEG', 0, 0, 297, 210);
     }
-    
     const fh = await hDir.getFileHandle(`Relatorio_${Date.now()}.pdf`, { create: true });
     const w = await fh.createWritable();
     await w.write(doc.output('blob'));
