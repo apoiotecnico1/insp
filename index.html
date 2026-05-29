@@ -3,45 +3,37 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Sistema Operacional de Campo</title>
+    <title>Captura Operacional Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: 'Courier New', monospace; overflow: hidden; }
+        body { margin: 0; background: #000; color: #fff; font-family: 'Roboto', sans-serif; overflow: hidden; }
         #app-shell { width: 100vw; height: 100vh; position: relative; }
         #vid { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* HUD Superior Robusto */
-        #hud-top { position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; padding: 20px; box-sizing: border-box; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); }
-        .data-box { background: rgba(0, 121, 52, 0.9); padding: 10px 20px; border-radius: 5px; border: 2px solid #fff; font-weight: 900; font-size: 1.4rem; }
-        
-        /* Controles */
-        #btn-ctrl { position: absolute; bottom: 40px; right: 40px; padding: 30px 60px; font-size: 1.5rem; border-radius: 15px; border: none; cursor: pointer; font-weight: 900; z-index: 100; }
+        #hud-top { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 10px; z-index: 100; pointer-events: none; }
+        .data-card { background: rgba(0,0,0,0.7); padding: 15px; border-left: 5px solid #ffcc00; border-radius: 4px; font-weight: bold; font-size: 1.2rem; }
+        #btn-ctrl { position: absolute; bottom: 30px; right: 30px; padding: 40px 70px; font-size: 1.8rem; font-weight: 900; background: #ffcc00; border: none; border-radius: 20px; cursor: pointer; z-index: 200; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
-<div id="app-shell" onclick="toggleFullscreen()">
+<div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
     
     <div id="hud-top">
-        <div class="data-box" id="info-km">Km: 000.00</div>
-        <div class="data-box" id="info-snv">SNV: ---</div>
-        <div class="data-box" id="info-gps">GPS: 00.0, 00.0</div>
+        <div class="data-card" id="txt-snv">SNV: BR-116</div>
+        <div class="data-card" id="txt-km">Km: 000.0</div>
+        <div class="data-card" id="txt-gps">GPS: 0.0, 0.0</div>
     </div>
 
-    <button id="btn-ctrl" style="background:#ffcc00" onclick="toggleCapture()">INICIAR RELATÓRIO</button>
+    <button id="btn-ctrl" onclick="toggleCapture()">INICIAR OPERAÇÃO</button>
 </div>
 
 <canvas id="c" style="display:none"></canvas>
 
 <script>
 let stream, rec, hDir, capturing = false, buffer = [], notaAtual = "", falando = false;
-let data = { km: "000.00", snv: "BR-116", lat: "0.0", lon: "0.0" };
+let status = { km: "000.0", snv: "BR-116", gps: "0.0, 0.0" };
 const vid = document.getElementById('vid'), can = document.getElementById('c'), ctx = can.getContext('2d');
-
-async function toggleFullscreen() {
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-}
 
 async function init() {
     try {
@@ -49,30 +41,30 @@ async function init() {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
         vid.srcObject = stream;
         
-        // Simulação de atualização de dados (Integrar aqui sua fonte real de dados)
-        setInterval(() => {
-            document.getElementById('info-km').innerText = `Km: ${data.km}`;
-            document.getElementById('info-snv').innerText = `SNV: ${data.snv}`;
-            document.getElementById('info-gps').innerText = `GPS: ${data.lat}, ${data.lon}`;
-        }, 500);
-
-        // Narração
+        // Reconhecimento de Voz (Mantido ativo sem pedir permissão)
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         rec = new SR();
         rec.lang = 'pt-BR'; rec.continuous = true; rec.interimResults = true;
         rec.onresult = (e) => { 
             let t = ""; for(let i=e.resultIndex; i<e.results.length; i++) t += e.results[i][0].transcript;
-            if(t.length > 2) { notaAtual = t; falando = true; }
+            if(t.length > 1) { notaAtual = t; falando = true; }
         };
-        rec.onspeechend = () => setTimeout(() => { falando = false; }, 3000);
+        rec.onspeechend = () => setTimeout(() => { falando = false; }, 4000);
         rec.onend = () => { try { rec.start(); } catch(e){} };
         rec.start();
-    } catch(e) { alert("Sistema precisa de permissões."); }
+        
+        // Atualiza HUD de dados
+        setInterval(() => {
+            document.getElementById('txt-snv').innerText = `SNV: ${status.snv}`;
+            document.getElementById('txt-km').innerText = `Km: ${status.km}`;
+            document.getElementById('txt-gps').innerText = `GPS: ${status.gps}`;
+        }, 500);
+    } catch(e) { alert("Erro de Permissão: " + e.message); }
 }
 
 function toggleCapture() {
     capturing = !capturing;
-    document.getElementById('btn-ctrl').innerText = capturing ? "FINALIZAR" : "INICIAR RELATÓRIO";
+    document.getElementById('btn-ctrl').innerText = capturing ? "FINALIZAR" : "INICIAR OPERAÇÃO";
     document.getElementById('btn-ctrl').style.background = capturing ? "#ff4444" : "#ffcc00";
     if(capturing) loop(); else savePDF();
 }
@@ -82,21 +74,20 @@ function loop() {
     can.width = vid.videoWidth; can.height = vid.videoHeight;
     ctx.drawImage(vid, 0, 0);
     
-    // Estampa de Dados Fixos
-    ctx.fillStyle = "rgba(0,121,52,0.8)"; ctx.fillRect(20, 20, 600, 100);
-    ctx.fillStyle = "#fff"; ctx.font = "bold 40px Arial";
-    ctx.fillText(`${data.snv} | Km ${data.km} | ${data.lat}, ${data.lon}`, 40, 85);
+    // Estampa de Dados
+    ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, 0, can.width, 100);
+    ctx.fillStyle = "#ffcc00"; ctx.font = "bold 50px Courier New";
+    ctx.fillText(`${status.snv} | Km ${status.km} | ${status.gps}`, 40, 70);
     
-    // Estampa de Narração (Apenas se houver fala)
+    // Estampa de Voz
     if(falando) {
-        ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, can.height-180, can.width, 180);
-        ctx.fillStyle = "#ffcc00"; ctx.font = "bold 35px Arial";
-        let lines = notaAtual.match(/.{1,60}(\s|$)/g) || [notaAtual];
-        lines.forEach((l, i) => ctx.fillText(l, 40, (can.height-120) + (i*50)));
+        ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, can.height-150, can.width, 150);
+        ctx.fillStyle = "#fff"; ctx.font = "bold 40px Courier New";
+        ctx.fillText(notaAtual.substring(0, 70), 40, can.height-60);
     }
     
     buffer.push(can.toDataURL('image/jpeg', 0.8));
-    if(buffer.length >= 20) savePDF();
+    if(buffer.length >= 25) savePDF();
     setTimeout(loop, 1000);
 }
 
@@ -107,10 +98,12 @@ async function savePDF() {
         if(i > 0) doc.addPage();
         doc.addImage(buffer[i], 'JPEG', 0, 0, 297, 210);
     }
-    const fh = await hDir.getFileHandle(`RELATORIO_${Date.now()}.pdf`, { create: true });
-    const w = await fh.createWritable();
-    await w.write(doc.output('blob'));
-    await w.close();
+    try {
+        const fh = await hDir.getFileHandle(`OPERACAO_${Date.now()}.pdf`, { create: true });
+        const w = await fh.createWritable();
+        await w.write(doc.output('blob'));
+        await w.close();
+    } catch(e) { console.error(e); }
     buffer = [];
 }
 
