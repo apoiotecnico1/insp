@@ -12,15 +12,16 @@
 
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
         .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; background: #0a0a0a; max-width: 90%; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 8px; cursor: pointer; }
+        .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 8px; cursor: pointer; margin-top: 20px; }
 
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; }
 
         #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 10px 20px; border: 3px solid rgba(255, 255, 255, 0.7); border-radius: 8px; z-index: 100; backdrop-filter: blur(8px); }
         #km-txt { font-size: 2.2rem; font-weight: 900; }
-        
-        #narration-hud { position: absolute; top: 120px; left: 20px; color: var(--accent); background: rgba(0,0,0,0.6); padding: 10px; border-radius: 5px; font-weight: bold; z-index: 100; }
+
+        /* HUD DE NARRAÇÃO */
+        #narration-ui { position: absolute; top: 120px; left: 20px; background: rgba(255, 204, 0, 0.2); border: 1px solid var(--accent); padding: 10px; border-radius: 8px; z-index: 100; color: #fff; font-weight: bold; pointer-events: none; }
 
         #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; }
         .btn-main { border: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 160px; }
@@ -30,29 +31,34 @@
 
         #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); z-index: 4000; padding: 60px 25px; transition: 0.4s; }
         #settings-panel.open { right: 0; }
+        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; transition: opacity 0.05s; }
     </style>
 </head>
 <body>
 
+<div id="flash"></div>
+
 <div id="safety-gate">
     <div class="alert-box">
-        <h2 style="color:var(--accent);">SISTEMA DE APOIO</h2>
+        <h2 style="color:var(--accent); margin-bottom:10px;">SISTEMA DE APOIO</h2>
         <button class="btn-aware" onclick="startApp()">ATIVAR SISTEMA</button>
     </div>
 </div>
 
 <div id="settings-panel">
-    <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; margin-bottom:20px;">← FECHAR</div>
+    <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; margin-bottom:20px; font-weight: bold;">← FECHAR</div>
     <label>Câmera Ativa</label>
     <select id="cam-select" onchange="switchCam(this.value)"></select>
     <label>Intervalo (ms)</label>
-    <input type="number" id="cfg-int" value="200" style="width:100%; padding:10px;">
+    <input type="number" id="cfg-int" value="200">
+    <label>Fotos/Lote</label>
+    <input type="number" id="cfg-lote" value="50">
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
     <div id="km-hud"><h1 id="km-txt">Km ---</h1></div>
-    <div id="narration-hud">Narração: Iniciando...</div>
+    <div id="narration-ui">Microfone: Ativo</div>
     <div id="ui-controls">
         <div id="gear-btn" onclick="toggleSet()">⚙</div>
         <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR</button>
@@ -63,35 +69,34 @@
 <canvas id="c"></canvas>
 
 <script>
-let capturing = false, hDir = null, buffer = [], currentStream = null, lastNarration = "";
+let capturing = false, hDir = null, buffer = [], currentStream = null, notaAtual = "";
 const vid = document.getElementById('vid'), can = document.getElementById('c'), ctx = can.getContext('2d');
+
+// --- SISTEMA DE NARRAÇÃO ---
+function initNarration() {
+    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Speech) return;
+    const rec = new Speech();
+    rec.lang = 'pt-BR'; rec.continuous = true; rec.interimResults = false;
+    rec.onresult = (e) => {
+        notaAtual = e.results[e.results.length - 1][0].transcript;
+        document.getElementById('narration-ui').innerText = "Nota: " + notaAtual;
+    };
+    rec.start();
+}
 
 async function startApp() {
     try {
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
         document.getElementById('safety-gate').remove();
         document.getElementById('app-shell').style.visibility = 'visible';
-        
-        // Fullscreen
         if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-        
-        initNarration();
+        initNarration(); // Inicia microfone
         listCams();
     } catch(e) { alert("Permissão de pasta necessária."); }
 }
 
-function initNarration() {
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Recognition) { document.getElementById('narration-hud').innerText = "Voz não suportada"; return; }
-    const rec = new Recognition();
-    rec.lang = 'pt-BR'; rec.continuous = true; rec.interimResults = false;
-    rec.onresult = (e) => {
-        lastNarration = e.results[e.results.length - 1][0].transcript;
-        document.getElementById('narration-hud').innerText = "Fala: " + lastNarration;
-    };
-    rec.start();
-}
-
+// --- LÓGICA DE CAPTURA ORIGINAL MANTIDA ---
 async function listCams() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const vids = devices.filter(d => d.kind === 'videoinput');
@@ -120,18 +125,18 @@ function captureLoop() {
     can.width = vid.videoWidth; can.height = vid.videoHeight;
     ctx.drawImage(vid, 0, 0);
     
+    // Captura com a nota se houver
     buffer.push({ 
         img: can.toDataURL('image/jpeg', 0.6), 
         km: document.getElementById('km-txt').innerText,
-        nota: lastNarration,
+        nota: notaAtual,
         ts: new Date().toLocaleString()
     });
+
+    notaAtual = ""; // Limpa a nota para não repetir em fotos sem comentário
+    document.getElementById('narration-ui').innerText = "Microfone: Ativo";
     
-    // Reset da nota após capturar para não repetir em todas as fotos se não houver nova fala
-    lastNarration = ""; 
-    document.getElementById('narration-hud').innerText = "Narração ativa...";
-    
-    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value));
+    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
 }
 
 async function stopCapture() {
@@ -142,13 +147,15 @@ async function stopCapture() {
         const img = new Image();
         img.src = buffer[i].img;
         await new Promise(r => img.onload = r);
-        
         ctx.drawImage(img, 0, 0);
+        
+        // Estampa a nota se existir
         if(buffer[i].nota) {
-            ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0, can.height - 100, can.width, 100);
-            ctx.fillStyle = "#ffcc00"; ctx.font = "bold 50px Arial";
-            ctx.fillText(buffer[i].nota, 50, can.height - 40);
+            ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0, can.height - 120, can.width, 120);
+            ctx.fillStyle = "#ffcc00"; ctx.font = "bold 45px Arial";
+            ctx.fillText("Nota: " + buffer[i].nota, 40, can.height - 40);
         }
+        
         doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, 297, 210);
     }
     const handle = await hDir.getFileHandle(`Relatorio_${Date.now()}.pdf`, { create: true });
