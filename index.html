@@ -2,86 +2,82 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
     <title>Captura Pro - Operacional</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --accent: #ffcc00; --placa-verde: rgba(0, 121, 52, 0.6); --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); }
-        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        :root { --placa-verde: rgba(0, 121, 52, 0.9); --accent: #ffcc00; }
+        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; }
+        body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
 
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; background: #0a0a0a; max-width: 90%; }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 8px; cursor: pointer; }
+        .btn-aware { background: var(--accent); padding: 30px 60px; font-weight: 900; border: none; border-radius: 15px; font-size: 1.2rem; cursor: pointer; }
 
-        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
+        #app-shell { position: relative; width: 100vw; height: 100vh; display: none; }
         #vid { width: 100%; height: 100%; object-fit: cover; }
 
-        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 15px; border: 3px solid #fff; border-radius: 8px; z-index: 100; pointer-events: none; }
-        #km-txt { font-size: 2rem; font-weight: 900; }
-        
-        #audio-hud { position: absolute; bottom: 120px; left: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 8px; color: var(--accent); font-weight: bold; }
-        
-        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; }
-        .btn-main { border: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 160px; }
-        #btn-start { background: var(--accent); color: #000; }
-        #btn-stop { background: var(--danger); color: #fff; display: none; }
+        /* HUD PLACA ORIGINAL */
+        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 15px 30px; border: 4px solid #fff; border-radius: 10px; z-index: 100; pointer-events: none; }
+        #km-txt { font-size: 3rem; font-weight: 900; line-height: 1; text-shadow: 2px 2px 2px rgba(0,0,0,0.5); }
+
+        #ui-controls { position: absolute; bottom: 40px; right: 40px; z-index: 500; display: flex; gap: 20px; }
+        .btn-main { padding: 30px 50px; font-weight: 900; border: none; border-radius: 15px; cursor: pointer; text-transform: uppercase; }
+        #btn-start { background: var(--accent); }
+        #btn-stop { background: #ff4444; color: #fff; display: none; }
     </style>
 </head>
 <body>
 
 <div id="safety-gate">
-    <div class="alert-box">
-        <h2 style="color:var(--accent);">SISTEMA DE APOIO</h2>
-        <button class="btn-aware" onclick="startApp()">ATIVAR SISTEMA E MICROFONE</button>
-    </div>
+    <button class="btn-aware" onclick="startApp()">INICIAR SISTEMA (FULLSCREEN)</button>
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
-    <div id="km-hud"><h1 id="km-txt">Km ---</h1></div>
-    <div id="audio-hud">Narração: aguardando...</div>
+    <div id="km-hud"><div id="km-txt">Km 000.0</div></div>
+    
     <div id="ui-controls">
-        <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR</button>
+        <button id="btn-start" class="btn-main" onclick="startCapture()">GRAVAR</button>
         <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR</button>
     </div>
 </div>
 
-<canvas id="c"></canvas>
+<canvas id="c" style="display:none"></canvas>
 
 <script>
-let kmDB=[], capturing=false, hDir=null, buffer=[], notaAtual="", falando=false, curLat="0", curLon="0";
+let stream, hDir, capturing = false, buffer = [], notaAtual = "", falando = false;
 const vid = document.getElementById('vid'), can = document.getElementById('c'), ctx = can.getContext('2d');
 
 async function startApp() {
     try {
+        const root = document.documentElement;
+        if (root.requestFullscreen) root.requestFullscreen();
         hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
         vid.srcObject = stream;
         
-        // Reconhecimento de Voz (Integrado)
+        // Voz
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         const rec = new SR();
         rec.lang = 'pt-BR'; rec.continuous = true; rec.interimResults = true;
         rec.onresult = (e) => { 
             let t = ""; for(let i=e.resultIndex; i<e.results.length; i++) t += e.results[i][0].transcript;
-            if(t.length > 2) { notaAtual = t; falando = true; document.getElementById('audio-hud').innerText = "Nota: " + t; }
+            if(t.length > 2) { notaAtual = t; falando = true; }
         };
-        rec.onspeechend = () => setTimeout(() => { falando = false; document.getElementById('audio-hud').innerText = "Aguardando..."; }, 3000);
+        rec.onspeechend = () => setTimeout(() => { falando = false; }, 3000);
         rec.onend = () => { try { rec.start(); } catch(e) {} };
         rec.start();
 
-        document.getElementById('safety-gate').remove();
-        document.getElementById('app-shell').style.visibility = 'visible';
-        loadCSV(); initGPS();
-    } catch(e) { alert("Erro de permissão: " + e.message); }
+        document.getElementById('safety-gate').style.display = 'none';
+        document.getElementById('app-shell').style.display = 'block';
+    } catch(e) { alert("Permissões necessárias!"); }
 }
 
 function startCapture() {
     capturing = true; buffer = [];
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
-    captureLoop();
+    loop();
 }
 
 function stopCapture() {
@@ -92,35 +88,34 @@ function stopCapture() {
     buffer = [];
 }
 
-function captureLoop() {
+function loop() {
     if (!capturing) return;
     can.width = vid.videoWidth; can.height = vid.videoHeight;
     ctx.drawImage(vid, 0, 0);
     
-    // Estampa fixa (Km/GPS)
-    const bh = can.height * 0.12;
-    ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, can.height - bh, can.width, bh);
-    ctx.fillStyle = "#fff"; ctx.font = "bold 40px Arial";
-    ctx.fillText(document.getElementById('km-txt').innerText, 30, can.height - 40);
+    // HUD Placa (Desenhado no Canvas)
+    ctx.fillStyle = "rgba(0,121,52,0.9)"; ctx.fillRect(20, 20, 300, 120);
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 10; ctx.strokeRect(20, 20, 300, 120);
+    ctx.fillStyle = "#fff"; ctx.font = "bold 60px Arial";
+    ctx.fillText(document.getElementById('km-txt').innerText, 50, 100);
     
-    // Estampa dinâmica (Nota de áudio)
+    // Nota dinâmica
     if(falando && notaAtual) {
-        ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, can.height - bh - 100, can.width, 100);
-        ctx.fillStyle = "#ffcc00"; ctx.font = "bold 35px Arial";
-        ctx.fillText(notaAtual.substring(0, 60) + (notaAtual.length > 60 ? "..." : ""), 30, can.height - bh - 30);
+        ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, can.height - 150, can.width, 150);
+        ctx.fillStyle = "#ffcc00"; ctx.font = "bold 40px Arial";
+        ctx.fillText(notaAtual.substring(0, 65), 50, can.height - 60);
     }
 
-    buffer.push({ img: can.toDataURL('image/jpeg', 0.6), km: document.getElementById('km-txt').innerText, nota: falando ? notaAtual : null });
-    
-    if(buffer.length >= 50) { savePDF([...buffer]); buffer = []; }
-    setTimeout(captureLoop, 500);
+    buffer.push(can.toDataURL('image/jpeg', 0.6));
+    if(buffer.length >= 40) { savePDF([...buffer]); buffer = []; }
+    setTimeout(loop, 500);
 }
 
 async function savePDF(dataList) {
     const doc = new jspdf.jsPDF('l', 'mm', 'a4');
     for(let i=0; i<dataList.length; i++) {
         if(i > 0) doc.addPage();
-        const img = new Image(); img.src = dataList[i].img; await new Promise(r => img.onload = r);
+        const img = new Image(); img.src = dataList[i]; await new Promise(r => img.onload = r);
         doc.addImage(img, 'JPEG', 0, 0, 297, 210);
     }
     const fh = await hDir.getFileHandle(`Relatorio_${Date.now()}.pdf`, { create: true });
@@ -128,10 +123,6 @@ async function savePDF(dataList) {
     await w.write(doc.output('blob'));
     await w.close();
 }
-
-// Funções auxiliares mantidas do seu original
-function initGPS() { navigator.geolocation.watchPosition(p => { curLat = p.coords.latitude.toFixed(6); curLon = p.coords.longitude.toFixed(6); }, null, { enableHighAccuracy: true }); }
-async function loadCSV() { try { const r = await fetch('SNVBR116SPRJ.csv'); const t = await r.text(); /* ... lógica original ... */ } catch(e) {} }
 </script>
 </body>
 </html>
