@@ -3,21 +3,31 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Sistema de Apoio - Captura Pro com Narração</title>
+    <title>Sistema de Apoio - Captura Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --accent: #ffcc00; --placa-verde: rgba(0, 121, 52, 0.6); --danger: #ff4444; --glass: rgba(10, 10, 10, 0.9); }
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
         body { background: #000; color: #fff; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+
         #safety-gate { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .btn-aware { background: var(--accent); color: #000; padding: 20px 50px; font-weight: 900; border-radius: 8px; cursor: pointer; }
+        .alert-box { border: 1px solid #333; padding: 40px; border-radius: 15px; text-align: center; background: #0a0a0a; max-width: 90%; }
+        .btn-aware { background: var(--accent); color: #000; border: none; padding: 20px 50px; font-weight: 900; border-radius: 8px; cursor: pointer; }
+
         #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
         #vid { width: 100%; height: 100%; object-fit: cover; }
-        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 15px; border-radius: 8px; z-index: 100; }
-        #narration-status { position: absolute; bottom: 100px; left: 20px; right: 20px; background: rgba(0,0,0,0.8); color: var(--accent); padding: 10px; border-left: 5px solid var(--accent); font-weight: bold; z-index: 100; }
-        #ui-controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; }
-        .btn-main { border: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
-        #btn-start { background: var(--accent); } #btn-stop { background: var(--danger); display: none; }
+
+        #km-hud { position: absolute; top: 20px; left: 20px; background: var(--placa-verde); padding: 10px 20px; border: 3px solid rgba(255, 255, 255, 0.7); border-radius: 8px; z-index: 100; backdrop-filter: blur(8px); }
+        #km-txt { font-size: 2.2rem; font-weight: 900; }
+        
+        #narration-hud { position: absolute; top: 120px; left: 20px; color: var(--accent); background: rgba(0,0,0,0.6); padding: 10px; border-radius: 5px; font-weight: bold; z-index: 100; }
+
+        #ui-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 500; }
+        .btn-main { border: none; padding: 18px 40px; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; min-width: 160px; }
+        #btn-start { background: var(--accent); color: #000; }
+        #btn-stop { background: var(--danger); color: #fff; display: none; }
+        #gear-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
+
         #settings-panel { position: fixed; right: -350px; top: 0; width: 320px; height: 100%; background: var(--glass); z-index: 4000; padding: 60px 25px; transition: 0.4s; }
         #settings-panel.open { right: 0; }
     </style>
@@ -25,99 +35,127 @@
 <body>
 
 <div id="safety-gate">
-    <button class="btn-aware" onclick="startApp()">ATIVAR SISTEMA E NARRAÇÃO</button>
+    <div class="alert-box">
+        <h2 style="color:var(--accent);">SISTEMA DE APOIO</h2>
+        <button class="btn-aware" onclick="startApp()">ATIVAR SISTEMA</button>
+    </div>
 </div>
 
 <div id="settings-panel">
-    <div onclick="document.getElementById('settings-panel').classList.toggle('open')" style="color:var(--accent); cursor:pointer;">FECHAR</div>
-    <label>Câmera</label><select id="cam-select" onchange="switchCam(this.value)"></select>
-    <label>Intervalo (ms)</label><input type="number" id="cfg-int" value="200">
+    <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; margin-bottom:20px;">← FECHAR</div>
+    <label>Câmera Ativa</label>
+    <select id="cam-select" onchange="switchCam(this.value)"></select>
+    <label>Intervalo (ms)</label>
+    <input type="number" id="cfg-int" value="200" style="width:100%; padding:10px;">
 </div>
 
 <div id="app-shell">
     <video id="vid" autoplay playsinline muted></video>
     <div id="km-hud"><h1 id="km-txt">Km ---</h1></div>
-    <div id="narration-status">Narração: Iniciando sistema de áudio...</div>
+    <div id="narration-hud">Narração: Iniciando...</div>
     <div id="ui-controls">
+        <div id="gear-btn" onclick="toggleSet()">⚙</div>
         <button id="btn-start" class="btn-main" onclick="startCapture()">INICIAR</button>
         <button id="btn-stop" class="btn-main" onclick="stopCapture()">FINALIZAR</button>
     </div>
 </div>
 
+<canvas id="c"></canvas>
+
 <script>
-let capturing = false, hDir = null, buffer = [], imgBuffer = [];
-const vid = document.getElementById('vid');
+let capturing = false, hDir = null, buffer = [], currentStream = null, lastNarration = "";
+const vid = document.getElementById('vid'), can = document.getElementById('c'), ctx = can.getContext('2d');
 
 async function startApp() {
-    hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-    document.getElementById('safety-gate').remove();
-    document.getElementById('app-shell').style.visibility = 'visible';
-    
-    // Iniciar Câmera e Narração
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    vid.srcObject = stream;
-    initNarration();
-    startCamLoop();
+    try {
+        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('safety-gate').remove();
+        document.getElementById('app-shell').style.visibility = 'visible';
+        
+        // Fullscreen
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+        
+        initNarration();
+        listCams();
+    } catch(e) { alert("Permissão de pasta necessária."); }
 }
 
 function initNarration() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const rec = new SpeechRecognition();
-    rec.lang = 'pt-BR';
-    rec.continuous = true;
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) { document.getElementById('narration-hud').innerText = "Voz não suportada"; return; }
+    const rec = new Recognition();
+    rec.lang = 'pt-BR'; rec.continuous = true; rec.interimResults = false;
     rec.onresult = (e) => {
-        const txt = e.results[e.results.length - 1][0].transcript;
-        document.getElementById('narration-status').innerText = "Última nota: " + txt;
-        // Salva a nota associada ao momento atual do buffer
-        if (capturing) {
-            imgBuffer[imgBuffer.length - 1].nota = txt;
-        }
+        lastNarration = e.results[e.results.length - 1][0].transcript;
+        document.getElementById('narration-hud').innerText = "Fala: " + lastNarration;
     };
     rec.start();
 }
 
-function startCamLoop() {
-    const can = document.createElement('canvas');
-    can.width = 1920; can.height = 1080;
-    const ctx = can.getContext('2d');
-    
-    setInterval(() => {
-        if (!capturing) return;
-        ctx.drawImage(vid, 0, 0);
-        imgBuffer.push({ 
-            img: can.toDataURL('image/jpeg', 0.6), 
-            km: document.getElementById('km-txt').innerText,
-            nota: ""
-        });
-        if(imgBuffer.length > 200) imgBuffer.shift();
-    }, 200);
+async function listCams() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const vids = devices.filter(d => d.kind === 'videoinput');
+    const sel = document.getElementById('cam-select');
+    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">Câmera ${i+1}</option>`).join('');
+    if(vids.length) switchCam(vids[vids.length-1].deviceId);
 }
 
+async function switchCam(id) {
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
+    vid.srcObject = currentStream;
+}
+
+function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
+
 function startCapture() {
-    capturing = true; imgBuffer = [];
+    capturing = true; buffer = [];
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display = 'block';
+    captureLoop();
+}
+
+function captureLoop() {
+    if (!capturing) return;
+    can.width = vid.videoWidth; can.height = vid.videoHeight;
+    ctx.drawImage(vid, 0, 0);
+    
+    buffer.push({ 
+        img: can.toDataURL('image/jpeg', 0.6), 
+        km: document.getElementById('km-txt').innerText,
+        nota: lastNarration,
+        ts: new Date().toLocaleString()
+    });
+    
+    // Reset da nota após capturar para não repetir em todas as fotos se não houver nova fala
+    lastNarration = ""; 
+    document.getElementById('narration-hud').innerText = "Narração ativa...";
+    
+    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value));
 }
 
 async function stopCapture() {
     capturing = false;
     const doc = new jspdf.jsPDF('l', 'mm', 'a4');
-    for (let i = 0; i < imgBuffer.length; i++) {
-        if (imgBuffer[i].nota !== "") { // Só gera página se houver nota ou se quiser todas
-            if (i > 0) doc.addPage();
-            const img = new Image();
-            img.src = imgBuffer[i].img;
-            await new Promise(r => img.onload = r);
-            doc.addImage(img, 'JPEG', 0, 0, 297, 210);
-            doc.setFontSize(20);
-            doc.text(`KM: ${imgBuffer[i].km} | Obs: ${imgBuffer[i].nota}`, 10, 200);
+    for (let i = 0; i < buffer.length; i++) {
+        if (i > 0) doc.addPage();
+        const img = new Image();
+        img.src = buffer[i].img;
+        await new Promise(r => img.onload = r);
+        
+        ctx.drawImage(img, 0, 0);
+        if(buffer[i].nota) {
+            ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0, can.height - 100, can.width, 100);
+            ctx.fillStyle = "#ffcc00"; ctx.font = "bold 50px Arial";
+            ctx.fillText(buffer[i].nota, 50, can.height - 40);
         }
+        doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, 297, 210);
     }
     const handle = await hDir.getFileHandle(`Relatorio_${Date.now()}.pdf`, { create: true });
     const writable = await handle.createWritable();
     await writable.write(doc.output('blob'));
     await writable.close();
-    alert("Relatório gerado!");
+    location.reload();
 }
 </script>
 </body>
