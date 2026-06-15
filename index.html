@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Coleta Campo - Ultra Leve</title>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <title>Coleta Campo - Banco de Alta Capacidade</title>
     <style>
         :root {
             --bg: #121212;
@@ -23,7 +22,6 @@
         h1 { font-size: 13px; color: var(--accent); }
         .card { background: var(--surface); border: 1px solid var(--border); padding: 10px; margin-bottom: 8px; }
         .row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
-        textarea { width: 100%; height: 60px; background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 8px; resize: none; font-size: 12px; }
         
         input[type="text"] { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 12px; font-size: 16px; border-radius: 4px; }
         input[type="text"]:focus { border-color: var(--accent); outline: none; }
@@ -31,7 +29,6 @@
         .btn { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 10px; cursor: pointer; font-weight: bold; font-size: 12px; border-radius: 4px; }
         .btn-accent { background: var(--accent); color: var(--bg); border-color: var(--accent); }
         
-        /* Botão de Toque Rápido para Android */
         .btn-action { background: #112215; color: var(--accent); border: 1px solid var(--accent); padding: 10px; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 4px; width: 100%; text-align: center; display: block; min-height: 42px; }
         .btn-action.has-data { color: var(--yellow); border-color: var(--yellow); background: #221a05; }
         
@@ -40,7 +37,6 @@
         .success { border-left-color: var(--accent) !important; color: var(--accent); }
         .error { border-left-color: var(--error) !important; color: var(--error); }
         
-        /* Tabela Otimizada com Virtualização por Scroll */
         .table-wrapper { overflow-x: auto; max-height: 65vh; border: 1px solid var(--border); -webkit-overflow-scrolling: touch; background: var(--surface); }
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th { background: #222222; position: sticky; top: 0; z-index: 10; padding: 10px; border-bottom: 1px solid var(--border); color: var(--accent); font-size: 11px; }
@@ -51,7 +47,7 @@
         .counter { font-size: 11px; color: var(--text-dim); }
         .highlight { color: var(--accent); font-weight: bold; background: #003314; padding: 0 2px; }
         
-        /* Modais Leves */
+        /* Modais */
         .modal-mask { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); justify-content: center; align-items: flex-start; z-index: 9999; padding-top: 12px; overflow-y: auto; }
         .modal-window { background: var(--surface); border: 1px solid var(--border); width: 96%; max-width: 420px; padding: 12px; border-radius: 6px; }
         .modal-top { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border); padding-bottom: 6px; margin-bottom: 10px; }
@@ -59,54 +55,58 @@
         .btn-close { color: var(--error); cursor: pointer; font-size: 24px; font-weight: bold; border: none; background: none; }
         .field-group { margin-bottom: 10px; }
         .field-group label { display: block; color: var(--text-dim); font-size: 11px; margin-bottom: 3px; text-transform: uppercase; }
+        textarea { width: 100%; height: 60px; background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 8px; resize: none; font-size: 12px; }
 
-        /* Fotos Compactas */
         .gallery-box { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 6px; background: var(--bg); padding: 6px; border: 1px dashed var(--border); min-height: 50px; }
         .gallery-cell { position: relative; width: 100%; aspect-ratio: 1; border: 1px solid var(--border); }
         .gallery-cell img { width: 100%; height: 100%; object-fit: cover; }
         .btn-del-photo { position: absolute; top: -3px; right: -3px; background: var(--error); color: #fff; border: none; width: 18px; height: 18px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
+        
+        #progress-bar-container { width: 100%; background: #222; height: 6px; margin-top: 8px; display: none; border-radius: 3px; overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background: var(--accent); transition: width 0.1s; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <header>
-        <h1>SYS // LIGHT_SPEED_FIELD</h1>
-        <div id="db-info" class="counter">Sem dados</div>
+        <h1>SYS // BIG_DATA_STREAM</h1>
+        <div id="db-info" class="counter">Carregando Banco...</div>
     </header>
 
     <div id="import-panel" class="card">
         <div class="row" style="justify-content: space-between; align-items: center; margin-bottom: 0;">
-            <strong>FONTE DE DADOS (SAP / EXCEL)</strong>
-            <button class="btn" onclick="toggleElement('import-area')">Injetar/Ver</button>
+            <strong>ARQUIVO SAP GRANDE (> 200MB)</strong>
+            <button class="btn" onclick="toggleElement('import-area')">Importar Base</button>
         </div>
         <div id="import-area" class="hidden" style="margin-top: 10px;">
             <div class="row">
-                <input type="file" id="file-input" accept=".html,.htm,.xls,.xlsx,.txt,.csv" style="display: none;" onchange="handleFile(this)">
-                <button class="btn" onclick="document.getElementById('file-input').click()">📁 Escolher Arquivo</button>
-                <button class="btn btn-accent" onclick="saveToLocalStorage()">💾 Travar no Celular</button>
-                <button class="btn" style="color: var(--error);" onclick="clearLocalStorage()">🗑️ Limpar</button>
+                <input type="file" id="file-input" accept=".html,.htm,.txt,.csv" style="display: none;" onchange="streamProcessFile(this)">
+                <button class="btn btn-accent" onclick="document.getElementById('file-input').click()">📁 Selecionar Arquivo Pesado</button>
+                <button class="btn" style="color: var(--error);" onclick="clearDatabase()">🗑️ Apagar Banco</button>
             </div>
-            <textarea id="raw-input" placeholder="Cole as linhas do relatório se preferir..."></textarea>
+            <div id="progress-bar-container">
+                <div id="progress-bar"></div>
+            </div>
         </div>
     </div>
 
-    <div id="status">Pronto para pesquisa rápida.</div>
+    <div id="status">Pronto para operação.</div>
 
     <div class="row">
-        <input type="text" id="search-input" placeholder="🔎 Digite o material ou termo para filtrar..." autocomplete="off">
+        <input type="text" id="search-input" placeholder="🔎 Digite o código do material para buscar..." autocomplete="off">
         <button class="btn" onclick="clearSearch()">X</button>
     </div>
 
-    <div class="counter" id="result-count" style="margin-bottom: 4px;">0 itens indexados.</div>
+    <div class="counter" id="result-count" style="margin-bottom: 4px;">Aguardando termo de busca...</div>
 
     <div class="table-wrapper" id="scroll-container">
         <table id="results-table">
             <thead>
-                <tr id="table-headers"><th>Aguardando importação...</th></tr>
+                <tr id="table-headers"><th>Código</th><th>Dados do Ativo</th><th>Ação</th></tr>
             </thead>
             <tbody id="table-body">
-                <tr><td style="color: var(--text-dim); text-align: center; padding: 20px;">Use a aba superior para injetar sua planilha.</td></tr>
+                <tr><td colspan="3" style="color: var(--text-dim); text-align: center; padding: 20px;">Insira um termo acima para pesquisar no banco de dados.</td></tr>
             </tbody>
         </table>
     </div>
@@ -125,7 +125,7 @@
         <div class="field-group">
             <label>Evidências Fotográficas:</label>
             <div id="modalGallery" class="gallery-box"></div>
-            <button type="button" class="btn" style="margin-top: 6px; width: 100%; background: #141414; border: 1px dashed var(--accent); color: var(--accent); min-height: 40px;" onclick="triggerAdditionalPhoto()">📸 Abrir Câmera Traseira</button>
+            <button type="button" class="btn" style="margin-top: 6px; width: 100%; background: #141414; border: 1px dashed var(--accent); color: var(--accent); min-height: 40px;" onclick="triggerAdditionalPhoto()">📸 Abrir Câmera</button>
         </div>
 
         <div class="field-group">
@@ -135,7 +135,7 @@
 
         <div class="field-group">
             <label>Notas de Campo:</label>
-            <textarea id="fObs" placeholder="Observações e anotações visuais..." oninput="saveDataCPS()"></textarea>
+            <textarea id="fObs" placeholder="Observações visuais..." oninput="saveDataCPS()"></textarea>
         </div>
 
         <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px;">
@@ -146,30 +146,43 @@
 </div>
 
 <script>
-    let DATA_INDEX = []; 
-    let FILTERED_DATA = []; 
-    let HEADERS = [];
+    let db = null;
     let INSPECTION_STORAGE = JSON.parse(localStorage.getItem('sys_inspection_data')) || {};
-    let matColIdx = 0;
     
-    // Configurações do Scroll Paginado Inteligente
+    // paginação para renderização da busca
+    let currentSearchResults = [];
     let itemsRendered = 0;
-    const PAGE_SIZE = 30; 
+    const PAGE_SIZE = 25;
+
+    // Inicializa o IndexedDB interno do Android
+    const dbRequest = indexedDB.open("SysCampoBigData", 1);
+    dbRequest.onupgradeneeded = function(e) {
+        let database = e.target.result;
+        if (!database.objectStoreNames.contains("materiais")) {
+            database.createObjectStore("materiais", { keyPath: "id" });
+        }
+        if (!database.objectStoreNames.contains("meta")) {
+            database.createObjectStore("meta", { keyPath: "chave" });
+        }
+    };
+    dbRequest.onsuccess = function(e) {
+        db = e.target.result;
+        updateDbInfo();
+    };
+    dbRequest.onerror = function() {
+        log("Erro ao inicializar armazenamento interno do celular.", "error");
+    };
 
     window.onload = function() {
-        loadFromLocalStorage();
-        
-        // Input otimizado: Busca em tempo real enquanto digita sem travar a escrita
         let searchTimeout;
         document.getElementById('search-input').addEventListener('input', function() {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(executeSearch, 50); 
+            searchTimeout = setTimeout(executeSearch, 150); 
         });
 
-        // Evento que detecta se o usuário rolou até o fim da tabela para carregar mais dados
         document.getElementById('scroll-container').addEventListener('scroll', function(e) {
             const container = e.target;
-            if (container.scrollTop + container.clientHeight >= container.scrollHeight - 60) {
+            if (container.scrollTop + container.clientHeight >= container.scrollHeight - 50) {
                 appendNextPage();
             }
         });
@@ -189,7 +202,206 @@
         input.value = ''; input.focus(); executeSearch();
     }
 
-    /* CONTROLE DE DISPARO DA CÂMERA */
+    /* FILTRAGEM E PROCESSAMENTO DE STREAM EM BLOCOS (PROTEÇÃO ANDROID) */
+    function streamProcessFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        document.getElementById('progress-bar-container').style.display = 'block';
+        log("Fatiando e limpando arquivo massivo... Não feche a aba.", "");
+
+        const CHUNK_SIZE = 2 * 1024 * 1024; // Pedaços de 2MB para não estourar a RAM
+        let offset = 0;
+        let leftover = "";
+        let isFirstLine = true;
+        let headers = [];
+        let matIdx = 0;
+        let count = 0;
+
+        let transaction = db.transaction(["materiais"], "readwrite");
+        let store = transaction.objectStore();
+
+        // Limpa registros anteriores antes de injetar novos
+        store.clear();
+
+        function readNextChunk() {
+            const slice = file.slice(offset, offset + CHUNK_SIZE);
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                let text = leftover + e.target.result;
+                let lines = text.split(/\r?\n/);
+                
+                // Guarda a última linha incompleta para o próximo bloco
+                leftover = lines.pop(); 
+
+                if (isFirstLine && lines.length > 0) {
+                    let firstLine = lines.shift();
+                    // Detecta se é HTML limpo ou CSV/TXT estruturado
+                    if(firstLine.toLowerCase().includes('<tr') || firstLine.toLowerCase().includes('<td')) {
+                        headers = ["Material", "Dados Cadastrais"];
+                    } else {
+                        headers = firstLine.split(/\t|,|;|\|/).map(h => h.replace(/["']/g, '').trim());
+                        matIdx = headers.findIndex(h => h.toLowerCase().includes('material') || h.toLowerCase().includes('código') || h.toLowerCase().includes('cod'));
+                        if(matIdx === -1) matIdx = 0;
+                    }
+                    isFirstLine = false;
+                }
+
+                let tx = db.transaction(["materiais"], "readwrite");
+                let objectStore = tx.objectStore("materiais");
+
+                lines.forEach(line => {
+                    if (!line.trim() || line.includes('----') || line.includes('<table') || line.includes('</table')) return;
+                    
+                    // Limpeza simples de tags HTML se o arquivo for export puro do SAP em formato HTML
+                    let cleanLine = line.replace(/<\/?[^>]+(>|$)/g, "").trim();
+                    if (!cleanLine) return;
+
+                    let cells = cleanLine.split(/\t|,|;|\|/).map(c => c.trim());
+                    let key = cells[matIdx] || "ID_" + count;
+                    
+                    if(key) {
+                        objectStore.put({ id: key.toLowerCase(), data: cells.join(" | ") });
+                        count++;
+                    }
+                });
+
+                offset += CHUNK_SIZE;
+                let pct = Math.min(100, Math.floor((offset / file.size) * 100));
+                document.getElementById('progress-bar').style.style = `width: ${pct}%`;
+                log(`Processando: ${pct}% (${count} itens salvos)...`);
+
+                if (offset < file.size) {
+                    setTimeout(readNextChunk, 5); // Intervalo para o processador do celular respirar
+                } else {
+                    // Finalizou o arquivo completo
+                    let metaTx = db.transaction(["meta"], "readwrite");
+                    metaTx.objectStore("meta").put({ chave: "total_itens", valor: count });
+                    metaTx.objectStore("meta").put({ chave: "headers", valor: headers });
+                    
+                    document.getElementById('progress-bar-container').style.display = 'none';
+                    document.getElementById('import-area').classList.add('hidden');
+                    log(`Sucesso absoluto! ${count} registros salvos no banco interno.`, "success");
+                    updateDbInfo();
+                }
+            };
+
+            reader.readAsText(slice, 'UTF-8');
+        }
+
+        readNextChunk();
+    }
+
+    /* MOTOR DE PESQUISA INDEXADA RÁPIDA */
+    function executeSearch() {
+        const query = document.getElementById('search-input').value.toLowerCase().trim();
+        const tbody = document.getElementById('table-body');
+        document.getElementById('scroll-container').scrollTop = 0;
+
+        if (!db) return;
+        if (query === "") {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:var(--text-dim);">Digite um código ou descrição para buscar.</td></tr>';
+            document.getElementById('result-count').innerText = "Aguardando busca...";
+            return;
+        }
+
+        log("Varrendo indexadores...", "");
+        currentSearchResults = [];
+        itemsRendered = 0;
+        tbody.innerHTML = "";
+
+        let tx = db.transaction(["materiais"], "readonly");
+        let store = tx.objectStore("materiais");
+        let cursorReq = store.openCursor();
+        let terms = query.split(/\s+/);
+
+        cursorReq.onsuccess = function(e) {
+            let cursor = e.target.result;
+            if (cursor) {
+                let idMatch = cursor.value.id.includes(query);
+                let dataMatch = terms.every(term => cursor.value.data.toLowerCase().includes(term));
+
+                if (idMatch || dataMatch) {
+                    currentSearchResults.push(cursor.value);
+                }
+                
+                // Limita a busca em memória a 300 resultados encontrados para não travar o celular
+                if (currentSearchResults.length < 300) {
+                    cursor.continue();
+                } else {
+                    finalizeSearchRender(terms);
+                }
+            } else {
+                finalizeSearchRender(terms);
+            }
+        };
+    }
+
+    function finalizeSearchRender(terms) {
+        document.getElementById('result-count').innerText = `Localizados: ${currentSearchResults.length} itens.`;
+        log("Busca concluída.", "success");
+        appendNextPage();
+    }
+
+    function appendNextPage() {
+        if (itemsRendered >= currentSearchResults.length) return;
+
+        const tbody = document.getElementById('table-body');
+        const start = itemsRendered;
+        const end = Math.min(start + PAGE_SIZE, currentSearchResults.length);
+        const query = document.getElementById('search-input').value.toLowerCase().trim();
+        const terms = query !== "" ? query.split(/\s+/) : [];
+
+        let chunkHtml = '';
+        for (let i = start; i < end; i++) {
+            const item = currentSearchResults[i];
+            const rowKey = item.id;
+            const hasRecord = INSPECTION_STORAGE[rowKey];
+            
+            let displayData = item.data;
+            if (terms.length > 0) {
+                terms.forEach(term => {
+                    if (term.length > 1) {
+                        const regex = new RegExp(`(${escapeRegExp(term)})`, 'gi');
+                        displayData = displayData.replace(regex, '<span class="highlight">$1</span>');
+                    }
+                });
+            }
+
+            chunkHtml += `<tr id="row-id-${rowKey}" ${hasRecord ? 'class="inspected-row"' : ''}>`;
+            chunkHtml += `<tr id="row-id-${rowKey}" ${hasRecord ? 'class="inspected-row"' : ''}>`;
+            chunkHtml += `<td style="font-weight:bold; color:var(--accent);">${item.id.toUpperCase()}</td>`;
+            chunkHtml += `<td style="max-width: 200px; overflow:hidden; text-overflow:ellipsis;">${displayData}</td>`;
+            
+            let btnClass = hasRecord ? 'btn-action has-data' : 'btn-action';
+            let btnText = hasRecord ? `📝 EDITAR (${hasRecord.fotos?.length || 0}F)` : '📸 FOTO / COLETAR';
+            chunkHtml += `<td><button type="button" class="${btnClass}" onclick="directCaptureTrigger('${rowKey}')">${btnText}</button></td>`;
+            chunkHtml += '</tr>';
+        }
+
+        tbody.insertAdjacentHTML('beforeend', chunkHtml);
+        itemsRendered = end;
+    }
+
+    function updateVisibleRowState(key) {
+        const tr = document.getElementById(`row-id-${key}`);
+        if (!tr) return;
+        const hasRecord = INSPECTION_STORAGE[key];
+        const btn = tr.querySelector('.btn-action');
+        
+        if (hasRecord) {
+            tr.classList.add('inspected-row');
+            btn.className = 'btn-action has-data';
+            btn.innerText = `📝 EDITAR (${hasRecord.fotos?.length || 0}F)`;
+        } else {
+            tr.classList.remove('inspected-row');
+            btn.className = 'btn-action';
+            btn.innerText = '📸 FOTO / COLETAR';
+        }
+    }
+
+    /* CONTROLE DA CÂMERA E REGISTRO LOCAL */
     let targetedKey = null;
     function directCaptureTrigger(key) {
         targetedKey = key;
@@ -217,7 +429,7 @@
             img.src = e.target.result;
             img.onload = function() {
                 const canvas = document.createElement('canvas');
-                const MAX_W = 400; // Resolução ultra-enxuta para não estourar o espaço interno do Android
+                const MAX_W = 400; 
                 let w = img.width; let h = img.height;
 
                 if (w > MAX_W) { h *= MAX_W / w; w = MAX_W; }
@@ -226,7 +438,6 @@
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, w, h);
                 
-                // Compressão agressiva (0.45) para salvar milhares de fotos sem gargalos de escrita
                 const compressed = canvas.toDataURL('image/jpeg', 0.45); 
                 INSPECTION_STORAGE[key].fotos.push(compressed);
                 
@@ -237,10 +448,9 @@
         reader.readAsDataURL(file);
     }
 
-    /* CONTROLE DE REGISTROS */
     function openModalCPS(key) {
         document.getElementById('activeRowKey').value = key;
-        document.getElementById('modalTitle').innerText = `ITEM ID: ${key}`;
+        document.getElementById('modalTitle').innerText = `ITEM ID: ${key.toUpperCase()}`;
         
         const current = INSPECTION_STORAGE[key] || { qtd: '', obs: '', fotos: [] };
         document.getElementById('fQtd').value = current.qtd || '';
@@ -300,191 +510,32 @@
         }
     }
 
-    /* ENGINE DE BUSCA DE ALTA VELOCIDADE E RENDERIZAÇÃO PARCIAL */
-    function executeSearch() {
-        const query = document.getElementById('search-input').value.toLowerCase().trim();
-        document.getElementById('scroll-container').scrollTop = 0; // Joga o scroll para o topo
-
-        if (DATA_INDEX.length === 0) return;
-
-        if (query === "") {
-            FILTERED_DATA = DATA_INDEX;
-        } else {
-            const terms = query.split(/\s+/);
-            FILTERED_DATA = DATA_INDEX.filter(row => {
-                const rowString = row.join(' ').toLowerCase();
-                return terms.every(term => rowString.includes(term));
-            });
-        }
-
-        document.getElementById('result-count').innerText = `Encontrados: ${FILTERED_DATA.length} de ${DATA_INDEX.length}`;
-        
-        // Reseta o renderizador para a primeira página
-        document.getElementById('table-body').innerHTML = "";
-        itemsRendered = 0;
-        appendNextPage();
-    }
-
-    // Injeta blocos de linhas sob demanda para evitar gargalos na tela do Android
-    function appendNextPage() {
-        if (itemsRendered >= FILTERED_DATA.length) return;
-
-        const tbody = document.getElementById('table-body');
-        const start = itemsRendered;
-        const end = Math.min(start + PAGE_SIZE, FILTERED_DATA.length);
-        const query = document.getElementById('search-input').value.toLowerCase().trim();
-        const terms = query !== "" ? query.split(/\s+/) : [];
-
-        let chunkHtml = '';
-        for (let i = start; i < end; i++) {
-            const rowData = FILTERED_DATA[i];
-            const rowKey = rowData[matColIdx] || 'R_' + i;
-            const hasRecord = INSPECTION_STORAGE[rowKey];
-            
-            chunkHtml += `<tr id="row-id-${rowKey}" ${hasRecord ? 'class="inspected-row"' : ''}>`;
-            for (let j = 0; j < HEADERS.length - 1; j++) {
-                let cellValue = rowData[j] !== undefined ? rowData[j] : '';
-                if (terms.length > 0 && cellValue !== '') {
-                    terms.forEach(term => {
-                        if (term.length > 1) {
-                            const regex = new RegExp(`(${escapeRegExp(term)})`, 'gi');
-                            cellValue = cellValue.replace(regex, '<span class="highlight">$1</span>');
-                        }
-                    });
-                }
-                chunkHtml += `<td>${cellValue}</td>`;
-            }
-            
-            let btnClass = hasRecord ? 'btn-action has-data' : 'btn-action';
-            let btnText = hasRecord ? `📝 EDITAR (${hasRecord.fotos?.length || 0}F)` : '📸 FOTO / COLETAR';
-            chunkHtml += `<td><button type="button" class="${btnClass}" onclick="directCaptureTrigger('${rowKey}')">${btnText}</button></td>`;
-            chunkHtml += '</tr>';
-        }
-
-        tbody.insertAdjacentHTML('beforeend', chunkHtml);
-        itemsRendered = end;
-    }
-
-    // Atualiza apenas a linha modificada sem precisar remontar o HTML inteiro da tela
-    function updateVisibleRowState(key) {
-        const tr = document.getElementById(`row-id-${key}`);
-        if (!tr) return;
-        const hasRecord = INSPECTION_STORAGE[key];
-        const btn = tr.querySelector('.btn-action');
-        
-        if (hasRecord) {
-            tr.classList.add('inspected-row');
-            btn.className = 'btn-action has-data';
-            btn.innerText = `📝 EDITAR (${hasRecord.fotos?.length || 0}F)`;
-        } else {
-            tr.classList.remove('inspected-row');
-            btn.className = 'btn-action';
-            btn.innerText = '📸 FOTO / COLETAR';
-        }
-    }
-
     function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-    /* PARSERS E TRATAMENTO DA BASE */
-    function handleFile(input) {
-        const file = input.files[0]; if (!file) return;
-        log("Lendo arquivo...", "");
-        const reader = new FileReader();
-
-        if (file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) {
-            reader.onload = function(e) {
-                try {
-                    const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                    if (json.length > 0) {
-                        HEADERS = json[0].map(h => String(h || '').trim());
-                        DATA_INDEX = json.slice(1).filter(r => r.length > 0).map(r => r.map(c => String(c ?? '').trim()));
-                        finalizeDataLoad();
-                    }
-                } catch (err) { log("Falha na leitura Excel.", "error"); }
-            };
-            reader.readAsArrayBuffer(file);
-        } else {
-            reader.onload = function(e) {
-                const content = e.target.result;
-                if (content.includes('<table') || content.includes('<TABLE')) { parseHtmlTable(content); } 
-                else { parseRawText(content); }
-            };
-            reader.readAsText(file, 'UTF-8');
-        }
-    }
-
-    function parseHtmlTable(htmlContent) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlContent, 'text/html');
-        const rows = doc.querySelectorAll('tr');
-        DATA_INDEX = []; HEADERS = [];
-        let headerDetected = false;
-
-        rows.forEach((row) => {
-            const cells = Array.from(row.querySelectorAll('th, td')).map(c => c.innerText.trim());
-            if (cells.length === 0 || cells.join('').includes('----')) return;
-            if (!headerDetected) { HEADERS = cells.map(h => h || 'Coluna'); headerDetected = true; } 
-            else if (cells.length >= Math.floor(HEADERS.length * 0.5) && cells[0] !== '') { DATA_INDEX.push(cells); }
-        });
-        finalizeDataLoad();
-    }
-
-    function parseRawText(text) {
-        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        if (!lines.length) return;
-        HEADERS = lines[0].split(/\t|,|;|\|/).map(h => h.replace(/["']/g, '').trim());
-        DATA_INDEX = [];
-        for (let i = 1; i < lines.length; i++) {
-            const cells = lines[i].split(/\t|,|;|\|/).map(c => c.replace(/["']/g, '').trim());
-            if (cells.length <= HEADERS.length) DATA_INDEX.push(cells);
-        }
-        finalizeDataLoad();
-    }
-
-    function finalizeDataLoad() {
-        if(!HEADERS.includes('AÇÃO_CAMPO')) HEADERS.push('AÇÃO_CAMPO');
-        matColIdx = HEADERS.findIndex(h => h.toLowerCase().includes('material') || h.toLowerCase().includes('código') || h.toLowerCase().includes('cod'));
-        if(matColIdx === -1) matColIdx = 0;
-        document.getElementById('table-headers').innerHTML = HEADERS.map(h => `<th>${h}</th>`).join('');
-        executeSearch(); updateDbInfo();
-        log(`Sucesso! ${DATA_INDEX.length} ativos indexados.`, 'success');
-    }
-
-    function saveToLocalStorage() {
-        if (!DATA_INDEX.length) return;
-        try {
-            localStorage.setItem('sys_headers', JSON.stringify(HEADERS));
-            localStorage.setItem('sys_data', JSON.stringify(DATA_INDEX));
-            log("Base fixada no aparelho!", "success");
-            updateDbInfo();
-            document.getElementById('import-area').classList.add('hidden');
-        } catch (e) { log("Erro: Limite de cota excedido.", "error"); }
-    }
-
-    function loadFromLocalStorage() {
-        try {
-            const lh = localStorage.getItem('sys_headers');
-            const ld = localStorage.getItem('sys_data');
-            if (lh && ld) { HEADERS = JSON.parse(lh); DATA_INDEX = JSON.parse(ld); finalizeDataLoad(); }
-        } catch (e) {}
-    }
-
-    function clearLocalStorage() {
-        if(confirm("Apagar base local?")) {
-            localStorage.removeItem('sys_headers'); localStorage.removeItem('sys_data');
-            DATA_INDEX = []; FILTERED_DATA = []; HEADERS = [];
-            document.getElementById('table-headers').innerHTML = '<th>Aguardando carga...</th>';
-            document.getElementById('table-body').innerHTML = '<tr><td style="text-align:center; padding:20px;">Vazio.</td></tr>';
-            updateDbInfo(); log("Base removida.", "");
-        }
-    }
-
     function updateDbInfo() {
-        const info = document.getElementById('db-info');
-        info.innerText = DATA_INDEX.length > 0 ? `📦 BANCO: ${DATA_INDEX.length}` : "⚠️ SEM BASE";
-        info.style.color = DATA_INDEX.length > 0 ? "var(--accent)" : "var(--text-dim)";
+        if (!db) return;
+        let tx = db.transaction(["meta"], "readonly");
+        let req = tx.objectStore("meta").get("total_itens");
+        req.onsuccess = function() {
+            const info = document.getElementById('db-info');
+            if(req.result) {
+                info.innerText = `📦 BANCO: ${req.result.valor} ITENS`;
+                info.style.color = "var(--accent)";
+            } else {
+                info.innerText = "⚠️ BANCO VAZIO";
+                info.style.color = "var(--text-dim)";
+            }
+        };
+    }
+
+    function clearDatabase() {
+        if(confirm("Apagar todos os dados estruturais do banco de dados interno?")) {
+            let tx = db.transaction(["materiais", "meta"], "readwrite");
+            tx.objectStore("materiais").clear();
+            tx.objectStore("meta").clear();
+            document.getElementById('table-body').innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Banco limpo.</td></tr>';
+            setTimeout(updateDbInfo, 200);
+        }
     }
 </script>
 </body>
