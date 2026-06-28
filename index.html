@@ -1,537 +1,242 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Coleta Campo - Correção de Pesquisa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Tarefas Pro v3 (Voz Corrigido)</title>
     <style>
-        :root {
-            --bg: #121212;
-            --surface: #1e1e1e;
-            --border: #2a2a2a;
-            --text: #e0e0e0;
-            --text-dim: #888888;
-            --accent: #00ff66;
-            --yellow: #ffb703;
-            --error: #ff3333;
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; background-color: #f4f4f9; color: #333; max-width: 500px; margin: auto; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h2 { margin: 0; color: #444; }
+        .gear-btn { font-size: 24px; cursor: pointer; background: none; border: none; }
+        
+        /* Grupo de Input com Microfone */
+        .input-group { display: flex; gap: 8px; margin-bottom: 10px; }
+        input { flex: 1; padding: 15px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; margin-bottom: 0; }
+        
+        .mic-btn { 
+            width: 55px; 
+            background-color: #6c757d; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 20px; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            transition: all 0.3s ease;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: monospace; }
-        body { background: var(--bg); color: var(--text); padding: 8px; font-size: 13px; overflow-x: hidden; }
-        .container { max-width: 100%; margin: 0 auto; }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
-        h1 { font-size: 13px; color: var(--accent); }
-        .card { background: var(--surface); border: 1px solid var(--border); padding: 10px; margin-bottom: 8px; }
-        .row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+        .mic-btn.listening { 
+            background-color: #dc3545; 
+            animation: pulse 1.5s infinite;
+        }
         
-        input[type="text"] { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 12px; font-size: 16px; border-radius: 4px; }
-        input[type="text"]:focus { border-color: var(--accent); outline: none; }
+        button.add-btn { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        ul { list-style: none; padding: 0; margin-top: 20px; }
+        li { background: white; margin-bottom: 10px; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .ok-btn { color: #28a745; cursor: pointer; font-weight: bold; border: 1px solid #28a745; padding: 5px 12px; border-radius: 4px; }
         
-        .btn { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 10px; cursor: pointer; font-weight: bold; font-size: 12px; border-radius: 4px; }
-        .btn-accent { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-        
-        .btn-action { background: #112215; color: var(--accent); border: 1px solid var(--accent); padding: 10px; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 4px; width: 100%; text-align: center; display: block; min-height: 42px; }
-        .btn-action.has-data { color: var(--yellow); border-color: var(--yellow); background: #221a05; }
-        
-        .hidden { display: none; }
-        #status { padding: 6px; font-size: 11px; background: #161616; border-left: 3px solid var(--border); margin-bottom: 8px; }
-        .success { border-left-color: var(--accent) !important; color: var(--accent); }
-        .error { border-left-color: var(--error) !important; color: var(--error); }
-        
-        .table-wrapper { overflow-x: auto; max-height: 65vh; border: 1px solid var(--border); -webkit-overflow-scrolling: touch; background: var(--surface); }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { background: #222222; position: sticky; top: 0; z-index: 10; padding: 10px; border-bottom: 1px solid var(--border); color: var(--accent); font-size: 11px; }
-        td { padding: 10px; border-bottom: 1px solid var(--border); white-space: nowrap; font-size: 13px; }
-        tr:nth-child(even) { background: #171717; }
-        .inspected-row { border-left: 3px solid var(--accent); background: rgba(0, 255, 102, 0.02) !important; }
-        
-        .counter { font-size: 11px; color: var(--text-dim); }
-        .highlight { color: var(--accent); font-weight: bold; background: #003314; padding: 0 2px; }
-        
-        /* Modais */
-        .modal-mask { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); justify-content: center; align-items: flex-start; z-index: 9999; padding-top: 12px; overflow-y: auto; }
-        .modal-window { background: var(--surface); border: 1px solid var(--border); width: 96%; max-width: 420px; padding: 12px; border-radius: 6px; }
-        .modal-top { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border); padding-bottom: 6px; margin-bottom: 10px; }
-        .modal-title { color: var(--accent); font-size: 11px; font-weight: bold; }
-        .btn-close { color: var(--error); cursor: pointer; font-size: 24px; font-weight: bold; border: none; background: none; }
-        .field-group { margin-bottom: 10px; }
-        .field-group label { display: block; color: var(--text-dim); font-size: 11px; margin-bottom: 3px; text-transform: uppercase; }
-        textarea { width: 100%; height: 60px; background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 8px; resize: none; font-size: 12px; }
+        /* Alerta de Segurança/Protocolo local */
+        .warning-box { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            padding: 12px; 
+            border-radius: 8px; 
+            font-size: 13px; 
+            margin-bottom: 15px; 
+            border: 1px solid #ffeeba;
+            display: none;
+        }
 
-        .gallery-box { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 6px; background: var(--bg); padding: 6px; border: 1px dashed var(--border); min-height: 50px; }
-        .gallery-cell { position: relative; width: 100%; aspect-ratio: 1; border: 1px solid var(--border); }
-        .gallery-cell img { width: 100%; height: 100%; object-fit: cover; }
-        .btn-del-photo { position: absolute; top: -3px; right: -3px; background: var(--error); color: #fff; border: none; width: 18px; height: 18px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; }
-        
-        #progress-bar-container { width: 100%; background: #222; height: 6px; margin-top: 8px; display: none; border-radius: 3px; overflow: hidden; }
-        #progress-bar { width: 0%; height: 100%; background: var(--accent); }
+        /* Modal Estilo */
+        #historyModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; padding: 20px; overflow-y: auto; box-sizing: border-box; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; }
+        .history-item { font-size: 14px; border-bottom: 1px solid #eee; padding: 15px 0; display: flex; justify-content: space-between; align-items: center; }
+        .date-info { color: #888; font-size: 12px; display: block; }
+        .revert-btn { color: #007bff; cursor: pointer; font-weight: bold; border: 1px solid #007bff; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); box-shadow: 0 0 10px rgba(220, 53, 69, 0.5); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
     <header>
-        <h1>SYS // ENGINE_FIXED_STREAM</h1>
-        <div id="db-info" class="counter">Iniciando Banco Otimizado...</div>
+        <h2>Tarefas</h2>
+        <span class="gear-btn" onclick="toggleHistory(true)">⚙️</span>
     </header>
 
-    <div id="import-panel" class="card">
-        <div class="row" style="justify-content: space-between; align-items: center; margin-bottom: 0;">
-            <strong>ARQUIVO SAP GRANDE (> 200MB)</strong>
-            <button class="btn" onclick="toggleElement('import-area')">Importar Novo</button>
-        </div>
-        <div id="import-area" class="hidden" style="margin-top: 10px;">
-            <div class="row">
-                <input type="file" id="file-input" accept=".html,.htm,.txt,.csv" style="display: none;" onchange="streamProcessFile(this)">
-                <button class="btn btn-accent" onclick="document.getElementById('file-input').click()">📁 Carregar Arquivo de 200MB+</button>
-                <button class="btn" style="color: var(--error);" onclick="clearDatabase()">🗑️ Limpar Tudo</button>
-            </div>
-            <div id="progress-bar-container">
-                <div id="progress-bar"></div>
-            </div>
-        </div>
+    <div id="protocolWarning" class="warning-box">
+        <strong>Aviso do Microfone:</strong> Navegadores de celular bloqueiam o microfone em arquivos locais (<code>file://</code>). Se não funcionar, use o Chrome/Safari ou envie para um site seguro (HTTPS).
     </div>
 
-    <div id="status">Pronto para buscar ativos de campo.</div>
-
-    <div class="row">
-        <input type="text" id="search-input" placeholder="🔎 Escreva o código do material para buscar..." autocomplete="off">
-        <button class="btn" onclick="clearSearch()">X</button>
+    <div class="input-group">
+        <input type="text" id="taskInput" placeholder="O que você precisa lembrar?">
+        <button class="mic-btn" id="micBtn" onclick="initiateVoiceWithPermission()" title="Ouvir voz">🎙️</button>
     </div>
-
-    <div class="counter" id="result-count" style="margin-bottom: 4px;">Aguardando digitação...</div>
-
-    <div class="table-wrapper" id="scroll-container">
-        <table id="results-table">
-            <thead>
-                <tr id="table-headers"><th>Código</th><th>Linha de Dados Completa</th><th>Ação de Campo</th></tr>
-            </thead>
-            <tbody id="table-body">
-                <tr><td colspan="3" style="color: var(--text-dim); text-align: center; padding: 25px;">Digite o termo ou código no campo acima para varrer o banco.</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<input type="file" id="globalCameraInput" accept="image/*" onchange="processGlobalPhotos(this)" style="display:none;">
-
-<div id="modalFoco" class="modal-mask">
-    <div class="modal-window">
-        <div class="modal-top">
-            <h3 id="modalTitle" class="modal-title">COLETA ATIVA</h3>
-            <button class="btn-close" onclick="closeModalCPS()">&times;</button>
-        </div>
-        <input type="hidden" id="activeRowKey">
-
-        <div class="field-group">
-            <label>Evidências Fotográficas:</label>
-            <div id="modalGallery" class="gallery-box"></div>
-            <button type="button" class="btn" style="margin-top: 6px; width: 100%; background: #141414; border: 1px dashed var(--accent); color: var(--accent); min-height: 40px;" onclick="triggerAdditionalPhoto()">📸 Acionar Hardware Câmera</button>
-        </div>
-
-        <div class="field-group">
-            <label>Qtd Encontrada / Estado:</label>
-            <input type="text" id="fQtd" placeholder="Ex: 12 un, regular, amassado..." oninput="saveDataCPS()">
-        </div>
-
-        <div class="field-group">
-            <label>Notas de Campo:</label>
-            <textarea id="fObs" placeholder="Observações e anotações visuais de inspeção..." oninput="saveDataCPS()"></textarea>
-        </div>
-
-        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px;">
-            <button type="button" style="color: var(--error); background:none; border:none; font-size:11px;" onclick="clearRecordCPS()">[ APAGAR REGISTROS ]</button>
-            <div id="flashSaved" style="color: var(--accent); font-size: 11px; font-weight: bold; opacity: 0; transition: opacity 0.15s;">● SALVO AUTOMÁTICO</div>
-        </div>
-    </div>
-</div>
-
-<script>
-    let db = null;
-    let INSPECTION_STORAGE = JSON.parse(localStorage.getItem('sys_inspection_data')) || {};
+    <button class="add-btn" onclick="addTask()">Adicionar</button>
     
-    // Configurações do renderizador controlado por scroll
-    let currentSearchResults = [];
-    let itemsRendered = 0;
-    const PAGE_SIZE = 25;
+    <ul id="taskList"></ul>
 
-    // Inicialização do IndexedDB à prova de quebra de memória do Android
-    const dbRequest = indexedDB.open("SysCampoBigDataCorrigido", 1);
-    dbRequest.onupgradeneeded = function(e) {
-        let database = e.target.result;
-        if (!database.objectStoreNames.contains("materiais")) {
-            database.createObjectStore("materiais", { keyPath: "id" });
+    <div id="historyModal">
+        <div class="modal-header">
+            <h3>Histórico</h3>
+            <button onclick="toggleHistory(false)">Fechar</button>
+        </div>
+        <div id="historyList"></div>
+    </div>
+
+    <script>
+        const taskInput = document.getElementById('taskInput');
+        const taskList = document.getElementById('taskList');
+        const historyList = document.getElementById('historyList');
+        const modal = document.getElementById('historyModal');
+        const micBtn = document.getElementById('micBtn');
+        const warningBox = document.getElementById('protocolWarning');
+
+        // Detecta se está rodando localmente (file://) para alertar o usuário
+        if (window.location.protocol === 'file:') {
+            warningBox.style.display = 'block';
         }
-        if (!database.objectStoreNames.contains("meta")) {
-            database.createObjectStore("meta", { keyPath: "chave" });
-        }
-    };
-    dbRequest.onsuccess = function(e) {
-        db = e.target.result;
-        updateDbInfo();
-    };
-    dbRequest.onerror = function() {
-        log("Falha ao criar banco de alta capacidade interno.", "error");
-    };
 
-    window.onload = function() {
-        let searchTimeout;
-        document.getElementById('search-input').addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(executeSearch, 100); 
-        });
+        let recognition;
+        let isListening = false;
 
-        document.getElementById('scroll-container').addEventListener('scroll', function(e) {
-            const container = e.target;
-            if (container.scrollTop + container.clientHeight >= container.scrollHeight - 40) {
-                appendNextPage();
-            }
-        });
-    };
+        function setupSpeechRecognition() {
+            if (!recognition && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'pt-BR';
+                recognition.continuous = false;
+                recognition.interimResults = false;
 
-    function log(msg, type = '') {
-        const el = document.getElementById('status');
-        el.innerText = msg; el.className = type;
-    }
+                recognition.onstart = () => {
+                    isListening = true;
+                    micBtn.classList.add('listening');
+                    micBtn.innerText = '🛑';
+                    taskInput.placeholder = "Ouvindo... Fale agora";
+                };
 
-    function toggleElement(id) {
-        document.getElementById(id).classList.toggle('hidden');
-    }
+                recognition.onend = () => {
+                    isListening = false;
+                    micBtn.classList.remove('listening');
+                    micBtn.innerText = '🎙️';
+                    taskInput.placeholder = "O que você precisa lembrar?";
+                };
 
-    function clearSearch() {
-        const input = document.getElementById('search-input');
-        input.value = ''; input.focus(); executeSearch();
-    }
+                recognition.onresult = (event) => {
+                    const voiceText = event.results[0][0].transcript;
+                    taskInput.value = voiceText;
+                };
 
-    /* PROCESSAMENTO EM FLUXO CONTÍNUO (STREAM) DO ARQUIVO DE 200MB+ */
-    function streamProcessFile(input) {
-        const file = input.files[0];
-        if (!file) return;
-
-        document.getElementById('progress-bar-container').style.display = 'block';
-        log("Fatiando e processando arquivo massivo... Por favor, aguarde.", "");
-
-        const CHUNK_SIZE = 2 * 1024 * 1024; // Pedaços estritos de 2MB para não gerar Out of Memory
-        let offset = 0;
-        let leftover = "";
-        let isFirstLine = true;
-        let matIdx = 0;
-        let count = 0;
-
-        let transaction = db.transaction(["materiais"], "readwrite");
-        transaction.objectStore("materiais").clear();
-
-        function readNextChunk() {
-            const slice = file.slice(offset, offset + CHUNK_SIZE);
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                let text = leftover + e.target.result;
-                // Trata quebras de linha independentemente da origem (Windows/Linux/SAP)
-                let lines = text.split(/\r?\n/);
-                leftover = lines.pop(); 
-
-                if (isFirstLine && lines.length > 0) {
-                    let firstLine = lines.shift();
-                    let cleanHeaders = firstLine.replace(/<\/?[^>]+(>|$)/g, "").trim();
-                    let headers = cleanHeaders.split(/\t|,|;|\|/).map(h => h.replace(/["']/g, '').trim());
-                    
-                    matIdx = headers.findIndex(h => h.toLowerCase().includes('material') || h.toLowerCase().includes('código') || h.toLowerCase().includes('cod'));
-                    if(matIdx === -1) matIdx = 0;
-                    isFirstLine = false;
-                }
-
-                let tx = db.transaction(["materiais"], "readwrite");
-                let objectStore = tx.objectStore("materiais");
-
-                lines.forEach(line => {
-                    if (!line.trim() || line.includes('----') || line.includes('<table') || line.includes('</table')) return;
-                    
-                    // Limpeza em tempo de leitura de qualquer resquício de tag HTML do relatório original
-                    let cleanLine = line.replace(/<\/?[^>]+(>|$)/g, "").trim();
-                    if (!cleanLine) return;
-
-                    let cells = cleanLine.split(/\t|,|;|\|/).map(c => c.trim());
-                    let rawKey = cells[matIdx] || "";
-                    
-                    // Normaliza a chave para busca perfeita por texto puro
-                    let cleanKey = rawKey.replace(/["']/g, '').trim();
-                    
-                    if(cleanKey) {
-                        objectStore.put({ 
-                            id: cleanKey.toLowerCase(), 
-                            data: cells.join(" ").replace(/\s+/g, ' ') 
-                        });
-                        count++;
+                recognition.onerror = (event) => {
+                    console.error("Erro no reconhecimento:", event.error);
+                    if (event.error === 'not-allowed') {
+                        alert("Permissão negada! Vá nas configurações do navegador/celular e autorize o microfone para este aplicativo.");
+                    } else {
+                        alert("Erro no reconhecimento de voz: " + event.error);
                     }
-                });
-
-                offset += CHUNK_SIZE;
-                let pct = Math.min(100, Math.floor((offset / file.size) * 100));
-                document.getElementById('progress-bar').style.width = `${pct}%`;
-                log(`Lendo Base: ${pct}% (${count} itens importados)...`);
-
-                if (offset < file.size) {
-                    setTimeout(readNextChunk, 1); // Delay mínimo para liberar processamento da UI do Android
-                } else {
-                    let metaTx = db.transaction(["meta"], "readwrite");
-                    metaTx.objectStore("meta").put({ chave: "total_itens", valor: count });
-                    
-                    document.getElementById('progress-bar-container').style.display = 'none';
-                    document.getElementById('import-area').classList.add('hidden');
-                    log(`Sucesso! ${count} registros indexados de forma segura no celular.`, "success");
-                    updateDbInfo();
-                }
-            };
-            reader.readAsText(slice, 'UTF-8');
-        }
-        readNextChunk();
-    }
-
-    /* SISTEMA DE FILTRAGEM CORRIGIDO (IGUAL AO HTML ORIGINAL) */
-    function executeSearch() {
-        const query = document.getElementById('search-input').value.toLowerCase().trim();
-        const tbody = document.getElementById('table-body');
-        document.getElementById('scroll-container').scrollTop = 0;
-
-        if (!db) return;
-        if (query === "") {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:var(--text-dim);">Escreva acima para rodar o motor de busca.</td></tr>';
-            document.getElementById('result-count').innerText = "Aguardando busca...";
-            return;
-        }
-
-        log("Varrendo registros...", "");
-        currentSearchResults = [];
-        itemsRendered = 0;
-        tbody.innerHTML = "";
-
-        let tx = db.transaction(["materiais"], "readonly");
-        let store = tx.objectStore("materiais");
-        let cursorReq = store.openCursor();
-        let terms = query.split(/\s+/);
-
-        cursorReq.onsuccess = function(e) {
-            let cursor = e.target.result;
-            if (cursor) {
-                let textToSearch = (cursor.value.id + " " + cursor.value.data).toLowerCase();
-                
-                // Validação termo a termo (Multi-termo idêntico ao motor HTML clássico)
-                let match = terms.every(term => textToSearch.includes(term));
-
-                if (match) {
-                    currentSearchResults.push(cursor.value);
-                }
-                
-                // Proteção extra: interrompe a varredura visual se encontrar mais de 250 itens para poupar a RAM do Android
-                if (currentSearchResults.length < 250) {
-                    cursor.continue();
-                } else {
-                    finalizeSearchRender(terms);
-                }
-            } else {
-                finalizeSearchRender(terms);
+                };
             }
-        };
-    }
+        }
 
-    function finalizeSearchRender(terms) {
-        document.getElementById('result-count').innerText = `Encontrados: ${currentSearchResults.length} itens correspondentes.`;
-        log("Resultados atualizados.", "success");
-        appendNextPage();
-    }
+        async function initiateVoiceWithPermission() {
+            if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+                alert("Seu navegador atual não suporta essa tecnologia de voz. Por favor, use o Google Chrome ou o Safari.");
+                return;
+            }
 
-    function appendNextPage() {
-        if (itemsRendered >= currentSearchResults.length) return;
+            setupSpeechRecognition();
 
-        const tbody = document.getElementById('table-body');
-        const start = itemsRendered;
-        const end = Math.min(start + PAGE_SIZE, currentSearchResults.length);
-        const query = document.getElementById('search-input').value.toLowerCase().trim();
-        const terms = query !== "" ? query.split(/\s+/) : [];
+            if (isListening) {
+                recognition.stop();
+                return;
+            }
 
-        let chunkHtml = '';
-        for (let i = start; i < end; i++) {
-            const item = currentSearchResults[i];
-            const rowKey = item.id;
-            const hasRecord = INSPECTION_STORAGE[rowKey];
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+                recognition.start();
+            } catch (err) {
+                console.error("Erro ao obter mídia:", err);
+                alert("Não foi possível acessar o microfone.\\n\\nMotivo: Como você abriu o arquivo direto do celular (protocolo file://), a maioria dos navegadores bloqueia recursos de voz por privacidade. Para funcionar 100% no celular, o arquivo precisa estar hospedado em um endereço web seguro (https).");
+            }
+        }
+
+        function getNow() {
+            return new Date().toLocaleString('pt-BR');
+        }
+
+        function loadData() {
+            const data = JSON.parse(localStorage.getItem('myTasks_v2')) || [];
             
-            let displayData = item.data;
-            if (terms.length > 0) {
-                terms.forEach(term => {
-                    if (term.length > 0) {
-                        const regex = new RegExp(`(${escapeRegExp(term)})`, 'gi');
-                        displayData = displayData.replace(regex, '<span class="highlight">$1</span>');
-                    }
-                });
+            taskList.innerHTML = '';
+            data.filter(t => !t.finishedAt).forEach((task) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${task.text}</span> <span class="ok-btn" onclick="completeTask(${task.id})">OK</span>`;
+                taskList.appendChild(li);
+            });
+
+            historyList.innerHTML = '';
+            data.filter(t => t.finishedAt).reverse().forEach(task => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <div>
+                        <strong>${task.text}</strong><br>
+                        <span class="date-info">Solicitado: ${task.createdAt}</span>
+                        <span class="date-info">Concluído: ${task.finishedAt}</span>
+                    </div>
+                    <span class="revert-btn" onclick="uncompleteTask(${task.id})">↩ Reverter</span>
+                `;
+                historyList.appendChild(div);
+            });
+        }
+
+        function addTask() {
+            if (!taskInput.value.trim()) return;
+            const data = JSON.parse(localStorage.getItem('myTasks_v2')) || [];
+            data.push({
+                id: Date.now(),
+                text: taskInput.value,
+                createdAt: getNow(),
+                finishedAt: null
+            });
+            localStorage.setItem('myTasks_v2', JSON.stringify(data));
+            taskInput.value = '';
+            loadData();
+        }
+
+        function completeTask(id) {
+            const data = JSON.parse(localStorage.getItem('myTasks_v2')) || [];
+            const task = data.find(t => t.id === id);
+            if (task) {
+                task.finishedAt = getNow();
+                localStorage.setItem('myTasks_v2', JSON.stringify(data));
+                loadData();
             }
-
-            chunkHtml += `<tr id="row-id-${rowKey}" ${hasRecord ? 'class="inspected-row"' : ''}>`;
-            chunkHtml += `<td style="font-weight:bold; color:var(--accent);">${item.id.toUpperCase()}</td>`;
-            chunkHtml += `<td style="max-width: 220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${displayData}</td>`;
-            
-            let btnClass = hasRecord ? 'btn-action has-data' : 'btn-action';
-            let btnText = hasRecord ? `📝 EDITAR (${hasRecord.fotos?.length || 0}F)` : '📸 FOTO / COLETAR';
-            chunkHtml += `<td><button type="button" class="${btnClass}" onclick="directCaptureTrigger('${rowKey}')">${btnText}</button></td>`;
-            chunkHtml += '</tr>';
         }
 
-        tbody.insertAdjacentHTML('beforeend', chunkHtml);
-        itemsRendered = end;
-    }
-
-    function updateVisibleRowState(key) {
-        const tr = document.getElementById(`row-id-${key}`);
-        if (!tr) return;
-        const hasRecord = INSPECTION_STORAGE[key];
-        const btn = tr.querySelector('.btn-action');
-        
-        if (hasRecord) {
-            tr.classList.add('inspected-row');
-            btn.className = 'btn-action has-data';
-            btn.innerText = `📝 EDITAR (${hasRecord.fotos?.length || 0}F)`;
-        } else {
-            tr.classList.remove('inspected-row');
-            btn.className = 'btn-action';
-            btn.innerText = '📸 FOTO / COLETAR';
-        }
-    }
-
-    /* HARDWARE DA CÂMERA E SALVAMENTO DE REGISTROS DE CAMPO */
-    let targetedKey = null;
-    function directCaptureTrigger(key) {
-        targetedKey = key;
-        const camInput = document.getElementById('globalCameraInput');
-        camInput.value = '';
-        camInput.click();
-    }
-
-    function triggerAdditionalPhoto() {
-        const key = document.getElementById('activeRowKey').value;
-        if(key) directCaptureTrigger(key);
-    }
-
-    function processGlobalPhotos(input) {
-        if (!targetedKey || !input.files.length) return;
-        const key = targetedKey;
-
-        if (!INSPECTION_STORAGE[key]) INSPECTION_STORAGE[key] = { qtd: '', obs: '', fotos: [] };
-        if (!INSPECTION_STORAGE[key].fotos) INSPECTION_STORAGE[key].fotos = [];
-
-        let file = input.files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = new Image();
-            img.src = e.target.result;
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const MAX_W = 400; 
-                let w = img.width; let h = img.height;
-
-                if (w > MAX_W) { h *= MAX_W / w; w = MAX_W; }
-                canvas.width = w; canvas.height = h;
-                
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, w, h);
-                
-                const compressed = canvas.toDataURL('image/jpeg', 0.45); 
-                INSPECTION_STORAGE[key].fotos.push(compressed);
-                
-                localStorage.setItem('sys_inspection_data', JSON.stringify(INSPECTION_STORAGE));
-                openModalCPS(key);
-            };
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function openModalCPS(key) {
-        document.getElementById('activeRowKey').value = key;
-        document.getElementById('modalTitle').innerText = `ITEM: ${key.toUpperCase()}`;
-        
-        const current = INSPECTION_STORAGE[key] || { qtd: '', obs: '', fotos: [] };
-        document.getElementById('fQtd').value = current.qtd || '';
-        document.getElementById('fObs').value = current.obs || '';
-        
-        buildGalleryCPS(current.fotos || []);
-        document.getElementById('modalFoco').style.display = 'flex';
-    }
-
-    function closeModalCPS() {
-        document.getElementById('modalFoco').style.display = 'none';
-        updateVisibleRowState(document.getElementById('activeRowKey').value);
-    }
-
-    function buildGalleryCPS(photos) {
-        document.getElementById('modalGallery').innerHTML = photos.map((p, idx) => `
-            <div class="gallery-cell">
-                <img src="${p}">
-                <button type="button" class="btn-del-photo" onclick="deletePhotoCPS(${idx})">×</button>
-            </div>
-        `).join('');
-    }
-
-    function deletePhotoCPS(idx) {
-        const key = document.getElementById('activeRowKey').value;
-        if (key && INSPECTION_STORAGE[key]?.fotos) {
-            INSPECTION_STORAGE[key].fotos.splice(idx, 1);
-            localStorage.setItem('sys_inspection_data', JSON.stringify(INSPECTION_STORAGE));
-            buildGalleryCPS(INSPECTION_STORAGE[key].fotos);
-        }
-    }
-
-    let saveTimeout;
-    function saveDataCPS() {
-        const key = document.getElementById('activeRowKey').value;
-        if (!key) return;
-
-        if (!INSPECTION_STORAGE[key]) INSPECTION_STORAGE[key] = { qtd: '', obs: '', fotos: [] };
-        INSPECTION_STORAGE[key].qtd = document.getElementById('fQtd').value;
-        INSPECTION_STORAGE[key].obs = document.getElementById('fObs').value;
-
-        localStorage.setItem('sys_inspection_data', JSON.stringify(INSPECTION_STORAGE));
-
-        const flash = document.getElementById('flashSaved');
-        flash.style.opacity = '1';
-        clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(() => { flash.style.opacity = '0'; }, 500);
-    }
-
-    function clearRecordCPS() {
-        const key = document.getElementById('activeRowKey').value;
-        if (key && confirm("Deseja expurgar os dados deste ativo?")) {
-            delete INSPECTION_STORAGE[key];
-            localStorage.setItem('sys_inspection_data', JSON.stringify(INSPECTION_STORAGE));
-            document.getElementById('fQtd').value = ''; document.getElementById('fObs').value = '';
-            buildGalleryCPS([]); closeModalCPS();
-        }
-    }
-
-    function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-
-    function updateDbInfo() {
-        if (!db) return;
-        let tx = db.transaction(["meta"], "readonly");
-        let req = tx.objectStore("meta").get("total_itens");
-        req.onsuccess = function() {
-            const info = document.getElementById('db-info');
-            if(req.result) {
-                info.innerText = `📦 BANCO: ${req.result.valor} ATIVOS`;
-                info.style.color = "var(--accent)";
-            } else {
-                info.innerText = "⚠️ BANCO ZERADO";
-                info.style.color = "var(--text-dim)";
+        function uncompleteTask(id) {
+            const data = JSON.parse(localStorage.getItem('myTasks_v2')) || [];
+            const task = data.find(t => t.id === id);
+            if (task) {
+                task.finishedAt = null;
+                localStorage.setItem('myTasks_v2', JSON.stringify(data));
+                loadData();
             }
-        };
-    }
-
-    function clearDatabase() {
-        if(confirm("Confirmar a exclusão física do banco de dados no celular?")) {
-            let tx = db.transaction(["materiais", "meta"], "readwrite");
-            tx.objectStore("materiais").clear();
-            tx.objectStore("meta").clear();
-            document.getElementById('table-body').innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Limpo.</td></tr>';
-            setTimeout(updateDbInfo, 150);
         }
-    }
-</script>
+
+        function toggleHistory(show) {
+            modal.style.display = show ? 'block' : 'none';
+        }
+
+        taskInput.addEventListener("keypress", (e) => { if (e.key === "Enter") addTask(); });
+        loadData();
+    </script>
 </body>
 </html>
