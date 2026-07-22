@@ -3,8 +3,18 @@
 
 > <head>
   <meta charset="UTF-8" />
-  <title>Inspeção de Fibra Óptica - Motiva</title>
+  <title>Inspeção de Fibra Óptica - KMZ Corrigido</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.15.0/dist/leaflet-geoman.css"
+  />
 
   <style>
     html, body {
@@ -17,7 +27,7 @@
 
     #app {
       display: grid;
-      grid-template-columns: 390px 1fr;
+      grid-template-columns: 410px 1fr;
       height: 100%;
     }
 
@@ -31,11 +41,12 @@
     #map {
       width: 100%;
       height: 100%;
+      background: #020617;
     }
 
     h1 {
       font-size: 18px;
-      margin: 0 0 8px 0;
+      margin: 0 0 6px 0;
     }
 
     h2 {
@@ -122,7 +133,8 @@
     }
 
     .metric strong {
-      font-size: 17px;
+      font-size: 16px;
+      word-break: break-word;
     }
 
     .ok {
@@ -135,6 +147,23 @@
 
     .bad {
       color: #ef4444;
+    }
+
+    .small {
+      color: #9ca3af;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .notice {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      border-radius: 8px;
+      padding: 9px;
+      font-size: 12px;
+      line-height: 1.4;
+      margin-bottom: 8px;
     }
 
     #photoPreview {
@@ -162,25 +191,41 @@
       margin-bottom: 0;
     }
 
-    .small {
-      color: #9ca3af;
-      font-size: 12px;
-      line-height: 1.4;
-    }
-
     #loading {
       position: fixed;
       top: 12px;
       right: 12px;
-      background: rgba(17, 24, 39, 0.96);
+      background: rgba(17, 24, 39, 0.97);
       border: 1px solid #374151;
       color: white;
       padding: 12px;
       border-radius: 10px;
       display: none;
       z-index: 9999;
-      max-width: 360px;
+      max-width: 420px;
       font-size: 13px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+
+    #progressBarOuter {
+      width: 100%;
+      background: #020617;
+      border-radius: 999px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 8px;
+      border: 1px solid #374151;
+      display: none;
+    }
+
+    #progressBarInner {
+      height: 100%;
+      width: 0%;
+      background: #38bdf8;
+    }
+
+    .leaflet-popup-content {
+      color: #111827;
     }
 
     @media (max-width: 900px) {
@@ -202,16 +247,31 @@
 </head>
 
 <body>
-<div id="loading">Processando...</div>
+<div id="loading"
+
+>   <div id="loadingText">Processando...</div>
+  <div id="progressBarOuter"
+
+>     <div id="progressBarInner"></div>
+  </div>
+</div>
 
 <div id="app"
 
 >   <div id="panel"
 
 >     <h1>Inspeção de Fibra Óptica</h1>
-    <div class="small">Google Satélite | KMZ/KML | GPS | Foto | WhatsApp | Relatórios</div>
+    <div class="small"
+
+>       KMZ/KML corrigido | Híbrido satélite sem chave | GPS | Distância lateral | Fotos | Relatórios
+    </div>
 
     <h2>1. Traçado KMZ/KML</h2>
+
+    <div class="notice"
+
+>       Correção aplicada: o sistema agora lê somente traçados lineares, como LineString e gx:Track. Ele não liga trechos separados e não usa coordenadas de polígonos, áreas ou descrições.
+    </div>
 
     <label>Importar arquivo KMZ ou KML</label>
     <input type="file" id="fileInput" accept=".kml,.kmz" />
@@ -219,7 +279,7 @@
     <div class="grid2"
 
 >       <button onclick="fitTrace()">Enquadrar</button>
-      <button class="gray" onclick="toggleEditable()">Editar traçado</button>
+      <button class="gray" onclick="toggleTraceEdit()">Editar traçado</button>
     </div>
 
     <div class="metric"
@@ -230,14 +290,32 @@
 
     <div class="metric"
 
->       <small>Pontos do traçado</small>
+>       <small>Trechos lineares encontrados</small>
+      <strong id="segmentCount">--</strong>
+    </div>
+
+    <div class="metric"
+
+>       <small>Pontos originais válidos</small>
       <strong id="pointCount">--</strong>
+    </div>
+
+    <div class="metric"
+
+>       <small>Pontos exibidos</small>
+      <strong id="displayPointCount">--</strong>
     </div>
 
     <div class="metric"
 
 >       <small>Extensão estimada</small>
       <strong id="traceLength">-- km</strong>
+    </div>
+
+    <div class="metric"
+
+>       <small>Status do carregamento</small>
+      <strong id="processMode" style="font-size:13px;">Aguardando arquivo</strong>
     </div>
 
     <h2>2. GPS e distância lateral</h2>
@@ -280,21 +358,26 @@
       <strong id="coords" style="font-size:13px;">--</strong>
     </div>
 
-    <h2>3. Visualização</h2>
+    <h2>3. Mapa e visualização</h2>
 
     <div class="grid2"
 
->       <button onclick="setSatellite()">Satélite</button>
-      <button onclick="setHybrid()">Híbrido</button>
+>       <button onclick="setHybridSatellite()">Híbrido satélite</button>
+      <button onclick="setOSM()">Mapa padrão</button>
     </div>
 
     <div class="grid2"
 
->       <button onclick="maxZoom()">Zoom solo</button>
+>       <button onclick="openGoogleMaps()">Google Maps</button>
       <button onclick="openStreetView()">Street View</button>
     </div>
 
-    <button class="gray" onclick="closeStreetView()">Fechar Street View</button>
+    <button onclick="maxZoom()">Zoom máximo</button>
+
+    <div class="small"
+
+>       O mapa híbrido usa Esri World Imagery + rótulos públicos, sem chave de API.
+    </div>
 
     <h2>4. Foto e ocorrência</h2>
 
@@ -331,24 +414,45 @@
     <button onclick="exportKML()">Exportar KML atualizado</button>
     <button onclick="exportKMZ()">Exportar KMZ com fotos</button>
 
+    <div class="notice"
+
+>       A exportação mantém os trechos separados, sem criar linhas artificiais entre segmentos.
+    </div>
+
     <h2>6. Ocorrências</h2>
-    <div id="records"></div>
+    <div id="records"
+
+>       <div class="small">Nenhuma ocorrência registrada.</div>
+    </div>
   </div>
 
   <div id="map"></div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.15.0/dist/leaflet-geoman.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script>
+const MAX_DISPLAY_POINTS_TOTAL = 200000;
+const MAX_DISTANCE_POINTS_TOTAL = 200000;
+
 let map;
-let panorama;
+let osmLayer;
+let satelliteLayer;
+let labelLayer;
+
+let parseWorker = null;
 
 let originalFileName = "";
-let fiberPathFull = [];
-let fiberPathDisplay = [];
-let fiberPolyline = null;
-let traceEditable = false;
+let originalSegments = [];
+let displaySegments = [];
+let distanceSegments = [];
+
+let fiberGroup = null;
+let fiberLayers = [];
+let traceEditEnabled = false;
+let traceEdited = false;
 
 let userMarker = null;
 let accuracyCircle = null;
@@ -368,241 +472,689 @@ let occurrenceMarkers = [];
 
 let lastPhotoDataUrl = null;
 let lastStampedPhotoDataUrl = null;
+let lastGpsUpdate = 0;
 
-const MAX_DISPLAY_POINTS = 12000;
+initMap();
+initWorker();
 
-function showLoading(msg) {
-  const el = document.getElementById("loading");
-  el.innerText = msg || "Processando...";
-  el.style.display = "block";
+function initMap() {
+  map = L.map("map", {
+    center: [-23.55052, -46.633308],
+    zoom: 17,
+    zoomControl: true,
+    preferCanvas: true
+  });
+
+  satelliteLayer = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    {
+      maxZoom: 21,
+      maxNativeZoom: 19,
+      attribution: "Tiles &copy; Esri"
+    }
+  );
+
+  labelLayer = L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
+    {
+      maxZoom: 21,
+      maxNativeZoom: 20,
+      subdomains: "abcd",
+      attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+    }
+  );
+
+  osmLayer = L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }
+  );
+
+  setHybridSatellite();
+
+  map.pm.addControls({
+    position: "topleft",
+    drawMarker: false,
+    drawCircle: false,
+    drawCircleMarker: false,
+    drawRectangle: false,
+    drawPolygon: false,
+    drawPolyline: false,
+    editMode: false,
+    dragMode: false,
+    cutPolygon: false,
+    removalMode: false
+  });
+
+  document.getElementById("fileInput").addEventListener("change", handleFile);
+  document.getElementById("cameraInput").addEventListener("change", handlePhoto);
+}
+
+function setHybridSatellite() {
+  if (map.hasLayer(osmLayer)) map.removeLayer(osmLayer);
+  if (!map.hasLayer(satelliteLayer)) satelliteLayer.addTo(map);
+  if (!map.hasLayer(labelLayer)) labelLayer.addTo(map);
+}
+
+function setOSM() {
+  if (map.hasLayer(satelliteLayer)) map.removeLayer(satelliteLayer);
+  if (map.hasLayer(labelLayer)) map.removeLayer(labelLayer);
+  if (!map.hasLayer(osmLayer)) osmLayer.addTo(map);
+}
+
+function showLoading(msg, progress) {
+  const loading = document.getElementById("loading");
+  const text = document.getElementById("loadingText");
+  const outer = document.getElementById("progressBarOuter");
+  const inner = document.getElementById("progressBarInner");
+
+  text.innerText = msg || "Processando...";
+  loading.style.display = "block";
+
+  if (typeof progress === "number") {
+    outer.style.display = "block";
+    inner.style.width = Math.max(0, Math.min(100, progress)) + "%";
+  } else {
+    outer.style.display = "none";
+    inner.style.width = "0%";
+  }
 }
 
 function hideLoading() {
   document.getElementById("loading").style.display = "none";
 }
 
-function initMap() {
-  map = new google.maps.Map(document.getElementById("map"), {
-    center: { lat: -23.55052, lng: -46.633308 },
-    zoom: 18,
-    mapTypeId: "satellite",
-    tilt: 0,
-    streetViewControl: true,
-    fullscreenControl: true,
-    mapTypeControl: true,
-    zoomControl: true
+function initWorker() {
+  const workerCode = `
+    self.importScripts("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js");
+
+    self.onmessage = async function(e) {
+      if (e.data.cmd === "parse") {
+        try {
+          const result = await parseFile(
+            e.data.file,
+            e.data.name,
+            e.data.maxDisplayPointsTotal,
+            e.data.maxDistancePointsTotal
+          );
+
+          self.postMessage({
+            ok: true,
+            type: "done",
+            result: result
+          });
+        } catch (err) {
+          self.postMessage({
+            ok: false,
+            error: err.message || String(err)
+          });
+        }
+      }
+    };
+
+    async function parseFile(file, name, maxDisplayPointsTotal, maxDistancePointsTotal) {
+      postProgress("Lendo arquivo...", 5);
+
+      let kmlText = "";
+      const lower = name.toLowerCase();
+
+      if (lower.endsWith(".kml")) {
+        kmlText = await file.text();
+      } else if (lower.endsWith(".kmz")) {
+        postProgress("Descompactando KMZ...", 15);
+
+        const zip = await JSZip.loadAsync(file);
+        let kmlEntry = null;
+
+        zip.forEach(function(path, entry) {
+          const p = path.toLowerCase();
+
+          if (!entry.dir && p.endsWith(".kml")) {
+            /*
+              Preferência para doc.kml, que normalmente é o arquivo principal.
+            */
+            if (!kmlEntry || p.endsWith("doc.kml")) {
+              kmlEntry = entry;
+            }
+          }
+        });
+
+        if (!kmlEntry) {
+          throw new Error("KMZ não contém arquivo KML interno.");
+        }
+
+        kmlText = await kmlEntry.async("string");
+      } else {
+        throw new Error("Formato inválido. Use KMZ ou KML.");
+      }
+
+      if (!kmlText || kmlText.length < 10) {
+        throw new Error("Arquivo vazio ou inválido.");
+      }
+
+      postProgress("Lendo somente traçados lineares do KML...", 35);
+
+      const parsed = extractLinearSegments(kmlText);
+
+      if (!parsed.segments.length) {
+        throw new Error("Nenhum LineString ou gx:Track foi encontrado no KML. O arquivo pode conter apenas polígonos, pontos ou elementos não lineares.");
+      }
+
+      postProgress("Otimizando sem ligar trechos separados...", 70);
+
+      const originalSegments = parsed.segments;
+      const totalPoints = countPoints(originalSegments);
+      const totalLength = computeSegmentsLength(originalSegments);
+
+      const displaySegments = simplifySegmentsByTotalLimit(originalSegments, maxDisplayPointsTotal);
+      const distanceSegments = simplifySegmentsByTotalLimit(originalSegments, maxDistancePointsTotal);
+
+      return {
+        originalSegments: originalSegments,
+        displaySegments: displaySegments,
+        distanceSegments: distanceSegments,
+        totalPoints: totalPoints,
+        displayPoints: countPoints(displaySegments),
+        distancePoints: countPoints(distanceSegments),
+        segmentCount: originalSegments.length,
+        totalLength: totalLength,
+        ignoredPolygonBlocks: parsed.ignoredPolygonBlocks,
+        ignoredPointBlocks: parsed.ignoredPointBlocks
+      };
+    }
+
+    function postProgress(message, progress) {
+      self.postMessage({
+        type: "progress",
+        message: message,
+        progress: progress
+      });
+    }
+
+    function extractLinearSegments(text) {
+      const segments = [];
+      let ignoredPolygonBlocks = 0;
+      let ignoredPointBlocks = 0;
+
+      /*
+        Preferência: processa por Placemark para não misturar elementos diferentes.
+      */
+      const placemarkRegex = /<Placemark[\\s\\S]*?<\\/Placemark>/gi;
+      let placemarkMatch;
+      let placemarkCount = 0;
+
+      while ((placemarkMatch = placemarkRegex.exec(text)) !== null) {
+        placemarkCount++;
+        const placemark = placemarkMatch[0];
+
+        if (/<Polygon[\\s\\S]*?<\\/Polygon>/i.test(placemark)) {
+          ignoredPolygonBlocks++;
+        }
+
+        if (/<Point[\\s\\S]*?<\\/Point>/i.test(placemark)) {
+          ignoredPointBlocks++;
+        }
+
+        /*
+          Lê apenas LineString. Não lê Polygon, LinearRing, Point nem coordenadas soltas.
+          Cada LineString vira um segmento separado.
+        */
+        const lineRegex = /<LineString[\\s\\S]*?<coordinates[^>]*>([\\s\\S]*?)<\\/coordinates>[\\s\\S]*?<\\/LineString>/gi;
+        let lineMatch;
+
+        while ((lineMatch = lineRegex.exec(placemark)) !== null) {
+          const segment = parseCoordinatesBlock(lineMatch[1]);
+
+          if (segment.length >= 2) {
+            segments.push(segment);
+          }
+        }
+
+        /*
+          Lê gx:Track como segmento separado.
+          Formato: <gx:coord>longitude latitude altitude</gx:coord>
+        */
+        const trackRegex = /<gx:Track[\\s\\S]*?<\\/gx:Track>/gi;
+        let trackMatch;
+
+        while ((trackMatch = trackRegex.exec(placemark)) !== null) {
+          const segment = parseGxTrack(trackMatch[0]);
+
+          if (segment.length >= 2) {
+            segments.push(segment);
+          }
+        }
+
+        if (placemarkCount % 50 === 0) {
+          postProgress("Analisando Placemarks: " + placemarkCount, 45);
+        }
+      }
+
+      /*
+        Fallback: se o KML não tiver Placemark padrão, lê LineString no documento inteiro.
+        Ainda assim não concatena blocos diferentes.
+      */
+      if (!segments.length) {
+        const lineRegex = /<LineString[\\s\\S]*?<coordinates[^>]*>([\\s\\S]*?)<\\/coordinates>[\\s\\S]*?<\\/LineString>/gi;
+        let lineMatch;
+
+        while ((lineMatch = lineRegex.exec(text)) !== null) {
+          const segment = parseCoordinatesBlock(lineMatch[1]);
+
+          if (segment.length >= 2) {
+            segments.push(segment);
+          }
+        }
+      }
+
+      /*
+        Fallback para gx:Track no documento inteiro.
+      */
+      if (!segments.length) {
+        const trackRegex = /<gx:Track[\\s\\S]*?<\\/gx:Track>/gi;
+        let trackMatch;
+
+        while ((trackMatch = trackRegex.exec(text)) !== null) {
+          const segment = parseGxTrack(trackMatch[0]);
+
+          if (segment.length >= 2) {
+            segments.push(segment);
+          }
+        }
+      }
+
+      return {
+        segments: segments,
+        ignoredPolygonBlocks: ignoredPolygonBlocks,
+        ignoredPointBlocks: ignoredPointBlocks
+      };
+    }
+
+    function parseCoordinatesBlock(block) {
+      const segment = [];
+      const coordRegex = /(-?\\d+(?:\\.\\d+)?),(-?\\d+(?:\\.\\d+)?)(?:,-?\\d+(?:\\.\\d+)?)?/g;
+      let m;
+
+      while ((m = coordRegex.exec(block)) !== null) {
+        const lng = parseFloat(m[1]);
+        const lat = parseFloat(m[2]);
+
+        if (
+          isFinite(lat) &&
+          isFinite(lng) &&
+          lat >= -90 &&
+          lat <= 90 &&
+          lng >= -180 &&
+          lng <= 180
+        ) {
+          segment.push([lat, lng]);
+        }
+      }
+
+      return removeConsecutiveDuplicates(segment);
+    }
+
+    function parseGxTrack(trackText) {
+      const segment = [];
+      const gxRegex = /<gx:coord[^>]*>\\s*(-?\\d+(?:\\.\\d+)?)\\s+(-?\\d+(?:\\.\\d+)?)(?:\\s+-?\\d+(?:\\.\\d+)?)?\\s*<\\/gx:coord>/gi;
+      let m;
+
+      while ((m = gxRegex.exec(trackText)) !== null) {
+        const lng = parseFloat(m[1]);
+        const lat = parseFloat(m[2]);
+
+        if (
+          isFinite(lat) &&
+          isFinite(lng) &&
+          lat >= -90 &&
+          lat <= 90 &&
+          lng >= -180 &&
+          lng <= 180
+        ) {
+          segment.push([lat, lng]);
+        }
+      }
+
+      return removeConsecutiveDuplicates(segment);
+    }
+
+    function removeConsecutiveDuplicates(segment) {
+      if (!segment.length) return segment;
+
+      const out = [segment[0]];
+
+      for (let i = 1; i < segment.length; i++) {
+        const prev = out[out.length - 1];
+        const cur = segment[i];
+
+        if (prev[0] !== cur[0] || prev[1] !== cur[1]) {
+          out.push(cur);
+        }
+      }
+
+      return out;
+    }
+
+    function countPoints(segments) {
+      let total = 0;
+
+      for (let i = 0; i < segments.length; i++) {
+        total += segments[i].length;
+      }
+
+      return total;
+    }
+
+    function simplifySegmentsByTotalLimit(segments, maxTotal) {
+      const total = countPoints(segments);
+
+      if (total <= maxTotal) {
+        return segments;
+      }
+
+      const globalStep = Math.ceil(total / maxTotal);
+      const out = [];
+
+      for (let s = 0; s < segments.length; s++) {
+        const seg = segments[s];
+
+        if (seg.length <= 2) {
+          out.push(seg);
+          continue;
+        }
+
+        const simplified = [];
+
+        for (let i = 0; i < seg.length; i += globalStep) {
+          simplified.push(seg[i]);
+        }
+
+        const last = seg[seg.length - 1];
+        const curLast = simplified[simplified.length - 1];
+
+        if (curLast[0] !== last[0] || curLast[1] !== last[1]) {
+          simplified.push(last);
+        }
+
+        if (simplified.length >= 2) {
+          out.push(simplified);
+        }
+      }
+
+      return out;
+    }
+
+    function computeSegmentsLength(segments) {
+      let total = 0;
+
+      for (let s = 0; s < segments.length; s++) {
+        const seg = segments[s];
+
+        for (let i = 1; i < seg.length; i++) {
+          total += distanceMeters(seg[i - 1][0], seg[i - 1][1], seg[i][0], seg[i][1]);
+        }
+      }
+
+      return total;
+    }
+
+    function distanceMeters(lat1, lng1, lat2, lng2) {
+      const R = 6371000;
+      const p1 = lat1 * Math.PI / 180;
+      const p2 = lat2 * Math.PI / 180;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(p1) * Math.cos(p2) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+  `;
+
+  const blob = new Blob([workerCode], {
+    type: "application/javascript"
   });
 
-  panorama = map.getStreetView();
+  parseWorker = new Worker(URL.createObjectURL(blob));
 
-  document.getElementById("fileInput").addEventListener("change", handleFile);
-  document.getElementById("cameraInput").addEventListener("change", handlePhoto);
+  parseWorker.onmessage = function(e) {
+    const data = e.data;
+
+    if (data.type === "progress") {
+      showLoading(data.message, data.progress);
+      return;
+    }
+
+    if (!data.ok) {
+      hideLoading();
+      alert("Erro ao carregar KMZ/KML: " + data.error);
+      return;
+    }
+
+    handleParsedResult(data.result);
+  };
+
+  parseWorker.onerror = function(err) {
+    hideLoading();
+    alert("Erro no processamento: " + err.message);
+  };
 }
 
-async function handleFile(event) {
+function handleFile(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  try {
-    showLoading("Lendo arquivo...");
+  resetTrace();
 
-    originalFileName = file.name;
-    document.getElementById("fileName").innerText = file.name;
+  originalFileName = file.name;
+  document.getElementById("fileName").innerText = file.name;
+  document.getElementById("processMode").innerText = "Processando em segundo plano...";
 
-    let kmlText = "";
+  showLoading("Preparando leitura do KMZ/KML...", 1);
 
-    if (file.name.toLowerCase().endsWith(".kml")) {
-      kmlText = await file.text();
-    } else if (file.name.toLowerCase().endsWith(".kmz")) {
-      kmlText = await extractKMLFromKMZ(file);
-    } else {
-      alert("Formato inválido. Use KMZ ou KML.");
-      hideLoading();
-      return;
-    }
-
-    showLoading("Processando coordenadas...");
-
-    fiberPathFull = parseKMLCoordinates(kmlText);
-
-    if (!fiberPathFull.length) {
-      alert("Nenhuma coordenada encontrada no arquivo.");
-      hideLoading();
-      return;
-    }
-
-    fiberPathDisplay = simplifyForDisplay(fiberPathFull, MAX_DISPLAY_POINTS);
-
-    drawFiberPolyline();
-
-    document.getElementById("pointCount").innerText =
-      fiberPathFull.length.toLocaleString("pt-BR");
-
-    document.getElementById("traceLength").innerText =
-      (computePathLength(fiberPathFull) / 1000).toFixed(3) + " km";
-
-    fitTrace();
-
-    hideLoading();
-
-    alert("Traçado carregado com sucesso. Pontos: " + fiberPathFull.length.toLocaleString("pt-BR"));
-  } catch (err) {
-    console.error(err);
-    hideLoading();
-    alert("Erro ao carregar arquivo: " + err.message);
-  }
-}
-
-async function extractKMLFromKMZ(file) {
-  const zip = await JSZip.loadAsync(file);
-  let kmlFile = null;
-
-  zip.forEach(function(path, entry) {
-    if (path.toLowerCase().endsWith(".kml") && !kmlFile) {
-      kmlFile = entry;
-    }
+  parseWorker.postMessage({
+    cmd: "parse",
+    file: file,
+    name: file.name,
+    maxDisplayPointsTotal: MAX_DISPLAY_POINTS_TOTAL,
+    maxDistancePointsTotal: MAX_DISTANCE_POINTS_TOTAL
   });
-
-  if (!kmlFile) {
-    throw new Error("KMZ não contém KML interno.");
-  }
-
-  return await kmlFile.async("text");
 }
 
-function parseKMLCoordinates(kmlText) {
-  const parser = new DOMParser();
-  const xml = parser.parseFromString(kmlText, "text/xml");
+function handleParsedResult(result) {
+  originalSegments = result.originalSegments;
+  displaySegments = result.displaySegments;
+  distanceSegments = result.distanceSegments;
 
-  const parserError = xml.querySelector("parsererror");
-  if (parserError) {
-    throw new Error("KML inválido.");
-  }
+  drawFiberSegments();
 
-  const nodes = Array.from(xml.getElementsByTagName("coordinates"));
-  const points = [];
-
-  nodes.forEach(node => {
-    const raw = node.textContent.trim();
-    if (!raw) return;
-
-    const items = raw.split(/\s+/);
-
-    items.forEach(item => {
-      const parts = item.split(",");
-      if (parts.length >= 2) {
-        const lng = parseFloat(parts[0]);
-        const lat = parseFloat(parts[1]);
-
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          points.push({ lat, lng });
-        }
-      }
-    });
-  });
-
-  return points;
-}
-
-function simplifyForDisplay(points, maxPoints) {
-  if (points.length <= maxPoints) return points.slice();
-
-  const step = Math.ceil(points.length / maxPoints);
-  const simplified = [];
-
-  for (let i = 0; i < points.length; i += step) {
-    simplified.push(points[i]);
-  }
-
-  const last = points[points.length - 1];
-  const currentLast = simplified[simplified.length - 1];
-
-  if (currentLast.lat !== last.lat || currentLast.lng !== last.lng) {
-    simplified.push(last);
-  }
-
-  return simplified;
-}
-
-function drawFiberPolyline() {
-  if (fiberPolyline) {
-    fiberPolyline.setMap(null);
-  }
-
-  fiberPolyline = new google.maps.Polyline({
-    path: fiberPathDisplay,
-    geodesic: true,
-    strokeColor: "#00BFFF",
-    strokeOpacity: 1,
-    strokeWeight: 5,
-    editable: traceEditable,
-    map: map
-  });
-
-  fiberPolyline.addListener("mouseup", syncEditedTrace);
-  fiberPolyline.addListener("dragend", syncEditedTrace);
-}
-
-function syncEditedTrace() {
-  if (!fiberPolyline) return;
-
-  const edited = fiberPolyline.getPath().getArray().map(p => ({
-    lat: p.lat(),
-    lng: p.lng()
-  }));
-
-  fiberPathDisplay = edited;
-  fiberPathFull = edited;
+  document.getElementById("segmentCount").innerText =
+    result.segmentCount.toLocaleString("pt-BR");
 
   document.getElementById("pointCount").innerText =
-    fiberPathFull.length.toLocaleString("pt-BR");
+    result.totalPoints.toLocaleString("pt-BR");
+
+  document.getElementById("displayPointCount").innerText =
+    result.displayPoints.toLocaleString("pt-BR");
 
   document.getElementById("traceLength").innerText =
-    (computePathLength(fiberPathFull) / 1000).toFixed(3) + " km";
+    (result.totalLength / 1000).toFixed(3) + " km";
 
-  updateDistance();
-}
+  let status = "Traçado carregado corretamente por segmentos separados.";
 
-function toggleEditable() {
-  if (!fiberPolyline) {
-    alert("Carregue primeiro um KMZ ou KML.");
-    return;
+  if (result.totalPoints > result.displayPoints) {
+    status += " Arquivo grande com exibição otimizada.";
   }
 
-  traceEditable = !traceEditable;
-  fiberPolyline.setEditable(traceEditable);
+  if (result.ignoredPolygonBlocks > 0 || result.ignoredPointBlocks > 0) {
+    status += " Polígonos e pontos foram ignorados para não gerar linhas indevidas.";
+  }
 
-  if (traceEditable) {
-    alert("Modo edição ativado. Arraste os vértices do traçado para corrigir.");
-  } else {
-    syncEditedTrace();
-    alert("Modo edição desativado. Traçado atualizado.");
+  document.getElementById("processMode").innerText = status;
+
+  hideLoading();
+  fitTrace();
+
+  alert(
+    "KMZ/KML carregado corretamente.\\n\\n" +
+    "Trechos lineares: " + result.segmentCount.toLocaleString("pt-BR") + "\\n" +
+    "Pontos válidos: " + result.totalPoints.toLocaleString("pt-BR") + "\\n" +
+    "Polígonos ignorados: " + result.ignoredPolygonBlocks.toLocaleString("pt-BR") + "\\n" +
+    "Pontos isolados ignorados: " + result.ignoredPointBlocks.toLocaleString("pt-BR")
+  );
+}
+
+function resetTrace() {
+  originalSegments = [];
+  displaySegments = [];
+  distanceSegments = [];
+  traceEdited = false;
+
+  if (fiberGroup) {
+    map.removeLayer(fiberGroup);
+    fiberGroup = null;
+  }
+
+  fiberLayers = [];
+
+  if (nearestMarker) {
+    map.removeLayer(nearestMarker);
+    nearestMarker = null;
+  }
+
+  if (nearestLine) {
+    map.removeLayer(nearestLine);
+    nearestLine = null;
+  }
+}
+
+function drawFiberSegments() {
+  if (fiberGroup) {
+    map.removeLayer(fiberGroup);
+  }
+
+  fiberLayers = [];
+  fiberGroup = L.featureGroup().addTo(map);
+
+  for (let i = 0; i < displaySegments.length; i++) {
+    const seg = displaySegments[i];
+
+    if (!seg || seg.length < 2) continue;
+
+    const layer = L.polyline(seg, {
+      color: "#00BFFF",
+      weight: 5,
+      opacity: 1,
+      smoothFactor: 0,
+      interactive: true
+    });
+
+    layer.bindPopup("Trecho da fibra óptica " + (i + 1));
+
+    layer.on("pm:edit", function() {
+      syncEditedTrace();
+    });
+
+    layer.addTo(fiberGroup);
+    fiberLayers.push(layer);
+
+    if (traceEditEnabled) {
+      layer.pm.enable({
+        allowSelfIntersection: true
+      });
+    }
   }
 }
 
 function fitTrace() {
-  if (!fiberPathDisplay.length) {
+  if (!fiberGroup || !fiberLayers.length) {
     alert("Nenhum traçado carregado.");
     return;
   }
 
-  const bounds = new google.maps.LatLngBounds();
-
-  fiberPathDisplay.forEach(p => {
-    bounds.extend(new google.maps.LatLng(p.lat, p.lng));
+  map.fitBounds(fiberGroup.getBounds(), {
+    padding: [35, 35]
   });
-
-  map.fitBounds(bounds);
 }
 
-function computePathLength(path) {
+function toggleTraceEdit() {
+  if (!fiberLayers.length) {
+    alert("Carregue primeiro um KMZ ou KML.");
+    return;
+  }
+
+  traceEditEnabled = !traceEditEnabled;
+
+  if (traceEditEnabled) {
+    fiberLayers.forEach(layer => {
+      layer.pm.enable({
+        allowSelfIntersection: true
+      });
+    });
+
+    alert("Modo edição ativado. Cada trecho permanece separado.");
+  } else {
+    fiberLayers.forEach(layer => {
+      layer.pm.disable();
+    });
+
+    syncEditedTrace();
+    alert("Modo edição desativado. Traçado atualizado mantendo trechos separados.");
+  }
+}
+
+function syncEditedTrace() {
+  if (!fiberLayers.length) return;
+
+  traceEdited = true;
+
+  const newSegments = [];
+
+  fiberLayers.forEach(layer => {
+    const latlngs = layer.getLatLngs();
+
+    if (latlngs && latlngs.length >= 2) {
+      newSegments.push(latlngs.map(ll => [ll.lat, ll.lng]));
+    }
+  });
+
+  originalSegments = newSegments;
+  displaySegments = newSegments;
+  distanceSegments = newSegments;
+
+  document.getElementById("segmentCount").innerText = newSegments.length.toLocaleString("pt-BR");
+  document.getElementById("pointCount").innerText = countPoints(newSegments).toLocaleString("pt-BR");
+  document.getElementById("displayPointCount").innerText = countPoints(newSegments).toLocaleString("pt-BR");
+  document.getElementById("traceLength").innerText = (computeSegmentsLength(newSegments) / 1000).toFixed(3) + " km";
+  document.getElementById("processMode").innerText = "Traçado editado manualmente, mantendo segmentos separados.";
+
+  updateDistance();
+}
+
+function countPoints(segments) {
   let total = 0;
 
-  for (let i = 1; i < path.length; i++) {
-    total += google.maps.geometry.spherical.computeDistanceBetween(
-      new google.maps.LatLng(path[i - 1].lat, path[i - 1].lng),
-      new google.maps.LatLng(path[i].lat, path[i].lng)
-    );
+  for (let i = 0; i < segments.length; i++) {
+    total += segments[i].length;
+  }
+
+  return total;
+}
+
+function computeSegmentsLength(segments) {
+  let total = 0;
+
+  for (let s = 0; s < segments.length; s++) {
+    const seg = segments[s];
+
+    for (let i = 1; i < seg.length; i++) {
+      total += distanceMeters(seg[i - 1][0], seg[i - 1][1], seg[i][0], seg[i][1]);
+    }
   }
 
   return total;
@@ -614,7 +1166,7 @@ function startGPS() {
     return;
   }
 
-  if (!fiberPathFull.length) {
+  if (!distanceSegments.length) {
     alert("Importe primeiro o traçado KMZ ou KML.");
     return;
   }
@@ -626,17 +1178,17 @@ function startGPS() {
 
   watchId = navigator.geolocation.watchPosition(
     pos => {
+      const now = Date.now();
+
       currentPosition = {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude
       };
 
       currentAccuracy = pos.coords.accuracy;
-
       userTrail.push(currentPosition);
 
       updateUserMarker();
-      updateDistance();
       updateTrail();
 
       document.getElementById("coords").innerText =
@@ -644,6 +1196,11 @@ function startGPS() {
 
       document.getElementById("accuracy").innerText =
         currentAccuracy.toFixed(1) + " m";
+
+      if (now - lastGpsUpdate > 700) {
+        updateDistance();
+        lastGpsUpdate = now;
+      }
     },
     err => {
       alert("Erro no GPS: " + err.message);
@@ -669,53 +1226,49 @@ function stopGPS() {
 function updateUserMarker() {
   if (!currentPosition) return;
 
+  const latlng = [currentPosition.lat, currentPosition.lng];
+
   if (!userMarker) {
-    userMarker = new google.maps.Marker({
-      position: currentPosition,
-      map: map,
-      title: "Sua posição atual",
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 8,
-        fillColor: "#22c55e",
-        fillOpacity: 1,
-        strokeColor: "#ffffff",
-        strokeWeight: 2
-      }
-    });
+    userMarker = L.circleMarker(latlng, {
+      radius: 8,
+      color: "#ffffff",
+      weight: 2,
+      fillColor: "#22c55e",
+      fillOpacity: 1
+    }).addTo(map).bindPopup("Sua posição atual");
   } else {
-    userMarker.setPosition(currentPosition);
+    userMarker.setLatLng(latlng);
   }
 
   if (accuracyCircle) {
-    accuracyCircle.setMap(null);
+    map.removeLayer(accuracyCircle);
   }
 
-  accuracyCircle = new google.maps.Circle({
-    strokeColor: "#22c55e",
-    strokeOpacity: 0.45,
-    strokeWeight: 2,
+  accuracyCircle = L.circle(latlng, {
+    radius: currentAccuracy || 0,
+    color: "#22c55e",
+    weight: 2,
+    opacity: 0.45,
     fillColor: "#22c55e",
-    fillOpacity: 0.12,
-    map: map,
-    center: currentPosition,
-    radius: currentAccuracy || 0
-  });
+    fillOpacity: 0.12
+  }).addTo(map);
 }
 
 function updateTrail() {
   if (trailPolyline) {
-    trailPolyline.setMap(null);
+    map.removeLayer(trailPolyline);
   }
 
-  trailPolyline = new google.maps.Polyline({
-    path: userTrail,
-    geodesic: true,
-    strokeColor: "#22c55e",
-    strokeOpacity: 1,
-    strokeWeight: 3,
-    map: map
-  });
+  if (userTrail.length < 2) return;
+
+  trailPolyline = L.polyline(
+    userTrail.map(p => [p.lat, p.lng]),
+    {
+      color: "#22c55e",
+      weight: 3,
+      opacity: 1
+    }
+  ).addTo(map);
 }
 
 function centerOnUser() {
@@ -724,14 +1277,24 @@ function centerOnUser() {
     return;
   }
 
-  map.setCenter(currentPosition);
-  map.setZoom(20);
+  map.setView([currentPosition.lat, currentPosition.lng], 21);
+}
+
+function maxZoom() {
+  if (currentPosition) {
+    map.setView([currentPosition.lat, currentPosition.lng], 21);
+  } else if (fiberGroup) {
+    fitTrace();
+    map.setZoom(Math.min(21, map.getZoom() + 2));
+  } else {
+    alert("Carregue um traçado ou inicie o GPS.");
+  }
 }
 
 function updateDistance() {
-  if (!currentPosition || fiberPathFull.length < 2) return;
+  if (!currentPosition || !distanceSegments.length) return;
 
-  const result = nearestPointOnPathOptimized(currentPosition, fiberPathFull);
+  const result = nearestPointOnSegments(currentPosition, distanceSegments);
 
   currentNearest = result.point;
   currentDistance = result.distance;
@@ -763,109 +1326,145 @@ function updateDistance() {
   drawNearestObjects();
 }
 
-function nearestPointOnPathOptimized(point, path) {
-  let best = {
-    distance: Infinity,
-    point: null
-  };
+function nearestPointOnSegments(point, segments) {
+  let bestDistance = Infinity;
+  let bestPoint = null;
+  let bestSegmentIndex = -1;
 
-  const pLatLng = new google.maps.LatLng(point.lat, point.lng);
+  const p = lonLatToMeters(point.lng, point.lat);
 
-  for (let i = 1; i < path.length; i++) {
-    const a = path[i - 1];
-    const b = path[i];
+  for (let s = 0; s < segments.length; s++) {
+    const seg = segments[s];
 
-    const candidate = nearestPointOnSegment(point, a, b);
+    for (let i = 1; i < seg.length; i++) {
+      const aLL = {
+        lat: seg[i - 1][0],
+        lng: seg[i - 1][1]
+      };
 
-    const d = google.maps.geometry.spherical.computeDistanceBetween(
-      pLatLng,
-      new google.maps.LatLng(candidate.lat, candidate.lng)
-    );
+      const bLL = {
+        lat: seg[i][0],
+        lng: seg[i][1]
+      };
 
-    if (d < best.distance) {
-      best.distance = d;
-      best.point = candidate;
+      const a = lonLatToMeters(aLL.lng, aLL.lat);
+      const b = lonLatToMeters(bLL.lng, bLL.lat);
+
+      const nearestM = nearestPointOnSegmentMeters(p, a, b);
+      const nearestLL = metersToLonLat(nearestM.x, nearestM.y);
+
+      const d = distanceMeters(
+        point.lat,
+        point.lng,
+        nearestLL.lat,
+        nearestLL.lng
+      );
+
+      if (d < bestDistance) {
+        bestDistance = d;
+        bestPoint = {
+          lat: nearestLL.lat,
+          lng: nearestLL.lng
+        };
+        bestSegmentIndex = s;
+      }
     }
   }
 
-  return best;
+  return {
+    distance: bestDistance,
+    point: bestPoint,
+    segmentIndex: bestSegmentIndex
+  };
 }
 
-function nearestPointOnSegment(p, a, b) {
-  const latFactor = 111320;
-  const lngFactor = 111320 * Math.cos(p.lat * Math.PI / 180);
+function lonLatToMeters(lng, lat) {
+  const R = 6378137;
+  const x = R * lng * Math.PI / 180;
+  const y = R * Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+  return { x, y };
+}
 
-  const px = p.lng * lngFactor;
-  const py = p.lat * latFactor;
+function metersToLonLat(x, y) {
+  const R = 6378137;
+  const lng = x / R * 180 / Math.PI;
+  const lat = (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * 180 / Math.PI;
+  return { lat, lng };
+}
 
-  const ax = a.lng * lngFactor;
-  const ay = a.lat * latFactor;
-
-  const bx = b.lng * lngFactor;
-  const by = b.lat * latFactor;
-
-  const dx = bx - ax;
-  const dy = by - ay;
+function nearestPointOnSegmentMeters(p, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
 
   if (dx === 0 && dy === 0) {
-    return { lat: a.lat, lng: a.lng };
+    return {
+      x: a.x,
+      y: a.y
+    };
   }
 
-  let t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy);
   t = Math.max(0, Math.min(1, t));
 
   return {
-    lat: a.lat + t * (b.lat - a.lat),
-    lng: a.lng + t * (b.lng - a.lng)
+    x: a.x + t * dx,
+    y: a.y + t * dy
   };
+}
+
+function distanceMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const p1 = lat1 * Math.PI / 180;
+  const p2 = lat2 * Math.PI / 180;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(p1) * Math.cos(p2) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function drawNearestObjects() {
   if (!currentNearest || !currentPosition) return;
 
-  if (nearestMarker) nearestMarker.setMap(null);
-  if (nearestLine) nearestLine.setMap(null);
+  if (nearestMarker) map.removeLayer(nearestMarker);
+  if (nearestLine) map.removeLayer(nearestLine);
 
-  nearestMarker = new google.maps.Marker({
-    position: currentNearest,
-    map: map,
-    title: "Ponto mais próximo da fibra",
-    icon: {
-      path: google.maps.SymbolPath.CIRCLE,
-      scale: 6,
-      fillColor: "#facc15",
-      fillOpacity: 1,
-      strokeColor: "#111827",
-      strokeWeight: 2
+  nearestMarker = L.circleMarker([currentNearest.lat, currentNearest.lng], {
+    radius: 7,
+    color: "#111827",
+    weight: 2,
+    fillColor: "#facc15",
+    fillOpacity: 1
+  }).addTo(map).bindPopup("Ponto mais próximo da fibra");
+
+  nearestLine = L.polyline(
+    [
+      [currentPosition.lat, currentPosition.lng],
+      [currentNearest.lat, currentNearest.lng]
+    ],
+    {
+      color: "#facc15",
+      weight: 4,
+      opacity: 1
     }
-  });
-
-  nearestLine = new google.maps.Polyline({
-    path: [currentPosition, currentNearest],
-    geodesic: true,
-    strokeColor: "#facc15",
-    strokeOpacity: 1,
-    strokeWeight: 4,
-    map: map
-  });
+  ).addTo(map);
 }
 
-function setSatellite() {
-  map.setMapTypeId("satellite");
-}
-
-function setHybrid() {
-  map.setMapTypeId("hybrid");
-}
-
-function maxZoom() {
+function openGoogleMaps() {
   if (!currentPosition) {
     alert("GPS ainda não obteve posição.");
     return;
   }
 
-  map.setCenter(currentPosition);
-  map.setZoom(21);
+  const url =
+    "https://www.google.com/maps?q=" +
+    currentPosition.lat + "," + currentPosition.lng;
+
+  window.open(url, "_blank");
 }
 
 function openStreetView() {
@@ -874,17 +1473,11 @@ function openStreetView() {
     return;
   }
 
-  panorama.setPosition(currentPosition);
-  panorama.setPov({
-    heading: 0,
-    pitch: 0
-  });
-  panorama.setZoom(1);
-  panorama.setVisible(true);
-}
+  const url =
+    "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" +
+    currentPosition.lat + "," + currentPosition.lng;
 
-function closeStreetView() {
-  panorama.setVisible(false);
+  window.open(url, "_blank");
 }
 
 function takePhoto() {
@@ -922,7 +1515,6 @@ function stampPhoto(dataUrl) {
     canvas.height = Math.round(img.height * scale);
 
     const ctx = canvas.getContext("2d");
-
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     const lines = [
@@ -938,14 +1530,18 @@ function stampPhoto(dataUrl) {
     const lineHeight = 28;
     const boxHeight = padding * 2 + lines.length * lineHeight;
 
-    ctx.fillStyle = "rgba(0, 0, 0, 0.68)";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
     ctx.fillRect(0, canvas.height - boxHeight, canvas.width, boxHeight);
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 22px Arial";
 
     lines.forEach((line, index) => {
-      ctx.fillText(line, padding, canvas.height - boxHeight + padding + 24 + index * lineHeight);
+      ctx.fillText(
+        line,
+        padding,
+        canvas.height - boxHeight + padding + 24 + index * lineHeight
+      );
     });
 
     lastStampedPhotoDataUrl = canvas.toDataURL("image/jpeg", 0.86);
@@ -991,38 +1587,31 @@ function saveOccurrence() {
 }
 
 function addOccurrenceMarker(item) {
-  const marker = new google.maps.Marker({
-    position: { lat: item.lat, lng: item.lng },
-    map: map,
-    title: item.type,
-    draggable: true,
-    icon: "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
-  });
+  const marker = L.marker([item.lat, item.lng], {
+    draggable: true
+  }).addTo(map);
 
-  marker.addListener("dragend", function(e) {
-    item.lat = e.latLng.lat();
-    item.lng = e.latLng.lng();
+  marker.bindPopup(buildOccurrencePopup(item));
+
+  marker.on("dragend", function(e) {
+    const pos = e.target.getLatLng();
+    item.lat = pos.lat;
+    item.lng = pos.lng;
+    marker.setPopupContent(buildOccurrencePopup(item));
     renderRecords();
   });
 
-  const content = `
-    <div style="max-width:240px;"
-
->       <b>${escapeHtml(item.type)}</b><br>
-      ${escapeHtml(item.note || "")}<br>
-      Lat: ${item.lat.toFixed(7)}<br>
-      Lng: ${item.lng.toFixed(7)}<br>
-      Distância lateral: ${item.distanceToFiber !== null ? item.distanceToFiber.toFixed(2) + " m" : "--"}
-    </div>
-  `;
-
-  const info = new google.maps.InfoWindow({ content });
-
-  marker.addListener("click", function() {
-    info.open(map, marker);
-  });
-
   occurrenceMarkers.push(marker);
+}
+
+function buildOccurrencePopup(item) {
+  return `
+    <b>${escapeHtml(item.id + ". " + item.type)}</b><br>
+    ${escapeHtml(item.note || "")}<br>
+    Lat: ${Number(item.lat).toFixed(7)}<br>
+    Lng: ${Number(item.lng).toFixed(7)}<br>
+    Distância lateral: ${item.distanceToFiber !== null ? Number(item.distanceToFiber).toFixed(2) + " m" : "--"}
+  `;
 }
 
 function renderRecords() {
@@ -1042,6 +1631,7 @@ function renderRecords() {
       Lng: ${Number(o.lng).toFixed(7)}<br>
       Distância lateral: ${o.distanceToFiber !== null ? Number(o.distanceToFiber).toFixed(2) + " m" : "--"}<br>
       Precisão GPS: ${o.accuracy !== null ? Number(o.accuracy).toFixed(1) + " m" : "--"}<br>
+      Foto: ${o.photo ? "Sim" : "Não"}<br>
       ${escapeHtml(o.note || "")}
       <div class="grid2"
 
@@ -1056,8 +1646,7 @@ function goToOccurrence(id) {
   const o = occurrences.find(x => x.id === id);
   if (!o) return;
 
-  map.setCenter({ lat: o.lat, lng: o.lng });
-  map.setZoom(21);
+  map.setView([o.lat, o.lng], 21);
 }
 
 function editOccurrenceCoords(id) {
@@ -1082,8 +1671,10 @@ function editOccurrenceCoords(id) {
   o.lng = newLng;
 
   const index = occurrences.findIndex(x => x.id === id);
+
   if (occurrenceMarkers[index]) {
-    occurrenceMarkers[index].setPosition({ lat: newLat, lng: newLng });
+    occurrenceMarkers[index].setLatLng([newLat, newLng]);
+    occurrenceMarkers[index].setPopupContent(buildOccurrencePopup(o));
   }
 
   renderRecords();
@@ -1102,7 +1693,7 @@ function shareWhatsApp() {
     "Longitude: " + currentPosition.lng.toFixed(7) + "%0A" +
     "Distância lateral até fibra: " + (currentDistance !== null ? currentDistance.toFixed(2) : "--") + " m%0A" +
     "Precisão GPS: " + (currentAccuracy !== null ? currentAccuracy.toFixed(1) : "--") + " m%0A" +
-    "Google Maps: https://www.google.com/maps?q=" + currentPosition.lat + "," + currentPosition.lng;
+    "Mapa: https://www.google.com/maps?q=" + currentPosition.lat + "," + currentPosition.lng;
 
   window.open("https://wa.me/?text=" + msg, "_blank");
 }
@@ -1115,7 +1706,9 @@ async function shareLastPhoto() {
 
   try {
     const blob = dataUrlToBlob(lastStampedPhotoDataUrl);
-    const file = new File([blob], "foto_inspecao_fibra.jpg", { type: "image/jpeg" });
+    const file = new File([blob], "foto_inspecao_fibra.jpg", {
+      type: "image/jpeg"
+    });
 
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
@@ -1176,11 +1769,31 @@ function exportCSV() {
 }
 
 function exportKML() {
-  const kml = buildKML(false);
-  downloadText(kml, "fibra_atualizada_com_ocorrencias.kml", "application/vnd.google-earth.kml+xml");
+  if (!originalSegments.length) {
+    alert("Nenhum traçado carregado.");
+    return;
+  }
+
+  showLoading("Gerando KML atualizado...");
+
+  setTimeout(() => {
+    try {
+      const kml = buildKML(false);
+      downloadText(kml, "fibra_atualizada_sem_linhas_indevidas.kml", "application/vnd.google-earth.kml+xml");
+    } catch (err) {
+      alert("Erro ao gerar KML: " + err.message);
+    } finally {
+      hideLoading();
+    }
+  }, 100);
 }
 
 async function exportKMZ() {
+  if (!originalSegments.length) {
+    alert("Nenhum traçado carregado.");
+    return;
+  }
+
   showLoading("Gerando KMZ com fotos...");
 
   try {
@@ -1196,12 +1809,18 @@ async function exportKMZ() {
       }
     });
 
-    const content = await zip.generateAsync({ type: "blob" });
+    const content = await zip.generateAsync({
+      type: "blob",
+      compression: "DEFLATE",
+      compressionOptions: {
+        level: 6
+      }
+    });
 
     const url = URL.createObjectURL(content);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "fibra_atualizada_com_fotos.kmz";
+    a.download = "fibra_atualizada_sem_linhas_indevidas.kmz";
     a.click();
     URL.revokeObjectURL(url);
   } catch (err) {
@@ -1213,7 +1832,13 @@ async function exportKMZ() {
 }
 
 function buildKML(includePhotoLinks) {
-  let kml = `<?xml version="1.0" encoding="UTF-8"?
+  if (traceEditEnabled) {
+    syncEditedTrace();
+  }
+
+  const chunks = [];
+
+  chunks.push(`<?xml version="1.0" encoding="UTF-8"?
 
 > <kml xmlns="http://www.opengis.net/kml/2.2"
 
@@ -1238,30 +1863,36 @@ function buildKML(includePhotoLinks) {
 </Icon>
 </IconStyle>
 </Style>
+`);
 
+  originalSegments.forEach((seg, index) => {
+    if (!seg || seg.length < 2) return;
+
+    chunks.push(`
 <Placemark>
-<name>Tracado Fibra Atualizado</name>
+<name>Trecho Fibra ${index + 1}</name>
 <styleUrl>#fibraStyle</styleUrl>
 <LineString>
 <tessellate>1</tessellate>
 <coordinates>
-`;
+`);
 
-  fiberPathFull.forEach(p => {
-    kml += `${p.lng},${p.lat},0\n`;
-  });
+    seg.forEach(p => {
+      chunks.push(`${p[1]},${p[0]},0\n`);
+    });
 
-  kml += `
+    chunks.push(`
 </coordinates>
 </LineString>
 </Placemark>
-`;
+`);
+  });
 
   occurrences.forEach(o => {
     let desc = `
-Tipo: ${o.type}
-Observacao: ${o.note || ""}
-Data: ${o.date}
+Tipo: ${escapeXml(o.type)}
+Observacao: ${escapeXml(o.note || "")}
+Data: ${escapeXml(o.date)}
 Latitude: ${o.lat}
 Longitude: ${o.lng}
 Distancia lateral ate fibra: ${o.distanceToFiber !== null ? Number(o.distanceToFiber).toFixed(2) + " m" : "--"}
@@ -1275,7 +1906,7 @@ Precisao GPS: ${o.accuracy !== null ? Number(o.accuracy).toFixed(1) + " m" : "--
 `;
     }
 
-    kml += `
+    chunks.push(`
 <Placemark>
 <name>${escapeXml(o.id + " - " + o.type)}</name>
 <styleUrl>#ocorrenciaStyle</styleUrl>
@@ -1286,14 +1917,14 @@ ${desc}
 <coordinates>${o.lng},${o.lat},0</coordinates>
 </Point>
 </Placemark>
-`;
+`);
   });
 
-  kml += `
+  chunks.push(`
 </Document>
-</kml>`;
+</kml>`);
 
-  return kml;
+  return chunks.join("");
 }
 
 function downloadText(text, filename, type) {
@@ -1317,7 +1948,8 @@ function downloadDataUrl(dataUrl, filename) {
 
 function dataUrlToBlob(dataUrl) {
   const parts = dataUrl.split(",");
-  const mime = parts[0].match(/:(.*?);/)[1];
+  const mimeMatch = parts[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
   const binary = atob(parts[1]);
   const len = binary.length;
   const array = new Uint8Array(len);
@@ -1326,7 +1958,9 @@ function dataUrlToBlob(dataUrl) {
     array[i] = binary.charCodeAt(i);
   }
 
-  return new Blob([array], { type: mime });
+  return new Blob([array], {
+    type: mime
+  });
 }
 
 function csvEscape(value) {
@@ -1352,12 +1986,5 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 </script>
-
-<script
-  src="https://maps.googleapis.com/maps/api/js?key=SUA_CHAVE_GOOGLE_MAPS&libraries=geometry,drawing&callback=initMap"
-  async
-  defer>
-</script>
-
 </body>
 </html>
