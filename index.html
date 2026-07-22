@@ -1,93 +1,1241 @@
 <!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ter Fé Muda Tudo</title>
-    <style>
-        /* Reset de margens e preenchimentos */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+<html lang="pt-BR"
 
-        /* Configuração do fundo azul cobrindo toda a tela */
-        html, body {
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0a1128 0%, #1c355e 50%, #001f54 100%);
-            overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+> <head>
+  <meta charset="UTF-8" />
+  <title>Inspeção de Fibra Óptica por KMZ - Offline</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        /* Container centralizador */
-        .center-container {
-            text-align: center;
-            padding: 20px;
-            width: 100%;
-        }
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel2: #1f2937;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --blue: #38bdf8;
+      --green: #22c55e;
+      --yellow: #facc15;
+      --red: #ef4444;
+      --border: #374151;
+    }
 
-        /* Estilização da frase com as animações incorporadas */
-        .animated-text {
-            color: #ffffff;
-            font-size: 3rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            /* Sombra suave para dar efeito de brilho/profundidade */
-            text-shadow: 0 0 25px rgba(255, 255, 255, 0.5), 0 4px 10px rgba(0, 0, 0, 0.3);
-            opacity: 0;
-            /* Executa o surgimento suave (fadeIn) e depois mantém o efeito flutuante (float) continuo */
-            animation: fadeIn 2.5s ease-out forwards, float 4s ease-in-out infinite 2.5s;
-        }
+    * {
+      box-sizing: border-box;
+    }
 
-        /* Animação 1: Entrada suave com desfoque e subida */
-        @keyframes fadeIn {
-            0% {
-                opacity: 0;
-                transform: translateY(30px);
-                filter: blur(8px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-                filter: blur(0);
-            }
-        }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
 
-        /* Animação 2: Efeito flutuante e pulsação de brilho contínua */
-        @keyframes float {
-            0% {
-                transform: translateY(0px);
-                text-shadow: 0 0 25px rgba(255, 255, 255, 0.5), 0 4px 10px rgba(0, 0, 0, 0.3);
-            }
-            50% {
-                transform: translateY(-15px);
-                text-shadow: 0 0 40px rgba(255, 255, 255, 0.8), 0 4px 20px rgba(255, 255, 255, 0.3);
-            }
-            100% {
-                transform: translateY(0px);
-                text-shadow: 0 0 25px rgba(255, 255, 255, 0.5), 0 4px 10px rgba(0, 0, 0, 0.3);
-            }
-        }
+    header {
+      height: 56px;
+      background: #020617;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+    }
 
-        /* Ajustes de tamanho de fonte para telas menores (celulares) */
-        @media (max-width: 600px) {
-            .animated-text {
-                font-size: 1.8rem;
-                letter-spacing: 0px;
-            }
-        }
-    </style>
+    header h1 {
+      font-size: 17px;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    header span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    #app {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      height: calc(100vh - 56px);
+    }
+
+    aside {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 14px;
+      overflow-y: auto;
+    }
+
+    main {
+      position: relative;
+      background: #020617;
+    }
+
+    .section {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .section h2 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #e5e7eb;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input[type="file"],
+    input[type="number"],
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #030712;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      min-height: 70px;
+      resize: vertical;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 9px 10px;
+      cursor: pointer;
+      color: #020617;
+      font-weight: 700;
+      background: var(--blue);
+      margin: 3px 0;
+      width: 100%;
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+    }
+
+    button.green {
+      background: var(--green);
+    }
+
+    button.yellow {
+      background: var(--yellow);
+    }
+
+    button.red {
+      background: var(--red);
+      color: white;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric {
+      background: #030712;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px;
+      margin-bottom: 8px;
+    }
+
+    .metric .label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .metric .value {
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .status-ok {
+      color: var(--green);
+    }
+
+    .status-warn {
+      color: var(--yellow);
+    }
+
+    .status-bad {
+      color: var(--red);
+    }
+
+    #mapCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #020617;
+      cursor: grab;
+    }
+
+    #mapCanvas:active {
+      cursor: grabbing;
+    }
+
+    #legend {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin: 5px 0;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .line {
+      width: 20px;
+      height: 4px;
+      display: inline-block;
+      border-radius: 2px;
+    }
+
+    #toast {
+      position: absolute;
+      right: 14px;
+      top: 14px;
+      max-width: 360px;
+      background: rgba(17, 24, 39, 0.96);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      display: none;
+      font-size: 13px;
+      z-index: 10;
+    }
+
+    .small {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .records {
+      font-size: 12px;
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      background: #030712;
+    }
+
+    .record {
+      border-bottom: 1px solid #1f2937;
+      padding: 6px 0;
+    }
+
+    .record:last-child {
+      border-bottom: 0;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        overflow: auto;
+      }
+
+      #app {
+        display: block;
+        height: auto;
+      }
+
+      aside {
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      main {
+        height: 62vh;
+      }
+    }
+  </style>
 </head>
+
 <body>
-
-    <div class="center-container">
-        <h1 class="animated-text">Ter fé muda tudo.</h1>
+  <header>
+    <div>
+      <h1>Inspeção de Fibra Óptica por KMZ</h1>
+      <span>Offline | KMZ/KML + GPS + distância até o traçado</span>
     </div>
+  </header>
 
+  <div id="app"
+
+>     <aside>
+      <div class="section"
+
+>         <h2>1. Importar traçado</h2>
+        <label>Arquivo KMZ ou KML</label>
+        <input id="fileInput" type="file" accept=".kmz,.kml" />
+        <button onclick="fitToTrace()">Enquadrar traçado</button>
+        <p class="small"
+
+>           O KMZ será lido localmente no navegador. Nenhum arquivo é enviado para servidor.
+        </p>
+      </div>
+
+      <div class="section"
+
+>         <h2>2. GPS e inspeção</h2>
+
+        <div class="grid2"
+
+>           <button class="green" onclick="startGPS()">Iniciar GPS</button>
+          <button class="red" onclick="stopGPS()">Parar GPS</button>
+        </div>
+
+        <button class="secondary" onclick="centerOnUser()">Centralizar em mim</button>
+
+        <label>Tolerância normal em metros</label>
+        <input id="tolOk" type="number" value="5" min="1" step="1" />
+
+        <label>Tolerância atenção em metros</label>
+        <input id="tolWarn" type="number" value="15" min="1" step="1" />
+
+        <p class="small"
+
+>           Exemplo: até 5 m = normal; até 15 m = atenção; acima disso = fora do traçado.
+        </p>
+      </div>
+
+      <div class="section"
+
+>         <h2>3. Status atual</h2>
+
+        <div class="metric"
+
+>           <div class="label">Status</div>
+          <div id="statusValue" class="value">Aguardando dados</div>
+        </div>
+
+        <div class="grid2"
+
+>           <div class="metric"
+
+>             <div class="label">Distância até fibra</div>
+            <div id="distValue" class="value">-- m</div>
+          </div>
+
+          <div class="metric"
+
+>             <div class="label">Precisão GPS</div>
+            <div id="accValue" class="value">-- m</div>
+          </div>
+        </div>
+
+        <div class="grid2"
+
+>           <div class="metric"
+
+>             <div class="label">Latitude</div>
+            <div id="latValue" class="value" style="font-size:13px;">--</div>
+          </div>
+
+          <div class="metric"
+
+>             <div class="label">Longitude</div>
+            <div id="lonValue" class="value" style="font-size:13px;">--</div>
+          </div>
+        </div>
+
+        <div class="metric"
+
+>           <div class="label">Extensão estimada do traçado</div>
+          <div id="lenValue" class="value">-- km</div>
+        </div>
+      </div>
+
+      <div class="section"
+
+>         <h2>4. Registrar ocorrência</h2>
+
+        <label>Tipo de ocorrência</label>
+        <select id="occType"
+
+>           <option>Fibra localizada</option>
+          <option>Marco ausente</option>
+          <option>Caixa de passagem encontrada</option>
+          <option>Interferência de obra</option>
+          <option>Risco de rompimento</option>
+          <option>Divergência de traçado</option>
+          <option>Acesso bloqueado</option>
+          <option>Vegetação impedindo inspeção</option>
+          <option>Outro</option>
+        </select>
+
+        <label>Observação</label>
+        <textarea id="occNote" placeholder="Descreva a ocorrência em campo"></textarea>
+
+        <button class="yellow" onclick="addOccurrence()">Registrar ponto atual</button>
+        <button class="secondary" onclick="exportCSV()">Exportar CSV</button>
+
+        <div class="records" id="recordsList"
+
+>           Nenhuma ocorrência registrada.
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <canvas id="mapCanvas"></canvas>
+
+      <div id="legend"
+
+>         <div class="legend-row"
+
+>           <span class="line" style="background:#38bdf8;"></span> Traçado da fibra
+        </div>
+        <div class="legend-row"
+
+>           <span class="line" style="background:#22c55e;"></span> Caminho percorrido
+        </div>
+        <div class="legend-row"
+
+>           <span class="dot" style="background:#22c55e;"></span> Sua posição
+        </div>
+        <div class="legend-row"
+
+>           <span class="dot" style="background:#facc15;"></span> Ponto mais próximo da fibra
+        </div>
+        <div class="legend-row"
+
+>           <span class="dot" style="background:#ef4444;"></span> Ocorrência registrada
+        </div>
+      </div>
+
+      <div id="toast"></div>
+    </main>
+  </div>
+
+<script>
+/*
+  Sistema offline para inspeção de fibra por KMZ/KML.
+  Sem bibliotecas externas.
+
+  Observação técnica:
+  - Suporta KML diretamente.
+  - Suporta KMZ com arquivo KML interno compactado em ZIP.
+  - Para KMZ compactado via Deflate, usa DecompressionStream.
+  - Navegadores modernos baseados em Chromium tendem a suportar.
+*/
+
+let fiberLonLat = [];
+let fiberXY = [];
+let userLonLat = null;
+let userXY = null;
+let nearestXY = null;
+let nearestLonLat = null;
+let userTrailXY = [];
+let occurrences = [];
+let watchId = null;
+
+let canvas = document.getElementById("mapCanvas");
+let ctx = canvas.getContext("2d");
+
+let view = {
+  scale: 1,
+  offsetX: 0,
+  offsetY: 0,
+  minX: 0,
+  minY: 0,
+  maxX: 0,
+  maxY: 0
+};
+
+let dragging = false;
+let lastMouse = null;
+
+function showToast(msg, type = "info") {
+  const toast = document.getElementById("toast");
+  toast.innerHTML = msg;
+  toast.style.display = "block";
+  toast.style.borderColor = type === "error" ? "#ef4444" : "#374151";
+  setTimeout(() => {
+    toast.style.display = "none";
+  }, 5500);
+}
+
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * window.devicePixelRatio;
+  canvas.height = rect.height * window.devicePixelRatio;
+  canvas.style.width = rect.width + "px";
+  canvas.style.height = rect.height + "px";
+  ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+  draw();
+}
+
+window.addEventListener("resize", resizeCanvas);
+setTimeout(resizeCanvas, 100);
+
+document.getElementById("fileInput").addEventListener("change", async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  try {
+    showToast("Lendo arquivo local...");
+
+    const name = file.name.toLowerCase();
+    let kmlText = "";
+
+    if (name.endsWith(".kml")) {
+      kmlText = await file.text();
+    } else if (name.endsWith(".kmz")) {
+      const buffer = await file.arrayBuffer();
+      kmlText = await extractKmlFromKmz(buffer);
+    } else {
+      throw new Error("Formato não suportado. Use KML ou KMZ.");
+    }
+
+    const coords = parseKmlCoordinates(kmlText);
+
+    if (!coords.length) {
+      throw new Error("Nenhum traçado foi encontrado no KML/KMZ.");
+    }
+
+    fiberLonLat = coords;
+    fiberXY = fiberLonLat.map(p => lonLatToMeters(p.lon, p.lat));
+
+    const km = polylineLengthMeters(fiberXY) / 1000;
+    document.getElementById("lenValue").textContent = km.toFixed(3) + " km";
+
+    fitToTrace();
+
+    showToast("Traçado carregado com sucesso. Pontos: " + coords.length);
+  } catch (err) {
+    console.error(err);
+    showToast("Erro ao importar arquivo: " + err.message, "error");
+  }
+});
+
+async function extractKmlFromKmz(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+
+  const entries = readZipCentralDirectory(bytes);
+  const kmlEntry = entries.find(e => e.name.toLowerCase().endsWith(".kml"));
+
+  if (!kmlEntry) {
+    throw new Error("KMZ não contém arquivo KML interno.");
+  }
+
+  const fileData = bytes.slice(kmlEntry.dataStart, kmlEntry.dataStart + kmlEntry.compressedSize);
+
+  let decompressed;
+
+  if (kmlEntry.compression === 0) {
+    decompressed = fileData;
+  } else if (kmlEntry.compression === 8) {
+    if (!("DecompressionStream" in window)) {
+      throw new Error("Este navegador não suporta descompactação Deflate offline. Tente abrir em Chrome ou Edge atualizado, ou importe o KML diretamente.");
+    }
+
+    decompressed = await inflateRaw(fileData);
+  } else {
+    throw new Error("Método de compactação do KMZ não suportado: " + kmlEntry.compression);
+  }
+
+  return new TextDecoder("utf-8").decode(decompressed);
+}
+
+function readZipCentralDirectory(bytes) {
+  function u16(i) {
+    return bytes[i] | (bytes[i+1] << 8);
+  }
+
+  function u32(i) {
+    return (bytes[i] | (bytes[i+1] << 8) | (bytes[i+2] << 16) | (bytes[i+3] << 24)) >>> 0;
+  }
+
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
+    if (u32(i) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  }
+
+  if (eocd < 0) {
+    throw new Error("Arquivo KMZ inválido. Assinatura ZIP não encontrada.");
+  }
+
+  const totalEntries = u16(eocd + 10);
+  const cdOffset = u32(eocd + 16);
+
+  let ptr = cdOffset;
+  let entries = [];
+
+  for (let n = 0; n < totalEntries; n++) {
+    if (u32(ptr) !== 0x02014b50) {
+      throw new Error("Diretório central ZIP inválido.");
+    }
+
+    const compression = u16(ptr + 10);
+    const compressedSize = u32(ptr + 20);
+    const fileNameLen = u16(ptr + 28);
+    const extraLen = u16(ptr + 30);
+    const commentLen = u16(ptr + 32);
+    const localHeaderOffset = u32(ptr + 42);
+
+    const nameBytes = bytes.slice(ptr + 46, ptr + 46 + fileNameLen);
+    const name = new TextDecoder("utf-8").decode(nameBytes);
+
+    if (u32(localHeaderOffset) !== 0x04034b50) {
+      throw new Error("Cabeçalho local ZIP inválido.");
+    }
+
+    const localNameLen = u16(localHeaderOffset + 26);
+    const localExtraLen = u16(localHeaderOffset + 28);
+    const dataStart = localHeaderOffset + 30 + localNameLen + localExtraLen;
+
+    entries.push({
+      name,
+      compression,
+      compressedSize,
+      dataStart
+    });
+
+    ptr += 46 + fileNameLen + extraLen + commentLen;
+  }
+
+  return entries;
+}
+
+async function inflateRaw(data) {
+  let stream;
+
+  try {
+    stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  } catch (e1) {
+    try {
+      stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate"));
+    } catch (e2) {
+      throw new Error("Falha ao descompactar KMZ. Tente importar o KML diretamente.");
+    }
+  }
+
+  const response = new Response(stream);
+  const buffer = await response.arrayBuffer();
+  return new Uint8Array(buffer);
+}
+
+function parseKmlCoordinates(kmlText) {
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(kmlText, "text/xml");
+
+  const parseError = xml.querySelector("parsererror");
+  if (parseError) {
+    throw new Error("KML inválido ou malformado.");
+  }
+
+  let allCoords = [];
+
+  const coordNodes = Array.from(xml.getElementsByTagName("coordinates"));
+
+  coordNodes.forEach(node => {
+    const text = node.textContent.trim();
+    if (!text) return;
+
+    const parts = text.split(/\s+/);
+
+    parts.forEach(item => {
+      const nums = item.split(",").map(Number);
+      if (nums.length >= 2 && isFinite(nums[0]) && isFinite(nums[1])) {
+        allCoords.push({
+          lon: nums[0],
+          lat: nums[1]
+        });
+      }
+    });
+  });
+
+  /*
+    Se houver múltiplos LineStrings no KML, este MVP concatena todos os pontos.
+    Para inspeção simples de um traçado contínuo, isso costuma funcionar bem.
+  */
+
+  return allCoords;
+}
+
+function lonLatToMeters(lon, lat) {
+  const R = 6378137;
+  const x = R * lon * Math.PI / 180;
+  const y = R * Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+  return { x, y };
+}
+
+function metersToLonLat(x, y) {
+  const R = 6378137;
+  const lon = x / R * 180 / Math.PI;
+  const lat = (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * 180 / Math.PI;
+  return { lon, lat };
+}
+
+function polylineLengthMeters(points) {
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    total += distanceXY(points[i-1], points[i]);
+  }
+  return total;
+}
+
+function distanceXY(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function fitToTrace() {
+  if (!fiberXY.length) {
+    showToast("Importe primeiro um KMZ ou KML.", "error");
+    return;
+  }
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+  fiberXY.forEach(p => {
+    minX = Math.min(minX, p.x);
+    minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x);
+    maxY = Math.max(maxY, p.y);
+  });
+
+  view.minX = minX;
+  view.minY = minY;
+  view.maxX = maxX;
+  view.maxY = maxY;
+
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width;
+  const h = rect.height;
+
+  const pad = 50;
+  const spanX = Math.max(1, maxX - minX);
+  const spanY = Math.max(1, maxY - minY);
+
+  const scaleX = (w - pad * 2) / spanX;
+  const scaleY = (h - pad * 2) / spanY;
+
+  view.scale = Math.min(scaleX, scaleY);
+  view.offsetX = pad - minX * view.scale + ((w - pad * 2) - spanX * view.scale) / 2;
+  view.offsetY = pad + maxY * view.scale + ((h - pad * 2) - spanY * view.scale) / 2;
+
+  draw();
+}
+
+function worldToScreen(p) {
+  return {
+    x: p.x * view.scale + view.offsetX,
+    y: -p.y * view.scale + view.offsetY
+  };
+}
+
+function screenToWorld(s) {
+  return {
+    x: (s.x - view.offsetX) / view.scale,
+    y: -(s.y - view.offsetY) / view.scale
+  };
+}
+
+function draw() {
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width;
+  const h = rect.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  drawGrid(w, h);
+
+  if (fiberXY.length) {
+    drawPolyline(fiberXY, "#38bdf8", 4);
+  }
+
+  if (userTrailXY.length > 1) {
+    drawPolyline(userTrailXY, "#22c55e", 3);
+  }
+
+  occurrences.forEach(o => {
+    drawPoint(o.xy, "#ef4444", 7, "!");
+  });
+
+  if (nearestXY) {
+    drawPoint(nearestXY, "#facc15", 7);
+  }
+
+  if (userXY) {
+    drawAccuracyCircle();
+    drawPoint(userXY, "#22c55e", 9);
+  }
+}
+
+function drawGrid(w, h) {
+  ctx.save();
+
+  ctx.strokeStyle = "#111827";
+  ctx.lineWidth = 1;
+
+  const step = 50;
+
+  for (let x = 0; x < w; x += step) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y < h; y += step) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawPolyline(points, color, width) {
+  if (!points.length) return;
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+
+  ctx.beginPath();
+
+  points.forEach((p, i) => {
+    const s = worldToScreen(p);
+    if (i === 0) ctx.moveTo(s.x, s.y);
+    else ctx.lineTo(s.x, s.y);
+  });
+
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawPoint(p, color, radius, label) {
+  const s = worldToScreen(p);
+
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = "#020617";
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  if (label) {
+    ctx.fillStyle = "#020617";
+    ctx.font = "bold 12px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, s.x, s.y);
+  }
+
+  ctx.restore();
+}
+
+let lastAccuracy = null;
+
+function drawAccuracyCircle() {
+  if (!userXY || !lastAccuracy) return;
+
+  const s = worldToScreen(userXY);
+  const r = lastAccuracy * view.scale;
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(34, 197, 94, 0.35)";
+  ctx.fillStyle = "rgba(34, 197, 94, 0.08)";
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function startGPS() {
+  if (!navigator.geolocation) {
+    showToast("GPS não suportado neste navegador.", "error");
+    return;
+  }
+
+  if (!fiberXY.length) {
+    showToast("Importe primeiro o KMZ/KML do traçado.", "error");
+    return;
+  }
+
+  if (watchId !== null) {
+    showToast("GPS já está ativo.");
+    return;
+  }
+
+  watchId = navigator.geolocation.watchPosition(
+    pos => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      const acc = pos.coords.accuracy;
+
+      lastAccuracy = acc;
+
+      userLonLat = { lon, lat };
+      userXY = lonLatToMeters(lon, lat);
+
+      userTrailXY.push(userXY);
+
+      updateNearestAndStatus(acc);
+      draw();
+    },
+    err => {
+      showToast("Erro no GPS: " + err.message, "error");
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 1000,
+      timeout: 15000
+    }
+  );
+
+  showToast("GPS iniciado.");
+}
+
+function stopGPS() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    showToast("GPS parado.");
+  }
+}
+
+function centerOnUser() {
+  if (!userXY) {
+    showToast("Posição GPS ainda não disponível.", "error");
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  view.offsetX = rect.width / 2 - userXY.x * view.scale;
+  view.offsetY = rect.height / 2 + userXY.y * view.scale;
+
+  draw();
+}
+
+function updateNearestAndStatus(acc) {
+  if (!userXY || fiberXY.length < 2) return;
+
+  const nearest = nearestPointOnPolyline(userXY, fiberXY);
+  nearestXY = nearest.point;
+  nearestLonLat = metersToLonLat(nearestXY.x, nearestXY.y);
+
+  const dist = nearest.distance;
+
+  const tolOk = Number(document.getElementById("tolOk").value || 5);
+  const tolWarn = Number(document.getElementById("tolWarn").value || 15);
+
+  const statusEl = document.getElementById("statusValue");
+  const distEl = document.getElementById("distValue");
+
+  distEl.textContent = dist.toFixed(2) + " m";
+
+  document.getElementById("accValue").textContent = acc ? acc.toFixed(1) + " m" : "-- m";
+  document.getElementById("latValue").textContent = userLonLat.lat.toFixed(7);
+  document.getElementById("lonValue").textContent = userLonLat.lon.toFixed(7);
+
+  statusEl.classList.remove("status-ok", "status-warn", "status-bad");
+
+  if (dist <= tolOk) {
+    statusEl.textContent = "Dentro da faixa esperada";
+    statusEl.classList.add("status-ok");
+  } else if (dist <= tolWarn) {
+    statusEl.textContent = "Atenção: afastamento moderado";
+    statusEl.classList.add("status-warn");
+  } else {
+    statusEl.textContent = "Fora do traçado previsto";
+    statusEl.classList.add("status-bad");
+  }
+
+  if (acc && acc > 20) {
+    statusEl.textContent += " | GPS com baixa precisão";
+  }
+}
+
+function nearestPointOnPolyline(point, line) {
+  let best = {
+    distance: Infinity,
+    point: null,
+    segmentIndex: -1
+  };
+
+  for (let i = 1; i < line.length; i++) {
+    const a = line[i - 1];
+    const b = line[i];
+
+    const candidate = nearestPointOnSegment(point, a, b);
+    const d = distanceXY(point, candidate);
+
+    if (d < best.distance) {
+      best.distance = d;
+      best.point = candidate;
+      best.segmentIndex = i - 1;
+    }
+  }
+
+  return best;
+}
+
+function nearestPointOnSegment(p, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+
+  if (dx === 0 && dy === 0) return { x: a.x, y: a.y };
+
+  const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy);
+  const clamped = Math.max(0, Math.min(1, t));
+
+  return {
+    x: a.x + clamped * dx,
+    y: a.y + clamped * dy
+  };
+}
+
+function addOccurrence() {
+  if (!userXY || !userLonLat) {
+    showToast("GPS ainda não possui posição atual.", "error");
+    return;
+  }
+
+  const type = document.getElementById("occType").value;
+  const note = document.getElementById("occNote").value.trim();
+
+  let dist = "";
+  if (nearestXY) {
+    dist = distanceXY(userXY, nearestXY).toFixed(2);
+  }
+
+  const item = {
+    date: new Date().toISOString(),
+    type,
+    note,
+    lat: userLonLat.lat,
+    lon: userLonLat.lon,
+    accuracy: lastAccuracy || "",
+    distanceToFiber: dist,
+    nearestLat: nearestLonLat ? nearestLonLat.lat : "",
+    nearestLon: nearestLonLat ? nearestLonLat.lon : "",
+    xy: { ...userXY }
+  };
+
+  occurrences.push(item);
+  document.getElementById("occNote").value = "";
+
+  renderRecords();
+  draw();
+
+  showToast("Ocorrência registrada.");
+}
+
+function renderRecords() {
+  const list = document.getElementById("recordsList");
+
+  if (!occurrences.length) {
+    list.innerHTML = "Nenhuma ocorrência registrada.";
+    return;
+  }
+
+  list.innerHTML = occurrences.map((o, idx) => {
+    return `
+      <div class="record"
+
+>         <strong>${idx + 1}. ${escapeHtml(o.type)}</strong><br>
+        Lat: ${o.lat.toFixed(7)} | Lon: ${o.lon.toFixed(7)}<br>
+        Distância: ${o.distanceToFiber || "--"} m<br>
+        ${escapeHtml(o.note || "")}
+      </div>
+    `;
+  }).join("");
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function exportCSV() {
+  if (!occurrences.length) {
+    showToast("Não há ocorrências para exportar.", "error");
+    return;
+  }
+
+  const headers = [
+    "data_hora",
+    "tipo",
+    "observacao",
+    "latitude",
+    "longitude",
+    "precisao_gps_m",
+    "distancia_ate_fibra_m",
+    "latitude_ponto_mais_proximo_fibra",
+    "longitude_ponto_mais_proximo_fibra"
+  ];
+
+  const rows = occurrences.map(o => [
+    o.date,
+    o.type,
+    o.note,
+    o.lat,
+    o.lon,
+    o.accuracy,
+    o.distanceToFiber,
+    o.nearestLat,
+    o.nearestLon
+  ]);
+
+  const csv = [
+    headers.join(";"),
+    ...rows.map(r => r.map(csvEscape).join(";"))
+  ].join("\n");
+
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ocorrencias_inspecao_fibra.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  URL.revokeObjectURL(url);
+
+  showToast("CSV exportado.");
+}
+
+function csvEscape(value) {
+  if (value === null || value === undefined) return "";
+  const str = String(value).replaceAll('"', '""');
+  return `"${str}"`;
+}
+
+/* Interação com canvas: zoom e arrasto */
+
+canvas.addEventListener("mousedown", e => {
+  dragging = true;
+  lastMouse = { x: e.clientX, y: e.clientY };
+});
+
+window.addEventListener("mouseup", () => {
+  dragging = false;
+  lastMouse = null;
+});
+
+window.addEventListener("mousemove", e => {
+  if (!dragging || !lastMouse) return;
+
+  const dx = e.clientX - lastMouse.x;
+  const dy = e.clientY - lastMouse.y;
+
+  view.offsetX += dx;
+  view.offsetY += dy;
+
+  lastMouse = { x: e.clientX, y: e.clientY };
+  draw();
+});
+
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+
+  const rect = canvas.getBoundingClientRect();
+  const mouse = {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  };
+
+  const before = screenToWorld(mouse);
+
+  const factor = e.deltaY < 0 ? 1.15 : 0.87;
+  view.scale *= factor;
+  view.scale = Math.max(0.0000001, Math.min(view.scale, 100));
+
+  const after = screenToWorld(mouse);
+
+  view.offsetX += (after.x - before.x) * view.scale;
+  view.offsetY -= (after.y - before.y) * view.scale;
+
+  draw();
+}, { passive: false });
+
+/* Suporte touch simples */
+
+canvas.addEventListener("touchstart", e => {
+  if (e.touches.length === 1) {
+    dragging = true;
+    lastMouse = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    };
+  }
+}, { passive: false });
+
+canvas.addEventListener("touchmove", e => {
+  if (!dragging || !lastMouse || e.touches.length !== 1) return;
+  e.preventDefault();
+
+  const t = e.touches[0];
+  const dx = t.clientX - lastMouse.x;
+  const dy = t.clientY - lastMouse.y;
+
+  view.offsetX += dx;
+  view.offsetY += dy;
+
+  lastMouse = { x: t.clientX, y: t.clientY };
+  draw();
+}, { passive: false });
+
+canvas.addEventListener("touchend", () => {
+  dragging = false;
+  lastMouse = null;
+});
+</script>
 </body>
 </html>
