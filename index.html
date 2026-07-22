@@ -4,24 +4,26 @@
 > <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Bloqueio de Escavação por Fibra - KM SNV</title>
-<meta name="theme-color" content="#0b1020" />
+<title>Consulta de Interferência em Fibra</title>
+<meta name="theme-color" content="#07111f" />
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
 :root {
-  --bg:#0b1020;
-  --panel:#0f1630;
-  --card:#081126;
-  --border:#1e2647;
-  --text:#e6ebff;
-  --muted:#a3b1d1;
+  --bg:#07111f;
+  --panel:#0f172a;
+  --card:#111827;
+  --card2:#020617;
+  --border:#334155;
+  --text:#f8fafc;
+  --muted:#94a3b8;
   --blue:#38bdf8;
   --green:#22c55e;
   --yellow:#facc15;
+  --orange:#fb923c;
   --red:#ef4444;
-  --km-blue:#1e3a8a;
+  --kmBlue:#1e3a8a;
 }
 
 * {
@@ -32,87 +34,78 @@ html, body {
   margin:0;
   height:100%;
   font-family:Arial, Helvetica, sans-serif;
-  background:linear-gradient(180deg,#0b1020,#070b16);
+  background:var(--bg);
   color:var(--text);
 }
 
 #app {
   height:100%;
   display:grid;
-  grid-template-columns:420px 1fr;
+  grid-template-columns:390px 1fr;
 }
 
 #panel {
-  background:var(--panel);
+  background:linear-gradient(180deg,#0f172a,#020617);
   border-right:1px solid var(--border);
   padding:14px;
   overflow-y:auto;
 }
 
+#mapWrap {
+  position:relative;
+  height:100%;
+}
+
 #map {
   height:100%;
   width:100%;
+  background:#020617;
 }
 
 h1 {
+  margin:0;
   font-size:19px;
-  margin:0 0 4px;
+  line-height:1.15;
 }
 
 .subtitle {
   color:var(--muted);
   font-size:12px;
-  margin-bottom:12px;
+  margin:5px 0 12px;
+  line-height:1.35;
 }
 
 .card {
-  background:rgba(8,17,38,.92);
+  background:rgba(17,24,39,.92);
   border:1px solid var(--border);
-  border-radius:14px;
+  border-radius:16px;
   padding:12px;
   margin-bottom:12px;
+  box-shadow:0 10px 26px rgba(0,0,0,.28);
 }
 
 .card h2 {
-  font-size:14px;
   margin:0 0 10px;
+  font-size:14px;
+  color:#e5e7eb;
 }
 
 .notice {
   background:rgba(56,189,248,.09);
   border:1px solid rgba(56,189,248,.32);
   color:#bae6fd;
-  border-radius:10px;
-  padding:9px;
+  border-radius:12px;
+  padding:10px;
   font-size:12px;
   line-height:1.4;
   margin-bottom:10px;
 }
 
-.danger {
-  background:rgba(239,68,68,.12);
-  border:1px solid rgba(239,68,68,.45);
-  color:#fecaca;
-  border-radius:10px;
-  padding:9px;
-  font-size:12px;
-  line-height:1.4;
-  margin-bottom:12px;
-  font-weight:700;
-}
-
-label {
-  display:block;
-  color:var(--muted);
-  font-size:12px;
-  margin:8px 0 4px;
-}
-
-input, select, button {
+input, button, select {
   width:100%;
-  padding:10px;
-  border-radius:10px;
-  font-size:13px;
+  padding:11px;
+  border-radius:12px;
+  font-size:14px;
 }
 
 input, select {
@@ -124,25 +117,16 @@ input, select {
 button {
   border:0;
   cursor:pointer;
-  font-weight:800;
-  background:var(--blue);
+  font-weight:900;
   color:#06111f;
-  margin-bottom:7px;
+  background:var(--blue);
+  margin-bottom:8px;
 }
 
-button.green {
-  background:var(--green);
-}
-
-button.red {
-  background:var(--red);
-  color:white;
-}
-
-button.gray {
-  background:#e5e7eb;
-  color:#111827;
-}
+button.green { background:var(--green); }
+button.red { background:var(--red); color:white; }
+button.gray { background:#e5e7eb; color:#111827; }
+button.yellow { background:var(--yellow); color:#111827; }
 
 .grid2 {
   display:grid;
@@ -150,11 +134,53 @@ button.gray {
   gap:8px;
 }
 
+.statusBox {
+  border-radius:18px;
+  padding:18px 14px;
+  text-align:center;
+  border:3px solid #334155;
+  margin-bottom:12px;
+  background:#111827;
+}
+
+.statusBox .label {
+  font-size:12px;
+  color:#cbd5e1;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.statusBox .decision {
+  margin-top:7px;
+  font-size:30px;
+  line-height:1.05;
+  font-weight:1000;
+}
+
+.statusDanger {
+  background:linear-gradient(180deg,rgba(239,68,68,.28),rgba(127,29,29,.55));
+  border-color:var(--red);
+  box-shadow:0 0 0 4px rgba(239,68,68,.12);
+}
+
+.statusWarn {
+  background:linear-gradient(180deg,rgba(250,204,21,.24),rgba(146,64,14,.45));
+  border-color:var(--yellow);
+  box-shadow:0 0 0 4px rgba(250,204,21,.13);
+}
+
+.statusOk {
+  background:linear-gradient(180deg,rgba(34,197,94,.20),rgba(20,83,45,.45));
+  border-color:var(--green);
+  box-shadow:0 0 0 4px rgba(34,197,94,.12);
+}
+
 .metric {
   background:#020617;
   border:1px solid var(--border);
-  border-radius:12px;
-  padding:10px;
+  border-radius:14px;
+  padding:12px;
   margin-bottom:8px;
 }
 
@@ -163,116 +189,124 @@ button.gray {
   color:var(--muted);
   font-size:11px;
   margin-bottom:5px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
 }
 
 .metric strong {
   display:block;
-  font-size:17px;
+  font-size:20px;
+  line-height:1.15;
   word-break:break-word;
 }
 
 .metric.big strong {
-  font-size:24px;
-}
-
-.ok {
-  color:#86efac;
-}
-
-.warn {
-  color:#fde68a;
-}
-
-.bad {
-  color:#fecaca;
+  font-size:34px;
 }
 
 .km-sign {
   display:flex;
   width:100%;
-  min-height:98px;
+  min-height:90px;
   background:white;
   color:#0b1020;
-  border:4px solid var(--km-blue);
+  border:4px solid var(--kmBlue);
   border-radius:16px;
   overflow:hidden;
   margin-bottom:10px;
-  box-shadow:0 12px 28px rgba(0,0,0,.45);
 }
 
 .km-band {
-  width:78px;
-  background:var(--km-blue);
+  width:74px;
+  background:var(--kmBlue);
   color:white;
   display:flex;
   align-items:center;
   justify-content:center;
   font-weight:1000;
-  font-size:28px;
+  font-size:27px;
 }
 
 .km-body {
   flex:1;
-  padding:12px;
+  padding:10px 12px;
   display:flex;
   flex-direction:column;
   justify-content:center;
 }
 
 .km-main {
-  font-size:36px;
+  font-size:34px;
   font-weight:1000;
   line-height:1;
 }
 
 .km-sub {
-  margin-top:7px;
-  color:var(--km-blue);
+  margin-top:6px;
+  color:var(--kmBlue);
   font-size:13px;
   font-weight:900;
 }
 
-#riskBanner {
+.kv {
+  display:grid;
+  grid-template-columns:110px 1fr;
+  gap:7px;
+  padding:5px 0;
+  border-bottom:1px solid #1e293b;
+  font-size:12px;
+}
+
+.kv b { color:#cbd5e1; }
+.kv span { color:#f8fafc; word-break:break-word; }
+
+.small {
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.4;
+}
+
+#mapAlert {
   position:absolute;
   z-index:900;
   top:14px;
   left:14px;
-  max-width:520px;
+  right:14px;
+  max-width:620px;
   background:rgba(2,6,23,.94);
   border:1px solid #334155;
-  border-radius:16px;
-  padding:12px;
-  box-shadow:0 16px 36px rgba(0,0,0,.42);
+  border-radius:18px;
+  padding:14px;
+  box-shadow:0 18px 42px rgba(0,0,0,.44);
+  backdrop-filter:blur(8px);
 }
 
-#riskTitle {
-  font-size:24px;
+#mapAlertTitle {
+  font-size:32px;
   font-weight:1000;
-  margin-bottom:5px;
+  line-height:1;
+  margin-bottom:6px;
 }
 
-#riskDetails {
+#mapAlertText {
   color:#cbd5e1;
+  font-size:14px;
+  line-height:1.42;
+}
+
+.mapDanger { color:#fecaca; border-color:var(--red)!important; }
+.mapWarn { color:#fde68a; border-color:var(--yellow)!important; }
+.mapOk { color:#bbf7d0; border-color:var(--green)!important; }
+
+details {
+  margin-top:8px;
+}
+
+summary {
+  cursor:pointer;
+  color:#bae6fd;
   font-size:13px;
-  line-height:1.4;
-}
-
-.kv {
-  display:grid;
-  grid-template-columns:115px 1fr;
-  gap:8px;
-  border-bottom:1px solid #1e2647;
-  padding:5px 0;
-  font-size:12px;
-}
-
-.kv b {
-  color:#cbd5e1;
-}
-
-.kv span {
-  color:#f8fafc;
-  word-break:break-word;
+  font-weight:800;
 }
 
 #loading {
@@ -281,23 +315,23 @@ button.gray {
   top:12px;
   right:12px;
   z-index:9999;
+  width:330px;
   background:rgba(15,23,42,.98);
   border:1px solid #334155;
   color:white;
   border-radius:14px;
   padding:13px;
-  width:340px;
-  box-shadow:0 14px 40px rgba(0,0,0,.4);
   font-size:13px;
+  box-shadow:0 14px 40px rgba(0,0,0,.4);
 }
 
 #progressOuter {
+  margin-top:8px;
   height:8px;
-  border:1px solid #334155;
   background:#020617;
+  border:1px solid #334155;
   border-radius:999px;
   overflow:hidden;
-  margin-top:8px;
 }
 
 #progressInner {
@@ -321,14 +355,18 @@ button.gray {
     border-bottom:1px solid var(--border);
   }
 
-  #map {
+  #mapWrap {
     height:45%;
   }
 
-  #riskBanner {
+  #mapAlert {
+    top:8px;
     left:8px;
     right:8px;
-    top:8px;
+  }
+
+  #mapAlertTitle {
+    font-size:25px;
   }
 }
 </style>
@@ -349,24 +387,21 @@ button.gray {
 
 >   <aside id="panel"
 
->     <h1>Bloqueio de Escavação</h1>
-    <div class="subtitle">Fibra subterrânea KMZ/KML + KM correto pelo SNV</div>
+>     <h1>Consulta de Interferência em Fibra</h1>
+    <div class="subtitle"
 
-    <div class="danger"
+>       Verifique sua posição em relação ao traçado subterrâneo mais próximo antes de sondagem, escavação ou obra.
+    </div>
 
->       Sistema de apoio para impedir escavações próximas ao traçado subterrâneo de fibra.
-      Ao entrar na zona de bloqueio, será exibido <b>NÃO ESCAVAR</b> e o celular vibrará, se suportado.
+    <div id="statusBox" class="statusBox"
+
+>       <div class="label">Condição da área</div>
+      <div id="decisionText" class="decision">AGUARDANDO</div>
     </div>
 
     <section class="card"
 
->       <h2>1. KM atual da rodovia</h2>
-
-      <div class="notice"
-
->         O KM é calculado por projeção no eixo do arquivo <b>SNVBR116SPRJ.csv</b>,
-        carregado automaticamente da mesma pasta deste HTML.
-      </div>
+>       <h2>KM atual</h2>
 
       <div class="km-sign"
 
@@ -385,33 +420,27 @@ button.gray {
 >           <small>Pontos SNV</small>
           <strong id="snvCount">--</strong>
         </div>
+
         <div class="metric"
 
->           <small>Distância ao eixo SNV</small>
+>           <small>Distância ao eixo</small>
           <strong id="snvDistance">-- m</strong>
         </div>
       </div>
 
-      <div class="metric"
-
->         <small>Status SNV</small>
-        <strong id="snvStatus" style="font-size:13px;">Carregando SNV...</strong>
-      </div>
-
-      <div id="snvDetails"></div>
+      <div class="small" id="snvStatus">Carregando SNVBR116SPRJ.csv...</div>
     </section>
 
     <section class="card"
 
->       <h2>2. Traçado da fibra</h2>
+>       <h2>Fibra subterrânea</h2>
 
-      <label>Importar KMZ ou KML da fibra subterrânea</label>
       <input type="file" id="fiberFile" accept=".kmz,.kml" />
 
-      <div class="grid2"
+      <div class="grid2" style="margin-top:8px;"
 
->         <button onclick="fitFiber()">Enquadrar fibra</button>
-        <button class="gray" onclick="toggleFiber()">Mostrar/Ocultar</button>
+>         <button onclick="fitFiber()">Ver traçado</button>
+        <button class="gray" onclick="toggleFiber()">Ocultar</button>
       </div>
 
       <div class="grid2"
@@ -421,42 +450,54 @@ button.gray {
 >           <small>Trechos</small>
           <strong id="fiberSegments">--</strong>
         </div>
+
         <div class="metric"
 
->           <small>Pontos</small>
-          <strong id="fiberPoints">--</strong>
+>           <small>Extensão</small>
+          <strong id="fiberLength">-- km</strong>
         </div>
       </div>
 
-      <div class="metric"
-
->         <small>Extensão estimada</small>
-        <strong id="fiberLength">-- km</strong>
-      </div>
-
-      <div class="metric"
-
->         <small>Status fibra</small>
-        <strong id="fiberStatus" style="font-size:13px;">Aguardando KMZ/KML</strong>
-      </div>
+      <div class="small" id="fiberStatus">Importe o KMZ/KML da fibra.</div>
     </section>
 
     <section class="card"
 
->       <h2>3. GPS e risco de escavação</h2>
+>       <h2>Consulta GPS</h2>
 
       <div class="grid2"
 
->         <button class="green" onclick="startGPS()">Iniciar GPS</button>
-        <button class="red" onclick="stopGPS()">Parar GPS</button>
+>         <button class="green" onclick="startGPS()">Iniciar</button>
+        <button class="red" onclick="stopGPS()">Parar</button>
       </div>
 
-      <button onclick="centerOnUser()">Centralizar posição</button>
+      <button onclick="centerOnUser()">Centralizar</button>
 
-      <label>Zona de bloqueio de escavação em metros</label>
-      <input id="blockRadius" type="number" value="15" min="1" />
+      <div class="metric big"
 
-      <label>Zona de atenção em metros</label>
+>         <small>Distância até a fibra</small>
+        <strong id="fiberDistance">-- m</strong>
+      </div>
+
+      <div class="grid2"
+
+>         <div class="metric"
+
+>           <small>Precisão GPS</small>
+          <strong id="gpsAccuracy">-- m</strong>
+        </div>
+
+        <div class="metric"
+
+>           <small>Zona bloqueio</small>
+          <strong><span id="blockLabel">15</span> m</strong>
+        </div>
+      </div>
+
+      <label>Bloqueio em metros</label>
+      <input id="blockRadius" type="number" value="15" min="1" oninput="syncLabels()" />
+
+      <label>Atenção em metros</label>
       <input id="warnRadius" type="number" value="30" min="1" />
 
       <label>Vibração</label>
@@ -466,48 +507,38 @@ button.gray {
         <option value="off">Desativada</option>
       </select>
 
-      <div class="metric big"
+      <button class="yellow" onclick="shareWhatsApp()">Enviar consulta por WhatsApp</button>
 
->         <small>Decisão preliminar</small>
-        <strong id="decision">Aguardando GPS</strong>
-      </div>
+      <details>
+        <summary>Detalhes técnicos</summary>
+        <div style="margin-top:8px;"
 
-      <div class="grid2"
+>           <div class="metric"
 
->         <div class="metric"
+>             <small>Minha coordenada</small>
+            <strong id="gpsCoords" style="font-size:13px;">--</strong>
+          </div>
 
->           <small>Distância até fibra</small>
-          <strong id="fiberDistance">-- m</strong>
+          <div class="metric"
+
+>             <small>Fibra mais próxima</small>
+            <strong id="nearestFiber" style="font-size:13px;">--</strong>
+          </div>
+
+          <div id="snvDetails"></div>
         </div>
-        <div class="metric"
-
->           <small>Precisão GPS</small>
-          <strong id="gpsAccuracy">-- m</strong>
-        </div>
-      </div>
-
-      <div class="metric"
-
->         <small>Coordenada atual</small>
-        <strong id="gpsCoords" style="font-size:13px;">--</strong>
-      </div>
-
-      <div class="metric"
-
->         <small>Fibra mais próxima</small>
-        <strong id="nearestFiber" style="font-size:13px;">--</strong>
-      </div>
+      </details>
     </section>
   </aside>
 
-  <main style="position:relative"
+  <main id="mapWrap"
 
->     <div id="riskBanner"
+>     <div id="mapAlert"
 
->       <div id="riskTitle">Aguardando GPS</div>
-      <div id="riskDetails"
+>       <div id="mapAlertTitle">Aguardando GPS</div>
+      <div id="mapAlertText"
 
->         Carregue o KMZ/KML da fibra e inicie o GPS para mostrar o KM atual, a distância até a fibra e a decisão de escavação.
+>         Carregue o KMZ/KML da fibra e inicie o GPS para consultar a distância até o traçado subterrâneo mais próximo.
       </div>
     </div>
     <div id="map"></div>
@@ -518,10 +549,6 @@ button.gray {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script>
-/* ============================================================
-   VARIÁVEIS GLOBAIS
-============================================================ */
-
 let map;
 let satelliteLayer;
 let labelLayer;
@@ -544,14 +571,11 @@ let currentPosition = null;
 let currentAccuracy = null;
 let currentNearestFiber = null;
 let currentFiberDistance = null;
-let currentDecision = "Aguardando GPS";
-let currentDecisionClass = "";
+let currentDecision = "AGUARDANDO";
+let currentDecisionType = "neutral";
 
 let userMarker = null;
 let accuracyCircle = null;
-let trailLine = null;
-let trail = [];
-
 let nearestFiberMarker = null;
 let nearestFiberLine = null;
 let blockCircle = null;
@@ -560,15 +584,12 @@ let warnCircle = null;
 let lastAnalysisAt = 0;
 let lastVibrationAt = 0;
 
-const MAX_DISPLAY_POINTS = 180000;
-const MAX_DISTANCE_POINTS = 180000;
-
-/* ============================================================
-   INICIALIZAÇÃO
-============================================================ */
+const MAX_DISPLAY_POINTS = 150000;
+const MAX_DISTANCE_POINTS = 150000;
 
 initMap();
 loadSNV();
+syncLabels();
 
 document.getElementById("fiberFile").addEventListener("change", handleFiberFile);
 
@@ -612,19 +633,19 @@ function hideLoading() {
   document.getElementById("loading").style.display = "none";
 }
 
+function syncLabels() {
+  document.getElementById("blockLabel").innerText = document.getElementById("blockRadius").value || "15";
+}
+
 /* ============================================================
-   SNV - CARREGAMENTO E KM POR PROJEÇÃO
+   SNV E KM
 ============================================================ */
 
 async function loadSNV() {
   try {
-    document.getElementById("snvStatus").innerText = "Carregando SNVBR116SPRJ.csv...";
-
     const res = await fetch("./SNVBR116SPRJ.csv?cache=" + Date.now());
 
-    if (!res.ok) {
-      throw new Error("HTTP " + res.status);
-    }
+    if (!res.ok) throw new Error("HTTP " + res.status);
 
     const text = await res.text();
 
@@ -634,20 +655,16 @@ async function loadSNV() {
 
     document.getElementById("snvStatus").innerText = "SNV carregado. KM calculado por projeção.";
     document.getElementById("snvCount").innerText = snvPoints.length.toLocaleString("pt-BR");
-
   } catch (err) {
     console.error(err);
     document.getElementById("snvStatus").innerText =
-      "Falha ao carregar SNVBR116SPRJ.csv. Use GitHub Pages, HTTPS ou servidor local.";
+      "Não foi possível carregar SNVBR116SPRJ.csv. Use GitHub Pages, HTTPS ou servidor local.";
   }
 }
 
 function parseSNVCSV(text) {
   const rows = parseCSV(text);
-
-  if (rows.length < 2) {
-    throw new Error("CSV vazio.");
-  }
+  if (rows.length < 2) throw new Error("CSV vazio.");
 
   const rawHeaders = rows[0];
   const headers = rawHeaders.map(normalizeHeader);
@@ -666,9 +683,7 @@ function parseSNVCSV(text) {
     if (!row || !row.length) continue;
 
     const details = {};
-    rawHeaders.forEach((h, i) => {
-      details[h || ("campo_" + i)] = row[i] || "";
-    });
+    rawHeaders.forEach((h, i) => details[h || ("campo_" + i)] = row[i] || "");
 
     const kmRaw = kmIdx >= 0 ? row[kmIdx] : "";
     const kmNum = parseKm(kmRaw);
@@ -734,9 +749,7 @@ function parseSNVCSV(text) {
     snvPoints.sort((a, b) => (a.kmNum ?? 0) - (b.kmNum ?? 0));
   }
 
-  if (!snvPoints.length) {
-    throw new Error("Nenhuma coordenada válida no SNV.");
-  }
+  if (!snvPoints.length) throw new Error("Nenhuma coordenada válida no SNV.");
 }
 
 function buildSNVSegments() {
@@ -786,9 +799,7 @@ function projectCurrentKM(pos) {
       p.x > seg.maxx + margin ||
       p.y < seg.miny - margin ||
       p.y > seg.maxy + margin
-    ) {
-      continue;
-    }
+    ) continue;
 
     const proj = projectPointOnSegment(p, seg);
     const ll = metersToLonLat(proj.x, proj.y);
@@ -835,8 +846,7 @@ function projectCurrentKM(pos) {
     projectedLat: best.ll.lat,
     projectedLng: best.ll.lng,
     a,
-    b,
-    t: best.t
+    b
   };
 }
 
@@ -851,10 +861,10 @@ function updateKMDisplay() {
     return;
   }
 
-  const kmParts = kmToParts(currentSNV.km);
+  const parts = kmToParts(currentSNV.km);
 
-  document.getElementById("kmMain").innerText = kmParts.main;
-  document.getElementById("kmSub").innerText = kmParts.sub + " · " + currentSNV.distance.toFixed(1) + " m do eixo SNV";
+  document.getElementById("kmMain").innerText = parts.main;
+  document.getElementById("kmSub").innerText = parts.sub;
   document.getElementById("snvDistance").innerText = currentSNV.distance.toFixed(1) + " m";
 
   renderSNVDetails(currentSNV);
@@ -862,7 +872,7 @@ function updateKMDisplay() {
   if (snvProjectionMarker) map.removeLayer(snvProjectionMarker);
 
   snvProjectionMarker = L.circleMarker([currentSNV.projectedLat, currentSNV.projectedLng], {
-    radius: 7,
+    radius: 6,
     color: "#020617",
     weight: 2,
     fillColor: "#ffffff",
@@ -871,43 +881,11 @@ function updateKMDisplay() {
 }
 
 function renderSNVDetails(info) {
-  const a = info.a || {};
-  const b = info.b || {};
-  const details = a.details || {};
-
-  const keys = Object.keys(details);
-  const preferred = [
-    "br", "rodovia", "sg_rodovia", "uf", "sentido",
-    "km", "km_inicial", "km_final", "trecho",
-    "municipio", "local", "descricao", "jurisdicao"
-  ];
-
-  const ordered = [];
-
-  preferred.forEach(p => {
-    const found = keys.find(k => normalizeHeader(k) === p || normalizeHeader(k).includes(p));
-    if (found && !ordered.includes(found)) ordered.push(found);
-  });
-
-  keys.forEach(k => {
-    if (!ordered.includes(k) && ordered.length < 12) ordered.push(k);
-  });
-
-  let html = "";
-
-  html += `<div class="kv"><b>KM projetado</b><span>${escapeHtml(info.kmText)}</span></div>`;
-  html += `<div class="kv"><b>Distância SNV</b><span>${info.distance.toFixed(1)} m</span></div>`;
-  html += `<div class="kv"><b>Projeção</b><span>${info.projectedLat.toFixed(7)}, ${info.projectedLng.toFixed(7)}</span></div>`;
-  html += `<div class="kv"><b>KM anterior</b><span>${escapeHtml(formatKm(a.kmNum))}</span></div>`;
-  html += `<div class="kv"><b>KM posterior</b><span>${escapeHtml(formatKm(b.kmNum))}</span></div>`;
-
-  ordered.slice(0, 10).forEach(k => {
-    const v = details[k];
-
-    if (v !== undefined && String(v).trim() !== "") {
-      html += `<div class="kv"><b>${escapeHtml(k)}</b><span>${escapeHtml(v)}</span></div>`;
-    }
-  });
+  const html = `
+    <div class="kv"><b>KM</b><span>${escapeHtml(info.kmText)}</span></div>
+    <div class="kv"><b>Dist. SNV</b><span>${info.distance.toFixed(1)} m</span></div>
+    <div class="kv"><b>Projeção</b><span>${info.projectedLat.toFixed(7)}, ${info.projectedLng.toFixed(7)}</span></div>
+  `;
 
   document.getElementById("snvDetails").innerHTML = html;
 }
@@ -915,7 +893,7 @@ function renderSNVDetails(info) {
 function drawSNV() {
   if (snvLayer) map.removeLayer(snvLayer);
 
-  const max = 6000;
+  const max = 5000;
   const step = Math.max(1, Math.ceil(snvPoints.length / max));
   const latlngs = [];
 
@@ -927,9 +905,9 @@ function drawSNV() {
     snvLayer = L.polyline(latlngs, {
       color: "#ffffff",
       weight: 2,
-      opacity: 0.55,
+      opacity: 0.45,
       dashArray: "4 6"
-    }).addTo(map).bindPopup("Eixo SNVBR116SPRJ");
+    }).addTo(map).bindPopup("Eixo SNV");
   }
 }
 
@@ -942,14 +920,14 @@ async function handleFiberFile(e) {
   if (!file) return;
 
   try {
-    showLoading("Lendo KMZ/KML da fibra...", 5);
+    showLoading("Lendo traçado da fibra...", 5);
 
     let kmlText = "";
 
     if (file.name.toLowerCase().endsWith(".kml")) {
       kmlText = await file.text();
     } else if (file.name.toLowerCase().endsWith(".kmz")) {
-      showLoading("Descompactando KMZ...", 20);
+      showLoading("Abrindo KMZ...", 20);
 
       const zip = await JSZip.loadAsync(file);
       let entry = null;
@@ -966,15 +944,15 @@ async function handleFiberFile(e) {
 
       kmlText = await entry.async("string");
     } else {
-      throw new Error("Formato inválido. Use KMZ ou KML.");
+      throw new Error("Formato inválido.");
     }
 
-    showLoading("Extraindo traçado linear da fibra...", 55);
+    showLoading("Processando fibra...", 55);
 
     const segments = parseKMLLinearSegments(kmlText);
 
     if (!segments.length) {
-      throw new Error("Nenhum LineString ou gx:Track encontrado.");
+      throw new Error("Nenhum traçado linear encontrado.");
     }
 
     fiberSegmentsOriginal = segments;
@@ -984,21 +962,16 @@ async function handleFiberFile(e) {
     drawFiber();
     buildFiberIndex();
 
-    const totalPoints = countSegmentPoints(segments);
-    const totalLength = computeSegmentsLength(segments);
-
     document.getElementById("fiberSegments").innerText = segments.length.toLocaleString("pt-BR");
-    document.getElementById("fiberPoints").innerText = totalPoints.toLocaleString("pt-BR");
-    document.getElementById("fiberLength").innerText = (totalLength / 1000).toFixed(3) + " km";
-    document.getElementById("fiberStatus").innerText = "Fibra carregada mantendo trechos separados.";
+    document.getElementById("fiberLength").innerText = (computeSegmentsLength(segments) / 1000).toFixed(3) + " km";
+    document.getElementById("fiberStatus").innerText = "Fibra carregada. Pronto para consulta.";
 
     hideLoading();
     fitFiber();
 
   } catch (err) {
     hideLoading();
-    alert("Erro ao carregar KMZ/KML: " + err.message);
-    console.error(err);
+    alert("Erro ao carregar fibra: " + err.message);
   }
 }
 
@@ -1009,7 +982,6 @@ function parseKMLLinearSegments(text) {
 
   while ((pm = placemarkRegex.exec(text)) !== null) {
     const block = pm[0];
-
     const lineRegex = /<LineString[\s\S]*?<coordinates[^>]*>([\s\S]*?)<\/coordinates>[\s\S]*?<\/LineString>/gi;
     let lm;
 
@@ -1080,14 +1052,14 @@ function drawFiber() {
   fiberGroup = L.featureGroup().addTo(map);
 
   fiberSegmentsDisplay.forEach((seg, i) => {
-    if (!seg || seg.length < 2) return;
+    if (seg.length < 2) return;
 
     L.polyline(seg, {
       color: "#00BFFF",
-      weight: 5,
+      weight: 6,
       opacity: 1,
       smoothFactor: 0
-    }).addTo(fiberGroup).bindPopup("Trecho da fibra " + (i + 1));
+    }).addTo(fiberGroup).bindPopup("Fibra subterrânea - trecho " + (i + 1));
   });
 }
 
@@ -1107,10 +1079,6 @@ function buildFiberIndex() {
         ay: am.y,
         bx: bm.x,
         by: bm.y,
-        alat: a[0],
-        alng: a[1],
-        blat: b[0],
-        blng: b[1],
         minx: Math.min(am.x, bm.x),
         maxx: Math.max(am.x, bm.x),
         miny: Math.min(am.y, bm.y),
@@ -1142,7 +1110,7 @@ function toggleFiber() {
 }
 
 /* ============================================================
-   GPS E ANÁLISE
+   GPS
 ============================================================ */
 
 function startGPS() {
@@ -1171,7 +1139,6 @@ function startGPS() {
       };
 
       currentAccuracy = pos.coords.accuracy || 0;
-      trail.push(currentPosition);
 
       updateUserLayer();
 
@@ -1180,10 +1147,6 @@ function startGPS() {
       if (now - lastAnalysisAt > 450) {
         analyzePosition();
         lastAnalysisAt = now;
-      }
-
-      if (trail.length === 1) {
-        centerOnUser();
       }
     },
     err => {
@@ -1195,8 +1158,6 @@ function startGPS() {
       timeout: 15000
     }
   );
-
-  alert("GPS iniciado.");
 }
 
 function stopGPS() {
@@ -1205,8 +1166,6 @@ function stopGPS() {
     gpsWatch = null;
 
     if (navigator.vibrate) navigator.vibrate(0);
-
-    alert("GPS parado.");
   }
 }
 
@@ -1215,7 +1174,7 @@ function updateUserLayer() {
 
   if (!userMarker) {
     userMarker = L.circleMarker(latlng, {
-      radius: 9,
+      radius: 10,
       color: "#ffffff",
       weight: 2,
       fillColor: "#22c55e",
@@ -1231,25 +1190,13 @@ function updateUserLayer() {
     radius: currentAccuracy,
     color: "#22c55e",
     weight: 2,
-    opacity: 0.55,
+    opacity: 0.45,
     fillColor: "#22c55e",
-    fillOpacity: 0.12
+    fillOpacity: 0.10
   }).addTo(map);
-
-  if (trailLine) map.removeLayer(trailLine);
-
-  if (trail.length >= 2) {
-    trailLine = L.polyline(trail.map(p => [p.lat, p.lng]), {
-      color: "#22c55e",
-      weight: 3,
-      opacity: 1
-    }).addTo(map);
-  }
 }
 
 function analyzePosition() {
-  if (!currentPosition) return;
-
   currentNearestFiber = nearestFiberPoint(currentPosition);
   currentFiberDistance = currentNearestFiber ? currentNearestFiber.distance : null;
 
@@ -1265,37 +1212,56 @@ function updateDecision() {
   const warn = Number(document.getElementById("warnRadius").value || 30);
 
   if (currentFiberDistance === null || currentFiberDistance === undefined) {
-    currentDecision = "Aguardando análise";
-    currentDecisionClass = "";
+    currentDecision = "AGUARDANDO";
+    currentDecisionType = "neutral";
     return;
   }
 
   if (currentFiberDistance <= block) {
     currentDecision = "NÃO ESCAVAR";
-    currentDecisionClass = "bad";
+    currentDecisionType = "danger";
   } else if (currentFiberDistance <= warn) {
-    currentDecision = "ANÁLISE NECESSÁRIA";
-    currentDecisionClass = "warn";
+    currentDecision = "ATENÇÃO";
+    currentDecisionType = "warn";
   } else {
     currentDecision = "FORA DA ZONA CRÍTICA";
-    currentDecisionClass = "ok";
+    currentDecisionType = "ok";
   }
 
   if (currentAccuracy > 20) {
-    currentDecision += " · GPS BAIXA PRECISÃO";
+    currentDecision += " · GPS IMPRECISO";
   }
 }
 
 function updateScreen() {
-  const decisionEl = document.getElementById("decision");
-  decisionEl.innerText = currentDecision;
-  decisionEl.className = currentDecisionClass;
+  const box = document.getElementById("statusBox");
+  const decision = document.getElementById("decisionText");
+  const mapAlert = document.getElementById("mapAlert");
+  const mapTitle = document.getElementById("mapAlertTitle");
+  const mapText = document.getElementById("mapAlertText");
+
+  box.className = "statusBox";
+  mapAlert.className = "";
+
+  if (currentDecisionType === "danger") {
+    box.classList.add("statusDanger");
+    mapAlert.classList.add("mapDanger");
+  } else if (currentDecisionType === "warn") {
+    box.classList.add("statusWarn");
+    mapAlert.classList.add("mapWarn");
+  } else if (currentDecisionType === "ok") {
+    box.classList.add("statusOk");
+    mapAlert.classList.add("mapOk");
+  }
+
+  decision.innerText = currentDecision;
+  mapTitle.innerText = currentDecision;
 
   document.getElementById("fiberDistance").innerText =
-    currentFiberDistance !== null ? currentFiberDistance.toFixed(2) + " m" : "-- m";
+    currentFiberDistance !== null ? currentFiberDistance.toFixed(2).replace(".", ",") + " m" : "-- m";
 
   document.getElementById("gpsAccuracy").innerText =
-    currentAccuracy !== null ? currentAccuracy.toFixed(1) + " m" : "-- m";
+    currentAccuracy !== null ? currentAccuracy.toFixed(1).replace(".", ",") + " m" : "-- m";
 
   document.getElementById("gpsCoords").innerText =
     currentPosition.lat.toFixed(7) + ", " + currentPosition.lng.toFixed(7);
@@ -1305,18 +1271,10 @@ function updateScreen() {
       ? currentNearestFiber.point.lat.toFixed(7) + ", " + currentNearestFiber.point.lng.toFixed(7)
       : "--";
 
-  const riskTitle = document.getElementById("riskTitle");
-  const riskDetails = document.getElementById("riskDetails");
-
-  riskTitle.innerText = currentDecision;
-  riskTitle.className = currentDecisionClass;
-
-  riskDetails.innerHTML =
+  mapText.innerHTML =
     "KM atual: <b>" + escapeHtml(currentSNV ? currentSNV.kmText : "--") + "</b><br>" +
-    "Distância lateral até fibra: <b>" + (currentFiberDistance !== null ? currentFiberDistance.toFixed(2) : "--") + " m</b><br>" +
-    "Precisão GPS: <b>" + currentAccuracy.toFixed(1) + " m</b><br>" +
-    "Bloqueio: <b>" + document.getElementById("blockRadius").value + " m</b> · " +
-    "Atenção: <b>" + document.getElementById("warnRadius").value + " m</b>";
+    "Distância até a fibra: <b>" + (currentFiberDistance !== null ? currentFiberDistance.toFixed(2).replace(".", ",") : "--") + " m</b><br>" +
+    "Antes de sondagem, escavação ou obra, valide a interferência com o responsável técnico.";
 }
 
 function centerOnUser() {
@@ -1338,6 +1296,59 @@ function centerOnUser() {
   } else {
     map.setView([currentPosition.lat, currentPosition.lng], 21);
   }
+}
+
+function drawRiskLayers() {
+  if (!currentPosition || !currentNearestFiber) return;
+
+  if (nearestFiberMarker) map.removeLayer(nearestFiberMarker);
+  if (nearestFiberLine) map.removeLayer(nearestFiberLine);
+  if (blockCircle) map.removeLayer(blockCircle);
+  if (warnCircle) map.removeLayer(warnCircle);
+
+  const p = currentNearestFiber.point;
+
+  nearestFiberMarker = L.circleMarker([p.lat, p.lng], {
+    radius: 8,
+    color: "#020617",
+    weight: 2,
+    fillColor: "#facc15",
+    fillOpacity: 1
+  }).addTo(map).bindPopup("Fibra mais próxima");
+
+  nearestFiberLine = L.polyline(
+    [
+      [currentPosition.lat, currentPosition.lng],
+      [p.lat, p.lng]
+    ],
+    {
+      color: "#facc15",
+      weight: 5,
+      opacity: 1,
+      dashArray: "8 8"
+    }
+  ).addTo(map);
+
+  const block = Number(document.getElementById("blockRadius").value || 15);
+  const warn = Number(document.getElementById("warnRadius").value || 30);
+
+  warnCircle = L.circle([p.lat, p.lng], {
+    radius: warn,
+    color: "#facc15",
+    weight: 2,
+    opacity: 0.65,
+    fillColor: "#facc15",
+    fillOpacity: 0.08
+  }).addTo(map);
+
+  blockCircle = L.circle([p.lat, p.lng], {
+    radius: block,
+    color: "#ef4444",
+    weight: 3,
+    opacity: 0.9,
+    fillColor: "#ef4444",
+    fillOpacity: 0.20
+  }).addTo(map);
 }
 
 function vibrateIfNeeded() {
@@ -1362,58 +1373,27 @@ function vibrateIfNeeded() {
   }
 }
 
-function drawRiskLayers() {
-  if (!currentPosition || !currentNearestFiber) return;
+function shareWhatsApp() {
+  if (!currentPosition) {
+    alert("Inicie o GPS primeiro.");
+    return;
+  }
 
-  if (nearestFiberMarker) map.removeLayer(nearestFiberMarker);
-  if (nearestFiberLine) map.removeLayer(nearestFiberLine);
-  if (blockCircle) map.removeLayer(blockCircle);
-  if (warnCircle) map.removeLayer(warnCircle);
+  const msg =
+    "Consulta de Interferência em Fibra%0A" +
+    "Status: " + encodeURIComponent(currentDecision) + "%0A" +
+    "KM: " + encodeURIComponent(currentSNV ? currentSNV.kmText : "--") + "%0A" +
+    "Distância até fibra: " + (currentFiberDistance !== null ? currentFiberDistance.toFixed(2) : "--") + " m%0A" +
+    "Precisão GPS: " + (currentAccuracy !== null ? currentAccuracy.toFixed(1) : "--") + " m%0A" +
+    "Local: https://www.google.com/maps?q=" + currentPosition.lat + "," + currentPosition.lng + "%0A" +
+    "Orientação: validar antes de sondagem, escavação ou obra.";
 
-  const p = currentNearestFiber.point;
-
-  nearestFiberMarker = L.circleMarker([p.lat, p.lng], {
-    radius: 8,
-    color: "#020617",
-    weight: 2,
-    fillColor: "#facc15",
-    fillOpacity: 1
-  }).addTo(map).bindPopup("Ponto mais próximo da fibra");
-
-  nearestFiberLine = L.polyline(
-    [
-      [currentPosition.lat, currentPosition.lng],
-      [p.lat, p.lng]
-    ],
-    {
-      color: "#facc15",
-      weight: 5,
-      opacity: 1,
-      dashArray: "8 8"
-    }
-  ).addTo(map);
-
-  const block = Number(document.getElementById("blockRadius").value || 15);
-  const warn = Number(document.getElementById("warnRadius").value || 30);
-
-  warnCircle = L.circle([p.lat, p.lng], {
-    radius: warn,
-    color: "#f59e0b",
-    weight: 2,
-    opacity: 0.6,
-    fillColor: "#f59e0b",
-    fillOpacity: 0.08
-  }).addTo(map);
-
-  blockCircle = L.circle([p.lat, p.lng], {
-    radius: block,
-    color: "#ef4444",
-    weight: 3,
-    opacity: 0.85,
-    fillColor: "#ef4444",
-    fillOpacity: 0.18
-  }).addTo(map);
+  window.open("https://wa.me/?text=" + msg, "_blank");
 }
+
+/* ============================================================
+   DISTÂNCIA ATÉ FIBRA
+============================================================ */
 
 function nearestFiberPoint(pos) {
   if (!fiberIndex.length) return null;
@@ -1429,9 +1409,7 @@ function nearestFiberPoint(pos) {
       p.x > seg.maxx + margin ||
       p.y < seg.miny - margin ||
       p.y > seg.maxy + margin
-    ) {
-      continue;
-    }
+    ) continue;
 
     const proj = projectPointOnSegment(p, seg);
     const ll = metersToLonLat(proj.x, proj.y);
@@ -1439,11 +1417,7 @@ function nearestFiberPoint(pos) {
 
     if (d < bestD) {
       bestD = d;
-      best = {
-        distance: d,
-        point: ll,
-        segment: seg
-      };
+      best = { distance:d, point:ll };
     }
   }
 
@@ -1455,11 +1429,7 @@ function nearestFiberPoint(pos) {
 
       if (d < bestD) {
         bestD = d;
-        best = {
-          distance: d,
-          point: ll,
-          segment: seg
-        };
+        best = { distance:d, point:ll };
       }
     }
   }
@@ -1468,7 +1438,7 @@ function nearestFiberPoint(pos) {
 }
 
 /* ============================================================
-   FUNÇÕES GEOGRÁFICAS E UTILITÁRIAS
+   UTILITÁRIOS
 ============================================================ */
 
 function projectPointOnSegment(p, seg) {
@@ -1476,19 +1446,15 @@ function projectPointOnSegment(p, seg) {
   const dy = seg.by - seg.ay;
 
   if (dx === 0 && dy === 0) {
-    return {
-      x: seg.ax,
-      y: seg.ay,
-      t: 0
-    };
+    return { x:seg.ax, y:seg.ay, t:0 };
   }
 
   let t = ((p.x - seg.ax) * dx + (p.y - seg.ay) * dy) / (dx * dx + dy * dy);
   t = Math.max(0, Math.min(1, t));
 
   return {
-    x: seg.ax + t * dx,
-    y: seg.ay + t * dy,
+    x:seg.ax + t * dx,
+    y:seg.ay + t * dy,
     t
   };
 }
@@ -1497,8 +1463,8 @@ function lonLatToMeters(lng, lat) {
   const R = 6378137;
 
   return {
-    x: R * lng * Math.PI / 180,
-    y: R * Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360))
+    x:R * lng * Math.PI / 180,
+    y:R * Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360))
   };
 }
 
@@ -1506,8 +1472,8 @@ function metersToLonLat(x, y) {
   const R = 6378137;
 
   return {
-    lng: x / R * 180 / Math.PI,
-    lat: (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * 180 / Math.PI
+    lng:x / R * 180 / Math.PI,
+    lat:(2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * 180 / Math.PI
   };
 }
 
@@ -1553,7 +1519,6 @@ function parseCSV(text) {
       cur = "";
 
       if (row.some(v => v !== "")) rows.push(row);
-
       row = [];
     } else {
       cur += ch;
@@ -1562,7 +1527,6 @@ function parseCSV(text) {
 
   if (cur || row.length) {
     row.push(cur.trim());
-
     if (row.some(v => v !== "")) rows.push(row);
   }
 
@@ -1573,9 +1537,9 @@ function detectDelimiter(text) {
   const sample = text.slice(0, 5000);
 
   const counts = {
-    ";": (sample.match(/;/g) || []).length,
-    ",": (sample.match(/,/g) || []).length,
-    "\t": (sample.match(/\t/g) || []).length
+    ";":(sample.match(/;/g) || []).length,
+    ",":(sample.match(/,/g) || []).length,
+    "\t":(sample.match(/\t/g) || []).length
   };
 
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
@@ -1611,7 +1575,6 @@ function parseNumberBR(value) {
   if (value === null || value === undefined) return NaN;
 
   let s = String(value).trim();
-
   if (!s) return NaN;
 
   s = s.replace(/\s/g, "");
@@ -1632,10 +1595,6 @@ function parseKm(value) {
 
   if (!Number.isFinite(n)) return NaN;
 
-  /*
-    Se vier como metros inteiros, exemplo 123456, converte para KM 123.456.
-    Se já vier como KM decimal, exemplo 123.456, mantém.
-  */
   if (Math.abs(n)
 
 > 10000) {
@@ -1785,8 +1744,8 @@ function formatKm(km) {
 function kmToParts(km) {
   if (!Number.isFinite(km)) {
     return {
-      main: "--",
-      sub: "SNV não associado"
+      main:"--",
+      sub:"SNV não associado"
     };
   }
 
@@ -1794,8 +1753,8 @@ function kmToParts(km) {
   const metros = Math.round((km - inteiro) * 1000);
 
   return {
-    main: String(inteiro),
-    sub: "+ " + String(metros).padStart(3, "0") + " m · SNV BR-116"
+    main:String(inteiro),
+    sub:"+ " + String(metros).padStart(3, "0") + " m"
   };
 }
 
@@ -1808,5 +1767,6 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 </script>
+
 </body>
 </html>
