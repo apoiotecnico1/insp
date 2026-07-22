@@ -18,15 +18,12 @@
   --motiva-yellow:#FACC15;
   --motiva-orange:#FB923C;
   --motiva-red:#EF4444;
-
   --bg:#020617;
   --panel:#0F172A;
   --card:#111827;
-  --card2:#020617;
   --border:#334155;
   --text:#F8FAFC;
   --muted:#94A3B8;
-
   --km-blue:#1E3A8A;
   --km-bg:#FFFFFF;
   --km-text:#0B1020;
@@ -60,6 +57,14 @@ html, body {
   height:100%;
   background:#020617;
   z-index:1;
+}
+
+.leaflet-container {
+  background:#020617 !important;
+}
+
+.leaflet-tile {
+  image-rendering:auto;
 }
 
 /* =========================
@@ -833,6 +838,7 @@ function closeSplash() {
 
     setTimeout(() => {
       splash.style.display = "none";
+      map.invalidateSize();
     }, 320);
   }
 }
@@ -841,8 +847,21 @@ function initMap() {
   map = L.map("map", {
     center:[-23.55052,-46.633308],
     zoom:18,
+    maxZoom:23,
+    minZoom:3,
     preferCanvas:true,
-    zoomControl:false
+    zoomControl:false,
+    touchZoom:"center",
+    scrollWheelZoom:true,
+    doubleClickZoom:true,
+    boxZoom:false,
+    bounceAtZoomLimits:false,
+    zoomSnap:0.25,
+    zoomDelta:0.5,
+    wheelPxPerZoomLevel:90,
+    updateWhenZooming:false,
+    updateWhenIdle:true,
+    keepBuffer:8
   });
 
   L.control.zoom({
@@ -852,8 +871,16 @@ function initMap() {
   satelliteLayer = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     {
-      maxZoom:21,
+      maxZoom:23,
       maxNativeZoom:19,
+      minZoom:1,
+      tileSize:256,
+      zoomOffset:0,
+      keepBuffer:8,
+      updateWhenZooming:false,
+      updateWhenIdle:true,
+      detectRetina:false,
+      crossOrigin:true,
       attribution:"Tiles &copy; Esri"
     }
   );
@@ -861,15 +888,39 @@ function initMap() {
   labelLayer = L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
     {
-      maxZoom:21,
+      maxZoom:23,
       maxNativeZoom:20,
+      minZoom:1,
       subdomains:"abcd",
+      keepBuffer:8,
+      updateWhenZooming:false,
+      updateWhenIdle:true,
+      detectRetina:false,
+      opacity:.95,
       attribution:"&copy; OpenStreetMap contributors &copy; CARTO"
     }
   );
 
   satelliteLayer.addTo(map);
   labelLayer.addTo(map);
+
+  satelliteLayer.on("tileerror", function(e) {
+    if (e && e.tile) e.tile.style.visibility = "hidden";
+  });
+
+  labelLayer.on("tileerror", function(e) {
+    if (e && e.tile) e.tile.style.visibility = "hidden";
+  });
+
+  setTimeout(() => map.invalidateSize(), 300);
+
+  window.addEventListener("resize", () => {
+    setTimeout(() => map.invalidateSize(), 250);
+  });
+
+  window.addEventListener("orientationchange", () => {
+    setTimeout(() => map.invalidateSize(), 500);
+  });
 }
 
 function showLoading(msg, pct) {
@@ -895,7 +946,19 @@ function goFullScreen() {
   const el = document.documentElement;
 
   if (!document.fullscreenElement && el.requestFullscreen) {
-    el.requestFullscreen();
+    el.requestFullscreen().then(() => {
+      setTimeout(() => {
+        map.invalidateSize();
+
+        if (currentPosition) {
+          map.setView([currentPosition.lat, currentPosition.lng], Math.max(map.getZoom(), 20), {
+            animate:false
+          });
+        }
+      }, 500);
+    });
+  } else {
+    setTimeout(() => map.invalidateSize(), 300);
   }
 }
 
@@ -1677,7 +1740,7 @@ function drawRiskLayers() {
   if (!currentPosition || !currentNearestFiber) return;
 
   if (nearestFiberMarker) map.removeLayer(nearestFiberMarker);
-  if (nearestFiberLine) map.removeLayer(nearestLine);
+  if (nearestFiberLine) map.removeLayer(nearestFiberLine);
   if (blockCircle) map.removeLayer(blockCircle);
   if (warnCircle) map.removeLayer(warnCircle);
 
