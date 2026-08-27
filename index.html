@@ -107,6 +107,66 @@
             text-transform: lowercase;
         }
 
+        /* PAINEL DE BUSCA DE ID ADICIONADO */
+        .search-id-box {
+            background: var(--card);
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .search-id-title {
+            font-size: 0.85rem;
+            font-weight: 900;
+            color: var(--accent);
+            text-transform: lowercase;
+        }
+
+        .search-id-input-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .search-id-input-group input {
+            flex: 1;
+            padding: 10px;
+            font-family: var(--font);
+            font-size: 0.95rem;
+            font-weight: 800;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #1a1a1a;
+            color: #fff;
+            text-transform: lowercase;
+        }
+
+        .search-id-input-group button {
+            padding: 0 14px;
+            font-family: var(--font);
+            font-size: 0.9rem;
+            font-weight: 900;
+            border: 0;
+            border-radius: 6px;
+            background: var(--accent);
+            color: #000;
+            cursor: pointer;
+        }
+
+        .search-result-card {
+            background: #222000;
+            border: 2px solid var(--accent);
+            border-radius: 6px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
         .km-box {
             background: #00875a;
             border: 3px solid #ffffff;
@@ -309,6 +369,16 @@
 </div>
 
 <div id="mod-apoio" class="app-module">
+    <div class="search-id-box">
+        <span class="search-id-title">🔍 pesquisar por id específico</span>
+        <div class="search-id-input-group">
+            <input type="text" id="inputIdSearch" placeholder="digite o id exato..." onkeydown="if(event.key==='Enter') searchById()" />
+            <button onclick="searchById()">buscar</button>
+            <button onclick="clearSearchId()" style="background:#333; color:#fff;">limpar</button>
+        </div>
+        <div id="searchResultArea" style="display: none;"></div>
+    </div>
+
     <div class="km-box">
         <span class="km-label">km</span>
         <span id="kmValue" class="km-value">—</span>
@@ -405,6 +475,7 @@ const ACC_GREEN = 15, ACC_YELLOW = 35;
 let datasetApoio = [], kmDatasetApoio = [], lastPosApoio = null;
 let currentRenderedKey = "";
 let apoioInited = false;
+let currentSearchedIdItem = null; // Guarda o item consultado pela busca por ID
 
 const gpsStatus = document.getElementById('gpsStatus');
 const btnSend = document.getElementById('btnSend');
@@ -441,6 +512,73 @@ function getRangeText(dist, acc) {
   return `${min}m a ${max}m`;
 }
 
+/* NOVA FUNÇÃO: PESQUISAR POR ID ADICIONADA */
+function searchById() {
+    const term = normalizeStr(document.getElementById('inputIdSearch').value);
+    const resArea = document.getElementById('searchResultArea');
+    if (!term) {
+        resArea.style.display = 'none';
+        resArea.innerHTML = '';
+        currentSearchedIdItem = null;
+        return;
+    }
+
+    if (!datasetApoio.length) {
+        resArea.style.display = 'block';
+        resArea.innerHTML = `<div style="color:var(--warn); font-size:0.85rem; padding:4px;">carregando dados, tente novamente...</div>`;
+        return;
+    }
+
+    const found = datasetApoio.find(p => normalizeStr(p.id) === term || normalizeStr(p.id).includes(term));
+
+    if (!found) {
+        resArea.style.display = 'block';
+        resArea.innerHTML = `<div style="color:var(--bad); font-size:0.85rem; padding:4px; font-weight:800;">id "${term}" não encontrado.</div>`;
+        currentSearchedIdItem = null;
+        return;
+    }
+
+    currentSearchedIdItem = found;
+    resArea.style.display = 'block';
+    renderSearchedIdResult();
+}
+
+function renderSearchedIdResult() {
+    if (!currentSearchedIdItem) return;
+    const resArea = document.getElementById('searchResultArea');
+    const item = currentSearchedIdItem;
+
+    let distText = "aguardando gps...";
+    if (lastPosApoio) {
+        const d = hav(lastPosApoio.lat, lastPosApoio.lon, item.lat, item.lon);
+        distText = `distância: ${getRangeText(d, lastPosApoio.acc)}`;
+    }
+
+    resArea.innerHTML = `
+        <div class="search-result-card">
+            <div class="item-header">
+                <span class="id-val" style="color:var(--accent);">id: ${item.id}</span>
+                <span class="dist-val" id="search-dist-val">${distText}</span>
+            </div>
+            <div style="font-size:0.75rem; color:#aaa;">coords: ${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}</div>
+            <div class="mini-map">
+                <iframe 
+                  src="https://maps.google.com/maps?q=${item.lat},${item.lon}&t=k&z=19&ie=UTF8&iwloc=&output=embed" 
+                  loading="lazy">
+                </iframe>
+            </div>
+        </div>
+    `;
+}
+
+function clearSearchId() {
+    document.getElementById('inputIdSearch').value = '';
+    const resArea = document.getElementById('searchResultArea');
+    resArea.style.display = 'none';
+    resArea.innerHTML = '';
+    currentSearchedIdItem = null;
+}
+
 function updateGpsStatus(){
   if(!lastPosApoio || lastPosApoio.acc==null){ 
     gpsStatus.className='status-box bad'; 
@@ -462,6 +600,11 @@ function updateGpsStatus(){
 
 function renderApoio(){
   if(!lastPosApoio || !datasetApoio.length) return;
+
+  // Atualizar distância do card de busca por ID caso esteja visível
+  if (currentSearchedIdItem) {
+      renderSearchedIdResult();
+  }
 
   const qty = Number(qtySel.value || 10);
   const items = nearestN(lastPosApoio.lat, lastPosApoio.lon, qty);
