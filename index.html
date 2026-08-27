@@ -29,7 +29,6 @@
     padding: 10px;
   }
 
-  /* Bloco de KM Centralizado */
   .km-box {
     background: #00875A;
     border: 3px solid #FFFFFF;
@@ -81,7 +80,6 @@
     margin-bottom: 10px;
   }
 
-  /* Botão Reduzido */
   button#btnSend {
     width: 100%;
     min-height: 40px;
@@ -117,7 +115,6 @@
     font-weight: 800;
   }
 
-  /* Controles e Selects Compactos */
   select {
     padding: 4px 8px;
     font-family: var(--font);
@@ -304,13 +301,16 @@ function render(){
       const qty = Number(qtySel.value || 10);
       const items = nearestN(lastPos.lat, lastPos.lon, qty);
       const frag = document.createDocumentFragment();
+      const marginErr = (lastPos.acc != null && Number.isFinite(lastPos.acc)) ? Math.round(lastPos.acc) : 0;
       
       items.forEach((o,idx)=>{
         const li = document.createElement('li');
         if(idx===0){
           li.classList.add('nearest');
         }
-        li.innerHTML = `<span class="id-val">${o.id}</span><span class="dist-val">DISTÂNCIA: ${Math.round(o.d)} M</span>`;
+        const distCalculada = Math.round(o.d);
+        const txtTol = marginErr > 0 ? ` (±${marginErr}M)` : '';
+        li.innerHTML = `<span class="id-val">${o.id}</span><span class="dist-val">DISTÂNCIA: ${distCalculada}M${txtTol}</span>`;
         frag.appendChild(li);
       });
       listEl.appendChild(frag);
@@ -336,8 +336,11 @@ function startGPS(){
 btnSend.addEventListener('click', ()=>{
   if(!lastPos) return;
   const items = nearestN(lastPos.lat, lastPos.lon, Number(qtySel.value || 10));
+  const marginErr = (lastPos.acc != null && Number.isFinite(lastPos.acc)) ? Math.round(lastPos.acc) : 0;
+  const txtTol = marginErr > 0 ? ` (±${marginErr}M)` : '';
+  
   let tx = `${nowBR()}\nGPS: ${lastPos.lat.toFixed(6)},${lastPos.lon.toFixed(6)} (${fmtAcc(lastPos.acc)})\n\n`;
-  items.forEach(o => tx += `ID: ${o.id}\n`);
+  items.forEach(o => tx += `ID: ${o.id} - DISTÂNCIA: ${Math.round(o.d)}M${txtTol}\n`);
   if(chkMaps.checked){
     tx += '\nMAPAS:\n';
     items.forEach(o => tx += `${o.id}: https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`);
