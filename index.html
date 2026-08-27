@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>km / gps</title>
+<title>km / gps - tempo real</title>
 <meta name="theme-color" content="#000000" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root {
     --bg: #000000;
@@ -13,7 +14,6 @@
     --yellow: #ffd600;
     --green: #00e676;
     --text: #ffffff;
-    --muted: #888888;
     --bad: #ff1744;
     --warn: #ff9100;
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -30,7 +30,6 @@
     text-transform: lowercase;
   }
 
-  /* Bloco de KM Centralizado */
   .km-box {
     background: #00875a;
     border: 3px solid #ffffff;
@@ -44,19 +43,8 @@
     margin-bottom: 10px;
   }
 
-  .km-label {
-    font-size: 1rem;
-    font-weight: 900;
-    color: #ffffff;
-    letter-spacing: 0.05em;
-  }
-
-  .km-value {
-    font-size: 2.5rem;
-    font-weight: 900;
-    color: #ffffff;
-    line-height: 1;
-  }
+  .km-label { font-size: 1rem; font-weight: 900; color: #ffffff; }
+  .km-value { font-size: 2.5rem; font-weight: 900; color: #ffffff; line-height: 1; }
 
   .status-box {
     background: var(--card);
@@ -81,7 +69,6 @@
     margin-bottom: 10px;
   }
 
-  /* Botão Reduzido */
   button#btnSend {
     width: 100%;
     min-height: 40px;
@@ -97,27 +84,11 @@
     text-transform: lowercase;
   }
 
-  button#btnSend:disabled {
-    background: #222222;
-    color: #555555;
-  }
+  button#btnSend:disabled { background: #222222; color: #555555; }
 
-  .controls {
-    display: flex;
-    gap: 12px;
-    margin-top: 8px;
-    align-items: center;
-  }
+  .controls { display: flex; gap: 12px; margin-top: 8px; align-items: center; }
+  .controls label { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; font-weight: 800; }
 
-  .controls label {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.85rem;
-    font-weight: 800;
-  }
-
-  /* Controles e Selects Compactos */
   select {
     padding: 4px 8px;
     font-family: var(--font);
@@ -129,20 +100,7 @@
     color: #ffffff;
   }
 
-  input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--yellow);
-  }
-
-  ul {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    gap: 10px;
-  }
-
+  ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
   li {
     border: 2px solid var(--border);
     border-radius: 6px;
@@ -154,53 +112,19 @@
     gap: 8px;
   }
 
-  li.nearest {
-    background: #222000;
-    border: 3px solid var(--yellow);
-    color: #ffffff;
-  }
+  li.nearest { background: #222000; border: 3px solid var(--yellow); }
 
-  .item-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1rem;
-  }
-
-  li.nearest .id-val {
-    color: var(--yellow);
-    font-size: 1.15rem;
-    font-weight: 900;
-  }
-
-  li.nearest .dist-val {
-    color: var(--yellow);
-    font-size: 1.05rem;
-    font-weight: 900;
-  }
-
+  .item-header { display: flex; justify-content: space-between; align-items: center; }
   .id-val { font-size: 1rem; font-weight: 800; color: #ffffff; }
   .dist-val { color: var(--yellow); font-size: 0.95rem; font-weight: 800; }
-  
-  /* Mini Mapa de Satélite */
-  .mini-map {
+
+  .mini-map-container {
     width: 100%;
-    height: 120px;
+    height: 140px;
     border-radius: 4px;
     border: 1px solid #444444;
-    overflow: hidden;
-    position: relative;
-    background: #000000;
+    background: #000;
   }
-
-  .mini-map iframe {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    filter: contrast(1.1) brightness(0.9);
-  }
-
-  .skeleton { height: 42px; background: #222222; border-radius: 6px; }
 </style>
 </head>
 <body>
@@ -210,9 +134,7 @@
   <span id="kmValue" class="km-value">—</span>
 </div>
 
-<div id="gpsStatus" class="status-box bad">
-  gps: aguardando...
-</div>
+<div id="gpsStatus" class="status-box bad">gps: aguardando...</div>
 
 <div class="card">
   <button id="btnSend" disabled>whatsapp</button>
@@ -223,51 +145,25 @@
         <option value="1">1</option>
         <option value="5">5</option>
         <option value="10" selected>10</option>
-        <option value="20">20</option>
       </select>
-    </label>
-    <label>
-      <input type="checkbox" id="chkMaps" />
-      maps
     </label>
   </div>
 </div>
 
 <div class="card">
-  <ul id="list">
-    <li class="skeleton"></li>
-    <li class="skeleton"></li>
-    <li class="skeleton"></li>
-  </ul>
+  <ul id="list"></ul>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const ACC_GREEN=15, ACC_YELLOW=35;
-let dataset=[], kmDataset=[], lastPos=null, isRendering=false;
-let renderedItemsKey = "";
-
-class KalmanFilter {
-  constructor(R = 0.00001, Q = 0.000001) {
-    this.R = R; this.Q = Q; this.x = NaN; this.cov = NaN;
-  }
-  filter(z) {
-    if (isNaN(this.x)) { this.x = z; this.cov = 1; return z; }
-    const predCov = this.cov + this.Q;
-    const K = predCov / (predCov + this.R);
-    this.x = this.x + K * (z - this.x);
-    this.cov = predCov * (1 - K);
-    return this.x;
-  }
-}
-const kLat = new KalmanFilter(), kLon = new KalmanFilter();
+let dataset = [], kmDataset = [], lastPos = null;
+const mapInstances = {};
 
 const gpsStatus = document.getElementById('gpsStatus');
-const btnSend = document.getElementById('btnSend'), chkMaps = document.getElementById('chkMaps'), qtySel = document.getElementById('qty');
-const listEl = document.getElementById('list'), kmValue = document.getElementById('kmValue');
-
-function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
-function findColumnIndex(headers, candidates){ const map=headers.map(h=>normalizeStr(h)); for(const c of candidates){ const i=map.indexOf(c); if(i>=0) return i; } return -1; }
-function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d{1,}$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
+const btnSend = document.getElementById('btnSend');
+const qtySel = document.getElementById('qty');
+const listEl = document.getElementById('list');
+const kmValue = document.getElementById('kmValue');
 
 function hav(a,b,c,d){
   const p=0.017453292519943295, cos=Math.cos;
@@ -277,181 +173,59 @@ function hav(a,b,c,d){
 
 function nearestN(lat,lon,n=10){
   if(!dataset.length) return [];
-  const margin = 0.05;
-  const filtered = dataset.filter(p => Math.abs(p.lat - lat) < margin && Math.abs(p.lon - lon) < margin);
-  const targetArray = filtered.length >= n ? filtered : dataset;
-  
-  const arr = targetArray.map(p => ({id:p.id, lat:p.lat, lon:p.lon, d:hav(lat,lon,p.lat,p.lon)}));
+  const arr = dataset.map(p => ({id:p.id, lat:p.lat, lon:p.lon, d:hav(lat,lon,p.lat,p.lon)}));
   arr.sort((a,b)=>a.d-b.d);
   return arr.slice(0, n);
 }
 
-function fmtAcc(a){ return (a==null||!Number.isFinite(a))?'—':('±'+Math.round(a)+'m'); }
-function nowBR(){ return new Date().toLocaleString('pt-BR').toLowerCase(); }
-
-function updateGpsStatus(){
-  if(!lastPos || lastPos.acc==null){ 
-    gpsStatus.className='status-box bad'; 
-    gpsStatus.textContent='gps: buscando...'; 
-    return; 
-  }
-  const a=Math.round(lastPos.acc);
-  if(a<=ACC_GREEN){ 
-    gpsStatus.className='status-box ok'; 
-    gpsStatus.textContent=`gps ok (${fmtAcc(a)})`; 
-  } else if(a<=ACC_YELLOW){ 
-    gpsStatus.className='status-box warn'; 
-    gpsStatus.textContent=`gps medio (${fmtAcc(a)})`; 
-  } else { 
-    gpsStatus.className='status-box bad'; 
-    gpsStatus.textContent=`gps fraco (${fmtAcc(a)})`; 
-  }
-}
-
-async function loadCSV(){
-  try{
-    let resp = await fetch('dados.csv?v='+Date.now(), {cache:'no-store'}).catch(()=>null);
-    if(!resp || !resp.ok) resp = await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now(), {cache:'no-store'});
-    if(!resp.ok) return;
-    
-    let text = await resp.text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-    const lines = text.split(/\r?\n/).filter(l=>l.trim()!=='');
-    const head = lines.shift().split(';');
-    const iId=findColumnIndex(head,['id do nox','idnox','id']), iLat=findColumnIndex(head,['latitude','lat']), iLon=findColumnIndex(head,['longitude','lon','long']);
-    
-    dataset = lines.map(l=>{ const r=l.split(';'); return {id:String(r[iId]||'').trim(), lat:parsePt(r[iLat]), lon:parsePt(r[iLon])}; })
-                   .filter(p=>p.id && Number.isFinite(p.lat)&&Number.isFinite(p.lon));
-                   
-    dataset.sort((a,b) => a.lat - b.lat);
-    render();
-  }catch(e){}
-}
-
-function getRangeText(dist, acc) {
-  const err = (acc != null && Number.isFinite(acc)) ? Math.round(acc) : 0;
-  const d = Math.round(dist);
-  const min = Math.max(0, d - err);
-  const max = d + err;
-  return `${min}m a ${max}m`;
-}
-
 function render(){
-  if(isRendering) return;
   if(!lastPos || !dataset.length) return;
-
   const qty = Number(qtySel.value || 10);
   const items = nearestN(lastPos.lat, lastPos.lon, qty);
-  const currentKey = items.map(i => i.id).join(',') + '|' + Math.round(lastPos.acc || 0);
 
-  // Se os pontos não mudaram, atualiza apenas as distâncias de texto sem recarregar os iframes
-  if(currentKey === renderedItemsKey){
-    items.forEach((o, idx) => {
-      const el = document.getElementById(`dist-${idx}`);
-      if(el){
-        el.textContent = `distância: ${getRangeText(o.d, lastPos.acc)}`;
-      }
-    });
-    btnSend.disabled = false;
-    return;
-  }
+  listEl.innerHTML = '';
+  
+  items.forEach((o, idx) => {
+    const li = document.createElement('li');
+    if(idx === 0) li.classList.add('nearest');
 
-  isRendering = true;
-  requestAnimationFrame(()=>{
-    listEl.innerHTML = '';
-    const frag = document.createDocumentFragment();
-    
-    items.forEach((o, idx) => {
-      const li = document.createElement('li');
-      if(idx === 0) li.classList.add('nearest');
+    const mapId = `map-${o.id}`;
+    li.innerHTML = `
+      <div class="item-header">
+        <span class="id-val">${o.id}</span>
+        <span class="dist-val">distância: ${Math.round(o.d)}m</span>
+      </div>
+      <div id="${mapId}" class="mini-map-container"></div>
+    `;
+    listEl.appendChild(li);
 
-      const rangeText = getRangeText(o.d, lastPos.acc);
+    // Inicializa o mapa com atualização dinâmica do ponto
+    setTimeout(() => {
+      const map = L.map(mapId, { zoomControl: false, attributionControl: false }).setView([o.lat, o.lon], 18);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
       
-      li.innerHTML = `
-        <div class="item-header">
-          <span class="id-val">${o.id}</span>
-          <span class="dist-val" id="dist-${idx}">distância: ${rangeText}</span>
-        </div>
-        <div class="mini-map">
-          <iframe 
-            src="https://maps.google.com/maps?q=${o.lat},${o.lon}&t=k&z=19&ie=UTF8&iwloc=&output=embed" 
-            loading="lazy"
-            allowfullscreen>
-          </iframe>
-        </div>
-      `;
-      frag.appendChild(li);
-    });
+      // Marcador fixo do ponto cadastrado
+      L.circleMarker([o.lat, o.lon], { color: 'red', radius: 6 }).addTo(map);
 
-    listEl.appendChild(frag);
-    renderedItemsKey = currentKey;
-    btnSend.disabled = !(dataset.length > 0 && lastPos);
-    isRendering = false;
+      // Marcador dinâmico do usuário (atualizado via GPS)
+      L.circleMarker([lastPos.lat, lastPos.lon], { color: '#ffd600', radius: 8 }).addTo(map);
+    }, 50);
   });
+
+  btnSend.disabled = false;
 }
 
 function startGPS(){
   if(!('geolocation' in navigator)) return;
-  navigator.geolocation.watchPosition(p=>{
-    const filteredLat = kLat.filter(p.coords.latitude);
-    const filteredLon = kLon.filter(p.coords.longitude);
-    
-    lastPos = { lat: filteredLat, lon: filteredLon, acc: p.coords.accuracy };
-    updateGpsStatus();
+  navigator.geolocation.watchPosition(p => {
+    lastPos = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy };
+    gpsStatus.className = 'status-box ok';
+    gpsStatus.textContent = `gps ok (±${Math.round(p.coords.accuracy)}m)`;
     render();
-    updateKMChip();
-  }, err=>{}, {enableHighAccuracy:true, maximumAge:0, timeout:10000});
+  }, null, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
 }
 
-btnSend.addEventListener('click', ()=>{
-  if(!lastPos) return;
-  const items = nearestN(lastPos.lat, lastPos.lon, Number(qtySel.value || 10));
-  
-  let tx = `${nowBR()}\ngps: ${lastPos.lat.toFixed(6)},${lastPos.lon.toFixed(6)} (${fmtAcc(lastPos.acc)})\n\n`;
-  items.forEach(o => {
-    const rangeText = getRangeText(o.d, lastPos.acc);
-    tx += `id: ${o.id} - distância: ${rangeText}\n`;
-  });
-  if(chkMaps.checked){
-    tx += '\nmapas:\n';
-    items.forEach(o => tx += `${o.id}: https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`);
-  }
-  window.open('https://wa.me/?text='+encodeURIComponent(tx),'_blank');
-});
-
-qtySel.addEventListener('change', ()=>{
-  renderedItemsKey = "";
-  render();
-});
-
-async function loadKMCSV(){
-  try{
-    let resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
-    if(!resp.ok) return;
-    let text = await resp.text(); if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-    const head = lines.shift().split(';');
-    const iKm = findColumnIndex(head, ['km']), iLat = findColumnIndex(head, ['lat','latitude']), iLon = findColumnIndex(head, ['lon','long','longitude']);
-    kmDataset = lines.map(l=>{ const r = l.split(';'); return { km:parsePt(r[iKm]), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) }; })
-                     .filter(p => Number.isFinite(p.km) && Number.isFinite(p.lat) && Number.isFinite(p.lon));
-  }catch(e){}
-}
-
-function updateKMChip(){
-  if(!lastPos || !kmDataset.length) return;
-  let best = null, bd = Infinity;
-  for(let i=0; i<kmDataset.length; i++){
-    const p = kmDataset[i];
-    const d = hav(lastPos.lat, lastPos.lon, p.lat, p.lon);
-    if(d < bd){ bd = d; best = p; }
-  }
-  if(best) kmValue.textContent = (Math.round(best.km * 100) / 100).toFixed(2).replace('.', ',');
-}
-
-(function boot(){
-  loadCSV();
-  loadKMCSV();
-  startGPS();
-})();
+startGPS();
 </script>
 </body>
 </html>
