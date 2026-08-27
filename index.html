@@ -3,9 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>km / gps - panorama</title>
+<title>km / gps</title>
 <meta name="theme-color" content="#000000" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root {
     --bg: #000000;
@@ -14,6 +13,7 @@
     --yellow: #ffd600;
     --green: #00e676;
     --text: #ffffff;
+    --muted: #888888;
     --bad: #ff1744;
     --warn: #ff9100;
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -43,8 +43,19 @@
     margin-bottom: 10px;
   }
 
-  .km-label { font-size: 1rem; font-weight: 900; color: #ffffff; }
-  .km-value { font-size: 2.5rem; font-weight: 900; color: #ffffff; line-height: 1; }
+  .km-label {
+    font-size: 1rem;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.05em;
+  }
+
+  .km-value {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: #ffffff;
+    line-height: 1;
+  }
 
   .status-box {
     background: var(--card);
@@ -69,15 +80,6 @@
     margin-bottom: 10px;
   }
 
-  /* Panorama do Mapa de Satélite Geral */
-  #panoramaMap {
-    width: 100%;
-    height: 220px;
-    border-radius: 6px;
-    border: 2px solid var(--border);
-    background: #111;
-  }
-
   button#btnSend {
     width: 100%;
     min-height: 40px;
@@ -93,10 +95,25 @@
     text-transform: lowercase;
   }
 
-  button#btnSend:disabled { background: #222222; color: #555555; }
+  button#btnSend:disabled {
+    background: #222222;
+    color: #555555;
+  }
 
-  .controls { display: flex; gap: 12px; margin-top: 8px; align-items: center; }
-  .controls label { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; font-weight: 800; }
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+    align-items: center;
+  }
+
+  .controls label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    font-weight: 800;
+  }
 
   select {
     padding: 4px 8px;
@@ -109,8 +126,20 @@
     color: #ffffff;
   }
 
-  ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
-  
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--yellow);
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 10px;
+  }
+
   li {
     border: 2px solid var(--border);
     border-radius: 6px;
@@ -120,34 +149,47 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    cursor: pointer;
   }
 
-  li.nearest { background: #222000; border: 3px solid var(--yellow); }
+  li.nearest {
+    background: #222000;
+    border: 3px solid var(--yellow);
+    color: #ffffff;
+  }
 
-  .item-header { display: flex; justify-content: space-between; align-items: center; }
+  .item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1rem;
+  }
+
+  li.nearest .id-val, li.nearest .dist-val {
+    color: var(--yellow);
+    font-size: 1.05rem;
+    font-weight: 900;
+  }
+
   .id-val { font-size: 1rem; font-weight: 800; color: #ffffff; }
   .dist-val { color: var(--yellow); font-size: 0.95rem; font-weight: 800; }
-  .click-hint { font-size: 0.75rem; color: #888; text-align: right; margin-top: 2px; }
 
-  /* Mini Mapa Oculto/Expansível */
-  .mini-map-box {
-    display: none;
+  .mini-map {
     width: 100%;
-    height: 160px;
+    height: 130px;
     border-radius: 4px;
     border: 1px solid #444444;
-    margin-top: 6px;
     overflow: hidden;
+    position: relative;
+    background: #000000;
   }
 
-  .mini-map-box iframe {
+  .mini-map iframe {
     width: 100%;
     height: 100%;
     border: 0;
   }
 
-  .mini-map-box.open { display: block; }
+  .skeleton { height: 42px; background: #222222; border-radius: 6px; }
 </style>
 </head>
 <body>
@@ -157,11 +199,8 @@
   <span id="kmValue" class="km-value">—</span>
 </div>
 
-<div id="gpsStatus" class="status-box bad">gps: aguardando...</div>
-
-<!-- Panorama de Satélite Geral -->
-<div class="card">
-  <div id="panoramaMap"></div>
+<div id="gpsStatus" class="status-box bad">
+  gps: aguardando...
 </div>
 
 <div class="card">
@@ -176,20 +215,28 @@
         <option value="20">20</option>
       </select>
     </label>
+    <label>
+      <input type="checkbox" id="chkMaps" />
+      maps
+    </label>
   </div>
 </div>
 
 <div class="card">
-  <ul id="list"></ul>
+  <ul id="list">
+    <li class="skeleton"></li>
+    <li class="skeleton"></li>
+  </ul>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+const ACC_GREEN = 15, ACC_YELLOW = 35;
 let dataset = [], kmDataset = [], lastPos = null;
-let panoramaMap = null, markersLayer = null, userMarker = null;
+let currentRenderedKey = "";
 
 const gpsStatus = document.getElementById('gpsStatus');
 const btnSend = document.getElementById('btnSend');
+const chkMaps = document.getElementById('chkMaps');
 const qtySel = document.getElementById('qty');
 const listEl = document.getElementById('list');
 const kmValue = document.getElementById('kmValue');
@@ -211,60 +258,57 @@ function nearestN(lat,lon,n=10){
   return arr.slice(0, n);
 }
 
-// Inicializa Mapa de Satélite Panorama Geral com Esri World Imagery (Satélite Leve)
-function initPanoramaMap() {
-  if (panoramaMap) return;
-  panoramaMap = L.map('panoramaMap', { zoomControl: false, attributionControl: false }).setView([0, 0], 2);
-  
-  // Camada de Satélite leve
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19
-  }).addTo(panoramaMap);
+function fmtAcc(a){ return (a==null||!Number.isFinite(a))?'—':('±'+Math.round(a)+'m'); }
+function nowBR(){ return new Date().toLocaleString('pt-BR').toLowerCase(); }
 
-  markersLayer = L.layerGroup().addTo(panoramaMap);
+function getRangeText(dist, acc) {
+  const err = (acc != null && Number.isFinite(acc)) ? Math.round(acc) : 0;
+  const d = Math.round(dist);
+  const min = Math.max(0, d - err);
+  const max = d + err;
+  return `${min}m a ${max}m`;
 }
 
-function updatePanoramaMap(items) {
-  if (!panoramaMap || !lastPos) return;
-  markersLayer.clearLayers();
-
-  // Posição Atual do Usuário (Círculo Amarelo)
-  userMarker = L.circleMarker([lastPos.lat, lastPos.lon], {
-    color: '#ffffff',
-    fillColor: '#ffd600',
-    fillOpacity: 1,
-    radius: 7
-  }).addTo(markersLayer).bindPopup("sua posição");
-
-  const bounds = [ [lastPos.lat, lastPos.lon] ];
-
-  // Adiciona Marcadores de Todos os Pontos Selecionados
-  items.forEach((item, idx) => {
-    bounds.push([item.lat, item.lon]);
-    
-    const isNearest = idx === 0;
-    const marker = L.circleMarker([item.lat, item.lon], {
-      color: isNearest ? '#ffd600' : '#ff1744',
-      fillColor: isNearest ? '#ffd600' : '#ff1744',
-      fillOpacity: 0.8,
-      radius: isNearest ? 7 : 5
-    }).addTo(markersLayer);
-
-    marker.bindPopup(`<b>${item.id}</b><br>dist: ${Math.round(item.d)}m`);
-  });
-
-  // Ajusta visão para enquadrar todos os pontos + posição atual
-  panoramaMap.fitBounds(bounds, { padding: [20, 20] });
+function updateGpsStatus(){
+  if(!lastPos || lastPos.acc==null){ 
+    gpsStatus.className='status-box bad'; 
+    gpsStatus.textContent='gps: buscando...'; 
+    return; 
+  }
+  const a=Math.round(lastPos.acc);
+  if(a<=ACC_GREEN){ 
+    gpsStatus.className='status-box ok'; 
+    gpsStatus.textContent=`gps ok (${fmtAcc(a)})`; 
+  } else if(a<=ACC_YELLOW){ 
+    gpsStatus.className='status-box warn'; 
+    gpsStatus.textContent=`gps medio (${fmtAcc(a)})`; 
+  } else { 
+    gpsStatus.className='status-box bad'; 
+    gpsStatus.textContent=`gps fraco (${fmtAcc(a)})`; 
+  }
 }
 
 function render(){
   if(!lastPos || !dataset.length) return;
+
   const qty = Number(qtySel.value || 10);
   const items = nearestN(lastPos.lat, lastPos.lon, qty);
+  const itemKey = items.map(i => i.id).join(',');
 
-  updatePanoramaMap(items);
+  // Se a lista de pontos próximos for a mesma, atualiza apenas a distância sem recarregar os mini mapas
+  if(itemKey === currentRenderedKey){
+    items.forEach((o, idx) => {
+      const el = document.getElementById(`dist-val-${idx}`);
+      if(el) el.textContent = `distância: ${getRangeText(o.d, lastPos.acc)}`;
+    });
+    btnSend.disabled = false;
+    return;
+  }
 
+  currentRenderedKey = itemKey;
   listEl.innerHTML = '';
+  const frag = document.createDocumentFragment();
+
   items.forEach((o, idx) => {
     const li = document.createElement('li');
     if(idx === 0) li.classList.add('nearest');
@@ -272,30 +316,19 @@ function render(){
     li.innerHTML = `
       <div class="item-header">
         <span class="id-val">${o.id}</span>
-        <span class="dist-val">${Math.round(o.d)}m</span>
+        <span class="dist-val" id="dist-val-${idx}">distância: ${getRangeText(o.d, lastPos.acc)}</span>
       </div>
-      <div class="click-hint">clique para carregar satélite ➔</div>
-      <div class="mini-map-box" id="map-box-${idx}"></div>
+      <div class="mini-map">
+        <iframe 
+          src="https://maps.google.com/maps?q=${o.lat},${o.lon}&t=k&z=19&ie=UTF8&iwloc=&output=embed" 
+          loading="lazy">
+        </iframe>
+      </div>
     `;
-
-    // Clique abre o mini mapa individual sob demanda
-    li.addEventListener('click', () => {
-      const box = document.getElementById(`map-box-${idx}`);
-      const isOpen = box.classList.contains('open');
-      
-      // Se já estava aberto, fecha. Se fechado, insere o iframe
-      if (isOpen) {
-        box.classList.remove('open');
-        box.innerHTML = '';
-      } else {
-        box.classList.add('open');
-        box.innerHTML = `<iframe src="https://maps.google.com/maps?q=${o.lat},${o.lon}&t=k&z=19&ie=UTF8&iwloc=&output=embed" loading="lazy"></iframe>`;
-      }
-    });
-
-    listEl.appendChild(li);
+    frag.appendChild(li);
   });
 
+  listEl.appendChild(frag);
   btnSend.disabled = false;
 }
 
@@ -316,21 +349,63 @@ async function loadCSV(){
   }catch(e){}
 }
 
+async function loadKMCSV(){
+  try{
+    let resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
+    if(!resp.ok) return;
+    let text = await resp.text(); if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+    const head = lines.shift().split(';');
+    const iKm = findColumnIndex(head, ['km']), iLat = findColumnIndex(head, ['lat','latitude']), iLon = findColumnIndex(head, ['lon','long','longitude']);
+    kmDataset = lines.map(l=>{ const r = l.split(';'); return { km:parsePt(r[iKm]), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) }; })
+                     .filter(p => Number.isFinite(p.km) && Number.isFinite(p.lat) && Number.isFinite(p.lon));
+  }catch(e){}
+}
+
+function updateKMChip(){
+  if(!lastPos || !kmDataset.length) return;
+  let best = null, bd = Infinity;
+  for(let i=0; i<kmDataset.length; i++){
+    const p = kmDataset[i];
+    const d = hav(lastPos.lat, lastPos.lon, p.lat, p.lon);
+    if(d < bd){ bd = d; best = p; }
+  }
+  if(best) kmValue.textContent = (Math.round(best.km * 100) / 100).toFixed(2).replace('.', ',');
+}
+
 function startGPS(){
   if(!('geolocation' in navigator)) return;
   navigator.geolocation.watchPosition(p => {
     lastPos = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy };
-    gpsStatus.className = 'status-box ok';
-    gpsStatus.textContent = `gps ok (±${Math.round(p.coords.accuracy)}m)`;
+    updateGpsStatus();
     render();
+    updateKMChip();
   }, null, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
 }
 
-qtySel.addEventListener('change', render);
+btnSend.addEventListener('click', ()=>{
+  if(!lastPos) return;
+  const items = nearestN(lastPos.lat, lastPos.lon, Number(qtySel.value || 10));
+  
+  let tx = `${nowBR()}\ngps: ${lastPos.lat.toFixed(6)},${lastPos.lon.toFixed(6)} (${fmtAcc(lastPos.acc)})\n\n`;
+  items.forEach(o => {
+    tx += `id: ${o.id} - distância: ${getRangeText(o.d, lastPos.acc)}\n`;
+  });
+  if(chkMaps.checked){
+    tx += '\nmapas:\n';
+    items.forEach(o => tx += `${o.id}: https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`);
+  }
+  window.open('https://wa.me/?text='+encodeURIComponent(tx),'_blank');
+});
+
+qtySel.addEventListener('change', ()=>{
+  currentRenderedKey = "";
+  render();
+});
 
 (function boot(){
-  initPanoramaMap();
   loadCSV();
+  loadKMCSV();
   startGPS();
 })();
 </script>
