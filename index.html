@@ -140,35 +140,66 @@
     padding: 0;
     list-style: none;
     display: grid;
-    gap: 8px;
+    gap: 10px;
   }
 
   li {
     border: 2px solid var(--border);
     border-radius: 6px;
-    padding: 10px 12px;
+    padding: 10px;
     background: #181818;
     font-weight: 800;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  li.nearest {
+    background: #222000;
+    border: 3px solid var(--yellow);
+    color: #ffffff;
+  }
+
+  .item-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-size: 1rem;
   }
 
-  li.nearest {
-    background: var(--yellow);
-    border: 3px solid #ffffff;
-    color: #000000;
-  }
-
-  li.nearest .id-val, li.nearest .dist-val {
-    color: #000000;
+  li.nearest .id-val {
+    color: var(--yellow);
     font-size: 1.15rem;
     font-weight: 900;
   }
 
-  .id-val { font-size: 1rem; font-weight: 800; }
+  li.nearest .dist-val {
+    color: var(--yellow);
+    font-size: 1.05rem;
+    font-weight: 900;
+  }
+
+  .id-val { font-size: 1rem; font-weight: 800; color: #ffffff; }
   .dist-val { color: var(--yellow); font-size: 0.95rem; font-weight: 800; }
+  
+  /* Mini Mapa de Satélite */
+  .mini-map {
+    width: 100%;
+    height: 120px;
+    border-radius: 4px;
+    border: 1px solid #444444;
+    overflow: hidden;
+    position: relative;
+    background: #000000;
+  }
+
+  .mini-map iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    filter: contrast(1.1) brightness(0.9);
+  }
+
   .skeleton { height: 42px; background: #222222; border-radius: 6px; }
 </style>
 </head>
@@ -213,6 +244,7 @@
 <script>
 const ACC_GREEN=15, ACC_YELLOW=35;
 let dataset=[], kmDataset=[], lastPos=null, isRendering=false;
+let renderedItemsKey = "";
 
 class KalmanFilter {
   constructor(R = 0.00001, Q = 0.000001) {
@@ -305,25 +337,53 @@ function getRangeText(dist, acc) {
 
 function render(){
   if(isRendering) return;
+  if(!lastPos || !dataset.length) return;
+
+  const qty = Number(qtySel.value || 10);
+  const items = nearestN(lastPos.lat, lastPos.lon, qty);
+  const currentKey = items.map(i => i.id).join(',') + '|' + Math.round(lastPos.acc || 0);
+
+  // Se os pontos não mudaram, atualiza apenas as distâncias de texto sem recarregar os iframes
+  if(currentKey === renderedItemsKey){
+    items.forEach((o, idx) => {
+      const el = document.getElementById(`dist-${idx}`);
+      if(el){
+        el.textContent = `distância: ${getRangeText(o.d, lastPos.acc)}`;
+      }
+    });
+    btnSend.disabled = false;
+    return;
+  }
+
   isRendering = true;
   requestAnimationFrame(()=>{
-    listEl.innerHTML='';
-    if(lastPos && dataset.length){
-      const qty = Number(qtySel.value || 10);
-      const items = nearestN(lastPos.lat, lastPos.lon, qty);
-      const frag = document.createDocumentFragment();
+    listEl.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    
+    items.forEach((o, idx) => {
+      const li = document.createElement('li');
+      if(idx === 0) li.classList.add('nearest');
+
+      const rangeText = getRangeText(o.d, lastPos.acc);
       
-      items.forEach((o,idx)=>{
-        const li = document.createElement('li');
-        if(idx===0){
-          li.classList.add('nearest');
-        }
-        const rangeText = getRangeText(o.d, lastPos.acc);
-        li.innerHTML = `<span class="id-val">${o.id}</span><span class="dist-val">distância: ${rangeText}</span>`;
-        frag.appendChild(li);
-      });
-      listEl.appendChild(frag);
-    }
+      li.innerHTML = `
+        <div class="item-header">
+          <span class="id-val">${o.id}</span>
+          <span class="dist-val" id="dist-${idx}">distância: ${rangeText}</span>
+        </div>
+        <div class="mini-map">
+          <iframe 
+            src="https://maps.google.com/maps?q=${o.lat},${o.lon}&t=k&z=19&ie=UTF8&iwloc=&output=embed" 
+            loading="lazy"
+            allowfullscreen>
+          </iframe>
+        </div>
+      `;
+      frag.appendChild(li);
+    });
+
+    listEl.appendChild(frag);
+    renderedItemsKey = currentKey;
     btnSend.disabled = !(dataset.length > 0 && lastPos);
     isRendering = false;
   });
@@ -358,7 +418,10 @@ btnSend.addEventListener('click', ()=>{
   window.open('https://wa.me/?text='+encodeURIComponent(tx),'_blank');
 });
 
-qtySel.addEventListener('change', render);
+qtySel.addEventListener('change', ()=>{
+  renderedItemsKey = "";
+  render();
+});
 
 async function loadKMCSV(){
   try{
