@@ -213,64 +213,6 @@
             margin-top: 6px;
         }
 
-        /* PAINEL DE TELEMETRIA INTEGRADA */
-        .telemetry-panel {
-            background: #121212;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            padding: 10px;
-            margin-top: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .telemetry-title {
-            font-size: 0.8rem;
-            font-weight: 900;
-            color: var(--accent);
-            letter-spacing: 0.05em;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .telemetry-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-        }
-        .telemetry-input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-        .telemetry-input-group label {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            font-weight: 800;
-        }
-        .telemetry-input-group select, .telemetry-input-group input {
-            padding: 8px;
-            font-size: 0.85rem;
-            background: #1c1c1c;
-            border: 1px solid var(--border-focus);
-            color: #fff;
-            border-radius: 6px;
-            font-weight: 900;
-            outline: none;
-        }
-        .telemetry-verdict {
-            padding: 8px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 900;
-            text-align: center;
-            letter-spacing: 0.03em;
-            margin-top: 4px;
-        }
-        .verdict-safe { background: rgba(0,230,118,0.15); color: var(--green); border: 1px solid var(--green); }
-        .verdict-danger { background: rgba(255,23,68,0.15); color: var(--bad); border: 1px solid var(--bad); }
-        .verdict-warn { background: rgba(255,145,0,0.15); color: var(--warn); border: 1px solid var(--warn); }
-
         .km-box {
             background: linear-gradient(135deg, #00875a, #006644);
             border: 3px solid #ffffff;
@@ -333,12 +275,6 @@
             margin-bottom: 8px;
         }
         .btn-action:disabled { background: #1c1c1c; color: #444444; box-shadow: none; cursor: not-allowed; }
-
-        .btn-action-alt {
-            background: var(--accent);
-            color: #000;
-            box-shadow: 0 4px 14px rgba(255, 214, 0, 0.25);
-        }
 
         .controls { display: flex; gap: 16px; margin-top: 12px; align-items: center; justify-content: space-between; }
         .controls label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 900; letter-spacing: 0.05em; }
@@ -526,8 +462,7 @@
     </div>
 
     <div class="card">
-        <button id="btnSend" class="btn-action" disabled>Enviar Lista WhatsApp</button>
-        <button id="btnSendMaintenance" class="btn-action btn-action-alt" onclick="sendMaintenanceSelected()" disabled>⚡ Acionar Teste / Manutenção Remota</button>
+        <button id="btnSend" class="btn-action" disabled>Enviar Lista WhatsApp (Até 100 IDs)</button>
         <div class="controls">
             <label>
                 Proximidade:
@@ -536,6 +471,8 @@
                     <option value="5">5</option>
                     <option value="10" selected>10</option>
                     <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
                 </select>
             </label>
             <label>
@@ -615,12 +552,8 @@ let currentRenderedKey = "";
 let apoioInited = false;
 let currentSearchedIdItem = null;
 
-// Armazenamento local de telemetria informada pela central por ID
-let telemetryStore = JSON.parse(localStorage.getItem('nox_telemetry_store') || '{}');
-
 const gpsStatus = document.getElementById('gpsStatus');
 const btnSend = document.getElementById('btnSend');
-const btnSendMaintenance = document.getElementById('btnSendMaintenance');
 const chkMaps = document.getElementById('chkMaps');
 const qtySel = document.getElementById('qty');
 const listEl = document.getElementById('list');
@@ -702,40 +635,10 @@ function searchById() {
     renderSearchedIdResult(true);
 }
 
-function saveTelemetry(id) {
-    const tensao = document.getElementById(`tel-tensao-${id}`).value;
-    const corrente = document.getElementById(`tel-corrente-${id}`).value;
-    const com = document.getElementById(`tel-com-${id}`).value;
-
-    telemetryStore[id] = { tensao, corrente, com, updated: nowBR() };
-    localStorage.setItem('nox_telemetry_store', JSON.stringify(telemetryStore));
-    
-    if (currentSearchedIdItem && currentSearchedIdItem.id === id) {
-        renderSearchedIdResult(true);
-    }
-    renderApoio();
-}
-
-function getVerdictHTML(tel) {
-    if (!tel) return `<div class="telemetry-verdict" style="background:#1c1c1c; color:#888; border:1px solid #333;">⚠️ AGUARDANDO RETORNO DA CENTRAL</div>`;
-    
-    if (tel.com === 'offline') {
-        return `<div class="telemetry-verdict verdict-danger">🛑 SEM COMUNICAÇÃO HÁ MUITO TEMPO — VERIFICAR ALIMENTAÇÃO/MODEM</div>`;
-    }
-    if (tel.tensao === 'sem') {
-        return `<div class="telemetry-verdict verdict-danger">⚠️ SEM TENSÃO NA REDE — NÃO SUBIR NO POSTE (RISCO DE ALIMENTAÇÃO)</div>`;
-    }
-    if (tel.corrente === 'zero' && tel.tensao === 'com') {
-        return `<div class="telemetry-verdict verdict-warn">⚡ TENSÃO OK, MAS CORRENTE ZERO — LÂMPADA/DRIVER QUEIMADO (LIBERADO PARA ALTURA)</div>`;
-    }
-    return `<div class="telemetry-verdict verdict-safe">✅ SISTEMA OPERACIONAL / TESTE REALIZADO COM SUCESSO</div>`;
-}
-
 function renderSearchedIdResult(forceRender = false) {
     if (!currentSearchedIdItem) return;
     const resArea = document.getElementById('searchResultArea');
     const item = currentSearchedIdItem;
-    const tel = telemetryStore[item.id] || null;
 
     let distText = "AGUARDANDO GPS...";
     let dVal = null;
@@ -763,38 +666,6 @@ function renderSearchedIdResult(forceRender = false) {
                   src="https://maps.google.com/maps?q=${item.lat},${item.lon}&t=k&z=19&ie=UTF8&iwloc=&output=embed" 
                   loading="lazy">
                 </iframe>
-            </div>
-            <button onclick="sendMaintenanceSingle('${item.id}', ${item.lat}, ${item.lon})" style="margin-top:6px; width:100%; min-height:46px; background:var(--accent); color:#000; font-weight:900; border:0; border-radius:8px; cursor:pointer; text-transform:uppercase; font-size:0.9rem; box-shadow: 0 4px 12px rgba(255,214,0,0.3);">⚡ PEDIR DADOS E TESTE À CENTRAL</button>
-            
-            <div class="telemetry-panel">
-                <div class="telemetry-title">
-                    <span>📡 Resposta da Central (Telemetria)</span>
-                    <span style="font-size:0.7rem; color:var(--text-secondary);">${tel ? tel.updated : 'Pendente'}</span>
-                </div>
-                <div class="telemetry-grid">
-                    <div class="telemetry-input-group">
-                        <label>Tensão na Rede</label>
-                        <select id="tel-tensao-${item.id}" onchange="saveTelemetry('${item.id}')">
-                            <option value="com" ${tel&&tel.tensao==='com'?'selected':''}>Com Tensão (Normal)</option>
-                            <option value="sem" ${tel&&tel.tensao==='sem'?'selected':''}>Sem Tensão (0V)</option>
-                        </select>
-                    </div>
-                    <div class="telemetry-input-group">
-                        <label>Corrente (Carga)</label>
-                        <select id="tel-corrente-${item.id}" onchange="saveTelemetry('${item.id}')">
-                            <option value="normal" ${tel&&tel.corrente==='normal'?'selected':''}>Corrente OK</option>
-                            <option value="zero" ${tel&&tel.corrente==='zero'?'selected':''}>Zero Corrente</option>
-                        </select>
-                    </div>
-                    <div class="telemetry-input-group" style="grid-column: span 2;">
-                        <label>Status de Comunicação</label>
-                        <select id="tel-com-${item.id}" onchange="saveTelemetry('${item.id}')">
-                            <option value="online" ${tel&&tel.com==='online'?'selected':''}>Online / Comunicando em tempo real</option>
-                            <option value="offline" ${tel&&tel.com==='offline'?'selected':''}>Offline (Sem sinal há muito tempo)</option>
-                        </select>
-                    </div>
-                </div>
-                ${getVerdictHTML(tel)}
             </div>
         </div>
     `;
@@ -845,7 +716,6 @@ function renderApoio(){
       if(el) el.textContent = `DISTÂNCIA: ${getRangeText(o.d, lastPosApoio.acc)}`;
     });
     btnSend.disabled = false;
-    btnSendMaintenance.disabled = false;
     return;
   }
 
@@ -856,12 +726,11 @@ function renderApoio(){
   items.forEach((o, idx) => {
     const li = document.createElement('li');
     if(idx === 0) li.classList.add('nearest');
-    const tel = telemetryStore[o.id] || null;
 
     li.innerHTML = `
       <div class="item-header">
         <div class="item-left">
-            <input type="checkbox" class="item-chk" value="${o.id}" data-lat="${o.lat}" data-lon="${o.lon}" />
+            <input type="checkbox" class="item-chk" value="${o.id}" data-lat="${o.lat}" data-lon="${o.lon}" checked />
             <span class="id-val">POSTE / NOX: ${o.id}</span>
         </div>
         <span class="dist-val" id="dist-val-${idx}">DISTÂNCIA: ${getRangeText(o.d, lastPosApoio.acc)}</span>
@@ -872,43 +741,12 @@ function renderApoio(){
           loading="lazy">
         </iframe>
       </div>
-      <div class="telemetry-panel">
-        <div class="telemetry-title">
-            <span>📡 Retorno da Central</span>
-            <span style="font-size:0.65rem; color:var(--text-secondary);">${tel ? tel.updated : 'Pendente'}</span>
-        </div>
-        <div class="telemetry-grid">
-            <div class="telemetry-input-group">
-                <label>Tensão</label>
-                <select id="tel-tensao-${o.id}" onchange="saveTelemetry('${o.id}')">
-                    <option value="com" ${tel&&tel.tensao==='com'?'selected':''}>Com Tensão</option>
-                    <option value="sem" ${tel&&tel.tensao==='sem'?'selected':''}>Sem Tensão</option>
-                </select>
-            </div>
-            <div class="telemetry-input-group">
-                <label>Corrente</label>
-                <select id="tel-corrente-${o.id}" onchange="saveTelemetry('${o.id}')">
-                    <option value="normal" ${tel&&tel.corrente==='normal'?'selected':''}>OK</option>
-                    <option value="zero" ${tel&&tel.corrente==='zero'?'selected':''}>Zero</option>
-                </select>
-            </div>
-            <div class="telemetry-input-group" style="grid-column: span 2;">
-                <label>Comunicação</label>
-                <select id="tel-com-${o.id}" onchange="saveTelemetry('${o.id}')">
-                    <option value="online" ${tel&&tel.com==='online'?'selected':''}>Online</option>
-                    <option value="offline" ${tel&&tel.com==='offline'?'selected':''}>Offline (Sem sinal)</option>
-                </select>
-            </div>
-        </div>
-        ${getVerdictHTML(tel)}
-      </div>
     `;
     frag.appendChild(li);
   });
 
   listEl.appendChild(frag);
   btnSend.disabled = false;
-  btnSendMaintenance.disabled = false;
 }
 
 async function loadCSVApoio(){
@@ -962,69 +800,34 @@ function startGPSApoio(){
   }, null, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
 }
 
-function sendMaintenanceSingle(id, lat, lon) {
-  let tx = `🚨 *SOLICITAÇÃO DE TESTE E DADOS (TELEMETRIA)*\n`;
-  tx += `Data/Hora: ${nowBR()}\n\n`;
-  tx += `🔹 *ID DO NOX / POSTE:* ${id}\n`;
-  tx += `📍 *COORDENADAS:* ${lat.toFixed(6)}, ${lon.toFixed(6)}\n`;
-  tx += `💬 *SOLICITAÇÃO:* Favor consultar servidor: verifique Tensão, Corrente, Estado e se está sem comunicação há muito tempo. Retorne estes dados para lançamento no app de campo!\n`;
-  if (chkMaps.checked) {
-    tx += `🗺️ *MAPAS:* https://maps.google.com/?q=${lat.toFixed(6)},${lon.toFixed(6)}\n`;
-  }
-  window.open('https://wa.me/?text=' + encodeURIComponent(tx), '_blank');
-}
-
-function sendMaintenanceSelected() {
+btnSend.addEventListener('click', ()=>{
+  if(!lastPosApoio) return;
   const checkboxes = document.querySelectorAll('.item-chk:checked');
   let selectedItems = [];
 
-  checkboxes.forEach(chk => {
-    selectedItems.push({
-      id: chk.value,
-      lat: parseFloat(chk.getAttribute('data-lat')),
-      lon: parseFloat(chk.getAttribute('data-lon'))
-    });
-  });
-
-  if (selectedItems.length === 0) {
-    if (currentSearchedIdItem) {
-      sendMaintenanceSingle(currentSearchedIdItem.id, currentSearchedIdItem.lat, currentSearchedIdItem.lon);
-      return;
-    }
-    if (lastPosApoio) {
-      const items = nearestN(lastPosApoio.lat, lastPosApoio.lon, 1);
-      if (items.length > 0) {
-        sendMaintenanceSingle(items[0].id, items[0].lat, items[0].lon);
-        return;
-      }
-    }
-    alert("Selecione ao menos um Nox na lista ou busque a OS pelo ID.");
-    return;
+  if (checkboxes.length > 0) {
+      checkboxes.forEach(chk => {
+          const id = chk.value;
+          const lat = parseFloat(chk.getAttribute('data-lat'));
+          const lon = parseFloat(chk.getAttribute('data-lon'));
+          selectedItems.push({ id, lat, lon });
+      });
+  } else {
+      const items = nearestN(lastPosApoio.lat, lastPosApoio.lon, Number(qtySel.value || 10));
+      selectedItems = items.map(o => ({ id: o.id, lat: o.lat, lon: o.lon }));
   }
 
-  let tx = `🚨 *SOLICITAÇÃO DE TELEMETRIA E TESTES (${selectedItems.length} NOX)*\n`;
-  tx += `Data/Hora: ${nowBR()}\n\n`;
+  let tx = `📍 *LISTA DE LOCALIZAÇÃO DE POSTES / NOX*\n`;
+  tx += `Data/Hora: ${nowBR()}\n`;
+  tx += `GPS Atual: ${lastPosApoio.lat.toFixed(6)}, ${lastPosApoio.lon.toFixed(6)} (${fmtAcc(lastPosApoio.acc)})\n\n`;
 
-  selectedItems.forEach((o, i) => {
-    tx += `${i+1}. *NOX:* ${o.id} | *COORD:* ${o.lat.toFixed(6)}, ${o.lon.toFixed(6)}\n`;
+  selectedItems.forEach((o, index) => {
+    tx += `${index + 1}. *ID:* ${o.id}\n`;
+    if(chkMaps.checked){
+      tx += `   🗺️ https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`;
+    }
   });
-  tx += `\n💬 *INSTRUÇÃO:* Favor verificar Tensão, Corrente e Comunicação de cada ID acima no servidor e retornar os dados.`;
 
-  window.open('https://wa.me/?text=' + encodeURIComponent(tx), '_blank');
-}
-
-btnSend.addEventListener('click', ()=>{
-  if(!lastPosApoio) return;
-  const items = nearestN(lastPosApoio.lat, lastPosApoio.lon, Number(qtySel.value || 10));
-  
-  let tx = `${nowBR()}\nGPS: ${lastPosApoio.lat.toFixed(6)},${lastPosApoio.lon.toFixed(6)} (${fmtAcc(lastPosApoio.acc)})\n\n`;
-  items.forEach(o => {
-    tx += `ID: ${o.id} - DISTÂNCIA: ${getRangeText(o.d, lastPosApoio.acc)}\n`;
-  });
-  if(chkMaps.checked){
-    tx += '\nMAPAS:\n';
-    items.forEach(o => tx += `${o.id}: https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`);
-  }
   window.open('https://wa.me/?text='+encodeURIComponent(tx),'_blank');
 });
 
