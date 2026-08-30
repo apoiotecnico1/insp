@@ -1,209 +1,158 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Nexus Core — Sistema Integrado de Apoio & Inspeção</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: { 50: '#ecfeff', 500: '#06b6d4', 600: '#0891b2', 900: '#164e63', 950: '#083344' }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- jsPDF CDN para Relatórios -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <title>Sistema Integrado de Apoio & Inspeção</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        * { -webkit-tap-highlight-color: transparent; }
-        .glass { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .glow-cyan { box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.35); }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #020617; }
-        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg); color: var(--text); padding-bottom: 90px; }
+        header { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 16px; position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+        h1 { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+        .container { max-width: 600px; margin: 0 auto; padding: 16px; }
+        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .btn { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 12px 16px; font-weight: 600; font-size: 0.95rem; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn:active { background: var(--primary-dark); }
+        .btn-secondary { background: #e2e8f0; color: var(--text); }
+        .btn-danger { background: var(--danger); }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; margin-top: 6px; margin-bottom: 12px; background: #fff; color: var(--text); }
+        label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; }
+        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 12px; z-index: 20; }
+        .nav-item { background: none; border: none; color: var(--text-secondary); font-size: 0.75rem; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+        .nav-item.active { color: var(--primary); }
+        .view { display: none; }
+        .view.active { display: block; }
+        .telemetry-display { font-size: 2.5rem; font-weight: 800; color: var(--primary); text-align: center; margin: 20px 0; font-variant-numeric: tabular-nums; }
+        .telemetry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .metric-box { background: #f1f5f9; padding: 12px; border-radius: 8px; text-align: center; }
+        .metric-value { font-size: 1.25rem; font-weight: 700; color: var(--text); margin-top: 4px; }
+        .metric-label { font-size: 0.75rem; color: var(--text-secondary); }
+        .item-row { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); padding: 12px 0; }
+        .item-row:last-child { border-bottom: none; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+        .badge-ok { background: #d1fae5; color: #065f46; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
+<body>
 
-    <!-- Top Header -->
-    <header class="sticky top-0 z-50 glass border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center glow-cyan shadow-lg">
-                <i data-lucide="cpu" class="w-5 h-5 text-white"></i>
-            </div>
-            <div>
-                <h1 class="font-bold text-base tracking-tight bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">Nexus Core v5</h1>
-                <p class="text-xs text-slate-400 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Sistema Operacional de Campo Ativo
-                </p>
-            </div>
-        </div>
-        <div class="flex items-center space-x-2">
-            <button onclick="App.exportDataJSON()" title="Exportar Backup" class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 transition-all">
-                <i data-lucide="download" class="w-4 h-4"></i>
-            </button>
-            <button onclick="App.toggleTheme()" class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 transition-all">
-                <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
-                <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
-            </button>
-        </div>
+    <header>
+        <h1 id="header-title">Sistema de Apoio & Inspeção</h1>
+        <button onclick="App.exportJSON()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;" title="Exportar Dados">💾</button>
     </header>
 
-    <!-- Main Workspace Container -->
-    <main class="flex-1 max-w-4xl w-full mx-auto px-4 py-5 pb-28 space-y-6">
-
-        <!-- Real-Time Telemetry & KM Tracker Card -->
-        <section class="glass rounded-2xl p-5 border border-slate-800/80 relative overflow-hidden shadow-2xl">
-            <div class="absolute -right-10 -top-10 w-40 h-40 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
-            
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center space-x-2.5">
-                    <div class="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                        <i data-lucide="gauge" class="w-5 h-5"></i>
-                    </div>
-                    <h2 class="font-semibold text-slate-200">Telemetria & KM em Tempo Real</h2>
-                </div>
-                <span id="tracker-status-badge" class="px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700">Parado</span>
+    <div class="container">
+        <!-- VIEW 1: HOME / LISTA DE REGISTROS -->
+        <div id="view-home" class="view active">
+            <div class="card">
+                <input type="text" id="search-input" placeholder="Pesquisar registros..." oninput="App.filterItems(this.value)">
+                <button class="btn" onclick="App.openModal()">+ Novo Registro</button>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-                <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-800">
-                    <span class="text-xs text-slate-400 block mb-1">Distância Percorrida</span>
-                    <div class="text-2xl font-bold font-mono text-cyan-400"><span id="metric-distance">0.00</span> <span class="text-xs text-slate-400 font-normal">km</span></div>
-                </div>
-                <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-800">
-                    <span class="text-xs text-slate-400 block mb-1">Tempo Decorrido</span>
-                    <div class="text-2xl font-bold font-mono text-slate-200" id="metric-time">00:00:00</div>
-                </div>
-                <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-800">
-                    <span class="text-xs text-slate-400 block mb-1">Velocidade Atual</span>
-                    <div class="text-2xl font-bold font-mono text-emerald-400"><span id="metric-speed">0.0</span> <span class="text-xs text-slate-400 font-normal">km/h</span></div>
-                </div>
-                <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-800">
-                    <span class="text-xs text-slate-400 block mb-1">Precisão GPS</span>
-                    <div class="text-2xl font-bold font-mono text-slate-300"><span id="metric-gps">-</span> <span class="text-xs text-slate-400 font-normal">m</span></div>
+            <div class="card">
+                <h3 style="font-size:0.95rem; margin-bottom:12px; color:var(--text-secondary);">Registros Salvos</h3>
+                <div id="items-list">
+                    <!-- Preenchido via JS -->
                 </div>
             </div>
-
-            <div class="flex items-center gap-3">
-                <button id="btn-toggle-tracker" onclick="Tracker.toggle()" class="flex-1 py-3 px-4 rounded-xl font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-900/30 flex items-center justify-center space-x-2 transition-all">
-                    <i data-lucide="play" class="w-4 h-4 fill-current"></i>
-                    <span>Iniciar Monitoramento</span>
-                </button>
-                <button onclick="Tracker.reset()" class="px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-red-400 hover:border-red-500/30 transition-all">
-                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                </button>
-            </div>
-        </section>
-
-        <!-- Quick Action & Filter Bar -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="md:col-span-2 relative">
-                <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-                <input type="text" id="input-search" oninput="App.handleSearch(this.value)" placeholder="Pesquisar ativos, códigos, locais..." class="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
-            </div>
-            <button onclick="App.openModal()" class="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-semibold py-3 px-4 rounded-xl flex items-center justify-center space-x-2 transition-all">
-                <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                <span>Novo Registro</span>
-            </button>
         </div>
 
-        <!-- Dynamic List of Inspections / Assets -->
-        <section class="space-y-3">
-            <div class="flex items-center justify-between px-1">
-                <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Ativos & Inspeções Mapeadas</h3>
-                <span id="counter-items" class="text-xs bg-slate-900 px-2.5 py-1 rounded-full border border-slate-800 text-slate-400 font-mono">0 itens</span>
+        <!-- VIEW 2: KM EM TEMPO REAL (NOVA FUNÇÃO SOLICITADA) -->
+        <div id="view-tracker" class="view">
+            <div class="card" style="text-align: center;">
+                <h3 style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px;">Odômetro & Telemetria em Tempo Real</h3>
+                <div class="telemetry-display"><span id="track-km">0.00</span> <span style="font-size:1rem; color:var(--text-secondary);">km</span></div>
+                
+                <div class="telemetry-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">Tempo Decorrido</div>
+                        <div class="metric-value" id="track-time">00:00:00</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Velocidade Atual</div>
+                        <div class="metric-value"><span id="track-speed">0.0</span> <span style="font-size:0.8rem">km/h</span></div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-track-toggle" class="btn" onclick="Tracker.toggle()">Iniciar Monitoramento</button>
+                    <button class="btn btn-secondary" onclick="Tracker.reset()" style="width: auto; padding: 12px 16px;">🔄</button>
+                </div>
             </div>
+        </div>
 
-            <div id="items-container" class="space-y-3">
-                <!-- Injetado dinamicamente via JS -->
+        <!-- VIEW 3: RELATÓRIOS -->
+        <div id="view-reports" class="view">
+            <div class="card">
+                <h3 style="margin-bottom: 12px;">Relatório em PDF</h3>
+                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 16px;">Gere um relatório completo com todos os registros e dados de campo salvos no armazenamento local.</p>
+                <button class="btn" onclick="App.generatePDF()">Gerar PDF Completo</button>
             </div>
-        </section>
-    </main>
+        </div>
+    </div>
 
-    <!-- Floating / Fixed Bottom Navigation / Quick Actions Bar -->
-    <nav class="fixed bottom-0 left-0 right-0 glass border-t border-slate-800/80 px-6 py-3 flex items-center justify-around z-40 max-w-lg mx-auto md:rounded-t-2xl">
-        <button onclick="App.switchTab('home')" id="nav-home" class="flex flex-col items-center space-y-1 text-cyan-400 transition-colors">
-            <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-            <span class="text-[10px] font-medium">Início</span>
-        </button>
-        <button onclick="App.openModal()" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white glow-cyan shadow-lg -mt-5 hover:scale-105 transition-transform">
-            <i data-lucide="plus" class="w-6 h-6"></i>
-        </button>
-        <button onclick="App.generatePDFReport()" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-200 transition-colors">
-            <i data-lucide="file-text" class="w-5 h-5"></i>
-            <span class="text-[10px] font-medium">Gerar PDF</span>
-        </button>
-    </nav>
-
-    <!-- Modal Form for New / Edit Inspection -->
-    <div id="item-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="glass w-full max-w-lg rounded-2xl border border-slate-800 p-6 space-y-5 shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
-                <h3 class="text-lg font-bold text-slate-200 flex items-center gap-2">
-                    <i data-lucide="clipboard-edit" class="w-5 h-5 text-cyan-400"></i>
-                    <span id="modal-title">Novo Registro de Ativo</span>
-                </h3>
-                <button onclick="App.closeModal()" class="text-slate-400 hover:text-slate-200 p-1">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-
-            <form id="inspection-form" onsubmit="App.saveItem(event)" class="space-y-4">
+    <!-- Modal para Novo / Editar Registro -->
+    <div id="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:100; padding:20px; align-items:center; justify-content:center;">
+        <div style="background:white; width:100%; max-width:500px; border-radius:12px; padding:20px; max-height:90vh; overflow-y:auto;">
+            <h3 id="modal-title" style="margin-bottom:12px;">Novo Registro</h3>
+            <form id="form-item" onsubmit="App.saveItem(event)">
                 <input type="hidden" id="item-id">
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Identificação / Código do Ativo (ex: Luminiária #402)</label>
-                    <input type="text" id="item-title" required placeholder="Ex: Poste 14 - Setor Sul" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Setor / Área</label>
-                        <input type="text" id="item-sector" required placeholder="Ex: Rodovia SP-100" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Status Técnico</label>
-                        <select id="item-status" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
-                            <option value="Operacional">Operacional</option>
-                            <option value="Manutenção Necessária">Manutenção Necessária</option>
-                            <option value="Crítico / Inativo">Crítico / Inativo</option>
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Observações de Campo</label>
-                    <textarea id="item-notes" rows="3" placeholder="Insira detalhes técnicos, avarias ou anotações..." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 resize-none"></textarea>
-                </div>
-                <div class="flex items-center justify-end space-x-3 pt-2">
-                    <button type="button" onclick="App.closeModal()" class="px-5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-800">Cancelar</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm font-semibold shadow-lg shadow-cyan-900/30 hover:opacity-90">Salvar Registro</button>
+                <label>Título / Ativo</label>
+                <input type="text" id="item-title" required placeholder="Ex: Equipamento ou Local">
+                <label>Setor</label>
+                <input type="text" id="item-sector" required placeholder="Ex: Setor A">
+                <label>Status</label>
+                <select id="item-status">
+                    <option value="Operacional">Operacional</option>
+                    <option value="Manutenção">Manutenção</option>
+                </select>
+                <label>Observações</label>
+                <textarea id="item-notes" rows="3" placeholder="Detalhes de campo..."></textarea>
+                <div style="display:flex; gap:8px; margin-top:12px;">
+                    <button type="button" class="btn btn-secondary" onclick="App.closeModal()">Cancelar</button>
+                    <button type="submit" class="btn">Salvar</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Application Script Logic -->
+    <!-- Barra de Navegação Inferior -->
+    <nav class="nav-bar">
+        <button class="nav-item active" onclick="App.switchView('home', this)">
+            <span>🏠</span>
+            <span>Início</span>
+        </button>
+        <button class="nav-item" onclick="App.switchView('tracker', this)">
+            <span>📍</span>
+            <span>KM Tempo Real</span>
+        </button>
+        <button class="nav-item" onclick="App.switchView('reports', this)">
+            <span>📄</span>
+            <span>Relatórios</span>
+        </button>
+    </nav>
+
     <script>
-        // State Management & Reactive Core
         const State = {
-            items: JSON.parse(localStorage.getItem('nexus_items')) || [
-                { id: '1', title: 'Luminária LED #102', sector: 'Trecho Norte - KM 12', status: 'Operacional', notes: 'Funcionando perfeitamente após substituição do driver.', date: '30/08/2026' },
-                { id: '2', title: 'Painel de Comando Setor B', sector: 'Subestação Central', status: 'Manutenção Necessária', notes: 'Terminais oxidados exigem limpeza corretiva.', date: '30/08/2026' }
+            items: JSON.parse(localStorage.getItem('sys_items')) || [
+                { id: '1', title: 'Inspeção Inicial', sector: 'Setor Principal', status: 'Operacional', notes: 'Sistema verificado.', date: '30/08/2026' }
             ],
-            searchQuery: '',
             tracker: {
                 active: false,
                 startTime: null,
-                elapsedSeconds: 0,
+                elapsed: 0,
                 distance: 0,
                 lastCoords: null,
                 watchId: null,
@@ -211,168 +160,131 @@
             }
         };
 
-        // Real-Time Telemetry & KM Tracker Engine
         const Tracker = {
             toggle() {
-                if (State.tracker.active) {
+                if (this.active) {
                     this.stop();
                 } else {
                     this.start();
                 }
             },
             start() {
-                State.tracker.active = true;
-                State.tracker.startTime = Date.now() - (State.tracker.elapsedSeconds * 1000);
+                this.active = true;
+                this.startTime = Date.now() - (this.elapsed * 1000);
                 
-                document.getElementById('btn-toggle-tracker').innerHTML = `<i data-lucide="square" class="w-4 h-4 fill-current"></i><span>Parar Monitoramento</span>`;
-                document.getElementById('btn-toggle-tracker').className = "flex-1 py-3 px-4 rounded-xl font-semibold bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-lg shadow-red-900/30 flex items-center justify-center space-x-2 transition-all";
-                
-                const badge = document.getElementById('tracker-status-badge');
-                badge.className = "px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
-                badge.innerText = "Em Execução";
+                const btn = document.getElementById('btn-track-toggle');
+                btn.innerText = "Parar Monitoramento";
+                btn.className = "btn btn-danger";
 
-                // Start Timer
-                State.tracker.timerInterval = setInterval(() => {
-                    State.tracker.elapsedSeconds = Math.floor((Date.now() - State.tracker.startTime) / 1000);
-                    App.updateTimerDisplay();
+                this.timerInterval = setInterval(() => {
+                    this.elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+                    this.updateTimeDisplay();
                 }, 1000);
 
-                // Start Geolocation Watch
                 if ('geolocation' in navigator) {
-                    State.tracker.watchId = navigator.geolocation.watchPosition(
+                    this.watchId = navigator.geolocation.watchPosition(
                         (pos) => {
-                            const { latitude, longitude, speed, accuracy } = pos.coords;
-                            document.getElementById('metric-gps').innerText = Math.round(accuracy);
+                            const { latitude, longitude, speed } = pos.coords;
                             if (speed !== null && speed >= 0) {
-                                document.getElementById('metric-speed').innerText = (speed * 3.6).toFixed(1);
+                                document.getElementById('track-speed').innerText = (speed * 3.6).toFixed(1);
                             }
-
-                            const currentCoords = { lat: latitude, lng: longitude };
-                            if (State.tracker.lastCoords) {
-                                const dist = Tracker.calcDistance(State.tracker.lastCoords.lat, State.tracker.lastCoords.lng, latitude, longitude);
-                                if (dist > 0.003) { // filtro de ruído mínimo (3 metros)
-                                    State.tracker.distance += dist;
-                                    document.getElementById('metric-distance').innerText = State.tracker.distance.toFixed(2);
-                                    State.tracker.lastCoords = currentCoords;
+                            const current = { lat: latitude, lng: longitude };
+                            if (this.lastCoords) {
+                                const dist = this.calcDist(this.lastCoords.lat, this.lastCoords.lng, latitude, longitude);
+                                if (dist > 0.002) {
+                                    this.distance += dist;
+                                    document.getElementById('track-km').innerText = this.distance.toFixed(2);
+                                    this.lastCoords = current;
                                 }
                             } else {
-                                State.tracker.lastCoords = currentCoords;
+                                this.lastCoords = current;
                             }
                         },
-                        (err) => { console.warn('Erro GPS:', err.message); },
+                        (err) => console.warn(err),
                         { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
                     );
                 }
-                lucide.createIcons();
             },
             stop() {
-                State.tracker.active = false;
-                clearInterval(State.tracker.timerInterval);
-                if (State.tracker.watchId !== null && 'geolocation' in navigator) {
-                    navigator.geolocation.clearWatch(State.tracker.watchId);
+                this.active = false;
+                clearInterval(this.timerInterval);
+                if (this.watchId !== null && 'geolocation' in navigator) {
+                    navigator.geolocation.clearWatch(this.watchId);
                 }
-
-                document.getElementById('btn-toggle-tracker').innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-current"></i><span>Retomar Monitoramento</span>`;
-                document.getElementById('btn-toggle-tracker').className = "flex-1 py-3 px-4 rounded-xl font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-900/30 flex items-center justify-center space-x-2 transition-all";
-                
-                const badge = document.getElementById('tracker-status-badge');
-                badge.className = "px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700";
-                badge.innerText = "Pausado";
-                lucide.createIcons();
+                const btn = document.getElementById('btn-track-toggle');
+                btn.innerText = "Retomar Monitoramento";
+                btn.className = "btn";
             },
             reset() {
                 this.stop();
-                State.tracker.elapsedSeconds = 0;
-                State.tracker.distance = 0;
-                State.tracker.lastCoords = null;
-                document.getElementById('metric-distance').innerText = "0.00";
-                document.getElementById('metric-time').innerText = "00:00:00";
-                document.getElementById('metric-speed').innerText = "0.0";
-                document.getElementById('metric-gps').innerText = "-";
+                this.elapsed = 0;
+                this.distance = 0;
+                this.lastCoords = null;
+                document.getElementById('track-km').innerText = "0.00";
+                document.getElementById('track-time').innerText = "00:00:00";
+                document.getElementById('track-speed').innerText = "0.0";
             },
-            calcDistance(lat1, lon1, lat2, lon2) {
-                const R = 6371; // Raio da Terra em km
+            updateTimeDisplay() {
+                const s = this.elapsed;
+                const hrs = String(Math.floor(s / 3600)).padStart(2, '0');
+                const mins = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+                const secs = String(s % 60).padStart(2, '0');
+                document.getElementById('track-time').innerText = `${hrs}:${mins}:${secs}`;
+            },
+            calcDist(lat1, lon1, lat2, lon2) {
+                const R = 6371;
                 const dLat = (lat2 - lat1) * Math.PI / 180;
                 const dLon = (lon2 - lon1) * Math.PI / 180;
                 const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
                           Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                           Math.sin(dLon/2) * Math.sin(dLon/2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-                return R * c;
+                return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             }
         };
 
-        // Application Controller
         const App = {
             init() {
-                this.renderItems();
-                lucide.createIcons();
+                this.renderItems(State.items);
             },
-            updateTimerDisplay() {
-                const s = State.tracker.elapsedSeconds;
-                const hrs = String(Math.floor(s / 3600)).padStart(2, '0');
-                const mins = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
-                const secs = String(s % 60).padStart(2, '0');
-                document.getElementById('metric-time').innerText = `${hrs}:${mins}:${secs}`;
-            },
-            handleSearch(val) {
-                State.searchQuery = val.toLowerCase().trim();
-                this.renderItems();
-            },
-            renderItems() {
-                const container = document.getElementById('items-container');
-                const filtered = State.items.filter(item => 
-                    item.title.toLowerCase().includes(State.searchQuery) ||
-                    item.sector.toLowerCase().includes(State.searchQuery) ||
-                    item.status.toLowerCase().includes(State.searchQuery) ||
-                    item.notes.toLowerCase().includes(State.searchQuery)
-                );
+            switchView(viewName, el) {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                document.getElementById(`view-${viewName}`).classList.add('active');
+                el.classList.add('active');
 
-                document.getElementById('counter-items').innerText = `${filtered.length} ${filtered.length === 1 ? 'item' : 'itens'}`;
-
-                if (filtered.length === 0) {
-                    container.innerHTML = `
-                        <div class="glass rounded-2xl p-8 text-center border border-slate-800 text-slate-400 space-y-2">
-                            <i data-lucide="search-x" class="w-8 h-8 mx-auto opacity-50"></i>
-                            <p class="text-sm font-medium">Nenhum registro encontrado</p>
-                        </div>
-                    `;
-                    lucide.createIcons();
+                const titles = { home: 'Sistema de Apoio & Inspeção', tracker: 'KM em Tempo Real', reports: 'Relatórios' };
+                document.getElementById('header-title').innerText = titles[viewName];
+            },
+            renderItems(data) {
+                const container = document.getElementById('items-list');
+                if (data.length === 0) {
+                    container.innerHTML = '<p style="color:var(--text-secondary); text-align:center; padding:20px;">Nenhum registro encontrado.</p>';
                     return;
                 }
-
-                container.innerHTML = filtered.map(item => {
-                    const statusColor = item.status === 'Operacional' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                        item.status === 'Manutenção Necessária' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                        'bg-red-500/10 text-red-400 border-red-500/20';
-                    return `
-                        <div class="glass rounded-2xl p-4 border border-slate-800/80 hover:border-slate-700 transition-all space-y-3 group">
-                            <div class="flex items-start justify-between">
-                                <div>
-                                    <h4 class="font-bold text-slate-200 text-sm md:text-base">${item.title}</h4>
-                                    <span class="text-xs text-cyan-400 font-mono">${item.sector}</span>
-                                </div>
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold border ${statusColor}">${item.status}</span>
-                            </div>
-                            <p class="text-xs text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-800/50">${item.notes || 'Sem observações adicionais.'}</p>
-                            <div class="flex items-center justify-between pt-1 text-[11px] text-slate-500">
-                                <span>Registrado em: ${item.date}</span>
-                                <div class="flex items-center space-x-2">
-                                    <button onclick="App.editItem('${item.id}')" class="p-1.5 rounded-lg bg-slate-900 hover:text-cyan-400 text-slate-400 transition-colors">
-                                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-                                    </button>
-                                    <button onclick="App.deleteItem('${item.id}')" class="p-1.5 rounded-lg bg-slate-900 hover:text-red-400 text-slate-400 transition-colors">
-                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                    </button>
-                                </div>
+                container.innerHTML = data.map(item => `
+                    <div class="item-row">
+                        <div>
+                            <strong>${item.title}</strong>
+                            <div style="font-size:0.8rem; color:var(--text-secondary);">${item.sector} • ${item.date}</div>
+                            <div style="font-size:0.85rem; margin-top:4px;">${item.notes || ''}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <span class="badge ${item.status === 'Operacional' ? 'badge-ok' : 'badge-warning'}">${item.status}</span>
+                            <div style="margin-top:8px;">
+                                <button onclick="App.editItem('${item.id}')" style="background:none; border:none; cursor:pointer; font-size:0.85rem; color:var(--primary);">Editar</button>
+                                <button onclick="App.deleteItem('${item.id}')" style="background:none; border:none; cursor:pointer; font-size:0.85rem; color:var(--danger); margin-left:8px;">Excluir</button>
                             </div>
                         </div>
-                    `;
-                }).join('');
-                lucide.createIcons();
+                    </div>
+                `).join('');
+            },
+            filterItems(query) {
+                const q = query.toLowerCase();
+                const filtered = State.items.filter(i => i.title.toLowerCase().includes(q) || i.sector.toLowerCase().includes(q) || i.notes.toLowerCase().includes(q));
+                this.renderItems(filtered);
             },
             openModal(id = null) {
-                document.getElementById('item-modal').classList.remove('hidden');
+                document.getElementById('modal').style.display = 'flex';
                 if (id) {
                     const item = State.items.find(i => i.id === id);
                     if (item) {
@@ -384,13 +296,13 @@
                         document.getElementById('item-notes').value = item.notes;
                     }
                 } else {
-                    document.getElementById('modal-title').innerText = 'Novo Registro de Ativo';
-                    document.getElementById('inspection-form').reset();
+                    document.getElementById('modal-title').innerText = 'Novo Registro';
+                    document.getElementById('form-item').reset();
                     document.getElementById('item-id').value = '';
                 }
             },
             closeModal() {
-                document.getElementById('item-modal').classList.add('hidden');
+                document.getElementById('modal').style.display = 'none';
             },
             saveItem(e) {
                 e.preventDefault();
@@ -404,82 +316,52 @@
                 if (id) {
                     State.items = State.items.map(i => i.id === id ? { ...i, title, sector, status, notes } : i);
                 } else {
-                    const newItem = { id: Date.now().toString(), title, sector, status, notes, date };
-                    State.items.unshift(newItem);
+                    State.items.unshift({ id: Date.now().toString(), title, sector, status, notes, date });
                 }
 
-                localStorage.setItem('nexus_items', JSON.stringify(State.items));
+                localStorage.setItem('sys_items', JSON.stringify(State.items));
                 this.closeModal();
-                this.renderItems();
+                this.renderItems(State.items);
             },
             editItem(id) {
                 this.openModal(id);
             },
             deleteItem(id) {
-                if (confirm('Deseja realmente excluir este registro permanentemente?')) {
+                if (confirm('Deseja excluir este registro?')) {
                     State.items = State.items.filter(i => i.id !== id);
-                    localStorage.setItem('nexus_items', JSON.stringify(State.items));
-                    this.renderItems();
+                    localStorage.setItem('sys_items', JSON.stringify(State.items));
+                    this.renderItems(State.items);
                 }
             },
-            exportDataJSON() {
+            exportJSON() {
                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(State.items, null, 2));
-                const dlAnchor = document.createElement('a');
-                dlAnchor.setAttribute("href", dataStr);
-                dlAnchor.setAttribute("download", `nexus_backup_${new Date().toISOString().slice(0,10)}.json`);
-                document.body.appendChild(dlAnchor);
-                dlAnchor.click();
-                dlAnchor.remove();
+                const dl = document.createElement('a');
+                dl.setAttribute("href", dataStr);
+                dl.setAttribute("download", "dados_sistema.json");
+                document.body.appendChild(dl);
+                dl.click();
+                dl.remove();
             },
-            generatePDFReport() {
+            generatePDF() {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
-
-                doc.setFillColor(15, 23, 42);
-                doc.rect(0, 0, 210, 297, 'F');
-
-                doc.setTextColor(6, 182, 212);
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(22);
-                doc.text("Relatório Técnico de Inspeção", 20, 25);
-
-                doc.setTextColor(148, 163, 184);
+                doc.setFontSize(18);
+                doc.text("Relatório de Inspeção", 14, 20);
                 doc.setFontSize(10);
-                doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | Nexus Core v5`, 20, 33);
-                doc.text(`Distância Registrada na Sessão: ${document.getElementById('metric-distance').innerText} km`, 20, 40);
+                doc.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 14, 26);
 
-                let y = 55;
-                State.items.forEach((item, index) => {
-                    if (y > 260) {
-                        doc.addPage();
-                        doc.setFillColor(15, 23, 42);
-                        doc.rect(0, 0, 210, 297, 'F');
-                        y = 25;
-                    }
-
-                    doc.setTextColor(255, 255, 255);
+                let y = 35;
+                State.items.forEach((item, idx) => {
+                    if (y > 270) { doc.addPage(); y = 20; }
                     doc.setFont("helvetica", "bold");
-                    doc.setFontSize(12);
-                    doc.text(`${index + 1}. ${item.title} (${item.sector})`, 20, y);
-
-                    doc.setTextColor(148, 163, 184);
+                    doc.text(`${idx + 1}. ${item.title} (${item.sector})`, 14, y);
                     doc.setFont("helvetica", "normal");
-                    doc.setFontSize(10);
-                    doc.text(`Status: ${item.status} | Data: ${item.date}`, 20, y + 6);
-                    doc.text(`Obs: ${item.notes || 'N/A'}`, 20, y + 12);
-
-                    doc.setDrawColor(51, 65, 85);
-                    doc.line(20, y + 18, 190, y + 18);
-                    y += 26;
+                    doc.text(`Status: ${item.status} - ${item.date}`, 14, y + 6);
+                    doc.text(`Obs: ${item.notes || 'N/A'}`, 14, y + 12);
+                    y += 22;
                 });
-
-                doc.save(`relatorio_inspecao_${new Date().toISOString().slice(0,10)}.pdf`);
-            },
-            toggleTheme() {
-                document.documentElement.classList.toggle('dark');
-            },
-            switchTab(tab) {
-                // Navegação fluida entre abas caso necessário
+                doc.save("relatorio.pdf");
             }
         };
 
