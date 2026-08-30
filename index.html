@@ -1,1022 +1,489 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Sistema Integrado de Apoio & Inspeção - Nox OS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Nexus Core — Sistema Integrado de Apoio & Inspeção</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#ecfeff', 500: '#06b6d4', 600: '#0891b2', 900: '#164e63', 950: '#083344' }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- jsPDF CDN para Relatórios -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root {
-            --bg: #070707;
-            --card: #121212;
-            --card-hover: #1a1a1a;
-            --border: #262626;
-            --border-focus: #444444;
-            --accent: #ffd600;
-            --accent-glow: rgba(255, 214, 0, 0.15);
-            --green: #00e676;
-            --placa-verde: rgba(0, 121, 52, 0.85);
-            --text: #ffffff;
-            --text-secondary: #aaaaaa;
-            --bad: #ff1744;
-            --warn: #ff9100;
-            --glass: rgba(12, 12, 12, 0.96);
-            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: var(--bg); color: var(--text); font-family: var(--font); overflow-x: hidden; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-
-        /* ================= TELA INICIAL (MENU) ================= */
-        #main-menu {
-            position: fixed;
-            inset: 0;
-            background: var(--bg);
-            z-index: 10000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            text-align: center;
-        }
-
-        .menu-title {
-            font-size: 1.8rem;
-            font-weight: 900;
-            color: var(--accent);
-            margin-bottom: 8px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
-
-        .menu-subtitle {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            margin-bottom: 32px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .menu-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            width: 100%;
-            max-width: 340px;
-        }
-
-        .btn-menu {
-            padding: 20px;
-            font-size: 1.05rem;
-            font-weight: 900;
-            border: 2px solid var(--border);
-            border-radius: 14px;
-            background: var(--card);
-            color: var(--text);
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        }
-
-        .btn-menu:active {
-            transform: scale(0.97);
-            border-color: var(--accent);
-            background: var(--card-hover);
-        }
-
-        .btn-menu-primary {
-            background: var(--accent);
-            color: #000000;
-            border-color: var(--accent);
-            box-shadow: 0 6px 20px rgba(255, 214, 0, 0.25);
-        }
-
-        /* CONTAINER DOS MÓDULOS */
-        .app-module {
-            display: none;
-            width: 100vw;
-            min-height: 100vh;
-        }
-
-        .app-module.active {
-            display: block;
-        }
-
-        /* ================= MÓDULO 1: APOIO LOCALIZAÇÃO & OS ================= */
-        #mod-apoio {
-            line-height: 1.3;
-            padding: 12px;
-            max-width: 600px;
-            margin: 0 auto;
-            text-transform: uppercase;
-        }
-
-        /* PAINEL DE ORDEM DE SERVIÇO / BUSCA DE ID */
-        .search-id-box {
-            background: var(--card);
-            border: 2px solid var(--accent);
-            border-radius: 12px;
-            padding: 14px;
-            margin-bottom: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-        }
-
-        .search-id-title {
-            font-size: 0.85rem;
-            font-weight: 900;
-            color: var(--accent);
-            letter-spacing: 0.06em;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .search-id-input-group {
-            display: flex;
-            gap: 8px;
-        }
-
-        .search-id-input-group input {
-            flex: 1;
-            padding: 12px 14px;
-            font-family: var(--font);
-            font-size: 1rem;
-            font-weight: 800;
-            border-radius: 8px;
-            border: 1px solid var(--border-focus);
-            background: #181818;
-            color: #fff;
-            text-transform: uppercase;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .search-id-input-group input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-
-        .search-id-input-group button {
-            padding: 0 16px;
-            font-family: var(--font);
-            font-size: 0.9rem;
-            font-weight: 900;
-            border: 0;
-            border-radius: 8px;
-            background: var(--accent);
-            color: #000;
-            cursor: pointer;
-            text-transform: uppercase;
-            min-height: 46px;
-        }
-
-        /* ALERTA DE ALVO ALCANÇADO (GARANTIA DE CAMPO) */
-        .target-lock-banner {
-            display: none;
-            background: linear-gradient(135deg, #00c853, #009624);
-            border: 3px solid #ffffff;
-            border-radius: 12px;
-            padding: 14px;
-            text-align: center;
-            color: #ffffff;
-            margin-bottom: 12px;
-            box-shadow: 0 0 25px rgba(0, 200, 83, 0.6);
-            animation: pulse-banner 1.5s infinite;
-        }
-        @keyframes pulse-banner {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
-        .target-lock-banner.active { display: block; }
-        .target-lock-title { font-size: 1.1rem; font-weight: 900; letter-spacing: 0.08em; margin-bottom: 4px; }
-        .target-lock-sub { font-size: 0.8rem; font-weight: 800; opacity: 0.9; }
-
-        .search-result-card {
-            background: #1a1800;
-            border: 2px solid var(--accent);
-            border-radius: 8px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 6px;
-        }
-
-        .km-box {
-            background: linear-gradient(135deg, #00875a, #006644);
-            border: 3px solid #ffffff;
-            border-radius: 12px;
-            padding: 14px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            margin-bottom: 12px;
-            box-shadow: 0 6px 20px rgba(0, 135, 90, 0.3);
-        }
-
-        .km-label { font-size: 0.95rem; font-weight: 900; color: #ffffff; letter-spacing: 0.1em; }
-        .km-value { font-size: 2.8rem; font-weight: 900; color: #ffffff; line-height: 1.1; letter-spacing: 0.05em; }
-
-        .status-box {
-            background: var(--card);
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            padding: 12px;
-            font-size: 0.9rem;
-            font-weight: 900;
-            text-align: center;
-            margin-bottom: 12px;
-            letter-spacing: 0.05em;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        }
-
-        .ok { color: var(--green); border-color: var(--green); background: rgba(0, 230, 118, 0.05); }
-        .warn { color: var(--warn); border-color: var(--warn); background: rgba(255, 145, 0, 0.05); }
-        .bad { color: var(--bad); border-color: var(--bad); background: rgba(255, 23, 68, 0.05); }
-
-        .card {
-            background: var(--card);
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 14px;
-            margin-bottom: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-        }
-
-        .btn-action {
-            width: 100%;
-            min-height: 48px;
-            padding: 12px;
-            font-family: var(--font);
-            font-size: 0.95rem;
-            font-weight: 900;
-            border: 0;
-            border-radius: 10px;
-            background: var(--green);
-            color: #000000;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            box-shadow: 0 4px 14px rgba(0, 230, 118, 0.25);
-            transition: opacity 0.2s;
-            margin-bottom: 8px;
-        }
-        .btn-action:disabled { background: #1c1c1c; color: #444444; box-shadow: none; cursor: not-allowed; }
-
-        .controls { display: flex; gap: 16px; margin-top: 12px; align-items: center; justify-content: space-between; }
-        .controls label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 900; letter-spacing: 0.05em; }
-
-        select {
-            padding: 8px 12px;
-            font-family: var(--font);
-            font-size: 0.95rem;
-            font-weight: 900;
-            border-radius: 8px;
-            border: 1px solid var(--border-focus);
-            background: #1c1c1c;
-            color: #ffffff;
-            outline: none;
-        }
-
-        input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); border-radius: 4px; cursor: pointer; }
-
-        ul.apoio-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
-        ul.apoio-list li {
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            padding: 12px;
-            background: #161616;
-            font-weight: 900;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        }
-
-        ul.apoio-list li.nearest { background: #1f1c00; border: 3px solid var(--accent); color: #ffffff; box-shadow: 0 4px 16px rgba(255, 214, 0, 0.15); }
-
-        .item-header { display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem; }
-        .item-left { display: flex; align-items: center; gap: 10px; }
-        ul.apoio-list li.nearest .id-val, ul.apoio-list li.nearest .dist-val { color: var(--accent); font-size: 1.1rem; }
-        .id-val { font-size: 1.05rem; font-weight: 900; color: #ffffff; letter-spacing: 0.03em; }
-        .dist-val { color: var(--accent); font-size: 0.95rem; font-weight: 900; letter-spacing: 0.03em; }
-
-        .mini-map {
-            width: 100%;
-            height: 130px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            overflow: hidden;
-            position: relative;
-            background: #000000;
-        }
-        .mini-map iframe { width: 100%; height: 100%; border: 0; }
-        .skeleton { height: 50px; background: #1c1c1c; border-radius: 8px; }
-
-        /* ================= MÓDULO 2: INSPEÇÃO FOTOGRÁFICA ================= */
-        #mod-inspecao {
-            position: relative;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-        }
-
-        #safety-gate { position: absolute; inset: 0; background: #000; z-index: 1500; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .alert-box { border: 2px solid var(--border); padding: 32px 24px; border-radius: 16px; text-align: center; background: var(--card); max-width: 90%; width: 380px; box-shadow: 0 8px 30px rgba(0,0,0,0.8); }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 18px 32px; font-weight: 900; border-radius: 12px; cursor: pointer; margin-top: 24px; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; width: 100%; box-shadow: 0 4px 16px rgba(255, 214, 0, 0.3); }
-
-        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
-        #vid { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
-
-        #km-hud { 
-            position: absolute; 
-            top: 24px; 
-            left: 20px; 
-            background: var(--placa-verde); 
-            padding: 12px 20px; 
-            border: 3px solid rgba(255, 255, 255, 0.85); 
-            border-radius: 12px; 
-            z-index: 100; 
-            pointer-events: none; 
-            min-width: 170px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            transition: transform 0.15s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center; 
-            text-align: center;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
-        }
-        .hud-pulse { transform: scale(1.06); border-color: var(--accent) !important; }
-
-        #br-txt { font-size: 0.85rem; font-weight: 900; display: block; width: 100%; padding-bottom: 2px; margin-bottom: 2px; border-bottom: 1px solid rgba(255,255,255,0.3); letter-spacing: 0.05em; }
-        #km-txt { font-size: 2.4rem; font-weight: 900; line-height: 1.1; letter-spacing: 0.05em; }
-
-        #rec-tag { 
-            position: absolute; 
-            top: 30px; 
-            right: 20px; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            background: rgba(0,0,0,0.7); 
-            padding: 8px 14px; 
-            border-radius: 20px; 
-            opacity: 0; 
-            pointer-events: none; 
-            z-index: 100;
-            backdrop-filter: blur(6px);
-            border: 1px solid rgba(255,255,255,0.15);
-        }
-        #rec-tag span { font-size: 0.75rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.05em; }
-        .dot { width: 10px; height: 10px; background: #ff1744; border-radius: 50%; animation: blink 1s infinite; box-shadow: 0 0 8px #ff1744; }
-        @keyframes blink { 50% { opacity: 0.2; } }
-
-        #ui-controls { 
-            position: absolute; 
-            bottom: 40px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            display: flex; 
-            gap: 16px; 
-            z-index: 500; 
-            transition: opacity 0.3s ease, visibility 0.3s;
-            width: 90%;
-            max-width: 400px;
-            justify-content: center;
-            align-items: center;
-        }
-        .ui-hidden { opacity: 0; visibility: hidden; }
-
-        .btn-main { border: none; padding: 18px 32px; border-radius: 14px; font-weight: 900; text-transform: uppercase; cursor: pointer; flex: 1; font-size: 1rem; letter-spacing: 0.05em; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
-        #btn-start { background: var(--accent); color: #000; }
-        #btn-stop { background: var(--bad); color: #fff; display: none; }
-        #gear-btn { width: 56px; height: 56px; background: rgba(255,255,255,0.15); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); }
-
-        #settings-panel { position: fixed; right: -360px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(25px); z-index: 4000; padding: 60px 24px; transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto; box-shadow: -10px 0 40px rgba(0,0,0,0.8); border-left: 1px solid var(--border); }
-        #settings-panel.open { right: 0; }
-        #settings-panel label { display: block; margin-top: 18px; font-size: 0.85rem; color: var(--accent); text-transform: uppercase; font-weight: 900; letter-spacing: 0.05em; }
-        #settings-panel input, #settings-panel select { width: 100%; padding: 14px; background: #1c1c1c; border: 1px solid var(--border-focus); color: #fff; border-radius: 8px; margin-top: 6px; font-size: 0.95rem; font-weight: 800; outline: none; }
-
-        canvas#c { display: none; }
-        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; transition: opacity 0.05s ease-out; }
+        * { -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glow-cyan { box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.35); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #020617; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
     </style>
 </head>
-<body>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
 
-<div id="main-menu">
-    <div class="menu-title">Sistema de Apoio</div>
-    <div class="menu-subtitle">Selecione a ferramenta desejada</div>
-    <div class="menu-buttons">
-        <button class="btn-menu btn-menu-primary" onclick="openModule('apoio')">
-            📍 Apoio Localização (Ordem de Serviço)
-        </button>
-        <button class="btn-menu" onclick="openModule('inspecao')">
-            📷 Inspeção Fotográfica
-        </button>
-    </div>
-</div>
-
-<div id="mod-apoio" class="app-module">
-    <!-- BANNER DE ALERTA DE ALVO ALCANÇADO EM CAMPO -->
-    <div id="targetLockBanner" class="target-lock-banner">
-        <div class="target-lock-title">🎯 VOCÊ ESTÁ NO POSTE DA OS!</div>
-        <div id="targetLockSub" class="target-lock-sub">ID ALVO: --- | DISTÂNCIA < 5M</div>
-    </div>
-
-    <!-- PAINEL DA ORDEM DE SERVIÇO (ID DO NOX) -->
-    <div class="search-id-box">
-        <span class="search-id-title">
-            <span>📋 Ordem de Serviço (ID do Nox)</span>
-            <span style="font-size:0.75rem; color:var(--text-secondary);">Digite o ID da OS</span>
-        </span>
-        <div class="search-id-input-group">
-            <input type="text" id="inputIdSearch" placeholder="Ex: NOX-1042..." onkeydown="if(event.key==='Enter') searchById()" />
-            <button onclick="searchById()">Buscar OS</button>
-            <button onclick="clearSearchId()" style="background:#262626; color:#fff;">Limpar</button>
-        </div>
-        <div id="searchResultArea" style="display: none;"></div>
-    </div>
-
-    <div class="km-box">
-        <span class="km-label">KM ATUAL NA RODOVIA</span>
-        <span id="kmValue" class="km-value">—</span>
-    </div>
-
-    <div id="gpsStatus" class="status-box bad">
-        GPS: Aguardando sinal...
-    </div>
-
-    <div class="card">
-        <button id="btnSend" class="btn-action" disabled>Enviar Lista WhatsApp (Até 100 IDs)</button>
-        <div class="controls">
-            <label>
-                Proximidade:
-                <select id="qty">
-                    <option value="1">1</option>
-                    <option value="5">5</option>
-                    <option value="10" selected>10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
-            </label>
-            <label>
-                <input type="checkbox" id="chkMaps" />
-                Maps
-            </label>
-        </div>
-    </div>
-
-    <div class="card" style="padding: 10px; background: transparent; border: none; box-shadow: none;">
-        <ul id="list" class="apoio-list">
-            <li class="skeleton"></li>
-            <li class="skeleton"></li>
-        </ul>
-    </div>
-</div>
-
-<div id="mod-inspecao" class="app-module">
-    <div id="flash"></div>
-
-    <div id="safety-gate">
-        <div class="alert-box">
-            <h2 style="color:var(--accent); margin-bottom:12px; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 0.05em;">Sistema de Apoio</h2>
-            <p style="margin-bottom:8px; font-size: 0.95rem; font-weight: 800; color: #ccc; text-transform: uppercase;">Captura Automática + Foto Manual</p>
-            <button class="btn-aware" onclick="startAppInspecao()">Ativar Sistema</button>
-        </div>
-    </div>
-
-    <div id="settings-panel">
-        <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; margin-bottom:24px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em;">← Fechar</div>
-        <label>Câmera Ativa</label>
-        <select id="cam-select" onchange="switchCam(this.value)"></select>
-        <label>Intervalo (ms)</label>
-        <input type="number" id="cfg-int" value="200">
-        <label>Fotos/Lote</label>
-        <input type="number" id="cfg-lote" value="50">
-    </div>
-
-    <div id="app-shell">
-        <video id="vid" autoplay playsinline muted onclick="handleTouch()"></video>
-        
-        <div id="km-hud">
-            <span id="br-txt"></span>
-            <h1 id="km-txt">KM ---</h1>
-        </div>
-
-        <div id="rec-tag"><div class="dot"></div><span>Registrando fotos no PDF...</span></div>
-
-        <div id="ui-controls">
-            <div id="gear-btn" onclick="toggleSet()">⚙</div>
-            <button id="btn-start" class="btn-main" onclick="startCapture()">Iniciar</button>
-            <button id="btn-stop" class="btn-main" onclick="stopCapture()">Finalizar</button>
-        </div>
-    </div>
-
-    <canvas id="c"></canvas>
-</div>
-
-<script>
-/* ================= NAVEGAÇÃO ENTRE TELAS ================= */
-function openModule(modId) {
-    document.getElementById('main-menu').style.display = 'none';
-    document.querySelectorAll('.app-module').forEach(m => m.classList.remove('active'));
-    
-    if (modId === 'apoio') {
-        document.getElementById('mod-apoio').classList.add('active');
-        initApoioLocalizacao();
-    } else if (modId === 'inspecao') {
-        document.getElementById('mod-inspecao').classList.add('active');
-    }
-}
-
-/* ================= LÓGICA DO MÓDULO 1: APOIO LOCALIZAÇÃO & OS ================= */
-const ACC_GREEN = 15, ACC_YELLOW = 35;
-let datasetApoio = [], kmDatasetApoio = [], lastPosApoio = null;
-let currentRenderedKey = "";
-let apoioInited = false;
-let currentSearchedIdItem = null;
-
-const gpsStatus = document.getElementById('gpsStatus');
-const btnSend = document.getElementById('btnSend');
-const chkMaps = document.getElementById('chkMaps');
-const qtySel = document.getElementById('qty');
-const listEl = document.getElementById('list');
-const kmValue = document.getElementById('kmValue');
-const targetLockBanner = document.getElementById('targetLockBanner');
-const targetLockSub = document.getElementById('targetLockSub');
-
-function normalizeStr(s){ return String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
-function findColumnIndex(headers, candidates){ const map=headers.map(h=>normalizeStr(h)); for(const c of candidates){ const i=map.indexOf(c.toUpperCase()); if(i>=0) return i; } return -1; }
-function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d{1,}$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
-
-function hav(a,b,c,d){
-  const p=0.017453292519943295, cos=Math.cos;
-  const x = 0.5 - cos((c - a) * p)/2 + cos(a * p) * cos(c * p) * (1 - cos((d - b) * p))/2;
-  return 12742000 * Math.asin(Math.sqrt(x));
-}
-
-function nearestN(lat,lon,n=10){
-  if(!datasetApoio.length) return [];
-  const arr = datasetApoio.map(p => ({id:p.id, lat:p.lat, lon:p.lon, d:hav(lat,lon,p.lat,p.lon)}));
-  arr.sort((a,b)=>a.d-b.d);
-  return arr.slice(0, n);
-}
-
-function fmtAcc(a){ return (a==null||!Number.isFinite(a))?'—':('±'+Math.round(a)+'M'); }
-function nowBR(){ return new Date().toLocaleString('pt-BR').toUpperCase(); }
-
-function getRangeText(dist, acc) {
-  const err = (acc != null && Number.isFinite(acc)) ? Math.round(acc) : 0;
-  const d = Math.round(dist);
-  const min = Math.max(0, d - err);
-  const max = d + err;
-  return `${min}M A ${max}M`;
-}
-
-function checkTargetLock(item, dist) {
-  if (!item || dist == null) {
-    targetLockBanner.classList.remove('active');
-    return;
-  }
-  const acc = lastPosApoio && lastPosApoio.acc ? lastPosApoio.acc : 10;
-  if (dist <= (5 + acc)) {
-    targetLockBanner.classList.add('active');
-    targetLockSub.textContent = `ID ALVO: ${item.id} | DISTÂNCIA EST.: ~${Math.round(dist)}M`;
-  } else {
-    targetLockBanner.classList.remove('active');
-  }
-}
-
-function searchById() {
-    const term = normalizeStr(document.getElementById('inputIdSearch').value);
-    const resArea = document.getElementById('searchResultArea');
-    if (!term) {
-        resArea.style.display = 'none';
-        resArea.innerHTML = '';
-        currentSearchedIdItem = null;
-        targetLockBanner.classList.remove('active');
-        return;
-    }
-
-    if (!datasetApoio.length) {
-        resArea.style.display = 'block';
-        resArea.innerHTML = `<div style="color:var(--warn); font-size:0.85rem; padding:6px; font-weight:900;">Carregando dados, tente novamente...</div>`;
-        return;
-    }
-
-    const found = datasetApoio.find(p => normalizeStr(p.id) === term || normalizeStr(p.id).includes(term));
-
-    if (!found) {
-        resArea.style.display = 'block';
-        resArea.innerHTML = `<div style="color:var(--bad); font-size:0.85rem; padding:6px; font-weight:900;">ID DA OS "${term}" NÃO ENCONTRADO NO SISTEMA.</div>`;
-        currentSearchedIdItem = null;
-        targetLockBanner.classList.remove('active');
-        return;
-    }
-
-    currentSearchedIdItem = found;
-    resArea.style.display = 'block';
-    renderSearchedIdResult(true);
-}
-
-function renderSearchedIdResult(forceRender = false) {
-    if (!currentSearchedIdItem) return;
-    const resArea = document.getElementById('searchResultArea');
-    const item = currentSearchedIdItem;
-
-    let distText = "AGUARDANDO GPS...";
-    let dVal = null;
-    if (lastPosApoio) {
-        dVal = hav(lastPosApoio.lat, lastPosApoio.lon, item.lat, item.lon);
-        distText = `DISTÂNCIA DA OS: ${getRangeText(dVal, lastPosApoio.acc)}`;
-        checkTargetLock(item, dVal);
-    }
-
-    const distEl = document.getElementById('search-dist-val');
-    if (!forceRender && distEl) {
-        distEl.textContent = distText;
-        return;
-    }
-
-    resArea.innerHTML = `
-        <div class="search-result-card">
-            <div class="item-header">
-                <span class="id-val" style="color:var(--accent);">OS / ID: ${item.id}</span>
-                <span class="dist-val" id="search-dist-val">${distText}</span>
+    <!-- Top Header -->
+    <header class="sticky top-0 z-50 glass border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center glow-cyan shadow-lg">
+                <i data-lucide="cpu" class="w-5 h-5 text-white"></i>
             </div>
-            <div style="font-size:0.75rem; color:#aaa; font-weight:800;">COORDENADAS: ${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}</div>
-            <div class="mini-map">
-                <iframe 
-                  src="https://maps.google.com/maps?q=${item.lat},${item.lon}&t=k&z=19&ie=UTF8&iwloc=&output=embed" 
-                  loading="lazy">
-                </iframe>
+            <div>
+                <h1 class="font-bold text-base tracking-tight bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">Nexus Core v5</h1>
+                <p class="text-xs text-slate-400 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Sistema Operacional de Campo Ativo
+                </p>
             </div>
         </div>
-    `;
-}
-
-function clearSearchId() {
-    document.getElementById('inputIdSearch').value = '';
-    const resArea = document.getElementById('searchResultArea');
-    resArea.style.display = 'none';
-    resArea.innerHTML = '';
-    currentSearchedIdItem = null;
-    targetLockBanner.classList.remove('active');
-}
-
-function updateGpsStatus(){
-  if(!lastPosApoio || lastPosApoio.acc==null){ 
-    gpsStatus.className='status-box bad'; 
-    gpsStatus.textContent='GPS: BUSCANDO SINAL...'; 
-    return; 
-  }
-  const a=Math.round(lastPosApoio.acc);
-  if(a<=ACC_GREEN){ 
-    gpsStatus.className='status-box ok'; 
-    gpsStatus.textContent=`GPS DE ALTA PRECISÃO (${fmtAcc(a)})`; 
-  } else if(a<=ACC_YELLOW){ 
-    gpsStatus.className='status-box warn'; 
-    gpsStatus.textContent=`GPS MÉDIO (${fmtAcc(a)})`; 
-  } else { 
-    gpsStatus.className='status-box bad'; 
-    gpsStatus.textContent=`GPS FRACO / ALTA MARGEM (${fmtAcc(a)})`; 
-  }
-}
-
-function renderApoio(){
-  if(!lastPosApoio || !datasetApoio.length) return;
-
-  if (currentSearchedIdItem) {
-      renderSearchedIdResult(false);
-  }
-
-  const qty = Number(qtySel.value || 10);
-  const items = nearestN(lastPosApoio.lat, lastPosApoio.lon, qty);
-  const itemKey = items.map(i => i.id).join(',');
-
-  if(itemKey === currentRenderedKey){
-    items.forEach((o, idx) => {
-      const el = document.getElementById(`dist-val-${idx}`);
-      if(el) el.textContent = `DISTÂNCIA: ${getRangeText(o.d, lastPosApoio.acc)}`;
-    });
-    btnSend.disabled = false;
-    return;
-  }
-
-  currentRenderedKey = itemKey;
-  listEl.innerHTML = '';
-  const frag = document.createDocumentFragment();
-
-  items.forEach((o, idx) => {
-    const li = document.createElement('li');
-    if(idx === 0) li.classList.add('nearest');
-
-    li.innerHTML = `
-      <div class="item-header">
-        <div class="item-left">
-            <input type="checkbox" class="item-chk" value="${o.id}" data-lat="${o.lat}" data-lon="${o.lon}" checked />
-            <span class="id-val">POSTE / NOX: ${o.id}</span>
+        <div class="flex items-center space-x-2">
+            <button onclick="App.exportDataJSON()" title="Exportar Backup" class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 transition-all">
+                <i data-lucide="download" class="w-4 h-4"></i>
+            </button>
+            <button onclick="App.toggleTheme()" class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 transition-all">
+                <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+                <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+            </button>
         </div>
-        <span class="dist-val" id="dist-val-${idx}">DISTÂNCIA: ${getRangeText(o.d, lastPosApoio.acc)}</span>
-      </div>
-      <div class="mini-map">
-        <iframe 
-          src="https://maps.google.com/maps?q=${o.lat},${o.lon}&t=k&z=19&ie=UTF8&iwloc=&output=embed" 
-          loading="lazy">
-        </iframe>
-      </div>
-    `;
-    frag.appendChild(li);
-  });
+    </header>
 
-  listEl.appendChild(frag);
-  btnSend.disabled = false;
-}
+    <!-- Main Workspace Container -->
+    <main class="flex-1 max-w-4xl w-full mx-auto px-4 py-5 pb-28 space-y-6">
 
-async function loadCSVApoio(){
-  try{
-    let resp = await fetch('dados.csv?v='+Date.now(), {cache:'no-store'}).catch(()=>null);
-    if(!resp || !resp.ok) resp = await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now(), {cache:'no-store'});
-    if(!resp.ok) return;
-    
-    let text = await resp.text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-    const lines = text.split(/\r?\n/).filter(l=>l.trim()!=='');
-    const head = lines.shift().split(';');
-    const iId=findColumnIndex(head,['id do nox','idnox','id']), iLat=findColumnIndex(head,['latitude','lat']), iLon=findColumnIndex(head,['longitude','lon','long']);
-    
-    datasetApoio = lines.map(l=>{ const r=l.split(';'); return {id:String(r[iId]||'').trim().toUpperCase(), lat:parsePt(r[iLat]), lon:parsePt(r[iLon])}; })
-                   .filter(p=>p.id && Number.isFinite(p.lat)&&Number.isFinite(p.lon));
-    renderApoio();
-  }catch(e){}
-}
+        <!-- Real-Time Telemetry & KM Tracker Card -->
+        <section class="glass rounded-2xl p-5 border border-slate-800/80 relative overflow-hidden shadow-2xl">
+            <div class="absolute -right-10 -top-10 w-40 h-40 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-2.5">
+                    <div class="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                        <i data-lucide="gauge" class="w-5 h-5"></i>
+                    </div>
+                    <h2 class="font-semibold text-slate-200">Telemetria & KM em Tempo Real</h2>
+                </div>
+                <span id="tracker-status-badge" class="px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700">Parado</span>
+            </div>
 
-async function loadKMCSVApoio(){
-  try{
-    let resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
-    if(!resp.ok) return;
-    let text = await resp.text(); if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-    const head = lines.shift().split(';');
-    const iKm = findColumnIndex(head, ['km']), iLat = findColumnIndex(head, ['lat','latitude']), iLon = findColumnIndex(head, ['lon','long','longitude']);
-    kmDatasetApoio = lines.map(l=>{ const r = l.split(';'); return { km:parsePt(r[iKm]), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) }; })
-                     .filter(p => Number.isFinite(p.km) && Number.isFinite(p.lat) && Number.isFinite(p.lon));
-  }catch(e){}
-}
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+                <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-800">
+                    <span class="text-xs text-slate-400 block mb-1">Distância Percorrida</span>
+                    <div class="text-2xl font-bold font-mono text-cyan-400"><span id="metric-distance">0.00</span> <span class="text-xs text-slate-400 font-normal">km</span></div>
+                </div>
+                <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-800">
+                    <span class="text-xs text-slate-400 block mb-1">Tempo Decorrido</span>
+                    <div class="text-2xl font-bold font-mono text-slate-200" id="metric-time">00:00:00</div>
+                </div>
+                <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-800">
+                    <span class="text-xs text-slate-400 block mb-1">Velocidade Atual</span>
+                    <div class="text-2xl font-bold font-mono text-emerald-400"><span id="metric-speed">0.0</span> <span class="text-xs text-slate-400 font-normal">km/h</span></div>
+                </div>
+                <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-800">
+                    <span class="text-xs text-slate-400 block mb-1">Precisão GPS</span>
+                    <div class="text-2xl font-bold font-mono text-slate-300"><span id="metric-gps">-</span> <span class="text-xs text-slate-400 font-normal">m</span></div>
+                </div>
+            </div>
 
-function updateKMChipApoio(){
-  if(!lastPosApoio || !kmDatasetApoio.length) return;
-  let best = null, bd = Infinity;
-  for(let i=0; i<kmDatasetApoio.length; i++){
-    const p = kmDatasetApoio[i];
-    const d = hav(lastPosApoio.lat, lastPosApoio.lon, p.lat, p.lon);
-    if(d < bd){ bd = d; best = p; }
-  }
-  if(best) kmValue.textContent = (Math.round(best.km * 100) / 100).toFixed(2).replace('.', ',');
-}
+            <div class="flex items-center gap-3">
+                <button id="btn-toggle-tracker" onclick="Tracker.toggle()" class="flex-1 py-3 px-4 rounded-xl font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-900/30 flex items-center justify-center space-x-2 transition-all">
+                    <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                    <span>Iniciar Monitoramento</span>
+                </button>
+                <button onclick="Tracker.reset()" class="px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-red-400 hover:border-red-500/30 transition-all">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </section>
 
-function startGPSApoio(){
-  if(!('geolocation' in navigator)) return;
-  navigator.geolocation.watchPosition(p => {
-    lastPosApoio = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy };
-    updateGpsStatus();
-    renderApoio();
-    updateKMChipApoio();
-  }, null, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
-}
+        <!-- Quick Action & Filter Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="md:col-span-2 relative">
+                <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                <input type="text" id="input-search" oninput="App.handleSearch(this.value)" placeholder="Pesquisar ativos, códigos, locais..." class="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
+            </div>
+            <button onclick="App.openModal()" class="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-semibold py-3 px-4 rounded-xl flex items-center justify-center space-x-2 transition-all">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>Novo Registro</span>
+            </button>
+        </div>
 
-btnSend.addEventListener('click', ()=>{
-  if(!lastPosApoio) return;
-  const checkboxes = document.querySelectorAll('.item-chk:checked');
-  let selectedItems = [];
+        <!-- Dynamic List of Inspections / Assets -->
+        <section class="space-y-3">
+            <div class="flex items-center justify-between px-1">
+                <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Ativos & Inspeções Mapeadas</h3>
+                <span id="counter-items" class="text-xs bg-slate-900 px-2.5 py-1 rounded-full border border-slate-800 text-slate-400 font-mono">0 itens</span>
+            </div>
 
-  if (checkboxes.length > 0) {
-      checkboxes.forEach(chk => {
-          const id = chk.value;
-          const lat = parseFloat(chk.getAttribute('data-lat'));
-          const lon = parseFloat(chk.getAttribute('data-lon'));
-          selectedItems.push({ id, lat, lon });
-      });
-  } else {
-      const items = nearestN(lastPosApoio.lat, lastPosApoio.lon, Number(qtySel.value || 10));
-      selectedItems = items.map(o => ({ id: o.id, lat: o.lat, lon: o.lon }));
-  }
+            <div id="items-container" class="space-y-3">
+                <!-- Injetado dinamicamente via JS -->
+            </div>
+        </section>
+    </main>
 
-  let tx = `📍 *LISTA DE LOCALIZAÇÃO DE POSTES / NOX*\n`;
-  tx += `Data/Hora: ${nowBR()}\n`;
-  tx += `GPS Atual: ${lastPosApoio.lat.toFixed(6)}, ${lastPosApoio.lon.toFixed(6)} (${fmtAcc(lastPosApoio.acc)})\n\n`;
+    <!-- Floating / Fixed Bottom Navigation / Quick Actions Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 glass border-t border-slate-800/80 px-6 py-3 flex items-center justify-around z-40 max-w-lg mx-auto md:rounded-t-2xl">
+        <button onclick="App.switchTab('home')" id="nav-home" class="flex flex-col items-center space-y-1 text-cyan-400 transition-colors">
+            <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+            <span class="text-[10px] font-medium">Início</span>
+        </button>
+        <button onclick="App.openModal()" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white glow-cyan shadow-lg -mt-5 hover:scale-105 transition-transform">
+            <i data-lucide="plus" class="w-6 h-6"></i>
+        </button>
+        <button onclick="App.generatePDFReport()" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-200 transition-colors">
+            <i data-lucide="file-text" class="w-5 h-5"></i>
+            <span class="text-[10px] font-medium">Gerar PDF</span>
+        </button>
+    </nav>
 
-  selectedItems.forEach((o, index) => {
-    tx += `${index + 1}. *ID:* ${o.id}\n`;
-    if(chkMaps.checked){
-      tx += `   🗺️ https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`;
-    }
-  });
+    <!-- Modal Form for New / Edit Inspection -->
+    <div id="item-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass w-full max-w-lg rounded-2xl border border-slate-800 p-6 space-y-5 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                <h3 class="text-lg font-bold text-slate-200 flex items-center gap-2">
+                    <i data-lucide="clipboard-edit" class="w-5 h-5 text-cyan-400"></i>
+                    <span id="modal-title">Novo Registro de Ativo</span>
+                </h3>
+                <button onclick="App.closeModal()" class="text-slate-400 hover:text-slate-200 p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
 
-  window.open('https://wa.me/?text='+encodeURIComponent(tx),'_blank');
-});
+            <form id="inspection-form" onsubmit="App.saveItem(event)" class="space-y-4">
+                <input type="hidden" id="item-id">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Identificação / Código do Ativo (ex: Luminiária #402)</label>
+                    <input type="text" id="item-title" required placeholder="Ex: Poste 14 - Setor Sul" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Setor / Área</label>
+                        <input type="text" id="item-sector" required placeholder="Ex: Rodovia SP-100" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Status Técnico</label>
+                        <select id="item-status" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                            <option value="Operacional">Operacional</option>
+                            <option value="Manutenção Necessária">Manutenção Necessária</option>
+                            <option value="Crítico / Inativo">Crítico / Inativo</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Observações de Campo</label>
+                    <textarea id="item-notes" rows="3" placeholder="Insira detalhes técnicos, avarias ou anotações..." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 resize-none"></textarea>
+                </div>
+                <div class="flex items-center justify-end space-x-3 pt-2">
+                    <button type="button" onclick="App.closeModal()" class="px-5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm font-semibold shadow-lg shadow-cyan-900/30 hover:opacity-90">Salvar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-qtySel.addEventListener('change', ()=>{
-  currentRenderedKey = "";
-  renderApoio();
-});
+    <!-- Application Script Logic -->
+    <script>
+        // State Management & Reactive Core
+        const State = {
+            items: JSON.parse(localStorage.getItem('nexus_items')) || [
+                { id: '1', title: 'Luminária LED #102', sector: 'Trecho Norte - KM 12', status: 'Operacional', notes: 'Funcionando perfeitamente após substituição do driver.', date: '30/08/2026' },
+                { id: '2', title: 'Painel de Comando Setor B', sector: 'Subestação Central', status: 'Manutenção Necessária', notes: 'Terminais oxidados exigem limpeza corretiva.', date: '30/08/2026' }
+            ],
+            searchQuery: '',
+            tracker: {
+                active: false,
+                startTime: null,
+                elapsedSeconds: 0,
+                distance: 0,
+                lastCoords: null,
+                watchId: null,
+                timerInterval: null
+            }
+        };
 
-function initApoioLocalizacao(){
-    if(apoioInited) return;
-    apoioInited = true;
-    loadCSVApoio();
-    loadKMCSVApoio();
-    startGPSApoio();
-}
+        // Real-Time Telemetry & KM Tracker Engine
+        const Tracker = {
+            toggle() {
+                if (State.tracker.active) {
+                    this.stop();
+                } else {
+                    this.start();
+                }
+            },
+            start() {
+                State.tracker.active = true;
+                State.tracker.startTime = Date.now() - (State.tracker.elapsedSeconds * 1000);
+                
+                document.getElementById('btn-toggle-tracker').innerHTML = `<i data-lucide="square" class="w-4 h-4 fill-current"></i><span>Parar Monitoramento</span>`;
+                document.getElementById('btn-toggle-tracker').className = "flex-1 py-3 px-4 rounded-xl font-semibold bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-lg shadow-red-900/30 flex items-center justify-center space-x-2 transition-all";
+                
+                const badge = document.getElementById('tracker-status-badge');
+                badge.className = "px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                badge.innerText = "Em Execução";
 
+                // Start Timer
+                State.tracker.timerInterval = setInterval(() => {
+                    State.tracker.elapsedSeconds = Math.floor((Date.now() - State.tracker.startTime) / 1000);
+                    App.updateTimerDisplay();
+                }, 1000);
 
-/* ================= MÓDULO 2: INSPEÇÃO FOTOGRÁFICA ================= */
-let kmDB=[], capturing=false, hDir=null, currentStream=null;
-let kmInicialLote = "", buffer = [];
-let curLat = "0.0000", curLon = "0.0000";
-let wakeLock = null;
+                // Start Geolocation Watch
+                if ('geolocation' in navigator) {
+                    State.tracker.watchId = navigator.geolocation.watchPosition(
+                        (pos) => {
+                            const { latitude, longitude, speed, accuracy } = pos.coords;
+                            document.getElementById('metric-gps').innerText = Math.round(accuracy);
+                            if (speed !== null && speed >= 0) {
+                                document.getElementById('metric-speed').innerText = (speed * 3.6).toFixed(1);
+                            }
 
-const vid = document.getElementById('vid');
-const can = document.getElementById('c');
-const ctx = can.getContext('2d');
-const flashDiv = document.getElementById('flash');
-const kmHud = document.getElementById('km-hud');
-const uiControls = document.getElementById('ui-controls');
+                            const currentCoords = { lat: latitude, lng: longitude };
+                            if (State.tracker.lastCoords) {
+                                const dist = Tracker.calcDistance(State.tracker.lastCoords.lat, State.tracker.lastCoords.lng, latitude, longitude);
+                                if (dist > 0.003) { // filtro de ruído mínimo (3 metros)
+                                    State.tracker.distance += dist;
+                                    document.getElementById('metric-distance').innerText = State.tracker.distance.toFixed(2);
+                                    State.tracker.lastCoords = currentCoords;
+                                }
+                            } else {
+                                State.tracker.lastCoords = currentCoords;
+                            }
+                        },
+                        (err) => { console.warn('Erro GPS:', err.message); },
+                        { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+                    );
+                }
+                lucide.createIcons();
+            },
+            stop() {
+                State.tracker.active = false;
+                clearInterval(State.tracker.timerInterval);
+                if (State.tracker.watchId !== null && 'geolocation' in navigator) {
+                    navigator.geolocation.clearWatch(State.tracker.watchId);
+                }
 
-async function startAppInspecao() {
-    try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').style.display = 'none';
-        document.getElementById('app-shell').style.visibility = 'visible';
-        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
-        listCams(); loadCSVInspecao(); initGPSInspecao();
-        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    } catch(e) { alert("Permissão de pasta necessária."); }
-}
+                document.getElementById('btn-toggle-tracker').innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-current"></i><span>Retomar Monitoramento</span>`;
+                document.getElementById('btn-toggle-tracker').className = "flex-1 py-3 px-4 rounded-xl font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-900/30 flex items-center justify-center space-x-2 transition-all";
+                
+                const badge = document.getElementById('tracker-status-badge');
+                badge.className = "px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700";
+                badge.innerText = "Pausado";
+                lucide.createIcons();
+            },
+            reset() {
+                this.stop();
+                State.tracker.elapsedSeconds = 0;
+                State.tracker.distance = 0;
+                State.tracker.lastCoords = null;
+                document.getElementById('metric-distance').innerText = "0.00";
+                document.getElementById('metric-time').innerText = "00:00:00";
+                document.getElementById('metric-speed').innerText = "0.0";
+                document.getElementById('metric-gps').innerText = "-";
+            },
+            calcDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371; // Raio da Terra em km
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                          Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+            }
+        };
 
-async function listCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const vids = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">CÂMERA ${i+1}</option>`).join('');
-    if(vids.length) switchCam(vids[vids.length-1].deviceId);
-}
+        // Application Controller
+        const App = {
+            init() {
+                this.renderItems();
+                lucide.createIcons();
+            },
+            updateTimerDisplay() {
+                const s = State.tracker.elapsedSeconds;
+                const hrs = String(Math.floor(s / 3600)).padStart(2, '0');
+                const mins = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+                const secs = String(s % 60).padStart(2, '0');
+                document.getElementById('metric-time').innerText = `${hrs}:${mins}:${secs}`;
+            },
+            handleSearch(val) {
+                State.searchQuery = val.toLowerCase().trim();
+                this.renderItems();
+            },
+            renderItems() {
+                const container = document.getElementById('items-container');
+                const filtered = State.items.filter(item => 
+                    item.title.toLowerCase().includes(State.searchQuery) ||
+                    item.sector.toLowerCase().includes(State.searchQuery) ||
+                    item.status.toLowerCase().includes(State.searchQuery) ||
+                    item.notes.toLowerCase().includes(State.searchQuery)
+                );
 
-async function switchCam(id) {
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
-    vid.srcObject = currentStream;
-    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-}
+                document.getElementById('counter-items').innerText = `${filtered.length} ${filtered.length === 1 ? 'item' : 'itens'}`;
 
-function handleTouch() {
-    takeManualPhoto();
-    if (uiControls.classList.contains('ui-hidden')) {
-        uiControls.classList.remove('ui-hidden');
-    }
-}
+                if (filtered.length === 0) {
+                    container.innerHTML = `
+                        <div class="glass rounded-2xl p-8 text-center border border-slate-800 text-slate-400 space-y-2">
+                            <i data-lucide="search-x" class="w-8 h-8 mx-auto opacity-50"></i>
+                            <p class="text-sm font-medium">Nenhum registro encontrado</p>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                    return;
+                }
 
-async function takeManualPhoto() {
-    if(!hDir) return;
-    flashDiv.style.opacity = "0.2"; 
-    kmHud.classList.add('hud-pulse');
-    setTimeout(() => { flashDiv.style.opacity = "0"; kmHud.classList.remove('hud-pulse'); }, 70);
-    
-    const currentKm = document.getElementById('km-txt').innerText.replace("KM ", "");
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const bh = can.height * 0.10;
-    ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, can.height - bh, can.width, bh);
-    ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.35}px Arial`;
-    ctx.fillText(`KM ${currentKm}`, 20, can.height - (bh * 0.55));
-    ctx.font = `${bh * 0.22}px Arial`;
-    ctx.fillText(`${new Date().toLocaleString('pt-BR').toUpperCase()} | GPS: ${curLat}, ${curLon}`, 20, can.height - (bh * 0.25));
-    
-    const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
-    const fileName = `MANUAL_KM_${currentKm}_${Date.now()}.jpg`;
-    const fileHandle = await hDir.getFileHandle(fileName, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(blob); await writable.close();
-}
+                container.innerHTML = filtered.map(item => {
+                    const statusColor = item.status === 'Operacional' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                        item.status === 'Manutenção Necessária' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                        'bg-red-500/10 text-red-400 border-red-500/20';
+                    return `
+                        <div class="glass rounded-2xl p-4 border border-slate-800/80 hover:border-slate-700 transition-all space-y-3 group">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <h4 class="font-bold text-slate-200 text-sm md:text-base">${item.title}</h4>
+                                    <span class="text-xs text-cyan-400 font-mono">${item.sector}</span>
+                                </div>
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold border ${statusColor}">${item.status}</span>
+                            </div>
+                            <p class="text-xs text-slate-300 bg-slate-900/60 p-3 rounded-xl border border-slate-800/50">${item.notes || 'Sem observações adicionais.'}</p>
+                            <div class="flex items-center justify-between pt-1 text-[11px] text-slate-500">
+                                <span>Registrado em: ${item.date}</span>
+                                <div class="flex items-center space-x-2">
+                                    <button onclick="App.editItem('${item.id}')" class="p-1.5 rounded-lg bg-slate-900 hover:text-cyan-400 text-slate-400 transition-colors">
+                                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    <button onclick="App.deleteItem('${item.id}')" class="p-1.5 rounded-lg bg-slate-900 hover:text-red-400 text-slate-400 transition-colors">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                lucide.createIcons();
+            },
+            openModal(id = null) {
+                document.getElementById('item-modal').classList.remove('hidden');
+                if (id) {
+                    const item = State.items.find(i => i.id === id);
+                    if (item) {
+                        document.getElementById('modal-title').innerText = 'Editar Registro';
+                        document.getElementById('item-id').value = item.id;
+                        document.getElementById('item-title').value = item.title;
+                        document.getElementById('item-sector').value = item.sector;
+                        document.getElementById('item-status').value = item.status;
+                        document.getElementById('item-notes').value = item.notes;
+                    }
+                } else {
+                    document.getElementById('modal-title').innerText = 'Novo Registro de Ativo';
+                    document.getElementById('inspection-form').reset();
+                    document.getElementById('item-id').value = '';
+                }
+            },
+            closeModal() {
+                document.getElementById('item-modal').classList.add('hidden');
+            },
+            saveItem(e) {
+                e.preventDefault();
+                const id = document.getElementById('item-id').value;
+                const title = document.getElementById('item-title').value;
+                const sector = document.getElementById('item-sector').value;
+                const status = document.getElementById('item-status').value;
+                const notes = document.getElementById('item-notes').value;
+                const date = new Date().toLocaleDateString('pt-BR');
 
-function startCapture() {
-    capturing = true;
-    buffer = [];
-    kmInicialLote = document.getElementById('km-txt').innerText.replace("KM ", "");
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-tag').style.opacity = '1';
-    uiControls.classList.add('ui-hidden'); 
-    captureLoop();
-}
+                if (id) {
+                    State.items = State.items.map(i => i.id === id ? { ...i, title, sector, status, notes } : i);
+                } else {
+                    const newItem = { id: Date.now().toString(), title, sector, status, notes, date };
+                    State.items.unshift(newItem);
+                }
 
-function stopCapture() {
-    capturing = false;
-    if(buffer.length > 0) {
-        const kmFim = document.getElementById('km-txt').innerText.replace("KM ", "");
-        savePDF([...buffer], kmInicialLote, kmFim);
-    }
-    buffer = [];
-    document.getElementById('btn-start').style.display = 'block';
-    document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-tag').style.opacity = '0';
-    uiControls.classList.remove('ui-hidden'); 
-}
+                localStorage.setItem('nexus_items', JSON.stringify(State.items));
+                this.closeModal();
+                this.renderItems();
+            },
+            editItem(id) {
+                this.openModal(id);
+            },
+            deleteItem(id) {
+                if (confirm('Deseja realmente excluir este registro permanentemente?')) {
+                    State.items = State.items.filter(i => i.id !== id);
+                    localStorage.setItem('nexus_items', JSON.stringify(State.items));
+                    this.renderItems();
+                }
+            },
+            exportDataJSON() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(State.items, null, 2));
+                const dlAnchor = document.createElement('a');
+                dlAnchor.setAttribute("href", dataStr);
+                dlAnchor.setAttribute("download", `nexus_backup_${new Date().toISOString().slice(0,10)}.json`);
+                document.body.appendChild(dlAnchor);
+                dlAnchor.click();
+                dlAnchor.remove();
+            },
+            generatePDFReport() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
 
-function captureLoop() {
-    if (!capturing) return;
-    const currentKm = document.getElementById('km-txt').innerText.replace("KM ", "");
-    const limiteLote = parseInt(document.getElementById('cfg-lote').value) || 50;
+                doc.setFillColor(15, 23, 42);
+                doc.rect(0, 0, 210, 297, 'F');
 
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    buffer.push({ 
-        img: can.toDataURL('image/jpeg', 0.5), 
-        km: currentKm, 
-        ts: new Date().toLocaleString('pt-BR').toUpperCase(),
-        gps: `${curLat}, ${curLon}`
-    });
+                doc.setTextColor(6, 182, 212);
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(22);
+                doc.text("Relatório Técnico de Inspeção", 20, 25);
 
-    if (buffer.length >= limiteLote) {
-        savePDF([...buffer], kmInicialLote, currentKm);
-        buffer = []; 
-        kmInicialLote = currentKm;
-    }
-    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
-}
+                doc.setTextColor(148, 163, 184);
+                doc.setFontSize(10);
+                doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | Nexus Core v5`, 20, 33);
+                doc.text(`Distância Registrada na Sessão: ${document.getElementById('metric-distance').innerText} km`, 20, 40);
 
-async function savePDF(dataList, kmIni, kmFim) {
-    const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
-    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
-    for (let i = 0; i < dataList.length; i++) {
-        if (i > 0) doc.addPage();
-        await new Promise(res => {
-            const img = new Image();
-            img.onload = () => {
-                ctx.drawImage(img, 0, 0);
-                const bh = can.height * 0.10;
-                ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, can.height - bh, can.width, bh);
-                ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.35}px Arial`;
-                ctx.fillText(`KM ${dataList[i].km}`, 20, can.height - (bh * 0.55));
-                ctx.font = `${bh * 0.22}px Arial`;
-                ctx.fillText(`${dataList[i].ts} | GPS: ${dataList[i].gps}`, 20, can.height - (bh * 0.25));
-                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
-                res();
-            };
-            img.src = dataList[i].img;
-        });
-    }
-    const fileName = `RELATORIO_KM_${kmIni}_AO_${kmFim}_${Date.now()}.pdf`;
-    const fileHandle = await hDir.getFileHandle(fileName, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(doc.output('blob'));
-    await writable.close();
-}
+                let y = 55;
+                State.items.forEach((item, index) => {
+                    if (y > 260) {
+                        doc.addPage();
+                        doc.setFillColor(15, 23, 42);
+                        doc.rect(0, 0, 210, 297, 'F');
+                        y = 25;
+                    }
 
-function initGPSInspecao() {
-    navigator.geolocation.watchPosition(p => {
-        curLat = p.coords.latitude.toFixed(6); curLon = p.coords.longitude.toFixed(6);
-        if (!kmDB.length) return;
-        let best = null, minD = Infinity;
-        for (const pt of kmDB) {
-            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if (d < minD) { minD = d; best = pt; }
-        }
-        if (best) {
-            document.getElementById('km-txt').innerText = "KM " + best.km;
-            document.getElementById('br-txt').innerText = "";
-        }
-    }, null, { enableHighAccuracy: true });
-}
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(12);
+                    doc.text(`${index + 1}. ${item.title} (${item.sector})`, 20, y);
 
-async function loadCSVInspecao() {
-    try {
-        const r = await fetch('SNVBR116SPRJ.csv');
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ik=h.indexOf('km'), ilt=h.findIndex(x=>x.includes('lat')), iln=h.findIndex(x=>x.includes('lon'));
-        kmDB = rows.map(r => {
-            const c = r.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
-        }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
-}
+                    doc.setTextColor(148, 163, 184);
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(10);
+                    doc.text(`Status: ${item.status} | Data: ${item.date}`, 20, y + 6);
+                    doc.text(`Obs: ${item.notes || 'N/A'}`, 20, y + 12);
 
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
-</script>
+                    doc.setDrawColor(51, 65, 85);
+                    doc.line(20, y + 18, 190, y + 18);
+                    y += 26;
+                });
+
+                doc.save(`relatorio_inspecao_${new Date().toISOString().slice(0,10)}.pdf`);
+            },
+            toggleTheme() {
+                document.documentElement.classList.toggle('dark');
+            },
+            switchTab(tab) {
+                // Navegação fluida entre abas caso necessário
+            }
+        };
+
+        window.onload = () => App.init();
+    </script>
 </body>
 </html>
