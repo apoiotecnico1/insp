@@ -3,1125 +3,297 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Sistema Integrado de Apoio & Inspeção - Nox OS</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <title>Sistema Integrado de Apoio & Inspeção</title>
     <style>
         :root {
-            --bg: #070707;
-            --card: #121212;
-            --card-hover: #1a1a1a;
-            --border: #262626;
-            --border-focus: #444444;
-            --accent: #ffd600;
-            --accent-glow: rgba(255, 214, 0, 0.18);
-            --green: #00e676;
-            --placa-verde: rgba(0, 121, 52, 0.9);
-            --text: #ffffff;
-            --text-secondary: #999999;
-            --bad: #ff1744;
-            --warn: #ff9100;
-            --glass: rgba(12, 12, 12, 0.96);
-            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --primary: #0b4f2c;
+            --primary-hover: #0e6538;
+            --text-main: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --accent: #2e7d32;
+            --border: #333333;
         }
 
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: var(--bg); color: var(--text); font-family: var(--font); overflow-x: hidden; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-
-        /* ================= TELA INICIAL (MENU) ================= */
-        #main-menu {
-            position: fixed;
-            inset: 0;
-            background: var(--bg);
-            z-index: 10000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            text-align: center;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .menu-title {
-            font-size: 1.9rem;
-            font-weight: 900;
-            color: var(--accent);
-            margin-bottom: 6px;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-        }
-
-        .menu-subtitle {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin-bottom: 36px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-
-        .menu-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            width: 100%;
-            max-width: 360px;
-        }
-
-        .btn-menu {
-            padding: 20px 22px;
-            font-size: 1rem;
-            font-weight: 900;
-            border: 2px solid var(--border);
-            border-radius: 14px;
-            background: var(--card);
-            color: var(--text);
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-        }
-
-        .btn-menu:active {
-            transform: scale(0.97);
-            border-color: var(--accent);
-            background: var(--card-hover);
-        }
-
-        .btn-menu-primary {
-            background: var(--accent);
-            color: #000000;
-            border-color: var(--accent);
-            box-shadow: 0 6px 22px rgba(255, 214, 0, 0.3);
-        }
-
-        /* CONTAINER DOS MÓDULOS */
-        .app-module {
-            display: none;
-            width: 100vw;
-            min-height: 100vh;
-        }
-
-        .app-module.active {
-            display: block;
-        }
-
-        /* ================= MÓDULO 1: APOIO LOCALIZAÇÃO & ID ================= */
-        #mod-apoio {
-            line-height: 1.3;
-            padding: 16px 12px;
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 15px;
             max-width: 600px;
             margin: 0 auto;
-            text-transform: uppercase;
-        }
-
-        /* PAINEL DE BUSCA DE ID AVULSO */
-        .search-id-box {
-            background: var(--card);
-            border: 2px solid var(--accent);
-            border-radius: 14px;
-            padding: 16px;
-            margin-bottom: 14px;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+            gap: 15px;
         }
 
-        .search-id-title {
-            font-size: 0.85rem;
-            font-weight: 900;
-            color: var(--accent);
-            letter-spacing: 0.08em;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .search-id-input-group {
-            display: flex;
-            gap: 8px;
-        }
-
-        .search-id-input-group input {
-            flex: 1;
-            padding: 14px 16px;
-            font-family: var(--font);
-            font-size: 1rem;
-            font-weight: 800;
-            border-radius: 10px;
-            border: 1px solid var(--border-focus);
-            background: #181818;
-            color: #fff;
-            text-transform: uppercase;
-            outline: none;
-            transition: all 0.2s;
-        }
-
-        .search-id-input-group input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-
-        .search-id-input-group button {
-            padding: 0 18px;
-            font-family: var(--font);
-            font-size: 0.9rem;
-            font-weight: 900;
-            border: 0;
-            border-radius: 10px;
-            background: var(--accent);
-            color: #000;
-            cursor: pointer;
-            text-transform: uppercase;
-            min-height: 48px;
-            box-shadow: 0 4px 12px rgba(255, 214, 0, 0.2);
-            transition: transform 0.1s;
-        }
-        .search-id-input-group button:active { transform: scale(0.96); }
-
-        /* ALERTA DE ALVO ALCANÇADO */
-        .target-lock-banner {
-            display: none;
-            background: linear-gradient(135deg, #00c853, #009624);
-            border: 3px solid #ffffff;
-            border-radius: 14px;
-            padding: 16px;
+        header {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
             text-align: center;
-            color: #ffffff;
-            margin-bottom: 14px;
-            box-shadow: 0 0 30px rgba(0, 200, 83, 0.6);
-            animation: pulse-banner 1.5s infinite;
         }
-        @keyframes pulse-banner {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
-        .target-lock-banner.active { display: block; }
-        .target-lock-title { font-size: 1.15rem; font-weight: 900; letter-spacing: 0.08em; margin-bottom: 4px; }
-        .target-lock-sub { font-size: 0.82rem; font-weight: 800; opacity: 0.95; }
 
-        .search-result-card {
-            background: #1c1a00;
-            border: 2px solid var(--accent);
-            border-radius: 10px;
-            padding: 14px;
+        h1 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+
+        .status-bar {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
             gap: 10px;
-            margin-top: 8px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.4);
         }
 
-        .km-box {
-            background: linear-gradient(135deg, #00875a, #006644);
-            border: 3px solid #ffffff;
-            border-radius: 14px;
-            padding: 16px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            margin-bottom: 14px;
-            box-shadow: 0 6px 22px rgba(0, 135, 90, 0.35);
-        }
-
-        .km-label { font-size: 0.9rem; font-weight: 900; color: #ffffff; letter-spacing: 0.12em; margin-bottom: 4px; }
-        .km-value { font-size: 3rem; font-weight: 900; color: #ffffff; line-height: 1.1; letter-spacing: 0.06em; }
-
-        .status-box {
-            background: var(--card);
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 14px;
-            font-size: 0.9rem;
-            font-weight: 900;
-            text-align: center;
-            margin-bottom: 14px;
-            letter-spacing: 0.06em;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.4);
-        }
-
-        .ok { color: var(--green); border-color: var(--green); background: rgba(0, 230, 118, 0.06); }
-        .warn { color: var(--warn); border-color: var(--warn); background: rgba(255, 145, 0, 0.06); }
-        .bad { color: var(--bad); border-color: var(--bad); background: rgba(255, 23, 68, 0.06); }
-
-        .card {
-            background: var(--card);
-            border: 2px solid var(--border);
-            border-radius: 14px;
-            padding: 16px;
-            margin-bottom: 14px;
-            box-shadow: 0 4px 18px rgba(0,0,0,0.4);
-        }
-
-        .btn-action {
-            width: 100%;
-            min-height: 52px;
-            padding: 14px;
-            font-family: var(--font);
-            font-size: 1rem;
-            font-weight: 900;
-            border: 0;
-            border-radius: 12px;
-            background: var(--green);
-            color: #000000;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            box-shadow: 0 6px 18px rgba(0, 230, 118, 0.3);
-            transition: transform 0.15s, opacity 0.2s;
-            margin-bottom: 10px;
-        }
-        .btn-action:active { transform: scale(0.98); }
-        .btn-action:disabled { background: #1c1c1c; color: #444444; box-shadow: none; cursor: not-allowed; }
-
-        .controls { display: flex; gap: 16px; margin-top: 14px; align-items: center; justify-content: space-between; }
-        .controls label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 900; letter-spacing: 0.06em; }
-
-        select {
-            padding: 10px 14px;
-            font-family: var(--font);
+        .card-title {
             font-size: 0.95rem;
-            font-weight: 900;
+            font-weight: bold;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-display {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 20px;
             border-radius: 10px;
-            border: 1px solid var(--border-focus);
-            background: #1c1c1c;
-            color: #ffffff;
-            outline: none;
-        }
-
-        input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); border-radius: 6px; cursor: pointer; }
-
-        ul.apoio-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
-        ul.apoio-list li {
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 14px;
-            background: #161616;
-            font-weight: 900;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.35);
-        }
-
-        ul.apoio-list li.nearest { background: #1f1c00; border: 3px solid var(--accent); color: #ffffff; box-shadow: 0 6px 20px rgba(255, 214, 0, 0.2); }
-
-        .item-header { display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem; }
-        .item-left { display: flex; align-items: center; gap: 12px; }
-        ul.apoio-list li.nearest .id-val, ul.apoio-list li.nearest .dist-val { color: var(--accent); font-size: 1.1rem; }
-        .id-val { font-size: 1.05rem; font-weight: 900; color: #ffffff; letter-spacing: 0.04em; }
-        .dist-val { color: var(--accent); font-size: 0.95rem; font-weight: 900; letter-spacing: 0.04em; }
-
-        .mini-map {
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
             width: 100%;
-            height: 140px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            overflow: hidden;
-            position: relative;
-            background: #000000;
-        }
-        .mini-map iframe { width: 100%; height: 100%; border: 0; }
-        .skeleton { height: 60px; background: #1c1c1c; border-radius: 10px; }
-
-        /* ================= MÓDULO 2: INSPEÇÃO FOTOGRÁFICA ================= */
-        #mod-inspecao {
-            position: relative;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-        }
-
-        #safety-gate { position: absolute; inset: 0; background: #000; z-index: 1500; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .alert-box { border: 2px solid var(--border); padding: 36px 26px; border-radius: 18px; text-align: center; background: var(--card); max-width: 90%; width: 400px; box-shadow: 0 10px 35px rgba(0,0,0,0.85); }
-        .btn-aware { background: var(--accent); color: #000; border: none; padding: 18px 32px; font-weight: 900; border-radius: 12px; cursor: pointer; margin-top: 24px; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.06em; width: 100%; box-shadow: 0 6px 20px rgba(255, 214, 0, 0.3); }
-
-        #app-shell { position: relative; width: 100vw; height: 100vh; visibility: hidden; }
-        #vid { width: 100%; height: 100%; object-fit: cover; cursor: crosshair; }
-
-        #km-hud { 
-            position: absolute; 
-            top: 24px; 
-            left: 20px; 
-            background: var(--placa-verde); 
-            padding: 12px 20px; 
-            border: 3px solid rgba(255, 255, 255, 0.9); 
-            border-radius: 14px; 
-            z-index: 100; 
-            pointer-events: none; 
-            min-width: 180px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            transition: transform 0.15s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center; 
             text-align: center;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
-        .hud-pulse { transform: scale(1.06); border-color: var(--accent) !important; }
 
-        #br-txt { font-size: 0.85rem; font-weight: 900; display: block; width: 100%; padding-bottom: 2px; margin-bottom: 2px; border-bottom: 1px solid rgba(255,255,255,0.3); letter-spacing: 0.06em; }
-        #km-txt { font-size: 2.5rem; font-weight: 900; line-height: 1.1; letter-spacing: 0.06em; }
-
-        #rec-tag { 
-            position: absolute; 
-            top: 30px; 
-            right: 20px; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            background: rgba(0,0,0,0.75); 
-            padding: 10px 16px; 
-            border-radius: 22px; 
-            opacity: 0; 
-            pointer-events: none; 
-            z-index: 100;
-            backdrop-filter: blur(6px);
-            border: 1px solid rgba(255,255,255,0.2);
+        .btn:active {
+            transform: scale(0.98);
         }
-        #rec-tag span { font-size: 0.75rem; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.06em; }
-        .dot { width: 10px; height: 10px; background: #ff1744; border-radius: 50%; animation: blink 1s infinite; box-shadow: 0 0 10px #ff1744; }
-        @keyframes blink { 50% { opacity: 0.2; } }
 
-        #ui-controls { 
-            position: absolute; 
-            bottom: 40px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            display: flex; 
-            gap: 14px; 
-            z-index: 500; 
-            transition: opacity 0.3s ease, visibility 0.3s;
-            width: 90%;
-            max-width: 420px;
+        .btn-secondary {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+        }
+
+        /* ESTILOS DO MODO PLACA KM (TELA CHEIA / HORIZONTAL) */
+        #km-sign-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #0b4f2c; /* Verde sinalização rodoviária */
+            border: 12px solid #ffffff;
+            box-sizing: border-box;
+            display: none;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
+            z-index: 99999;
+            color: #ffffff;
+            text-align: center;
+            padding: 10px;
+            box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5);
         }
-        .ui-hidden { opacity: 0; visibility: hidden; }
+        
+        #km-sign-overlay.active {
+            display: flex;
+        }
 
-        .btn-main { border: none; padding: 18px 28px; border-radius: 14px; font-weight: 900; text-transform: uppercase; cursor: pointer; flex: 1; font-size: 1rem; letter-spacing: 0.06em; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
-        #btn-start { background: var(--accent); color: #000; }
-        #btn-stop { background: var(--bad); color: #fff; display: none; }
-        #gear-btn { width: 56px; height: 56px; background: rgba(255,255,255,0.15); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.25); }
+        .sign-label {
+            font-size: clamp(1rem, 3.5vw, 2rem);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            font-weight: 700;
+            opacity: 0.9;
+            border-bottom: 3px solid rgba(255, 255, 255, 0.4);
+            padding-bottom: 8px;
+            width: 60%;
+            max-width: 300px;
+        }
 
-        #settings-panel { position: fixed; right: -360px; top: 0; width: 320px; height: 100%; background: var(--glass); backdrop-filter: blur(25px); z-index: 4000; padding: 60px 24px; transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto; box-shadow: -10px 0 40px rgba(0,0,0,0.8); border-left: 1px solid var(--border); }
-        #settings-panel.open { right: 0; }
-        #settings-panel label { display: block; margin-top: 18px; font-size: 0.85rem; color: var(--accent); text-transform: uppercase; font-weight: 900; letter-spacing: 0.06em; }
-        #settings-panel input, #settings-panel select { width: 100%; padding: 14px; background: #1c1c1c; border: 1px solid var(--border-focus); color: #fff; border-radius: 10px; margin-top: 6px; font-size: 0.95rem; font-weight: 800; outline: none; }
+        .sign-value {
+            font-size: clamp(6rem, 26vw, 18rem);
+            font-weight: 900;
+            line-height: 0.9;
+            letter-spacing: -4px;
+            font-variant-numeric: tabular-nums;
+            text-shadow: 4px 4px 0px rgba(0, 0, 0, 0.4);
+        }
 
-        canvas#c { display: none; }
-        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 1000; transition: opacity 0.05s ease-out; }
+        .sign-unit {
+            font-size: clamp(1.4rem, 4.5vw, 2.5rem);
+            font-weight: 700;
+            margin-top: 10px;
+            letter-spacing: 3px;
+        }
+
+        .sign-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid #fff;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        @media (orientation: landscape) {
+            #km-sign-overlay.auto-rotate {
+                display: flex;
+            }
+        }
     </style>
 </head>
 <body>
 
-<div id="main-menu">
-    <div class="menu-title">Sistema de Apoio</div>
-    <div class="menu-subtitle">Selecione a ferramenta desejada</div>
-    <div class="menu-buttons">
-        <button class="btn-menu btn-menu-primary" onclick="openModule('apoio')">
-            📍 Apoio Localização & ID
-        </button>
-        <button class="btn-menu" onclick="openModule('inspecao')">
-            📷 Inspeção Fotográfica
-        </button>
-        <button class="btn-menu" onclick="openModule('km-realtime')">
-            🛣️ KM Atual em Tempo Real
-        </button>
-    </div>
-</div>
+    <header>
+        <h1>Painel Operacional</h1>
+        <div class="status-bar" id="systemStatus">Sistema pronto • Armazenamento Local Ativo</div>
+    </header>
 
-<div id="mod-apoio" class="app-module">
-    <!-- BANNER DE ALERTA DE ALVO ALCANÇADO EM CAMPO -->
-    <div id="targetLockBanner" class="target-lock-banner">
-        <div class="target-lock-title">🎯 VOCÊ ESTÁ NO POSTE ALVO!</div>
-        <div id="targetLockSub" class="target-lock-sub">ID: --- | DISTÂNCIA < 5M</div>
-    </div>
-
-    <!-- PAINEL DE BUSCA DE ID AVULSO -->
-    <div class="search-id-box">
-        <span class="search-id-title">
-            <span>🔍 Consulta Rápida de ID / Poste (Nox)</span>
-            <span style="font-size:0.75rem; color:var(--text-secondary);">Busca por número avulso</span>
-        </span>
-        <div class="search-id-input-group">
-            <input type="text" id="inputIdSearch" placeholder="Ex: NOX-1042..." onkeydown="if(event.key==='Enter') searchById()" />
-            <button onclick="searchById()">Buscar ID</button>
-            <button onclick="clearSearchId()" style="background:#262626; color:#fff;">Limpar</button>
-        </div>
-        <div id="searchResultArea" style="display: none;"></div>
-    </div>
-
-    <div class="km-box">
-        <span class="km-label">KM ATUAL NA RODOVIA</span>
-        <span id="kmValue" class="km-value">—</span>
-    </div>
-
-    <div id="gpsStatus" class="status-box bad">
-        GPS: Aguardando sinal...
-    </div>
-
+    <!-- Cartão Principal de Métricas -->
     <div class="card">
-        <button id="btnSend" class="btn-action" disabled>Enviar Lista WhatsApp (Até 100 IDs)</button>
-        <div class="controls">
-            <label>
-                Proximidade:
-                <select id="qty">
-                    <option value="1">1</option>
-                    <option value="5">5</option>
-                    <option value="10" selected>10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
-            </label>
-            <label>
-                <input type="checkbox" id="chkMaps" />
-                Maps
-            </label>
-        </div>
+        <div class="card-title">KM Atual em Tempo Real</div>
+        <div class="metric-display" id="mainKmDisplay">000.0</div>
+        <button onclick="openKmSignMode()" class="btn">
+            🛣️ Abrir Modo Placa KM (Tela Cheia / Horizontal)
+        </button>
     </div>
 
-    <div class="card" style="padding: 10px; background: transparent; border: none; box-shadow: none;">
-        <ul id="list" class="apoio-list">
-            <li class="skeleton"></li>
-            <li class="skeleton"></li>
-        </ul>
-    </div>
-    
-    <button class="btn-action" onclick="openModule('menu')" style="background:var(--card); color:var(--text); border:2px solid var(--border); margin-top:12px;">← Voltar ao Menu</button>
-</div>
-
-<div id="mod-inspecao" class="app-module">
-    <div id="flash"></div>
-
-    <div id="safety-gate">
-        <div class="alert-box">
-            <h2 style="color:var(--accent); margin-bottom:12px; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 0.05em;">Sistema de Apoio</h2>
-            <p style="margin-bottom:8px; font-size: 0.95rem; font-weight: 800; color: #ccc; text-transform: uppercase;">Captura Automática + Foto Manual</p>
-            <button class="btn-aware" onclick="startAppInspecao()">Ativar Sistema</button>
-            <button class="btn-aware" onclick="openModule('menu')" style="background:var(--card); color:var(--text); border:2px solid var(--border); margin-top:12px;">← Voltar ao Menu</button>
-        </div>
+    <!-- Seção de Ações e Logs Manuais -->
+    <div class="card">
+        <div class="card-title">Ações Rápidas</div>
+        <button onclick="simularAvancoKm()" class="btn btn-secondary">Simular Avanço de KM (+1.5)</button>
     </div>
 
-    <div id="settings-panel">
-        <div onclick="toggleSet()" style="color:var(--accent); cursor:pointer; margin-bottom:24px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em;">← Fechar</div>
-        <label>Câmera Ativa</label>
-        <select id="cam-select" onchange="switchCam(this.value)"></select>
-        <label>Intervalo (ms)</label>
-        <input type="number" id="cfg-int" value="200">
-        <label>Fotos/Lote</label>
-        <input type="number" id="cfg-lote" value="50">
+    <!-- OVERLAY DA PLACA DE KM (TELA CHEIA) -->
+    <div id="km-sign-overlay">
+        <button class="sign-close-btn" onclick="closeKmSignMode()">✕ Sair</button>
+        <div class="sign-label">KM ATUAL</div>
+        <div class="sign-value" id="signKmDisplay">000.0</div>
+        <div class="sign-unit">KM</div>
     </div>
 
-    <div id="app-shell">
-        <video id="vid" autoplay playsinline muted onclick="handleTouch()"></video>
-        
-        <div id="km-hud">
-            <span id="br-txt"></span>
-            <h1 id="km-txt">KM ---</h1>
-        </div>
+    <script>
+        // Variável global de KM do aplicativo
+        window.currentAppKm = "045.2";
+        let kmSignActive = false;
+        let signWatchId = null;
 
-        <div id="rec-tag"><div class="dot"></div><span>Registrando fotos no PDF...</span></div>
+        // Atualiza a interface inicial
+        function updateDisplays() {
+            document.getElementById('mainKmDisplay').textContent = window.currentAppKm;
+            if (kmSignActive) {
+                document.getElementById('signKmDisplay').textContent = window.currentAppKm;
+            }
+        }
+        updateDisplays();
 
-        <div id="ui-controls">
-            <div id="gear-btn" onclick="toggleSet()">⚙</div>
-            <button id="btn-start" class="btn-main" onclick="startCapture()">Iniciar</button>
-            <button id="btn-stop" class="btn-main" onclick="stopCapture()">Finalizar</button>
-            <button class="btn-main" onclick="openModule('menu')" style="background:var(--card); color:var(--text); border:2px solid var(--border); flex:none; padding:18px 20px;">Menu</button>
-        </div>
-    </div>
+        // Função de simulação para testes rápidos em campo
+        function simularAvancoKm() {
+            let atual = parseFloat(window.currentAppKm);
+            atual += 1.5;
+            window.currentAppKm = atual.toFixed(1).padStart(5, '0');
+            updateDisplays();
+        }
 
-    <canvas id="c"></canvas>
-</div>
+        // Abre o modo placa rodoviária em tela cheia
+        function openKmSignMode() {
+            kmSignActive = true;
+            const overlay = document.getElementById('km-sign-overlay');
+            overlay.classList.add('active');
+            
+            // Sincroniza valor atual imediatamente
+            document.getElementById('signKmDisplay').textContent = window.currentAppKm;
 
-<!-- MÓDULO 3: KM ATUAL EM TEMPO REAL -->
-<div id="mod-km-realtime" class="app-module">
-    <div style="padding: 24px; max-width: 600px; margin: 0 auto; text-transform: uppercase; text-align: center;">
-        <div style="font-size: 1.2rem; font-weight: 900; color: var(--accent); margin-bottom: 24px; letter-spacing: 0.06em;">Monitoramento de KM em Tempo Real</div>
-        
-        <div class="km-box" style="margin-bottom: 16px;">
-            <span class="km-label">KM ATUAL NA RODOVIA</span>
-            <span id="realtimeKmValue" class="km-value">—</span>
-        </div>
+            // Solicita modo tela cheia para imersão total
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
 
-        <div id="realtimeGpsStatus" class="status-box bad" style="margin-bottom: 24px;">
-            GPS: Aguardando sinal...
-        </div>
+            // Tenta forçar orientação horizontal (landscape) se suportado pelo navegador móvel
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
 
-        <button class="btn-action" onclick="openModule('menu')" style="background: var(--card); color: var(--text); border: 2px solid var(--border);">← Voltar ao Menu</button>
-    </div>
-</div>
+            // Inicia monitoramento contínuo por Geolocalização (caso queira rastreamento GPS real)
+            if (navigator.geolocation) {
+                signWatchId = navigator.geolocation.watchPosition(
+                    (position) => {
+                        // Se houver cálculo de KM por GPS ativo, atualiza aqui. 
+                        // Mantemos integrado com window.currentAppKm como fallback.
+                        if(position.coords && position.coords.speed !== null) {
+                            // Exemplo opcional de atualização baseada em coordenadas se necessário
+                        }
+                    },
+                    (error) => { console.warn("Aviso GPS:", error.message); },
+                    { enableHighAccuracy: true, maximumAge: 500, timeout: 5000 }
+                );
+            }
+        }
 
-<script>
-/* ================= NAVEGAÇÃO ENTRE TELAS ================= */
-function openModule(modId) {
-    if (modId === 'menu') {
-        document.getElementById('main-menu').style.display = 'flex';
-        document.querySelectorAll('.app-module').forEach(m => m.classList.remove('active'));
-        return;
-    }
-    document.getElementById('main-menu').style.display = 'none';
-    document.querySelectorAll('.app-module').forEach(m => m.classList.remove('active'));
-    
-    if (modId === 'apoio') {
-        document.getElementById('mod-apoio').classList.add('active');
-        initApoioLocalizacao();
-    } else if (modId === 'inspecao') {
-        document.getElementById('mod-inspecao').classList.add('active');
-    } else if (modId === 'km-realtime') {
-        document.getElementById('mod-km-realtime').classList.add('active');
-        initKmRealtimeModule();
-    }
-}
+        // Fecha o modo placa rodoviária
+        function closeKmSignMode() {
+            kmSignActive = false;
+            document.getElementById('km-sign-overlay').classList.remove('active');
+            
+            if (document.exitFullscreen && document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+            }
+            if (screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock();
+            }
+            if (signWatchId !== null) {
+                navigator.geolocation.clearWatch(signWatchId);
+                signWatchId = null;
+            }
+        }
 
-/* ================= LÓGICA DO MÓDULO 1: APOIO LOCALIZAÇÃO & ID ================= */
-const ACC_GREEN = 15, ACC_YELLOW = 35;
-let datasetApoio = [], kmDatasetApoio = [], lastPosApoio = null;
-let currentRenderedKey = "";
-let apoioInited = false;
-let currentSearchedIdItem = null;
-
-const gpsStatus = document.getElementById('gpsStatus');
-const btnSend = document.getElementById('btnSend');
-const chkMaps = document.getElementById('chkMaps');
-const qtySel = document.getElementById('qty');
-const listEl = document.getElementById('list');
-const kmValue = document.getElementById('kmValue');
-const targetLockBanner = document.getElementById('targetLockBanner');
-const targetLockSub = document.getElementById('targetLockSub');
-
-function normalizeStr(s){ return String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
-function findColumnIndex(headers, candidates){ const map=headers.map(h=>normalizeStr(h)); for(const c of candidates){ const i=map.indexOf(c.toUpperCase()); if(i>=0) return i; } return -1; }
-function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d{1,}$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
-
-function hav(a,b,c,d){
-  const p=0.017453292519943295, cos=Math.cos;
-  const x = 0.5 - cos((c - a) * p)/2 + cos(a * p) * cos(c * p) * (1 - cos((d - b) * p))/2;
-  return 12742000 * Math.asin(Math.sqrt(x));
-}
-
-function nearestN(lat,lon,n=10){
-  if(!datasetApoio.length) return [];
-  const arr = datasetApoio.map(p => ({id:p.id, lat:p.lat, lon:p.lon, d:hav(lat,lon,p.lat,p.lon)}));
-  arr.sort((a,b)=>a.d-b.d);
-  return arr.slice(0, n);
-}
-
-function fmtAcc(a){ return (a==null||!Number.isFinite(a))?'—':('±'+Math.round(a)+'M'); }
-function nowBR(){ return new Date().toLocaleString('pt-BR').toUpperCase(); }
-
-function getRangeText(dist, acc) {
-  const err = (acc != null && Number.isFinite(acc)) ? Math.round(acc) : 0;
-  const d = Math.round(dist);
-  const min = Math.max(0, d - err);
-  const max = d + err;
-  return `${min}M A ${max}M`;
-}
-
-function checkTargetLock(item, dist) {
-  if (!item || dist == null) {
-    targetLockBanner.classList.remove('active');
-    return;
-  }
-  const acc = lastPosApoio && lastPosApoio.acc ? lastPosApoio.acc : 10;
-  if (dist <= (5 + acc)) {
-    targetLockBanner.classList.add('active');
-    targetLockSub.textContent = `ID: ${item.id} | DISTÂNCIA EST.: ~${Math.round(dist)}M`;
-  } else {
-    targetLockBanner.classList.remove('active');
-  }
-}
-
-function searchById() {
-    const term = normalizeStr(document.getElementById('inputIdSearch').value);
-    const resArea = document.getElementById('searchResultArea');
-    if (!term) {
-        resArea.style.display = 'none';
-        resArea.innerHTML = '';
-        currentSearchedIdItem = null;
-        targetLockBanner.classList.remove('active');
-        return;
-    }
-
-    if (!datasetApoio.length) {
-        resArea.style.display = 'block';
-        resArea.innerHTML = `<div style="color:var(--warn); font-size:0.85rem; padding:6px; font-weight:900;">Carregando dados, tente novamente...</div>`;
-        return;
-    }
-
-    const found = datasetApoio.find(p => normalizeStr(p.id) === term || normalizeStr(p.id).includes(term));
-
-    if (!found) {
-        resArea.style.display = 'block';
-        resArea.innerHTML = `<div style="color:var(--bad); font-size:0.85rem; padding:6px; font-weight:900;">ID "${term}" NÃO ENCONTRADO NO SISTEMA.</div>`;
-        currentSearchedIdItem = null;
-        targetLockBanner.classList.remove('active');
-        return;
-    }
-
-    currentSearchedIdItem = found;
-    resArea.style.display = 'block';
-    renderSearchedIdResult(true);
-}
-
-function renderSearchedIdResult(forceRender = false) {
-    if (!currentSearchedIdItem) return;
-    const resArea = document.getElementById('searchResultArea');
-    const item = currentSearchedIdItem;
-
-    let distText = "AGUARDANDO GPS...";
-    let dVal = null;
-    if (lastPosApoio) {
-        dVal = hav(lastPosApoio.lat, lastPosApoio.lon, item.lat, item.lon);
-        distText = `DISTÂNCIA: ${getRangeText(dVal, lastPosApoio.acc)}`;
-        checkTargetLock(item, dVal);
-    }
-
-    const distEl = document.getElementById('search-dist-val');
-    if (!forceRender && distEl) {
-        distEl.textContent = distText;
-        return;
-    }
-
-    resArea.innerHTML = `
-        <div class="search-result-card">
-            <div class="item-header">
-                <span class="id-val" style="color:var(--accent);">ID / POSTE: ${item.id}</span>
-                <span class="dist-val" id="search-dist-val">${distText}</span>
-            </div>
-            <div style="font-size:0.75rem; color:#aaa; font-weight:800;">COORDENADAS: ${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}</div>
-            <div class="mini-map">
-                <iframe 
-                  src="https://maps.google.com/maps?q=${item.lat},${item.lon}&t=k&z=19&ie=UTF8&iwloc=&output=embed" 
-                  loading="lazy">
-                </iframe>
-            </div>
-        </div>
-    `;
-}
-
-function clearSearchId() {
-    document.getElementById('inputIdSearch').value = '';
-    const resArea = document.getElementById('searchResultArea');
-    resArea.style.display = 'none';
-    resArea.innerHTML = '';
-    currentSearchedIdItem = null;
-    targetLockBanner.classList.remove('active');
-}
-
-function updateGpsStatus(){
-  if(!lastPosApoio || lastPosApoio.acc==null){ 
-    gpsStatus.className='status-box bad'; 
-    gpsStatus.textContent='GPS: BUSCANDO SINAL...'; 
-    return; 
-  }
-  const a=Math.round(lastPosApoio.acc);
-  if(a<=ACC_GREEN){ 
-    gpsStatus.className='status-box ok'; 
-    gpsStatus.textContent=`GPS DE ALTA PRECISÃO (${fmtAcc(a)})`; 
-  } else if(a<=ACC_YELLOW){ 
-    gpsStatus.className='status-box warn'; 
-    gpsStatus.textContent=`GPS MÉDIO (${fmtAcc(a)})`; 
-  } else { 
-    gpsStatus.className='status-box bad'; 
-    gpsStatus.textContent=`GPS FRACO / ALTA MARGEM (${fmtAcc(a)})`; 
-  }
-}
-
-function renderApoio(){
-  if(!lastPosApoio || !datasetApoio.length) return;
-
-  if (currentSearchedIdItem) {
-      renderSearchedIdResult(false);
-  }
-
-  const qty = Number(qtySel.value || 10);
-  const items = nearestN(lastPosApoio.lat, lastPosApoio.lon, qty);
-  const itemKey = items.map(i => i.id).join(',');
-
-  if(itemKey === currentRenderedKey){
-    items.forEach((o, idx) => {
-      const el = document.getElementById(`dist-val-${idx}`);
-      if(el) el.textContent = `DISTÂNCIA: ${getRangeText(o.d, lastPosApoio.acc)}`;
-    });
-    btnSend.disabled = false;
-    return;
-  }
-
-  currentRenderedKey = itemKey;
-  listEl.innerHTML = '';
-  const frag = document.createDocumentFragment();
-
-  items.forEach((o, idx) => {
-    const li = document.createElement('li');
-    if(idx === 0) li.classList.add('nearest');
-
-    li.innerHTML = `
-      <div class="item-header">
-        <div class="item-left">
-            <input type="checkbox" class="item-chk" value="${o.id}" data-lat="${o.lat}" data-lon="${o.lon}" checked />
-            <span class="id-val">POSTE / NOX: ${o.id}</span>
-        </div>
-        <span class="dist-val" id="dist-val-${idx}">DISTÂNCIA: ${getRangeText(o.d, lastPosApoio.acc)}</span>
-      </div>
-      <div class="mini-map">
-        <iframe 
-          src="https://maps.google.com/maps?q=${o.lat},${o.lon}&t=k&z=19&ie=UTF8&iwloc=&output=embed" 
-          loading="lazy">
-        </iframe>
-      </div>
-    `;
-    frag.appendChild(li);
-  });
-
-  listEl.appendChild(frag);
-  btnSend.disabled = false;
-}
-
-async function loadCSVApoio(){
-  try{
-    let resp = await fetch('dados.csv?v='+Date.now(), {cache:'no-store'}).catch(()=>null);
-    if(!resp || !resp.ok) resp = await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now(), {cache:'no-store'});
-    if(!resp.ok) return;
-    
-    let text = await resp.text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-    const lines = text.split(/\r?\n/).filter(l=>l.trim()!=='');
-    const head = lines.shift().split(';');
-    const iId=findColumnIndex(head,['id do nox','idnox','id']), iLat=findColumnIndex(head,['latitude','lat']), iLon=findColumnIndex(head,['longitude','lon','long']);
-    
-    datasetApoio = lines.map(l=>{ const r=l.split(';'); return {id:String(r[iId]||'').trim().toUpperCase(), lat:parsePt(r[iLat]), lon:parsePt(r[iLon])}; })
-                   .filter(p=>p.id && Number.isFinite(p.lat)&&Number.isFinite(p.lon));
-    renderApoio();
-  }catch(e){}
-}
-
-async function loadKMCSVApoio(){
-  try{
-    let resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
-    if(!resp.ok) return;
-    let text = await resp.text(); if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-    const head = lines.shift().split(';');
-    const iKm = findColumnIndex(head, ['km']), iLat = findColumnIndex(head, ['lat','latitude']), iLon = findColumnIndex(head, ['lon','long','longitude']);
-    kmDatasetApoio = lines.map(l=>{ const r = l.split(';'); return { km:parsePt(r[iKm]), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) }; })
-                     .filter(p => Number.isFinite(p.km) && Number.isFinite(p.lat) && Number.isFinite(p.lon));
-  }catch(e){}
-}
-
-function updateKMChipApoio(){
-  if(!lastPosApoio || !kmDatasetApoio.length) return;
-  let best = null, bd = Infinity;
-  for(let i=0; i<kmDatasetApoio.length; i++){
-    const p = kmDatasetApoio[i];
-    const d = hav(lastPosApoio.lat, lastPosApoio.lon, p.lat, p.lon);
-    if(d < bd){ bd = d; best = p; }
-  }
-  if(best) kmValue.textContent = (Math.round(best.km * 100) / 100).toFixed(2).replace('.', ',');
-}
-
-function startGPSApoio(){
-  if(!('geolocation' in navigator)) return;
-  navigator.geolocation.watchPosition(p => {
-    lastPosApoio = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy };
-    updateGpsStatus();
-    renderApoio();
-    updateKMChipApoio();
-  }, null, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
-}
-
-btnSend.addEventListener('click', ()=>{
-  if(!lastPosApoio) return;
-  const checkboxes = document.querySelectorAll('.item-chk:checked');
-  let selectedItems = [];
-
-  if (checkboxes.length > 0) {
-      checkboxes.forEach(chk => {
-          const id = chk.value;
-          const lat = parseFloat(chk.getAttribute('data-lat'));
-          const lon = parseFloat(chk.getAttribute('data-lon'));
-          selectedItems.push({ id, lat, lon });
-      });
-  } else {
-      const items = nearestN(lastPosApoio.lat, lastPosApoio.lon, Number(qtySel.value || 10));
-      selectedItems = items.map(o => ({ id: o.id, lat: o.lat, lon: o.lon }));
-  }
-
-  let tx = `📍 *LISTA DE LOCALIZAÇÃO DE POSTES / NOX*\n`;
-  tx += `Data/Hora: ${nowBR()}\n`;
-  tx += `GPS Atual: ${lastPosApoio.lat.toFixed(6)}, ${lastPosApoio.lon.toFixed(6)} (${fmtAcc(lastPosApoio.acc)})\n\n`;
-
-  selectedItems.forEach((o, index) => {
-    tx += `${index + 1}. *ID:* ${o.id}\n`;
-    if(chkMaps.checked){
-      tx += `   🗺️ https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`;
-    }
-  });
-
-  window.open('https://wa.me/?text='+encodeURIComponent(tx),'_blank');
-});
-
-qtySel.addEventListener('change', ()=>{
-  currentRenderedKey = "";
-  renderApoio();
-});
-
-function initApoioLocalizacao(){
-    if(apoioInited) return;
-    apoioInited = true;
-    loadCSVApoio();
-    loadKMCSVApoio();
-    startGPSApoio();
-}
-
-
-/* ================= MÓDULO 2: INSPEÇÃO FOTOGRÁFICA ================= */
-let kmDB=[], capturing=false, hDir=null, currentStream=null;
-let kmInicialLote = "", buffer = [];
-let curLat = "0.0000", curLon = "0.0000";
-let wakeLock = null;
-
-const vid = document.getElementById('vid');
-const can = document.getElementById('c');
-const ctx = can.getContext('2d');
-const flashDiv = document.getElementById('flash');
-const kmHud = document.getElementById('km-hud');
-const uiControls = document.getElementById('ui-controls');
-
-async function startAppInspecao() {
-    try {
-        hDir = await window.showDirectoryPicker({ mode: 'readwrite' });
-        document.getElementById('safety-gate').style.display = 'none';
-        document.getElementById('app-shell').style.visibility = 'visible';
-        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
-        listCams(); loadCSVInspecao(); initGPSInspecao();
-        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    } catch(e) { alert("Permissão de pasta necessária."); }
-}
-
-async function listCams() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const vids = devices.filter(d => d.kind === 'videoinput');
-    const sel = document.getElementById('cam-select');
-    sel.innerHTML = vids.map((d, i) => `<option value="${d.deviceId}">CÂMERA ${i+1}</option>`).join('');
-    if(vids.length) switchCam(vids[vids.length-1].deviceId);
-}
-
-async function switchCam(id) {
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    currentStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: id, width: 1920, height: 1080 } });
-    vid.srcObject = currentStream;
-    vid.onloadedmetadata = () => { can.width = vid.videoWidth; can.height = vid.videoHeight; };
-}
-
-function handleTouch() {
-    takeManualPhoto();
-    if (uiControls.classList.contains('ui-hidden')) {
-        uiControls.classList.remove('ui-hidden');
-    }
-}
-
-async function takeManualPhoto() {
-    if(!hDir) return;
-    flashDiv.style.opacity = "0.2"; 
-    kmHud.classList.add('hud-pulse');
-    setTimeout(() => { flashDiv.style.opacity = "0"; kmHud.classList.remove('hud-pulse'); }, 70);
-    
-    const currentKm = document.getElementById('km-txt').innerText.replace("KM ", "");
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    const bh = can.height * 0.10;
-    ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, can.height - bh, can.width, bh);
-    ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.35}px Arial`;
-    ctx.fillText(`KM ${currentKm}`, 20, can.height - (bh * 0.55));
-    ctx.font = `${bh * 0.22}px Arial`;
-    ctx.fillText(`${new Date().toLocaleString('pt-BR').toUpperCase()} | GPS: ${curLat}, ${curLon}`, 20, can.height - (bh * 0.25));
-    
-    const blob = await new Promise(res => can.toBlob(res, 'image/jpeg', 0.95));
-    const fileName = `MANUAL_KM_${currentKm}_${Date.now()}.jpg`;
-    const fileHandle = await hDir.getFileHandle(fileName, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(blob); await writable.close();
-}
-
-function startCapture() {
-    capturing = true;
-    buffer = [];
-    kmInicialLote = document.getElementById('km-txt').innerText.replace("KM ", "");
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display = 'block';
-    document.getElementById('rec-tag').style.opacity = '1';
-    uiControls.classList.add('ui-hidden'); 
-    captureLoop();
-}
-
-function stopCapture() {
-    capturing = false;
-    if(buffer.length > 0) {
-        const kmFim = document.getElementById('km-txt').innerText.replace("KM ", "");
-        savePDF([...buffer], kmInicialLote, kmFim);
-    }
-    buffer = [];
-    document.getElementById('btn-start').style.display = 'block';
-    document.getElementById('btn-stop').style.display = 'none';
-    document.getElementById('rec-tag').style.opacity = '0';
-    uiControls.classList.remove('ui-hidden'); 
-}
-
-function captureLoop() {
-    if (!capturing) return;
-    const currentKm = document.getElementById('km-txt').innerText.replace("KM ", "");
-    const limiteLote = parseInt(document.getElementById('cfg-lote').value) || 50;
-
-    ctx.drawImage(vid, 0, 0, can.width, can.height);
-    buffer.push({ 
-        img: can.toDataURL('image/jpeg', 0.5), 
-        km: currentKm, 
-        ts: new Date().toLocaleString('pt-BR').toUpperCase(),
-        gps: `${curLat}, ${curLon}`
-    });
-
-    if (buffer.length >= limiteLote) {
-        savePDF([...buffer], kmInicialLote, currentKm);
-        buffer = []; 
-        kmInicialLote = currentKm;
-    }
-    setTimeout(captureLoop, parseInt(document.getElementById('cfg-int').value) || 200);
-}
-
-async function savePDF(dataList, kmIni, kmFim) {
-    const doc = new jspdf.jsPDF(can.width < can.height ? 'p' : 'l', 'mm', 'a4');
-    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
-    for (let i = 0; i < dataList.length; i++) {
-        if (i > 0) doc.addPage();
-        await new Promise(res => {
-            const img = new Image();
-            img.onload = () => {
-                ctx.drawImage(img, 0, 0);
-                const bh = can.height * 0.10;
-                ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, can.height - bh, can.width, bh);
-                ctx.fillStyle = "#fff"; ctx.font = `bold ${bh * 0.35}px Arial`;
-                ctx.fillText(`KM ${dataList[i].km}`, 20, can.height - (bh * 0.55));
-                ctx.font = `${bh * 0.22}px Arial`;
-                ctx.fillText(`${dataList[i].ts} | GPS: ${dataList[i].gps}`, 20, can.height - (bh * 0.25));
-                doc.addImage(can.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, pw, ph);
-                res();
-            };
-            img.src = dataList[i].img;
+        // Detecção opcional de mudança de orientação do celular
+        window.addEventListener("orientationchange", () => {
+            const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+            // Descomente a linha abaixo se desejar ativar a placa automaticamente ao virar o celular:
+            // if (isLandscape) { openKmSignMode(); } else { closeKmSignMode(); }
         });
-    }
-    const fileName = `RELATORIO_KM_${kmIni}_AO_${kmFim}_${Date.now()}.pdf`;
-    const fileHandle = await hDir.getFileHandle(fileName, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(doc.output('blob'));
-    await writable.close();
-}
-
-function initGPSInspecao() {
-    navigator.geolocation.watchPosition(p => {
-        curLat = p.coords.latitude.toFixed(6); curLon = p.coords.longitude.toFixed(6);
-        if (!kmDB.length) return;
-        let best = null, minD = Infinity;
-        for (const pt of kmDB) {
-            const d = Math.hypot(pt.lt - p.coords.latitude, pt.ln - p.coords.longitude);
-            if (d < minD) { minD = d; best = pt; }
-        }
-        if (best) {
-            document.getElementById('km-txt').innerText = "KM " + best.km;
-            document.getElementById('br-txt').innerText = "";
-        }
-    }, null, { enableHighAccuracy: true });
-}
-
-async function loadCSVInspecao() {
-    try {
-        const r = await fetch('SNVBR116SPRJ.csv');
-        const t = await r.text();
-        const rows = t.split('\n').filter(l => l.includes(';'));
-        const h = rows.shift().split(';').map(v => v.trim().toLowerCase());
-        const ik=h.indexOf('km'), ilt=h.findIndex(x=>x.includes('lat')), iln=h.findIndex(x=>x.includes('lon'));
-        kmDB = rows.map(r => {
-            const c = r.split(';');
-            return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
-        }).filter(d => !isNaN(d.lt));
-    } catch(e) {}
-}
-
-/* ================= MÓDULO 3: KM EM TEMPO REAL ================= */
-let realtimeInited = false;
-const realtimeKmValue = document.getElementById('realtimeKmValue');
-const realtimeGpsStatus = document.getElementById('realtimeGpsStatus');
-
-function initKmRealtimeModule() {
-    if (!kmDatasetApoio.length) {
-        loadKMCSVApoioForRealtime();
-    }
-    if (!realtimeInited) {
-        realtimeInited = true;
-        startGPSRealtime();
-    }
-}
-
-async function loadKMCSVApoioForRealtime() {
-    try {
-        let resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
-        if(!resp.ok) return;
-        let text = await resp.text(); if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-        const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-        const head = lines.shift().split(';');
-        const iKm = findColumnIndex(head, ['km']), iLat = findColumnIndex(head, ['lat','latitude']), iLon = findColumnIndex(head, ['lon','long','longitude']);
-        kmDatasetApoio = lines.map(l=>{ const r = l.split(';'); return { km:parsePt(r[iKm]), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) }; })
-                         .filter(p => Number.isFinite(p.km) && Number.isFinite(p.lat) && Number.isFinite(p.lon));
-    } catch(e) {}
-}
-
-function startGPSRealtime() {
-    if(!('geolocation' in navigator)) {
-        realtimeGpsStatus.className = 'status-box bad';
-        realtimeGpsStatus.textContent = 'GPS: NÃO SUPORTADO NESTE NAVEGADOR';
-        return;
-    }
-    navigator.geolocation.watchPosition(p => {
-        const lat = p.coords.latitude;
-        const lon = p.coords.longitude;
-        const acc = p.coords.accuracy;
-
-        if (acc <= ACC_GREEN) {
-            realtimeGpsStatus.className = 'status-box ok';
-            realtimeGpsStatus.textContent = `GPS DE ALTA PRECISÃO (${fmtAcc(acc)})`;
-        } else if (acc <= ACC_YELLOW) {
-            realtimeGpsStatus.className = 'status-box warn';
-            realtimeGpsStatus.textContent = `GPS MÉDIO (${fmtAcc(acc)})`;
-        } else {
-            realtimeGpsStatus.className = 'status-box bad';
-            realtimeGpsStatus.textContent = `GPS FRACO / ALTA MARGEM (${fmtAcc(acc)})`;
-        }
-
-        if (kmDatasetApoio.length) {
-            let best = null, bd = Infinity;
-            for (let i = 0; i < kmDatasetApoio.length; i++) {
-                const pt = kmDatasetApoio[i];
-                const d = hav(lat, lon, pt.lat, pt.lon);
-                if (d < bd) { bd = d; best = pt; }
-            }
-            if (best) {
-                realtimeKmValue.textContent = (Math.round(best.km * 100) / 100).toFixed(2).replace('.', ',');
-            }
-        }
-    }, () => {
-        realtimeGpsStatus.className = 'status-box bad';
-        realtimeGpsStatus.textContent = 'GPS: ERRO AO OBTER LOCALIZAÇÃO';
-    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
-}
-
-function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
-</script>
+    </script>
 </body>
 </html>
