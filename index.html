@@ -9,7 +9,6 @@
         :root {
             --primary: #0f172a;
             --accent: #2563eb;
-            --whatsapp: #25d366;
             --bg: #f8fafc;
             --card: #ffffff;
             --text: #1e293b;
@@ -25,8 +24,6 @@
         input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
         button { background: var(--accent); color: white; font-weight: 600; border: none; cursor: pointer; transition: background 0.2s; }
         button:hover { background: #1d4ed8; }
-        .btn-wa { background: var(--whatsapp); margin-bottom: 0; }
-        .btn-wa:hover { background: #1ebe5d; }
         .row { display: flex; gap: 8px; }
         .row > div { flex: 1; }
         .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.9rem; font-weight: 600; }
@@ -70,11 +67,11 @@
             <span>Resultados</span>
             <span id="counter">0 encontrados</span>
         </div>
-        <div id="resultsList" style="margin-bottom: 12px;"></div>
-        <button type="button" class="btn-wa" onclick="sendWhatsApp()">Enviar pelo WhatsApp</button>
+        <div id="resultsList"></div>
     </div>
 
     <script>
+        // Mock data base for demonstration and offline storage sync
         let database = [
             { id: "LUM-001", desc: "Luminaire Rodovia KM 12 - Faixa 1", lat: -22.9068, lng: -43.1729 },
             { id: "LUM-002", desc: "Luminaire Rodovia KM 12 - Faixa 2", lat: -22.9070, lng: -43.1730 },
@@ -87,8 +84,7 @@
             const query = document.getElementById('searchId').value.toLowerCase().trim();
             const limit = parseInt(document.getElementById('pageSize').value);
             
-            // Filtro exclusivo por ID avulso digitado
-            const filtered = database.filter(item => item.id.toLowerCase().includes(query));
+            const filtered = database.filter(item => item.id.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query));
             const paginated = filtered.slice(0, limit);
 
             const container = document.getElementById('resultsList');
@@ -107,26 +103,6 @@
                 div.innerHTML = `<strong>${item.id}</strong><br>${item.desc}<br><small style="color:#64748b">Lat: ${item.lat}, Lng: ${item.lng}</small>`;
                 container.appendChild(div);
             });
-        }
-
-        function sendWhatsApp() {
-            const query = document.getElementById('searchId').value.toLowerCase().trim();
-            const limit = parseInt(document.getElementById('pageSize').value);
-            const filtered = database.filter(item => item.id.toLowerCase().includes(query));
-            const paginated = filtered.slice(0, limit);
-
-            if (paginated.length === 0) {
-                alert('Nenhum registro selecionado para enviar.');
-                return;
-            }
-
-            let text = 'IDs Selecionados:\n';
-            paginated.forEach(item => {
-                text += `${item.id}\n`;
-            });
-
-            const encoded = encodeURIComponent(text);
-            window.open(`https://wa.me/?text=${encoded}`, '_blank');
         }
 
         function getLocation() {
@@ -149,6 +125,7 @@
             );
         }
 
+        // Initial render
         window.onload = filterData;
     </script>
 </body>
