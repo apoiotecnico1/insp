@@ -231,12 +231,12 @@
             box-shadow: 0 4px 16px rgba(0,0,0,0.4);
         }
 
-        button#btnSend {
+        .btn-action {
             width: 100%;
             min-height: 48px;
             padding: 12px;
             font-family: var(--font);
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 900;
             border: 0;
             border-radius: 10px;
@@ -247,9 +247,14 @@
             letter-spacing: 0.05em;
             box-shadow: 0 4px 14px rgba(0, 230, 118, 0.25);
             transition: opacity 0.2s;
+            margin-bottom: 8px;
         }
+        .btn-action:disabled { background: #1c1c1c; color: #444444; box-shadow: none; cursor: not-allowed; }
 
-        button#btnSend:disabled { background: #1c1c1c; color: #444444; box-shadow: none; cursor: not-allowed; }
+        .btn-action-alt {
+            background: var(--accent);
+            box-shadow: 0 4px 14px rgba(255, 214, 0, 0.25);
+        }
 
         .controls { display: flex; gap: 16px; margin-top: 12px; align-items: center; justify-content: space-between; }
         .controls label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 900; letter-spacing: 0.05em; }
@@ -284,6 +289,7 @@
         ul.apoio-list li.nearest { background: #1f1c00; border: 3px solid var(--accent); color: #ffffff; box-shadow: 0 4px 16px rgba(255, 214, 0, 0.15); }
 
         .item-header { display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem; }
+        .item-left { display: flex; align-items: center; gap: 10px; }
         ul.apoio-list li.nearest .id-val, ul.apoio-list li.nearest .dist-val { color: var(--accent); font-size: 1.1rem; }
         .id-val { font-size: 1.05rem; font-weight: 900; color: #ffffff; letter-spacing: 0.03em; }
         .dist-val { color: var(--accent); font-size: 0.95rem; font-weight: 900; letter-spacing: 0.03em; }
@@ -426,7 +432,8 @@
     </div>
 
     <div class="card">
-        <button id="btnSend" disabled>Enviar WhatsApp</button>
+        <button id="btnSend" class="btn-action" disabled>Enviar Lista WhatsApp</button>
+        <button id="btnSendMaintenance" class="btn-action btn-action-alt" onclick="sendMaintenanceSelected()" disabled>⚡ Acionar Manutenção (Selecionados / 1+)</button>
         <div class="controls">
             <label>
                 Qtd:
@@ -516,6 +523,7 @@ let currentSearchedIdItem = null;
 
 const gpsStatus = document.getElementById('gpsStatus');
 const btnSend = document.getElementById('btnSend');
+const btnSendMaintenance = document.getElementById('btnSendMaintenance');
 const chkMaps = document.getElementById('chkMaps');
 const qtySel = document.getElementById('qty');
 const listEl = document.getElementById('list');
@@ -574,14 +582,9 @@ function searchById() {
         return;
     }
 
-    if (!currentSearchedIdItem || currentSearchedIdItem.id !== found.id) {
-        currentSearchedIdItem = found;
-        resArea.style.display = 'block';
-        renderSearchedIdResult(true);
-    } else {
-        currentSearchedIdItem = found;
-        renderSearchedIdResult(false);
-    }
+    currentSearchedIdItem = found;
+    resArea.style.display = 'block';
+    renderSearchedIdResult(true);
 }
 
 function renderSearchedIdResult(forceRender = false) {
@@ -590,9 +593,10 @@ function renderSearchedIdResult(forceRender = false) {
     const item = currentSearchedIdItem;
 
     let distText = "AGUARDANDO GPS...";
+    let dVal = 0;
     if (lastPosApoio) {
-        const d = hav(lastPosApoio.lat, lastPosApoio.lon, item.lat, item.lon);
-        distText = `DISTÂNCIA: ${getRangeText(d, lastPosApoio.acc)}`;
+        dVal = hav(lastPosApoio.lat, lastPosApoio.lon, item.lat, item.lon);
+        distText = `DISTÂNCIA: ${getRangeText(dVal, lastPosApoio.acc)}`;
     }
 
     const distEl = document.getElementById('search-dist-val');
@@ -614,6 +618,7 @@ function renderSearchedIdResult(forceRender = false) {
                   loading="lazy">
                 </iframe>
             </div>
+            <button onclick="sendMaintenanceSingle('${item.id}', ${item.lat}, ${item.lon})" style="margin-top:4px; width:100%; min-height:42px; background:var(--accent); color:#000; font-weight:900; border:0; border-radius:6px; cursor:pointer; text-transform:uppercase; font-size:0.85rem;">⚡ SOLICITAR ACIONAMENTO / MANUTENÇÃO (WHATSAPP)</button>
         </div>
     `;
 }
@@ -662,6 +667,7 @@ function renderApoio(){
       if(el) el.textContent = `DISTÂNCIA: ${getRangeText(o.d, lastPosApoio.acc)}`;
     });
     btnSend.disabled = false;
+    btnSendMaintenance.disabled = false;
     return;
   }
 
@@ -675,7 +681,10 @@ function renderApoio(){
 
     li.innerHTML = `
       <div class="item-header">
-        <span class="id-val">${o.id}</span>
+        <div class="item-left">
+            <input type="checkbox" class="item-chk" value="${o.id}" data-lat="${o.lat}" data-lon="${o.lon}" />
+            <span class="id-val">${o.id}</span>
+        </div>
         <span class="dist-val" id="dist-val-${idx}">DISTÂNCIA: ${getRangeText(o.d, lastPosApoio.acc)}</span>
       </div>
       <div class="mini-map">
@@ -690,6 +699,7 @@ function renderApoio(){
 
   listEl.appendChild(frag);
   btnSend.disabled = false;
+  btnSendMaintenance.disabled = false;
 }
 
 async function loadCSVApoio(){
@@ -741,6 +751,57 @@ function startGPSApoio(){
     renderApoio();
     updateKMChipApoio();
   }, null, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+}
+
+function sendMaintenanceSingle(id, lat, lon) {
+  let tx = `⚡ *SOLICITAÇÃO DE MANUTENÇÃO / ACIONAMENTO*\n`;
+  tx += `${nowBR()}\n\n`;
+  tx += `ID: ${id}\n`;
+  tx += `COORDENADAS: ${lat.toFixed(6)}, ${lon.toFixed(6)}\n`;
+  if (chkMaps.checked) {
+    tx += `MAPA: https://maps.google.com/?q=${lat.toFixed(6)},${lon.toFixed(6)}\n`;
+  }
+  window.open('https://wa.me/?text=' + encodeURIComponent(tx), '_blank');
+}
+
+function sendMaintenanceSelected() {
+  const checkboxes = document.querySelectorAll('.item-chk:checked');
+  let selectedItems = [];
+
+  checkboxes.forEach(chk => {
+    selectedItems.push({
+      id: chk.value,
+      lat: parseFloat(chk.getAttribute('data-lat')),
+      lon: parseFloat(chk.getAttribute('data-lon'))
+    });
+  });
+
+  if (selectedItems.length === 0) {
+    // Se nenhum estiver marcado, envia o primeiro (mais próximo) ou todos se preferir
+    if (lastPosApoio) {
+      const items = nearestN(lastPosApoio.lat, lastPosApoio.lon, 1);
+      if (items.length > 0) {
+        sendMaintenanceSingle(items[0].id, items[0].lat, items[0].lon);
+        return;
+      }
+    }
+    alert("Selecione ao menos um item na lista para acionamento.");
+    return;
+  }
+
+  let tx = `⚡ *SOLICITAÇÃO DE MANUTENÇÃO (${selectedItems.length} ID${selectedItems.length > 1 ? 's' : ''})*\n`;
+  tx += `${nowBR()}\n\n`;
+
+  selectedItems.forEach((o, i) => {
+    tx += `${i+1}. ID: ${o.id}\n`;
+    tx += `   COORD: ${o.lat.toFixed(6)}, ${o.lon.toFixed(6)}\n`;
+    if (chkMaps.checked) {
+      tx += `   MAPA: https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`;
+    }
+    tx += `\n`;
+  });
+
+  window.open('https://wa.me/?text=' + encodeURIComponent(tx), '_blank');
 }
 
 btnSend.addEventListener('click', ()=>{
