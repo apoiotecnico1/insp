@@ -574,12 +574,17 @@ function searchById() {
         return;
     }
 
-    currentSearchedIdItem = found;
-    resArea.style.display = 'block';
-    renderSearchedIdResult();
+    if (!currentSearchedIdItem || currentSearchedIdItem.id !== found.id) {
+        currentSearchedIdItem = found;
+        resArea.style.display = 'block';
+        renderSearchedIdResult(true);
+    } else {
+        currentSearchedIdItem = found;
+        renderSearchedIdResult(false);
+    }
 }
 
-function renderSearchedIdResult() {
+function renderSearchedIdResult(forceRender = false) {
     if (!currentSearchedIdItem) return;
     const resArea = document.getElementById('searchResultArea');
     const item = currentSearchedIdItem;
@@ -588,6 +593,12 @@ function renderSearchedIdResult() {
     if (lastPosApoio) {
         const d = hav(lastPosApoio.lat, lastPosApoio.lon, item.lat, item.lon);
         distText = `DISTÂNCIA: ${getRangeText(d, lastPosApoio.acc)}`;
+    }
+
+    const distEl = document.getElementById('search-dist-val');
+    if (!forceRender && distEl) {
+        distEl.textContent = distText;
+        return;
     }
 
     resArea.innerHTML = `
@@ -638,7 +649,7 @@ function renderApoio(){
   if(!lastPosApoio || !datasetApoio.length) return;
 
   if (currentSearchedIdItem) {
-      renderSearchedIdResult();
+      renderSearchedIdResult(false);
   }
 
   const qty = Number(qtySel.value || 10);
