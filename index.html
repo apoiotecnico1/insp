@@ -428,6 +428,9 @@
         <button class="btn-menu" onclick="openModule('inspecao')">
             📷 Inspeção Fotográfica
         </button>
+        <button class="btn-menu" onclick="openModule('km-realtime')">
+            🛣️ KM Atual em Tempo Real
+        </button>
     </div>
 </div>
 
@@ -488,6 +491,8 @@
             <li class="skeleton"></li>
         </ul>
     </div>
+    
+    <button class="btn-action" onclick="openModule('menu')" style="background:var(--card); color:var(--text); border:2px solid var(--border); margin-top:12px;">← Voltar ao Menu</button>
 </div>
 
 <div id="mod-inspecao" class="app-module">
@@ -498,6 +503,7 @@
             <h2 style="color:var(--accent); margin-bottom:12px; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 0.05em;">Sistema de Apoio</h2>
             <p style="margin-bottom:8px; font-size: 0.95rem; font-weight: 800; color: #ccc; text-transform: uppercase;">Captura Automática + Foto Manual</p>
             <button class="btn-aware" onclick="startAppInspecao()">Ativar Sistema</button>
+            <button class="btn-aware" onclick="openModule('menu')" style="background:var(--card); color:var(--text); border:2px solid var(--border); margin-top:12px;">← Voltar ao Menu</button>
         </div>
     </div>
 
@@ -525,15 +531,39 @@
             <div id="gear-btn" onclick="toggleSet()">⚙</div>
             <button id="btn-start" class="btn-main" onclick="startCapture()">Iniciar</button>
             <button id="btn-stop" class="btn-main" onclick="stopCapture()">Finalizar</button>
+            <button class="btn-main" onclick="openModule('menu')" style="background:var(--card); color:var(--text); border:2px solid var(--border); flex:none; padding:18px 20px;">Menu</button>
         </div>
     </div>
 
     <canvas id="c"></canvas>
 </div>
 
+<!-- MÓDULO 3: KM ATUAL EM TEMPO REAL -->
+<div id="mod-km-realtime" class="app-module">
+    <div style="padding: 24px; max-width: 600px; margin: 0 auto; text-transform: uppercase; text-align: center;">
+        <div style="font-size: 1.2rem; font-weight: 900; color: var(--accent); margin-bottom: 24px; letter-spacing: 0.05em;">Monitoramento de KM em Tempo Real</div>
+        
+        <div class="km-box" style="margin-bottom: 16px;">
+            <span class="km-label">KM ATUAL NA RODOVIA</span>
+            <span id="realtimeKmValue" class="km-value">—</span>
+        </div>
+
+        <div id="realtimeGpsStatus" class="status-box bad" style="margin-bottom: 24px;">
+            GPS: Aguardando sinal...
+        </div>
+
+        <button class="btn-action" onclick="openModule('menu')" style="background: var(--card); color: var(--text); border: 2px solid var(--border);">← Voltar ao Menu</button>
+    </div>
+</div>
+
 <script>
 /* ================= NAVEGAÇÃO ENTRE TELAS ================= */
 function openModule(modId) {
+    if (modId === 'menu') {
+        document.getElementById('main-menu').style.display = 'flex';
+        document.querySelectorAll('.app-module').forEach(m => m.classList.remove('active'));
+        return;
+    }
     document.getElementById('main-menu').style.display = 'none';
     document.querySelectorAll('.app-module').forEach(m => m.classList.remove('active'));
     
@@ -542,6 +572,9 @@ function openModule(modId) {
         initApoioLocalizacao();
     } else if (modId === 'inspecao') {
         document.getElementById('mod-inspecao').classList.add('active');
+    } else if (modId === 'km-realtime') {
+        document.getElementById('mod-km-realtime').classList.add('active');
+        initKmRealtimeModule();
     }
 }
 
@@ -1014,6 +1047,73 @@ async function loadCSVInspecao() {
             return { km: c[ik], lt: parseFloat(c[ilt].replace(',','.')), ln: parseFloat(c[iln].replace(',','.')) };
         }).filter(d => !isNaN(d.lt));
     } catch(e) {}
+}
+
+/* ================= MÓDULO 3: KM EM TEMPO REAL ================= */
+let realtimeInited = false;
+const realtimeKmValue = document.getElementById('realtimeKmValue');
+const realtimeGpsStatus = document.getElementById('realtimeGpsStatus');
+
+function initKmRealtimeModule() {
+    if (!kmDatasetApoio.length) {
+        loadKMCSVApoioForRealtime();
+    }
+    if (!realtimeInited) {
+        realtimeInited = true;
+        startGPSRealtime();
+    }
+}
+
+async function loadKMCSVApoioForRealtime() {
+    try {
+        let resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
+        if(!resp.ok) return;
+        let text = await resp.text(); if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+        const head = lines.shift().split(';');
+        const iKm = findColumnIndex(head, ['km']), iLat = findColumnIndex(head, ['lat','latitude']), iLon = findColumnIndex(head, ['lon','long','longitude']);
+        kmDatasetApoio = lines.map(l=>{ const r = l.split(';'); return { km:parsePt(r[iKm]), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) }; })
+                         .filter(p => Number.isFinite(p.km) && Number.isFinite(p.lat) && Number.isFinite(p.lon));
+    } catch(e) {}
+}
+
+function startGPSRealtime() {
+    if(!('geolocation' in navigator)) {
+        realtimeGpsStatus.className = 'status-box bad';
+        realtimeGpsStatus.textContent = 'GPS: NÃO SUPORTADO NESTE NAVEGADOR';
+        return;
+    }
+    navigator.geolocation.watchPosition(p => {
+        const lat = p.coords.latitude;
+        const lon = p.coords.longitude;
+        const acc = p.coords.accuracy;
+
+        if (acc <= ACC_GREEN) {
+            realtimeGpsStatus.className = 'status-box ok';
+            realtimeGpsStatus.textContent = `GPS DE ALTA PRECISÃO (${fmtAcc(acc)})`;
+        } else if (acc <= ACC_YELLOW) {
+            realtimeGpsStatus.className = 'status-box warn';
+            realtimeGpsStatus.textContent = `GPS MÉDIO (${fmtAcc(acc)})`;
+        } else {
+            realtimeGpsStatus.className = 'status-box bad';
+            realtimeGpsStatus.textContent = `GPS FRACO / ALTA MARGEM (${fmtAcc(acc)})`;
+        }
+
+        if (kmDatasetApoio.length) {
+            let best = null, bd = Infinity;
+            for (let i = 0; i < kmDatasetApoio.length; i++) {
+                const pt = kmDatasetApoio[i];
+                const d = hav(lat, lon, pt.lat, pt.lon);
+                if (d < bd) { bd = d; best = pt; }
+            }
+            if (best) {
+                realtimeKmValue.textContent = (Math.round(best.km * 100) / 100).toFixed(2).replace('.', ',');
+            }
+        }
+    }, () => {
+        realtimeGpsStatus.className = 'status-box bad';
+        realtimeGpsStatus.textContent = 'GPS: ERRO AO OBTER LOCALIZAÇÃO';
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
 }
 
 function toggleSet() { document.getElementById('settings-panel').classList.toggle('open'); }
