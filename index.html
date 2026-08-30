@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Sistema Integrado de Apoio & Inspeção</title>
+    <title>Sistema Integrado de Apoio & Inspeção - Nox OS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -109,7 +109,7 @@
             display: block;
         }
 
-        /* ================= MÓDULO 1: APOIO LOCALIZAÇÃO ================= */
+        /* ================= MÓDULO 1: APOIO LOCALIZAÇÃO & OS ================= */
         #mod-apoio {
             line-height: 1.3;
             padding: 12px;
@@ -118,7 +118,7 @@
             text-transform: uppercase;
         }
 
-        /* PAINEL DE BUSCA DE ID */
+        /* PAINEL DE ORDEM DE SERVIÇO / BUSCA DE ID */
         .search-id-box {
             background: var(--card);
             border: 2px solid var(--accent);
@@ -136,6 +136,9 @@
             font-weight: 900;
             color: var(--accent);
             letter-spacing: 0.06em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .search-id-input-group {
@@ -176,6 +179,28 @@
             text-transform: uppercase;
             min-height: 46px;
         }
+
+        /* ALERTA DE ALVO ALCANÇADO (GARANTIA DE CAMPO) */
+        .target-lock-banner {
+            display: none;
+            background: linear-gradient(135deg, #00c853, #009624);
+            border: 3px solid #ffffff;
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 12px;
+            box-shadow: 0 0 25px rgba(0, 200, 83, 0.6);
+            animation: pulse-banner 1.5s infinite;
+        }
+        @keyframes pulse-banner {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        .target-lock-banner.active { display: block; }
+        .target-lock-title { font-size: 1.1rem; font-weight: 900; letter-spacing: 0.08em; margin-bottom: 4px; }
+        .target-lock-sub { font-size: 0.8rem; font-weight: 800; opacity: 0.9; }
 
         .search-result-card {
             background: #1a1800;
@@ -253,6 +278,7 @@
 
         .btn-action-alt {
             background: var(--accent);
+            color: #000;
             box-shadow: 0 4px 14px rgba(255, 214, 0, 0.25);
         }
 
@@ -403,7 +429,7 @@
     <div class="menu-subtitle">Selecione a ferramenta desejada</div>
     <div class="menu-buttons">
         <button class="btn-menu btn-menu-primary" onclick="openModule('apoio')">
-            📍 Apoio Localização
+            📍 Apoio Localização (Ordem de Serviço)
         </button>
         <button class="btn-menu" onclick="openModule('inspecao')">
             📷 Inspeção Fotográfica
@@ -412,31 +438,41 @@
 </div>
 
 <div id="mod-apoio" class="app-module">
+    <!-- BANNER DE ALERTA DE ALVO ALCANÇADO EM CAMPO -->
+    <div id="targetLockBanner" class="target-lock-banner">
+        <div class="target-lock-title">🎯 VOCÊ ESTÁ NO POSTE DA OS!</div>
+        <div id="targetLockSub" class="target-lock-sub">ID ALVO: --- | DISTÂNCIA < 5M</div>
+    </div>
+
+    <!-- PAINEL DA ORDEM DE SERVIÇO (ID DO NOX) -->
     <div class="search-id-box">
-        <span class="search-id-title">🔍 Pesquisar por ID Específico</span>
+        <span class="search-id-title">
+            <span>📋 Ordem de Serviço (ID do Nox)</span>
+            <span style="font-size:0.75rem; color:var(--text-secondary);">Digite o ID da OS</span>
+        </span>
         <div class="search-id-input-group">
-            <input type="text" id="inputIdSearch" placeholder="Digite o ID exato..." onkeydown="if(event.key==='Enter') searchById()" />
-            <button onclick="searchById()">Buscar</button>
+            <input type="text" id="inputIdSearch" placeholder="Ex: NOX-1042..." onkeydown="if(event.key==='Enter') searchById()" />
+            <button onclick="searchById()">Buscar OS</button>
             <button onclick="clearSearchId()" style="background:#262626; color:#fff;">Limpar</button>
         </div>
         <div id="searchResultArea" style="display: none;"></div>
     </div>
 
     <div class="km-box">
-        <span class="km-label">KM</span>
+        <span class="km-label">KM ATUAL NA RODOVIA</span>
         <span id="kmValue" class="km-value">—</span>
     </div>
 
     <div id="gpsStatus" class="status-box bad">
-        GPS: Aguardando...
+        GPS: Aguardando sinal...
     </div>
 
     <div class="card">
         <button id="btnSend" class="btn-action" disabled>Enviar Lista WhatsApp</button>
-        <button id="btnSendMaintenance" class="btn-action btn-action-alt" onclick="sendMaintenanceSelected()" disabled>⚡ Acionar Manutenção (Selecionados / 1+)</button>
+        <button id="btnSendMaintenance" class="btn-action btn-action-alt" onclick="sendMaintenanceSelected()" disabled>⚡ Acionar Teste / Manutenção Remota</button>
         <div class="controls">
             <label>
-                Qtd:
+                Proximidade:
                 <select id="qty">
                     <option value="1">1</option>
                     <option value="5">5</option>
@@ -514,7 +550,7 @@ function openModule(modId) {
     }
 }
 
-/* ================= LÓGICA DO MÓDULO 1: APOIO LOCALIZAÇÃO ================= */
+/* ================= LÓGICA DO MÓDULO 1: APOIO LOCALIZAÇÃO & OS ================= */
 const ACC_GREEN = 15, ACC_YELLOW = 35;
 let datasetApoio = [], kmDatasetApoio = [], lastPosApoio = null;
 let currentRenderedKey = "";
@@ -528,6 +564,8 @@ const chkMaps = document.getElementById('chkMaps');
 const qtySel = document.getElementById('qty');
 const listEl = document.getElementById('list');
 const kmValue = document.getElementById('kmValue');
+const targetLockBanner = document.getElementById('targetLockBanner');
+const targetLockSub = document.getElementById('targetLockSub');
 
 function normalizeStr(s){ return String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
 function findColumnIndex(headers, candidates){ const map=headers.map(h=>normalizeStr(h)); for(const c of candidates){ const i=map.indexOf(c.toUpperCase()); if(i>=0) return i; } return -1; }
@@ -557,6 +595,21 @@ function getRangeText(dist, acc) {
   return `${min}M A ${max}M`;
 }
 
+function checkTargetLock(item, dist) {
+  if (!item || dist == null) {
+    targetLockBanner.classList.remove('active');
+    return;
+  }
+  const acc = lastPosApoio && lastPosApoio.acc ? lastPosApoio.acc : 10;
+  // Se a distância for menor ou igual a 5 metros + margem de precisão do GPS
+  if (dist <= (5 + acc)) {
+    targetLockBanner.classList.add('active');
+    targetLockSub.textContent = `ID ALVO: ${item.id} | DISTÂNCIA EST.: ~${Math.round(dist)}M`;
+  } else {
+    targetLockBanner.classList.remove('active');
+  }
+}
+
 function searchById() {
     const term = normalizeStr(document.getElementById('inputIdSearch').value);
     const resArea = document.getElementById('searchResultArea');
@@ -564,6 +617,7 @@ function searchById() {
         resArea.style.display = 'none';
         resArea.innerHTML = '';
         currentSearchedIdItem = null;
+        targetLockBanner.classList.remove('active');
         return;
     }
 
@@ -577,8 +631,9 @@ function searchById() {
 
     if (!found) {
         resArea.style.display = 'block';
-        resArea.innerHTML = `<div style="color:var(--bad); font-size:0.85rem; padding:6px; font-weight:900;">ID "${term}" NÃO ENCONTRADO.</div>`;
+        resArea.innerHTML = `<div style="color:var(--bad); font-size:0.85rem; padding:6px; font-weight:900;">ID DA OS "${term}" NÃO ENCONTRADO NO SISTEMA.</div>`;
         currentSearchedIdItem = null;
+        targetLockBanner.classList.remove('active');
         return;
     }
 
@@ -593,10 +648,11 @@ function renderSearchedIdResult(forceRender = false) {
     const item = currentSearchedIdItem;
 
     let distText = "AGUARDANDO GPS...";
-    let dVal = 0;
+    let dVal = null;
     if (lastPosApoio) {
         dVal = hav(lastPosApoio.lat, lastPosApoio.lon, item.lat, item.lon);
-        distText = `DISTÂNCIA: ${getRangeText(dVal, lastPosApoio.acc)}`;
+        distText = `DISTÂNCIA DA OS: ${getRangeText(dVal, lastPosApoio.acc)}`;
+        checkTargetLock(item, dVal);
     }
 
     const distEl = document.getElementById('search-dist-val');
@@ -608,17 +664,17 @@ function renderSearchedIdResult(forceRender = false) {
     resArea.innerHTML = `
         <div class="search-result-card">
             <div class="item-header">
-                <span class="id-val" style="color:var(--accent);">ID: ${item.id}</span>
+                <span class="id-val" style="color:var(--accent);">OS / ID: ${item.id}</span>
                 <span class="dist-val" id="search-dist-val">${distText}</span>
             </div>
-            <div style="font-size:0.75rem; color:#aaa; font-weight:800;">COORDS: ${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}</div>
+            <div style="font-size:0.75rem; color:#aaa; font-weight:800;">COORDENADAS: ${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}</div>
             <div class="mini-map">
                 <iframe 
                   src="https://maps.google.com/maps?q=${item.lat},${item.lon}&t=k&z=19&ie=UTF8&iwloc=&output=embed" 
                   loading="lazy">
                 </iframe>
             </div>
-            <button onclick="sendMaintenanceSingle('${item.id}', ${item.lat}, ${item.lon})" style="margin-top:4px; width:100%; min-height:42px; background:var(--accent); color:#000; font-weight:900; border:0; border-radius:6px; cursor:pointer; text-transform:uppercase; font-size:0.85rem;">⚡ SOLICITAR ACIONAMENTO / MANUTENÇÃO (WHATSAPP)</button>
+            <button onclick="sendMaintenanceSingle('${item.id}', ${item.lat}, ${item.lon})" style="margin-top:6px; width:100%; min-height:46px; background:var(--accent); color:#000; font-weight:900; border:0; border-radius:8px; cursor:pointer; text-transform:uppercase; font-size:0.9rem; box-shadow: 0 4px 12px rgba(255,214,0,0.3);">⚡ PEDIR TESTE REMOTO (PISCAR LUMINÁRIA)</button>
         </div>
     `;
 }
@@ -629,24 +685,25 @@ function clearSearchId() {
     resArea.style.display = 'none';
     resArea.innerHTML = '';
     currentSearchedIdItem = null;
+    targetLockBanner.classList.remove('active');
 }
 
 function updateGpsStatus(){
   if(!lastPosApoio || lastPosApoio.acc==null){ 
     gpsStatus.className='status-box bad'; 
-    gpsStatus.textContent='GPS: BUSCANDO...'; 
+    gpsStatus.textContent='GPS: BUSCANDO SINAL...'; 
     return; 
   }
   const a=Math.round(lastPosApoio.acc);
   if(a<=ACC_GREEN){ 
     gpsStatus.className='status-box ok'; 
-    gpsStatus.textContent=`GPS OK (${fmtAcc(a)})`; 
+    gpsStatus.textContent=`GPS DE ALTA PRECISÃO (${fmtAcc(a)})`; 
   } else if(a<=ACC_YELLOW){ 
     gpsStatus.className='status-box warn'; 
     gpsStatus.textContent=`GPS MÉDIO (${fmtAcc(a)})`; 
   } else { 
     gpsStatus.className='status-box bad'; 
-    gpsStatus.textContent=`GPS FRACO (${fmtAcc(a)})`; 
+    gpsStatus.textContent=`GPS FRACO / ALTA MARGEM (${fmtAcc(a)})`; 
   }
 }
 
@@ -683,7 +740,7 @@ function renderApoio(){
       <div class="item-header">
         <div class="item-left">
             <input type="checkbox" class="item-chk" value="${o.id}" data-lat="${o.lat}" data-lon="${o.lon}" />
-            <span class="id-val">${o.id}</span>
+            <span class="id-val">POSTE / NOX: ${o.id}</span>
         </div>
         <span class="dist-val" id="dist-val-${idx}">DISTÂNCIA: ${getRangeText(o.d, lastPosApoio.acc)}</span>
       </div>
@@ -754,12 +811,13 @@ function startGPSApoio(){
 }
 
 function sendMaintenanceSingle(id, lat, lon) {
-  let tx = `⚡ *SOLICITAÇÃO DE MANUTENÇÃO / ACIONAMENTO*\n`;
-  tx += `${nowBR()}\n\n`;
-  tx += `ID: ${id}\n`;
-  tx += `COORDENADAS: ${lat.toFixed(6)}, ${lon.toFixed(6)}\n`;
+  let tx = `🚨 *SOLICITAÇÃO DE TESTE / ACIONAMENTO REMOTO (OS)*\n`;
+  tx += `Data/Hora: ${nowBR()}\n\n`;
+  tx += `🔹 *ID DO NOX / POSTE:* ${id}\n`;
+  tx += `📍 *COORDENADAS:* ${lat.toFixed(6)}, ${lon.toFixed(6)}\n`;
+  tx += `💬 *INSTRUÇÃO CAMPO:* Equipe posicionada no local. Favor acionar/piscar remotamente este Nox para confirmação visual!\n`;
   if (chkMaps.checked) {
-    tx += `MAPA: https://maps.google.com/?q=${lat.toFixed(6)},${lon.toFixed(6)}\n`;
+    tx += `🗺️ *MAPAS:* https://maps.google.com/?q=${lat.toFixed(6)},${lon.toFixed(6)}\n`;
   }
   window.open('https://wa.me/?text=' + encodeURIComponent(tx), '_blank');
 }
@@ -777,7 +835,10 @@ function sendMaintenanceSelected() {
   });
 
   if (selectedItems.length === 0) {
-    // Se nenhum estiver marcado, envia o primeiro (mais próximo) ou todos se preferir
+    if (currentSearchedIdItem) {
+      sendMaintenanceSingle(currentSearchedIdItem.id, currentSearchedIdItem.lat, currentSearchedIdItem.lon);
+      return;
+    }
     if (lastPosApoio) {
       const items = nearestN(lastPosApoio.lat, lastPosApoio.lon, 1);
       if (items.length > 0) {
@@ -785,21 +846,22 @@ function sendMaintenanceSelected() {
         return;
       }
     }
-    alert("Selecione ao menos um item na lista para acionamento.");
+    alert("Selecione ao menos um Nox na lista ou busque a OS pelo ID.");
     return;
   }
 
-  let tx = `⚡ *SOLICITAÇÃO DE MANUTENÇÃO (${selectedItems.length} ID${selectedItems.length > 1 ? 's' : ''})*\n`;
-  tx += `${nowBR()}\n\n`;
+  let tx = `🚨 *SOLICITAÇÃO DE TESTE / ACIONAMENTO REMOTO (${selectedItems.length} NOX)*\n`;
+  tx += `Data/Hora: ${nowBR()}\n\n`;
 
   selectedItems.forEach((o, i) => {
-    tx += `${i+1}. ID: ${o.id}\n`;
-    tx += `   COORD: ${o.lat.toFixed(6)}, ${o.lon.toFixed(6)}\n`;
+    tx += `${i+1}. *NOX / POSTE:* ${o.id}\n`;
+    tx += `   *COORD:* ${o.lat.toFixed(6)}, ${o.lon.toFixed(6)}\n`;
     if (chkMaps.checked) {
-      tx += `   MAPA: https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`;
+      tx += `   *MAPA:* https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`;
     }
     tx += `\n`;
   });
+  tx += `💬 *INSTRUÇÃO CAMPO:* Favor executar teste remoto (piscar/ligar) nos IDs acima para validação visual da equipe em campo.`;
 
   window.open('https://wa.me/?text=' + encodeURIComponent(tx), '_blank');
 }
@@ -833,7 +895,7 @@ function initApoioLocalizacao(){
 }
 
 
-/* ================= LÓGICA DO MÓDULO 2: INSPEÇÃO FOTOGRÁFICA ================= */
+/* ================= MÓDULO 2: INSPEÇÃO FOTOGRÁFICA ================= */
 let kmDB=[], capturing=false, hDir=null, currentStream=null;
 let kmInicialLote = "", buffer = [];
 let curLat = "0.0000", curLon = "0.0000";
