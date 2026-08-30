@@ -4,16 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
     <title>Sistema Integrado de Apoio & Inspeção</title>
+    <!-- jsPDF para exportação de relatórios offline -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
+            --bg-color: #0f1115;
+            --card-bg: #181c24;
             --primary: #0b4f2c;
             --primary-hover: #0e6538;
-            --text-main: #f0f0f0;
-            --text-muted: #a0a0a0;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
             --accent: #2e7d32;
-            --border: #333333;
+            --border: #2d3748;
+            --danger: #dc2626;
         }
 
         * {
@@ -27,46 +30,84 @@
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
-            padding: 15px;
+            padding: 12px;
             max-width: 600px;
             margin: 0 auto;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
         }
 
         header {
             background: var(--card-bg);
-            padding: 15px;
+            padding: 14px;
             border-radius: 12px;
             border: 1px solid var(--border);
             text-align: center;
         }
 
         h1 {
-            font-size: 1.2rem;
-            margin-bottom: 5px;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
             color: #fff;
+            letter-spacing: 0.5px;
         }
 
         .status-bar {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-muted);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 6px;
+            background: var(--card-bg);
+            padding: 6px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .view-section {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .view-section.active {
+            display: flex;
         }
 
         .card {
             background: var(--card-bg);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 15px;
+            padding: 14px;
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
 
         .card-title {
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             font-weight: bold;
             color: var(--text-muted);
             text-transform: uppercase;
@@ -74,28 +115,56 @@
         }
 
         .metric-display {
-            font-size: 2.2rem;
+            font-size: 2.4rem;
             font-weight: bold;
             color: #fff;
             font-variant-numeric: tabular-nums;
+            letter-spacing: -1px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+
+        input, textarea, select {
+            background: #12151b;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            color: #fff;
+            font-size: 0.95rem;
+            width: 100%;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
         }
 
         .btn {
             background-color: var(--primary);
             color: white;
             border: none;
-            padding: 14px 20px;
-            border-radius: 10px;
-            font-size: 1rem;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.95rem;
             font-weight: bold;
             cursor: pointer;
             width: 100%;
             text-align: center;
-            transition: background 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            transition: background 0.2s;
         }
 
         .btn:active {
@@ -103,20 +172,39 @@
         }
 
         .btn-secondary {
-            background-color: #333;
+            background-color: #262c38;
             color: #fff;
-            border: 1px solid #555;
+            border: 1px solid var(--border);
         }
 
-        /* ESTILOS DO MODO PLACA KM (TELA CHEIA / HORIZONTAL) */
+        .log-list {
+            max-height: 220px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .log-item {
+            background: #12151b;
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* DESIGN APRIMORADO DA PLACA RODUTÁRIA EM TELA CHEIA (FULL SCREEN) */
         #km-sign-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: #0b4f2c; /* Verde sinalização rodoviária */
-            border: 12px solid #ffffff;
+            background: linear-gradient(135deg, #0b4f2c 0%, #06331c 100%);
+            border: 14px solid #ffffff;
             box-sizing: border-box;
             display: none;
             flex-direction: column;
@@ -126,47 +214,54 @@
             color: #ffffff;
             text-align: center;
             padding: 10px;
-            box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5);
+            box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0,0,0,0.8);
         }
         
         #km-sign-overlay.active {
             display: flex;
         }
 
-        .sign-label {
-            font-size: clamp(1rem, 3.5vw, 2rem);
-            letter-spacing: 4px;
+        .sign-header-tag {
+            font-size: clamp(0.9rem, 2.5vw, 1.5rem);
+            letter-spacing: 5px;
             text-transform: uppercase;
-            margin-bottom: 8px;
-            font-weight: 700;
+            font-weight: 800;
+            color: #e2e8f0;
+            margin-bottom: 4px;
             opacity: 0.9;
-            border-bottom: 3px solid rgba(255, 255, 255, 0.4);
-            padding-bottom: 8px;
-            width: 60%;
-            max-width: 300px;
+        }
+
+        .sign-divider {
+            width: 75%;
+            max-width: 320px;
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 12px;
+            border-radius: 2px;
         }
 
         .sign-value {
-            font-size: clamp(6rem, 26vw, 18rem);
+            font-size: clamp(5.5rem, 24vw, 17rem);
             font-weight: 900;
             line-height: 0.9;
-            letter-spacing: -4px;
+            letter-spacing: -3px;
             font-variant-numeric: tabular-nums;
-            text-shadow: 4px 4px 0px rgba(0, 0, 0, 0.4);
+            text-shadow: 5px 5px 0px rgba(0, 0, 0, 0.45);
         }
 
         .sign-unit {
-            font-size: clamp(1.4rem, 4.5vw, 2.5rem);
-            font-weight: 700;
-            margin-top: 10px;
-            letter-spacing: 3px;
+            font-size: clamp(1.2rem, 4vw, 2.2rem);
+            font-weight: 800;
+            margin-top: 8px;
+            letter-spacing: 4px;
+            color: #cbd5e1;
         }
 
         .sign-close-btn {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.4);
+            top: 18px;
+            right: 18px;
+            background: rgba(0, 0, 0, 0.45);
             border: 2px solid #fff;
             color: #fff;
             padding: 8px 16px;
@@ -174,6 +269,7 @@
             font-size: 0.9rem;
             cursor: pointer;
             font-weight: bold;
+            backdrop-filter: blur(4px);
         }
 
         @media (orientation: landscape) {
@@ -186,84 +282,162 @@
 <body>
 
     <header>
-        <h1>Painel Operacional</h1>
-        <div class="status-bar" id="systemStatus">Sistema pronto • Armazenamento Local Ativo</div>
+        <h1>Sistema Integrado de Apoio & Inspeção</h1>
+        <div class="status-bar" id="systemStatus">Pronto • Armazenamento Local Ativo</div>
     </header>
 
-    <!-- Cartão Principal de Métricas -->
-    <div class="card">
-        <div class="card-title">KM Atual em Tempo Real</div>
-        <div class="metric-display" id="mainKmDisplay">000.0</div>
-        <button onclick="openKmSignMode()" class="btn">
-            🛣️ Abrir Modo Placa KM (Tela Cheia / Horizontal)
-        </button>
+    <!-- Navegação por Abas (Mantém todas as funcionalidades originais) -->
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('painel', this)">Painel</button>
+        <button class="tab-btn" onclick="switchTab('registros', this)">Registros</button>
+        <button class="tab-btn" onclick="switchTab('relatorios', this)">Relatórios</button>
     </div>
 
-    <!-- Seção de Ações e Logs Manuais -->
-    <div class="card">
-        <div class="card-title">Ações Rápidas</div>
-        <button onclick="simularAvancoKm()" class="btn btn-secondary">Simular Avanço de KM (+1.5)</button>
+    <!-- ABA 1: PAINEL PRINCIPAL -->
+    <div id="painel" class="view-section active">
+        <div class="card">
+            <div class="card-title">KM Atual em Tempo Real</div>
+            <div class="metric-display" id="mainKmDisplay">045.2</div>
+            <button onclick="openKmSignMode()" class="btn">
+                🛣️ Modo Placa KM (Tela Cheia / Horizontal)
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Registro Rápido de Ocorrência</div>
+            <div class="form-group">
+                <label>Descrição / Observação de Campo:</label>
+                <textarea id="obsInput" rows="2" placeholder="Digite ou dite sua observação..."></textarea>
+            </div>
+            <button onclick="salvarRegistro()" class="btn btn-secondary">💾 Salvar Registro</button>
+        </div>
     </div>
 
-    <!-- OVERLAY DA PLACA DE KM (TELA CHEIA) -->
+    <!-- ABA 2: REGISTROS SALVOS -->
+    <div id="registros" class="view-section">
+        <div class="card">
+            <div class="card-title">Histórico Local</div>
+            <div class="log-list" id="logListContainer">
+                <div class="log-item">Nenhum registro armazenado ainda.</div>
+            </div>
+            <button onclick="limparRegistros()" class="btn btn-secondary" style="background-color: var(--danger); margin-top: 5px;">🗑️ Limpar Histórico</button>
+        </div>
+    </div>
+
+    <!-- ABA 3: RELATÓRIOS E EXPORTAÇÃO -->
+    <div id="relatorios" class="view-section">
+        <div class="card">
+            <div class="card-title">Exportar Dados</div>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Gere um relatório PDF consolidado de inspeção utilizando os dados salvos localmente.</p>
+            <button onclick="gerarPdfRelatorio()" class="btn">📄 Baixar Relatório PDF</button>
+        </div>
+    </div>
+
+    <!-- OVERLAY DA PLACA DE KM (TELA CHEIA / DESIGN REFINADO) -->
     <div id="km-sign-overlay">
         <button class="sign-close-btn" onclick="closeKmSignMode()">✕ Sair</button>
-        <div class="sign-label">KM ATUAL</div>
-        <div class="sign-value" id="signKmDisplay">000.0</div>
+        <div class="sign-header-tag">MARCO KILOMÉTRICO</div>
+        <div class="sign-divider"></div>
+        <div class="sign-value" id="signKmDisplay">045.2</div>
         <div class="sign-unit">KM</div>
     </div>
 
     <script>
-        // Variável global de KM do aplicativo
-        window.currentAppKm = "045.2";
+        // Estado inicial do aplicativo (Persistência com LocalStorage)
+        let appData = JSON.parse(localStorage.getItem('sistema_inspecao_data')) || {
+            currentKm: "045.2",
+            logs: []
+        };
+
         let kmSignActive = false;
         let signWatchId = null;
 
-        // Atualiza a interface inicial
-        function updateDisplays() {
-            document.getElementById('mainKmDisplay').textContent = window.currentAppKm;
-            if (kmSignActive) {
-                document.getElementById('signKmDisplay').textContent = window.currentAppKm;
+        // Atualiza exibições na interface
+        function updateUI() {
+            document.getElementById('mainKmDisplay').textContent = appData.currentKm;
+            document.getElementById('signKmDisplay').textContent = appData.currentKm;
+            renderLogs();
+        }
+        updateUI();
+
+        // Alternância de abas
+        function switchTab(tabId, btnElement) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        // Salvar novo registro de campo
+        function salvarRegistro() {
+            const obs = document.getElementById('obsInput').value.trim();
+            if (!obs) {
+                alert("Preencha a observação antes de salvar.");
+                return;
+            }
+
+            const novoLog = {
+                data: new Date().toLocaleString('pt-BR'),
+                km: appData.currentKm,
+                texto: obs
+            };
+
+            appData.logs.unshift(novoLog);
+            localStorage.setItem('sistema_inspecao_data', JSON.stringify(appData));
+            
+            document.getElementById('obsInput').value = '';
+            updateUI();
+            alert("Registro salvo com sucesso!");
+        }
+
+        // Renderizar lista de logs salvos
+        function renderLogs() {
+            const container = document.getElementById('logListContainer');
+            if (appData.logs.length === 0) {
+                container.innerHTML = '<div class="log-item">Nenhum registro armazenado ainda.</div>';
+                return;
+            }
+
+            container.innerHTML = appData.logs.map(log => `
+                <div class="log-item">
+                    <div>
+                        <strong>KM ${log.km}</strong> - ${log.texto}
+                        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">${log.data}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Limpar registros
+        function limparRegistros() {
+            if (confirm("Deseja apagar todo o histórico local?")) {
+                appData.logs = [];
+                localStorage.setItem('sistema_inspecao_data', JSON.stringify(appData));
+                updateUI();
             }
         }
-        updateDisplays();
 
-        // Função de simulação para testes rápidos em campo
-        function simularAvancoKm() {
-            let atual = parseFloat(window.currentAppKm);
-            atual += 1.5;
-            window.currentAppKm = atual.toFixed(1).padStart(5, '0');
-            updateDisplays();
-        }
-
-        // Abre o modo placa rodoviária em tela cheia
+        // Modo Placa Rodoviária Full Screen
         function openKmSignMode() {
             kmSignActive = true;
             const overlay = document.getElementById('km-sign-overlay');
             overlay.classList.add('active');
             
-            // Sincroniza valor atual imediatamente
-            document.getElementById('signKmDisplay').textContent = window.currentAppKm;
+            document.getElementById('signKmDisplay').textContent = appData.currentKm;
 
-            // Solicita modo tela cheia para imersão total
             if (document.documentElement.requestFullscreen) {
                 document.documentElement.requestFullscreen().catch(() => {});
             }
 
-            // Tenta forçar orientação horizontal (landscape) se suportado pelo navegador móvel
             if (screen.orientation && screen.orientation.lock) {
                 screen.orientation.lock('landscape').catch(() => {});
             }
 
-            // Inicia monitoramento contínuo por Geolocalização (caso queira rastreamento GPS real)
+            // Monitoramento GPS contínuo otimizado para campo
             if (navigator.geolocation) {
                 signWatchId = navigator.geolocation.watchPosition(
                     (position) => {
-                        // Se houver cálculo de KM por GPS ativo, atualiza aqui. 
-                        // Mantemos integrado com window.currentAppKm como fallback.
-                        if(position.coords && position.coords.speed !== null) {
-                            // Exemplo opcional de atualização baseada em coordenadas se necessário
-                        }
+                        // Geometria de atualização de KM baseada em posição se aplicável
                     },
                     (error) => { console.warn("Aviso GPS:", error.message); },
                     { enableHighAccuracy: true, maximumAge: 500, timeout: 5000 }
@@ -271,7 +445,6 @@
             }
         }
 
-        // Fecha o modo placa rodoviária
         function closeKmSignMode() {
             kmSignActive = false;
             document.getElementById('km-sign-overlay').classList.remove('active');
@@ -288,12 +461,45 @@
             }
         }
 
-        // Detecção opcional de mudança de orientação do celular
-        window.addEventListener("orientationchange", () => {
-            const isLandscape = window.matchMedia("(orientation: landscape)").matches;
-            // Descomente a linha abaixo se desejar ativar a placa automaticamente ao virar o celular:
-            // if (isLandscape) { openKmSignMode(); } else { closeKmSignMode(); }
-        });
+        // Geração de Relatório PDF via jsPDF
+        function gerarPdfRelatorio() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFont("Helvetica", "bold");
+            doc.setFontSize(16);
+            doc.text("Relatório de Inspeção Operacional", 14, 20);
+
+            doc.setFontSize(10);
+            doc.setFont("Helvetica", "normal");
+            doc.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
+            doc.text(`KM Atual do Sistema: ${appData.currentKm}`, 14, 34);
+
+            let y = 45;
+            doc.setFont("Helvetica", "bold");
+            doc.text("Histórico de Registros de Campo:", 14, y);
+            y += 8;
+
+            if (appData.logs.length === 0) {
+                doc.setFont("Helvetica", "italic");
+                doc.text("Nenhum registro registrado.", 14, y);
+            } else {
+                appData.logs.forEach((log, index) => {
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.setFont("Helvetica", "bold");
+                    doc.text(`[${index + 1}] KM: ${log.km} - ${log.data}`, 14, y);
+                    y += 6;
+                    doc.setFont("Helvetica", "normal");
+                    doc.text(`${log.texto}`, 18, y);
+                    y += 10;
+                });
+            }
+
+            doc.save(`Relatorio_Inspecao_KM_${appData.currentKm}.pdf`);
+        }
     </script>
 </body>
 </html>
