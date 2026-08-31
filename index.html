@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <title>Sistema Integrado de Apoio & Inspeção</title>
+    <title>Sistema Integrado de Apoio & Inspeção - Nox OS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -11,7 +11,7 @@
             --card: #121212;
             --card-hover: #1a1a1a;
             --border: #262626;
-            --border-focus: #444444;F
+            --border-focus: #444444;
             --accent: #ffd600;
             --accent-glow: rgba(255, 214, 0, 0.15);
             --green: #00e676;
@@ -109,7 +109,7 @@
             display: block;
         }
 
-        /* ================= MÓDULO 1: APOIO LOCALIZAÇÃO ================= */
+        /* ================= MÓDULO 1: APOIO LOCALIZAÇÃO & OS ================= */
         #mod-apoio {
             line-height: 1.3;
             padding: 12px;
@@ -423,13 +423,13 @@
     <div class="menu-subtitle">Selecione a ferramenta desejada</div>
     <div class="menu-buttons">
         <button class="btn-menu btn-menu-primary" onclick="openModule('apoio')">
-            📍 Localizador ID
+            📍 Apoio Localização (Ordem de Serviço)
         </button>
         <button class="btn-menu" onclick="openModule('inspecao')">
             📷 Inspeção Fotográfica
         </button>
         <button class="btn-menu" onclick="openModule('km-realtime')">
-            🛣️ Mostrar KM em tempo real
+            🛣️ KM Atual em Tempo Real
         </button>
     </div>
 </div>
@@ -437,26 +437,26 @@
 <div id="mod-apoio" class="app-module">
     <!-- BANNER DE ALERTA DE ALVO ALCANÇADO EM CAMPO -->
     <div id="targetLockBanner" class="target-lock-banner">
-        <div class="target-lock-title">🎯 VOCÊ ESTÁ NO POSTE!</div>
+        <div class="target-lock-title">🎯 VOCÊ ESTÁ NO POSTE DA OS!</div>
         <div id="targetLockSub" class="target-lock-sub">ID ALVO: --- | DISTÂNCIA < 5M</div>
     </div>
 
     <!-- PAINEL DA ORDEM DE SERVIÇO (ID DO NOX) -->
     <div class="search-id-box">
         <span class="search-id-title">
-            <span>📋 ID</span>
-            <span style="font-size:0.75rem; color:var(--text-secondary);">Digite o ID</span>
+            <span>📋 Ordem de Serviço (ID do Nox)</span>
+            <span style="font-size:0.75rem; color:var(--text-secondary);">Digite o ID da OS</span>
         </span>
         <div class="search-id-input-group">
-            <input type="text" id="inputIdSearch" placeholder="Ex: 18000..." onkeydown="if(event.key==='Enter') searchById()" />
-            <button onclick="searchById()">Buscar</button>
+            <input type="text" id="inputIdSearch" placeholder="Ex: NOX-1042..." onkeydown="if(event.key==='Enter') searchById()" />
+            <button onclick="searchById()">Buscar OS</button>
             <button onclick="clearSearchId()" style="background:#262626; color:#fff;">Limpar</button>
         </div>
         <div id="searchResultArea" style="display: none;"></div>
     </div>
 
     <div class="km-box">
-        <span class="km-label">Você esta no KM : </span>
+        <span class="km-label">KM ATUAL NA RODOVIA</span>
         <span id="kmValue" class="km-value">—</span>
     </div>
 
@@ -465,7 +465,7 @@
     </div>
 
     <div class="card">
-        <button id="btnSend" class="btn-action" disabled>Enviar por WhatsApp</button>
+        <button id="btnSend" class="btn-action" disabled>Enviar Lista WhatsApp (Até 100 IDs)</button>
         <div class="controls">
             <label>
                 Proximidade:
@@ -578,7 +578,7 @@ function openModule(modId) {
     }
 }
 
-/* ================= LÓGICA DO MÓDULO 1: APOIO LOCALIZAÇÃO ================= */
+/* ================= LÓGICA DO MÓDULO 1: APOIO LOCALIZAÇÃO & OS ================= */
 const ACC_GREEN = 15, ACC_YELLOW = 35;
 let datasetApoio = [], kmDatasetApoio = [], lastPosApoio = null;
 let currentRenderedKey = "";
@@ -657,7 +657,7 @@ function searchById() {
 
     if (!found) {
         resArea.style.display = 'block';
-        resArea.innerHTML = `<div style="color:var(--bad); font-size:0.85rem; padding:6px; font-weight:900;">ID "${term}" NÃO ENCONTRADO NO SISTEMA.</div>`;
+        resArea.innerHTML = `<div style="color:var(--bad); font-size:0.85rem; padding:6px; font-weight:900;">ID DA OS "${term}" NÃO ENCONTRADO NO SISTEMA.</div>`;
         currentSearchedIdItem = null;
         targetLockBanner.classList.remove('active');
         return;
@@ -677,7 +677,7 @@ function renderSearchedIdResult(forceRender = false) {
     let dVal = null;
     if (lastPosApoio) {
         dVal = hav(lastPosApoio.lat, lastPosApoio.lon, item.lat, item.lon);
-        distText = `DISTÂNCIA: ${getRangeText(dVal, lastPosApoio.acc)}`;
+        distText = `DISTÂNCIA DA OS: ${getRangeText(dVal, lastPosApoio.acc)}`;
         checkTargetLock(item, dVal);
     }
 
@@ -746,7 +746,7 @@ function renderApoio(){
   if(itemKey === currentRenderedKey){
     items.forEach((o, idx) => {
       const el = document.getElementById(`dist-val-${idx}`);
-      if(el) el.textContent = `Distância: ${getRangeText(o.d, lastPosApoio.acc)}`;
+      if(el) el.textContent = `DISTÂNCIA: ${getRangeText(o.d, lastPosApoio.acc)}`;
     });
     btnSend.disabled = false;
     return;
@@ -764,7 +764,7 @@ function renderApoio(){
       <div class="item-header">
         <div class="item-left">
             <input type="checkbox" class="item-chk" value="${o.id}" data-lat="${o.lat}" data-lon="${o.lon}" checked />
-            <span class="id-val">ID: ${o.id}</span>
+            <span class="id-val">POSTE / NOX: ${o.id}</span>
         </div>
         <span class="dist-val" id="dist-val-${idx}">DISTÂNCIA: ${getRangeText(o.d, lastPosApoio.acc)}</span>
       </div>
@@ -850,7 +850,7 @@ btnSend.addEventListener('click', ()=>{
       selectedItems = items.map(o => ({ id: o.id, lat: o.lat, lon: o.lon }));
   }
 
-  let tx = `📍 *LISTA DE LOCALIZAÇÃO DE POSTES*\n`;
+  let tx = `📍 *LISTA DE LOCALIZAÇÃO DE POSTES / NOX*\n`;
   tx += `Data/Hora: ${nowBR()}\n`;
   tx += `GPS Atual: ${lastPosApoio.lat.toFixed(6)}, ${lastPosApoio.lon.toFixed(6)} (${fmtAcc(lastPosApoio.acc)})\n\n`;
 
